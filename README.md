@@ -170,6 +170,121 @@ The application supports dark mode with:
 - CSS variables for theming in `resources/css/app.css`
 - Theme state persisted in localStorage
 
+## Goravel Fundamentals
+
+Goravel is a web application framework for Go that follows Laravel's elegant syntax and architecture. Here are the core features used in this project:
+
+### Routing
+
+```go
+// Define a simple route
+facades.Route().Get("/", homeController.Index)
+
+// Route with middleware
+facades.Route().Middleware("auth:api").Get("/dashboard", dashboardController.Index)
+
+// Route groups
+facades.Route().Group(func(router route.Router) {
+    router.Get("/users", userController.Index)
+    router.Post("/users", userController.Store)
+})
+```
+
+### ORM and Database
+
+```go
+// Query with relationships
+user, err := facades.Orm().Query().With("Posts").First(&models.User{}, "id = ?", 1)
+
+// Create a record
+user := models.User{Name: "Goravel", Email: "goravel@example.com"}
+facades.Orm().Query().Create(&user)
+
+// Update a record
+facades.Orm().Query().Model(&models.User{}).Where("id = ?", 1).Update("name", "New Name")
+```
+
+### Authentication
+
+```go
+// Authenticate a user
+token, err := facades.Auth(ctx).Login(credentials)
+
+// Get authenticated user
+user, err := facades.Auth(ctx).User()
+
+// Logout
+err := facades.Auth(ctx).Logout()
+```
+
+### Middleware
+
+```go
+// Define middleware
+func JwtAuth() http.Middleware {
+    return func(ctx http.Context) {
+        // Authentication logic
+        ctx.Request().Next()
+    }
+}
+
+// Apply middleware to routes
+facades.Route().Middleware("jwt.auth").Get("/dashboard", controller.Dashboard)
+```
+
+### Artisan Commands
+
+```go
+// Define a command
+type UserCreate struct {
+    console.Command
+}
+
+// Register the command
+facades.Schedule().Command("user:create").EveryMinute()
+
+// Run a command
+go run . artisan user:create
+```
+
+### Logging
+
+```go
+// Log messages at different levels
+facades.Log().Debug("Debug message")
+facades.Log().Info("Info message")
+facades.Log().Warning("Warning message")
+facades.Log().Error("Error message")
+```
+
+### Configuration
+
+```go
+// Access configuration values
+appName := facades.Config().GetString("app.name")
+dbConnection := facades.Config().GetString("database.default")
+```
+
+### Validation
+
+```go
+// Validate request data
+validator := validation.Make(map[string]any{
+    "name": "Goravel",
+    "email": "goravel@example.com",
+})
+
+validator.Rules(map[string]string{
+    "name": "required|max:255",
+    "email": "required|email",
+})
+
+if validator.Fails() {
+    errors := validator.Errors()
+    // Handle validation errors
+}
+```
+
 ## Troubleshooting
 
 ### Common Issues
