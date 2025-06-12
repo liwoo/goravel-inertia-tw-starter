@@ -1,6 +1,5 @@
 import * as React from "react"
 import {
-    ArrowUpCircleIcon,
     BarChartIcon,
     CameraIcon,
     ClipboardListIcon,
@@ -12,8 +11,10 @@ import {
     HelpCircleIcon,
     LayoutDashboardIcon,
     ListIcon,
+    MoonIcon,
     SearchIcon,
     SettingsIcon,
+    SunIcon,
     UsersIcon,
 } from "lucide-react"
 
@@ -21,13 +22,13 @@ import {NavDocuments} from "@/components/nav-documents"
 import {NavMain} from "@/components/nav-main"
 import {NavSecondary} from "@/components/nav-secondary"
 import {NavUser} from "@/components/nav-user"
+import {useTheme} from "@/context/ThemeContext"
 import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
     SidebarHeader,
     SidebarMenu,
-    SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
@@ -149,22 +150,27 @@ const data = {
 }
 
 export function AppSidebar({user, ...props}: React.ComponentProps<typeof Sidebar>) {
+    const { theme, toggleTheme } = useTheme();
+    
     return (
         <Sidebar collapsible="offcanvas" {...props}>
             <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton
-                            asChild
-                            className="data-[slot=sidebar-menu-button]:!p-1.5"
-                        >
-                            <a href="#">
-                                <ArrowUpCircleIcon className="h-5 w-5"/>
-                                <span className="text-base font-semibold">Acme Inc.</span>
-                            </a>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                <div className="flex items-center justify-between px-3 py-2">
+                    <a href="/dashboard" className="flex items-center gap-2">
+                        <img src="/placeholder.svg" alt="Logo" className="h-8 w-auto" />
+                    </a>
+                    <button
+                        onClick={toggleTheme}
+                        className="rounded-md p-2 hover:bg-sidebar-accent transition-colors"
+                        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                    >
+                        {theme === 'dark' ? (
+                            <SunIcon className="h-5 w-5" />
+                        ) : (
+                            <MoonIcon className="h-5 w-5" />
+                        )}
+                    </button>
+                </div>
             </SidebarHeader>
             <SidebarContent>
                 <NavMain items={data.navMain}/>

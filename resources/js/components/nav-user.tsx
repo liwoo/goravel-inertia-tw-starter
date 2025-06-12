@@ -90,26 +90,26 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <UserCircleIcon />
-                <Link href="/account">
-                  Account
+              <DropdownMenuItem asChild>
+                <Link href="/account" className="flex items-center w-full">
+                  <UserCircleIcon className="mr-2 h-4 w-4" />
+                  <span>Account</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <CreditCardIcon />
-                Billing
+                <CreditCardIcon className="mr-2 h-4 w-4" />
+                <span>Billing</span>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <BellIcon />
-                Notifications
+                <BellIcon className="mr-2 h-4 w-4" />
+                <span>Notifications</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOutIcon />
-              <Link href="/logout" method="post">
-              Log out
+            <DropdownMenuItem asChild>
+              <Link href="/logout" method="post" className="flex items-center w-full">
+                <LogOutIcon className="mr-2 h-4 w-4" />
+                <span>Log out</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
