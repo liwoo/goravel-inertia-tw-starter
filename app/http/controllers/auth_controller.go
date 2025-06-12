@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/facades"
@@ -121,15 +122,13 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 	if err := facades.Auth(ctx).Logout(); err != nil {
 		// It's good to log this, but for the user, redirecting is usually best.
 		facades.Log().Error("Error during logout: " + err.Error())
+		fmt.Println("Error during logout: " + err.Error())
 		// Even if logout fails on the server, try to clear client-side session by redirecting.
 		return ctx.Response().Redirect(http.StatusFound, "/")
 	}
 
-	xInertiaHeader := ctx.Request().Header("X-Inertia", "")
-	// Redirect to login page on successful logout
-	if xInertiaHeader == "true" {
-		return ctx.Response().Redirect(http.StatusSeeOther, "/")
-	} else {
-		return ctx.Response().Redirect(http.StatusSeeOther, "/login")
-	}
+	fmt.Println("Logout successful")
+
+	return ctx.Response().Redirect(http.StatusFound, "/")
+
 }
