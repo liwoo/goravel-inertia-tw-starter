@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 // @ts-ignore
 import { createInertiaApp, PageProps, AppType } from '@inertiajs/react';
 import '../css/app.css';
+import { ThemeProvider } from './context/ThemeContext'; 
 
 const appName = import.meta.env.VITE_APP_NAME || 'Blog';
 
@@ -23,7 +24,11 @@ createInertiaApp({
   },
   setup({ el, App, props }: { el: HTMLElement; App: AppType<PageProps>; props: PageProps }) {
     const root = createRoot(el);
-    root.render(<App {...props} />); 
+    root.render(
+      <ThemeProvider>
+        <App {...props} />
+      </ThemeProvider>
+    ); 
   },
   progress: {
     color: '#4B5563',

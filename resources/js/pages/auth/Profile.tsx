@@ -7,7 +7,10 @@ const Profile = () => {
     return (
         <AdminLayout title="My Profile">
             <Head title="My Profile" />
-            <div>Profile</div>
+            <div className="p-4">
+                <h1 className="text-xl mt-4">Profile Page Content</h1>
+                {/* Add more profile content here */}
+            </div>
         </AdminLayout>
     );
 };

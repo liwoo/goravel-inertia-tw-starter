@@ -1,129 +1,199 @@
-<div align="center">
+# Goravel Blog Application
 
-<img src="https://www.goravel.dev/logo.png?v=1.14.x" width="300" alt="Logo">
+A modern web application built with Goravel (Go) and React, featuring JWT authentication, dark mode, and a responsive UI.
 
-[![Doc](https://pkg.go.dev/badge/github.com/goravel/framework)](https://pkg.go.dev/github.com/goravel/framework)
-[![Go](https://img.shields.io/github/go-mod/go-version/goravel/framework)](https://go.dev/)
-[![Release](https://img.shields.io/github/release/goravel/framework.svg)](https://github.com/goravel/framework/releases)
-[![Test](https://github.com/goravel/framework/actions/workflows/test.yml/badge.svg)](https://github.com/goravel/framework/actions)
-[![Report Card](https://goreportcard.com/badge/github.com/goravel/framework)](https://goreportcard.com/report/github.com/goravel/framework)
-[![Codecov](https://codecov.io/gh/goravel/framework/branch/master/graph/badge.svg)](https://codecov.io/gh/goravel/framework)
-![License](https://img.shields.io/github/license/goravel/framework)
+## Getting Started
 
-</div>
+This guide will help you set up and run the application locally for development.
 
-English | [中文](./README_zh.md)
+### Prerequisites
 
-## About Goravel
+- Go 1.18 or higher
+- Node.js 16 or higher
+- NPM or Yarn
+- MySQL or PostgreSQL database
 
-Goravel is a web application framework with complete functions and good scalability. As a starting scaffolding to help
-Gopher quickly build their own applications.
+### Installation
 
-The framework style is consistent with [Laravel](https://github.com/laravel/laravel), let Php developer don't need to learn a
-new framework, but also happy to play around Golang! In tribute to Laravel!
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd blog
+   ```
 
-Welcome to star, PR and issues！
+2. Install Go dependencies:
+   ```bash
+   go mod download
+   ```
 
-## Getting started
+3. Install JavaScript dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+4. Configure your environment:
+   - Copy `.env.example` to `.env`
+   - Update database credentials and other settings in `.env`
+
+5. Run database migrations:
+   ```bash
+   go run . artisan migrate
+   ```
+
+6. Generate application key:
+   ```bash
+   go run . artisan key:generate
+   ```
+
+### Creating an Admin User
+
+To create an admin user, run:
+
+```bash
+go run . artisan user:create
+```
+
+Follow the prompts to enter email, name, and password.
+
+### Running the Application
+
+For development, you'll need to run two processes in separate terminal windows:
+
+#### Terminal 1: Backend Server (with Air for hot-reload)
+
+```bash
+# If you don't have Air installed:
+go install github.com/cosmtrek/air@latest
+
+# Run the backend server with hot-reload
+air
+```
+
+#### Terminal 2: Frontend Assets (with Vite)
+
+```bash
+# Run Vite development server
+npm run dev
+# or
+yarn dev
+```
+
+The application should now be running at `http://localhost:8000`
+
+## Project Structure
+
+### Backend Structure
 
 ```
-// Generate APP_KEY
-go run . artisan key:generate
-
-// Route
-facades.Route().Get("/", userController.Show)
-
-// ORM
-facades.Orm().Query().With("Author").First(&user)
-
-// Task Scheduling
-facades.Schedule().Command("send:emails name").EveryMinute()
-
-// Log
-facades.Log().Debug(message)
-
-// Cache
-value := facades.Cache().Get("goravel", "default")
-
-// Queues
-err := facades.Queue().Job(&jobs.Test{}, []queue.Arg{}).Dispatch()
+├── app/                  # Application code
+│   ├── http/             # HTTP layer (controllers, middleware)
+│   │   ├── controllers/  # Request handlers
+│   │   └── middleware/   # HTTP middleware
+│   ├── models/           # Database models
+│   └── providers/        # Service providers
+├── bootstrap/            # Application bootstrap code
+├── config/               # Configuration files
+├── database/             # Database migrations and seeds
+├── public/               # Public assets
+├── resources/            # Frontend resources
+│   ├── css/              # CSS files
+│   └── js/               # JavaScript/TypeScript files
+├── routes/               # Route definitions
+│   ├── api.go            # API routes
+│   └── web.go            # Web routes
+└── storage/              # Storage for logs, cache, etc.
 ```
 
-## Documentation
+### Frontend Structure
 
-Online documentation [https://www.goravel.dev](https://www.goravel.dev)
+```
+resources/
+├── css/
+│   └── app.css           # Global CSS with theme variables
+└── js/
+    ├── app.tsx           # Main React entry point
+    ├── components/       # Reusable UI components
+    │   ├── ThemeToggle.tsx       # Dark/light mode toggle
+    │   └── app-sidebar.tsx       # Sidebar with theme toggle
+    ├── context/
+    │   └── ThemeContext.tsx      # Theme context provider
+    ├── layouts/          # Page layouts
+    │   ├── Admin.tsx     # Layout for authenticated users
+    │   └── Auth.tsx      # Layout for login/register pages
+    └── pages/            # Page components
+        ├── auth/         # Authentication pages
+        └── dashboard/    # Dashboard pages
+```
 
-Example [https://github.com/goravel/example](https://github.com/goravel/example)
+## Key Features
 
-> To optimize the documentation, please submit a PR to the documentation
-> repository [https://github.com/goravel/docs](https://github.com/goravel/docs)
+### Authentication
 
-## Main Function
+- JWT-based authentication
+- Login, registration, and logout functionality
+- Protected routes with middleware
 
-|                                                                                        |                                                                 |                                                                          |                                                                       |                                                                                |
-|----------------------------------------------------------------------------------------|-----------------------------------------------------------------|--------------------------------------------------------------------------|-----------------------------------------------------------------------|--------------------------------------------------------------------------------|
-| [Config](https://www.goravel.dev/getting-started/configuration.html)                   | [Http](https://www.goravel.dev/the-basics/routing.html)         | [Authentication](https://www.goravel.dev/security/authentication.html)   | [Authorization](https://www.goravel.dev/security/authorization.html)  | [Orm](https://www.goravel.dev/orm/getting-started.html)                        |
-| [Migrate](https://www.goravel.dev/orm/migrations.html)                                 | [Logger](https://www.goravel.dev/the-basics/logging.html)       | [Cache](https://www.goravel.dev/digging-deeper/cache.html)               | [Grpc](https://www.goravel.dev/the-basics/grpc.html)                  | [Artisan Console](https://www.goravel.dev/digging-deeper/artisan-console.html) |
-| [Task Scheduling](https://www.goravel.dev/digging-deeper/task-scheduling.html)         | [Queue](https://www.goravel.dev/digging-deeper/queues.html)     | [Event](https://www.goravel.dev/digging-deeper/event.html)               | [FileStorage](https://www.goravel.dev/digging-deeper/filesystem.html) | [Mail](https://www.goravel.dev/digging-deeper/mail.html)                       |
-| [Validation](https://www.goravel.dev/the-basics/validation.html)                       | [Mock](https://www.goravel.dev/testing/mock.html)               | [Hash](https://www.goravel.dev/security/hashing.html)                    | [Crypt](https://www.goravel.dev/security/encryption.html)             | [Carbon](https://www.goravel.dev/digging-deeper/helpers.html)                  |
-| [Package Development](https://www.goravel.dev/digging-deeper/package-development.html) | [Testing](https://www.goravel.dev/testing/getting-started.html) | [Localization](https://www.goravel.dev/digging-deeper/localization.html) | [Session](https://www.goravel.dev/the-basics/session.html)            |                                                                                |
+### Layouts
 
-## Roadmap
+The application uses two main layouts:
 
-[For Detail](https://github.com/goravel/goravel/issues?q=is%3Aissue+is%3Aopen)
+1. **Auth Layout** (`resources/js/layouts/Auth.tsx`)
+   - Used for login, registration, and password reset pages
+   - Features a split-screen design with logo and theme toggle
+   - Displays a form in the center of the screen
 
-## Excellent Extend Packages
+2. **Admin Layout** (`resources/js/layouts/Admin.tsx`)
+   - Used for authenticated user pages
+   - Features a sidebar navigation with collapsible menu
+   - Includes user dropdown menu and theme toggle
 
-[For Detail](https://www.goravel.dev/prologue/packages.html)
+### Routing
 
-## Contributors
+Routes are defined in two main files:
 
-This project exists thanks to all the people who contribute, to participate in the contribution, please see [Contribution Guide](https://www.goravel.dev/prologue/contributions.html).
+1. **Web Routes** (`routes/web.go`)
+   - Public routes (login, register)
+   - Protected routes that require authentication
+   - Middleware groups for JWT authentication
 
-<a href="https://github.com/hwbrzzl" target="_blank"><img src="https://avatars.githubusercontent.com/u/24771476?v=4" width="48" height="48"></a>
-<a href="https://github.com/DevHaoZi" target="_blank"><img src="https://avatars.githubusercontent.com/u/115467771?v=4" width="48" height="48"></a>
-<a href="https://github.com/kkumar-gcc" target="_blank"><img src="https://avatars.githubusercontent.com/u/84431594?v=4" width="48" height="48"></a>
-<a href="https://github.com/almas1992" target="_blank"><img src="https://avatars.githubusercontent.com/u/9382335?v=4" width="48" height="48"></a>
-<a href="https://github.com/merouanekhalili" target="_blank"><img src="https://avatars.githubusercontent.com/u/1122628?v=4" width="48" height="48"></a>
-<a href="https://github.com/hongyukeji" target="_blank"><img src="https://avatars.githubusercontent.com/u/23145983?v=4" width="48" height="48"></a>
-<a href="https://github.com/sidshrivastav" target="_blank"><img src="https://avatars.githubusercontent.com/u/28773690?v=4" width="48" height="48"></a>
-<a href="https://github.com/Juneezee" target="_blank"><img src="https://avatars.githubusercontent.com/u/20135478?v=4" width="48" height="48"></a>
-<a href="https://github.com/dragoonchang" target="_blank"><img src="https://avatars.githubusercontent.com/u/1432336?v=4" width="48" height="48"></a>
-<a href="https://github.com/dhanusaputra" target="_blank"><img src="https://avatars.githubusercontent.com/u/35093673?v=4" width="48" height="48"></a>
-<a href="https://github.com/mauri870" target="_blank"><img src="https://avatars.githubusercontent.com/u/10168637?v=4" width="48" height="48"></a>
-<a href="https://github.com/Marian0" target="_blank"><img src="https://avatars.githubusercontent.com/u/624592?v=4" width="48" height="48"></a>
-<a href="https://github.com/ahmed3mar" target="_blank"><img src="https://avatars.githubusercontent.com/u/12982325?v=4" width="48" height="48"></a>
-<a href="https://github.com/flc1125" target="_blank"><img src="https://avatars.githubusercontent.com/u/14297703?v=4" width="48" height="48"></a>
-<a href="https://github.com/zzpwestlife" target="_blank"><img src="https://avatars.githubusercontent.com/u/12382180?v=4" width="48" height="48"></a>
-<a href="https://github.com/juantarrel" target="_blank"><img src="https://avatars.githubusercontent.com/u/7213379?v=4" width="48" height="48"></a>
-<a href="https://github.com/Kamandlou" target="_blank"><img src="https://avatars.githubusercontent.com/u/77993374?v=4" width="48" height="48"></a>
-<a href="https://github.com/livghit" target="_blank"><img src="https://avatars.githubusercontent.com/u/108449432?v=4" width="48" height="48"></a>
-<a href="https://github.com/jeff87218" target="_blank"><img src="https://avatars.githubusercontent.com/u/29706585?v=4" width="48" height="48"></a>
-<a href="https://github.com/shayan-yousefi" target="_blank"><img src="https://avatars.githubusercontent.com/u/19957980?v=4" width="48" height="48"></a>
-<a href="https://github.com/zxdstyle" target="_blank"><img src="https://avatars.githubusercontent.com/u/38398954?v=4" width="48" height="48"></a>
-<a href="https://github.com/milwad-dev" target="_blank"><img src="https://avatars.githubusercontent.com/u/98118400?v=4" width="48" height="48"></a>
-<a href="https://github.com/mdanialr" target="_blank"><img src="https://avatars.githubusercontent.com/u/48054961?v=4" width="48" height="48"></a>
-<a href="https://github.com/KlassnayaAfrodita" target="_blank"><img src="https://avatars.githubusercontent.com/u/113383200?v=4" width="48" height="48"></a>
-<a href="https://github.com/YlanzinhoY" target="_blank"><img src="https://avatars.githubusercontent.com/u/102574758?v=4" width="48" height="48"></a>
-<a href="https://github.com/gouguoyin" target="_blank"><img src="https://avatars.githubusercontent.com/u/13517412?v=4" width="48" height="48"></a>
-<a href="https://github.com/dzham" target="_blank"><img src="https://avatars.githubusercontent.com/u/10853451?v=4" width="48" height="48"></a>
-<a href="https://github.com/praem90" target="_blank"><img src="https://avatars.githubusercontent.com/u/6235720?v=4" width="48" height="48"></a>
-<a href="https://github.com/vendion" target="_blank"><img src="https://avatars.githubusercontent.com/u/145018?v=4" width="48" height="48"></a>
-<a href="https://github.com/tzsk" target="_blank"><img src="https://avatars.githubusercontent.com/u/13273787?v=4" width="48" height="48"></a>
-<a href="https://github.com/ycb1986" target="_blank"><img src="https://avatars.githubusercontent.com/u/12908032?v=4" width="48" height="48"></a>
+2. **API Routes** (`routes/api.go`)
+   - API endpoints for AJAX requests
+   - Protected by JWT authentication
 
-## Sponsor
+### Dark Mode
 
-Better development of the project is inseparable from your support, reward us by [Open Collective](https://opencollective.com/goravel).
+The application supports dark mode with:
 
-<p align="left"><img src="https://www.goravel.dev/reward.png" width="200"></p>
+- Theme toggle in both layouts
+- CSS variables for theming in `resources/css/app.css`
+- Theme state persisted in localStorage
 
-## Group
+## Troubleshooting
 
-Welcome more discussion in Discord.
+### Common Issues
 
-[https://discord.gg/cFc5csczzS](https://discord.gg/cFc5csczzS)
+1. **Database Connection Issues**
+   - Verify database credentials in `.env`
+   - Ensure database server is running
+
+2. **JWT Authentication Issues**
+   - Check that `JWT_SECRET` is set in `.env`
+   - Verify token expiration settings
+
+3. **Frontend Build Issues**
+   - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
+   - Check for JavaScript errors in browser console
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit your changes: `git commit -m 'Add some feature'`
+4. Push to the branch: `git push origin feature-name`
+5. Submit a pull request
 
 ## License
 
-The Goravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is licensed under the MIT License - see the LICENSE file for details.
