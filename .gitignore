@@ -1,0 +1,8 @@
+.idea
+.DS_Store
+.env
+.env.*
+!.env.example
+storage/framework
+# node_modules
+node_modules/*
