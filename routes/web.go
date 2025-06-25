@@ -1,13 +1,14 @@
 package routes
 
 import (
+	"players/app/http/controllers"
+	inertiaHelper "players/app/http/inertia"
+	"players/app/http/middleware"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support"
-	"players/app/http/controllers"
-	inertiaHelper "players/app/http/inertia"
-	"players/app/http/middleware"
 )
 
 func Web() {

@@ -1,7 +1,9 @@
 package config
 
 import (
+	"github.com/goravel/framework/contracts/cache"
 	"github.com/goravel/framework/facades"
+	redisfacades "github.com/goravel/redis/facades"
 )
 
 func init() {
@@ -12,7 +14,7 @@ func init() {
 		// This option controls the default cache connection that gets used while
 		// using this caching library. This connection is used when another is
 		// not explicitly specified when executing a given caching function.
-		"default": config.Env("CACHE_STORE", "memory"),
+		"default": config.Env("CACHE_STORE", "redis"),
 
 		// Cache Stores
 		//
@@ -23,6 +25,13 @@ func init() {
 		"stores": map[string]any{
 			"memory": map[string]any{
 				"driver": "memory",
+			},
+			"redis": map[string]any{
+				"driver":     "custom",
+				"connection": "default",
+				"via": func() (cache.Driver, error) {
+					return redisfacades.Redis("redis"), nil // The `redis` value is the key of `stores`
+				},
 			},
 		},
 

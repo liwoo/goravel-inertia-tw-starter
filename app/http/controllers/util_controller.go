@@ -1,8 +1,9 @@
 package controllers
 
 import (
-	"github.com/goravel/framework/contracts/http"
 	"players/app/http/inertia"
+
+	"github.com/goravel/framework/contracts/http"
 )
 
 type UtilController struct {
