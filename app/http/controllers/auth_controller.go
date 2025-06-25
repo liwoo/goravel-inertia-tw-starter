@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"players/app/http/inertia"
+	"players/app/http/middleware"
 	"players/app/models" // Assuming your User model is here
 	"time"
 
@@ -12,11 +13,13 @@ import (
 )
 
 type AuthController struct {
-	// Dependencies can be injected here
+	passwordAttemptTracker *middleware.PasswordAttemptTracker
 }
 
 func NewAuthController() *AuthController {
-	return &AuthController{}
+	return &AuthController{
+		passwordAttemptTracker: middleware.NewPasswordAttemptTracker(),
+	}
 }
 
 // LoginRequest defines the structure for login requests.
@@ -77,21 +80,100 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		})
 	}
 
+	// Check if user is locked before attempting login
+	status, err := r.passwordAttemptTracker.CheckUserStatus(ctx.Context(), loginRequest.Email)
+	if err != nil {
+		facades.Log().Error("Error checking user status: " + err.Error())
+		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
+			"errors": map[string]string{"general": "Internal server error. Please try again later."},
+		})
+	}
+
+	if status.IsLocked {
+		lockMessage := "Account temporarily locked due to too many failed login attempts."
+		if status.LockExpiresAt != nil {
+			lockMessage = fmt.Sprintf("Account locked until %s due to too many failed login attempts.",
+				status.LockExpiresAt.Format("2006-01-02 15:04:05"))
+		}
+
+		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
+			"errors": map[string]string{
+				"email": lockMessage,
+			},
+		})
+	}
+
 	var user models.User
 	// Find user by email
 	if err := facades.Orm().Query().Where("email", loginRequest.Email).First(&user); err != nil {
-		// Return login page with credential error
+		// Record failed attempt for non-existent email too (to prevent email enumeration)
+		if result, attemptErr := r.passwordAttemptTracker.RecordFailedAttempt(ctx.Context(), loginRequest.Email); attemptErr != nil {
+			facades.Log().Error("Error recording failed attempt: " + attemptErr.Error())
+		} else {
+			// Add warning message if needed
+			if result.ShouldWarn {
+				return inertia.Render(ctx, "auth/Login", map[string]interface{}{
+					"errors": map[string]string{
+						"email": fmt.Sprintf("Invalid credentials. Warning: %d more failed attempts will result in account lockout.", result.RemainingAttempts),
+					},
+				})
+			}
+			if result.IsLocked {
+				lockMessage := "Account temporarily locked due to too many failed login attempts."
+				if result.LockExpiresAt != nil {
+					lockMessage = fmt.Sprintf("Account locked until %s due to too many failed login attempts.",
+						result.LockExpiresAt.Format("2006-01-02 15:04:05"))
+				}
+				return inertia.Render(ctx, "auth/Login", map[string]interface{}{
+					"errors": map[string]string{
+						"email": lockMessage,
+					},
+				})
+			}
+		}
+
 		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
-			"errors": map[string]string{"email": "Invalid credentials (email not found)"},
+			"errors": map[string]string{"email": "Invalid credentials"},
 		})
 	}
 
 	// Check password
 	if !facades.Hash().Check(loginRequest.Password, user.Password) {
-		// Return login page with credential error
+		// Record failed attempt
+		if result, attemptErr := r.passwordAttemptTracker.RecordFailedAttempt(ctx.Context(), loginRequest.Email); attemptErr != nil {
+			facades.Log().Error("Error recording failed attempt: " + attemptErr.Error())
+		} else {
+			// Add warning message if needed
+			if result.ShouldWarn {
+				return inertia.Render(ctx, "auth/Login", map[string]interface{}{
+					"errors": map[string]string{
+						"password": fmt.Sprintf("Invalid credentials. Warning: %d more failed attempts will result in account lockout.", result.RemainingAttempts),
+					},
+				})
+			}
+			if result.IsLocked {
+				lockMessage := "Account temporarily locked due to too many failed login attempts."
+				if result.LockExpiresAt != nil {
+					lockMessage = fmt.Sprintf("Account locked until %s due to too many failed login attempts.",
+						result.LockExpiresAt.Format("2006-01-02 15:04:05"))
+				}
+				return inertia.Render(ctx, "auth/Login", map[string]interface{}{
+					"errors": map[string]string{
+						"password": lockMessage,
+					},
+				})
+			}
+		}
+
 		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
-			"errors": map[string]string{"password": "Invalid credentials (password mismatch)"},
+			"errors": map[string]string{"password": "Invalid credentials"},
 		})
+	}
+
+	// Clear failed attempts on successful login
+	if err := r.passwordAttemptTracker.ClearAttempts(ctx.Context(), loginRequest.Email); err != nil {
+		facades.Log().Error("Error clearing failed attempts: " + err.Error())
+		// Don't fail the login for this, just log it
 	}
 
 	// Log the user in and get the token
@@ -129,5 +211,4 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 	fmt.Println("Logout successful")
 
 	return ctx.Response().Redirect(http.StatusFound, "/")
-
 }
