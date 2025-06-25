@@ -3,8 +3,8 @@ import { createRoot } from 'react-dom/client';
 // @ts-ignore
 import { createInertiaApp, PageProps, AppType } from '@inertiajs/react';
 import '../css/app.css';
-import { ThemeProvider } from './context/ThemeContext'; 
-import { Toaster } from 'sonner';
+import { ThemeProvider } from './context/ThemeContext';
+import { Toaster } from './components/ui/sonner';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Blog';
 
@@ -30,7 +30,7 @@ createInertiaApp({
         <App {...props} />
         <Toaster richColors position="top-right" />
       </ThemeProvider>
-    ); 
+    );
   },
   progress: {
     color: '#4B5563',

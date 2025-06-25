@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"fmt"
+	"players/app/http/inertia"
+	"players/app/models" // Assuming your User model is here
+	"time"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/facades"
-	"players/app/models" // Assuming your User model is here
-	"time"
 )
 
 type AuthController struct {
@@ -63,34 +65,31 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	var loginRequest LoginRequest
 	errors, err := ctx.Request().ValidateRequest(&loginRequest)
 	if err != nil {
-		// For Inertia, it's often better to redirect back with errors
-		// or return a JSON response that Inertia can handle to show errors on the form.
-		// However, for a direct API-like error, this is fine.
-		return ctx.Response().Status(http.StatusInternalServerError).Json(http.Json{
-			"message": "Error validating request: " + err.Error(),
+		// For Inertia, return validation error
+		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
+			"errors": map[string]string{"general": "Error validating request: " + err.Error()},
 		})
 	}
 	if errors != nil {
-		// Redirect back with validation errors for Inertia to display
-		// This assumes your frontend is set up to handle these errors.
-		// If using inertia-react, errors are typically passed as props.
-		// For simplicity in this step, we'll return JSON, but a redirect back is common.
-		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(errors.All())
+		// Return the login page with validation errors
+		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
+			"errors": errors.All(),
+		})
 	}
 
 	var user models.User
 	// Find user by email
 	if err := facades.Orm().Query().Where("email", loginRequest.Email).First(&user); err != nil {
-		// Return error that can be displayed on the login form
-		return ctx.Response().Status(http.StatusUnauthorized).Json(http.Json{
+		// Return login page with credential error
+		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
 			"errors": map[string]string{"email": "Invalid credentials (email not found)"},
 		})
 	}
 
 	// Check password
 	if !facades.Hash().Check(loginRequest.Password, user.Password) {
-		// Return error that can be displayed on the login form
-		return ctx.Response().Status(http.StatusUnauthorized).Json(http.Json{
+		// Return login page with credential error
+		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
 			"errors": map[string]string{"password": "Invalid credentials (password mismatch)"},
 		})
 	}
@@ -98,8 +97,8 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	// Log the user in and get the token
 	token, err := facades.Auth(ctx).Login(&user)
 	if err != nil {
-		return ctx.Response().Status(http.StatusInternalServerError).Json(http.Json{
-			"message": "Error during login: " + err.Error(),
+		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
+			"errors": map[string]string{"general": "Error during login: " + err.Error()},
 		})
 	}
 
