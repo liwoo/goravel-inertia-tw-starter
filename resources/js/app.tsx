@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { createInertiaApp, PageProps, AppType } from '@inertiajs/react';
 import '../css/app.css';
 import { ThemeProvider } from './context/ThemeContext'; 
+import { Toaster } from 'sonner';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Blog';
 
@@ -27,6 +28,7 @@ createInertiaApp({
     root.render(
       <ThemeProvider>
         <App {...props} />
+        <Toaster richColors position="top-right" />
       </ThemeProvider>
     ); 
   },
