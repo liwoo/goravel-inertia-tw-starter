@@ -7,11 +7,16 @@ import { useForm } from '@inertiajs/react';
 import React from 'react';
 import { toast } from "sonner";
 
+interface LoginFormProps extends React.ComponentPropsWithoutRef<"form"> {
+  errors?: Record<string, string>;
+}
+
 export function LoginForm({
   className,
+  errors: serverErrors = {},
   ...props
-}: React.ComponentPropsWithoutRef<"form">) {
-  const { data, setData, post, processing, errors, reset } = useForm({
+}: LoginFormProps) {
+  const { data, setData, post, processing, errors: formErrors, reset } = useForm({
     email: '',
     password: '',
   });
@@ -21,13 +26,7 @@ export function LoginForm({
     post('/login', {
       onFinish: () => reset('password'),
       onError: (errors: any) => {
-        // Show toast notifications for specific errors
-        if (errors.email) {
-          toast.error(errors.email);
-        }
-        if (errors.password) {
-          toast.error(errors.password);
-        }
+        // Show toast notifications for general/system errors only
         if (errors.general) {
           toast.error(errors.general);
         }
@@ -38,6 +37,10 @@ export function LoginForm({
     });
   };
 
+  // Server errors should take precedence over form errors
+  // This ensures that password attempt warnings are displayed
+  const allErrors = { ...formErrors, ...serverErrors };
+
   return (
     <form onSubmit={handleSubmit} className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="flex flex-col items-center gap-2 text-center">
@@ -46,6 +49,21 @@ export function LoginForm({
           Enter your email below to login to your account
         </p>
       </div>
+
+      {/* Display general error messages */}
+      {allErrors.general && (
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md text-sm">
+          {allErrors.general}
+        </div>
+      )}
+
+      {/* Display warning messages */}
+      {allErrors.warning && (
+        <div className="bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 px-4 py-3 rounded-md text-sm font-medium">
+          {allErrors.warning}
+        </div>
+      )}
+
       <div className="grid gap-6">
         <div className="grid gap-2">
           <Label htmlFor="email">Email</Label>
@@ -56,9 +74,9 @@ export function LoginForm({
             value={data.email}
             onChange={(e) => setData('email', e.target.value)}
             required
-            className={errors.email ? "border-red-500" : ""}
+            className={allErrors.email ? "border-red-500" : ""}
           />
-          {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+          {allErrors.email && <p className="text-xs text-red-500 mt-1">{allErrors.email}</p>}
         </div>
         <div className="grid gap-2">
           <div className="flex items-center">
@@ -76,9 +94,9 @@ export function LoginForm({
             value={data.password}
             onChange={(e) => setData('password', e.target.value)}
             required
-            className={errors.password ? "border-red-500" : ""}
+            className={allErrors.password ? "border-red-500" : ""}
           />
-          {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
+          {allErrors.password && <p className="text-xs text-red-500 mt-1">{allErrors.password}</p>}
         </div>
         <Button type="submit" className="w-full" disabled={processing}>
           {processing ? 'Logging in...' : 'Login'}

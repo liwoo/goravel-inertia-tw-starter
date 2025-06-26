@@ -98,7 +98,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
 			"errors": map[string]string{
-				"email": lockMessage,
+				"general": lockMessage,
 			},
 		})
 	}
@@ -114,7 +114,8 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 			if result.ShouldWarn {
 				return inertia.Render(ctx, "auth/Login", map[string]interface{}{
 					"errors": map[string]string{
-						"email": fmt.Sprintf("Invalid credentials. Warning: %d more failed attempts will result in account lockout.", result.RemainingAttempts),
+						"email":   "Invalid credentials",
+						"warning": fmt.Sprintf("Warning: %d more failed attempts will result in account lockout.", result.RemainingAttempts),
 					},
 				})
 			}
@@ -126,7 +127,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 				}
 				return inertia.Render(ctx, "auth/Login", map[string]interface{}{
 					"errors": map[string]string{
-						"email": lockMessage,
+						"general": lockMessage,
 					},
 				})
 			}
@@ -147,7 +148,8 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 			if result.ShouldWarn {
 				return inertia.Render(ctx, "auth/Login", map[string]interface{}{
 					"errors": map[string]string{
-						"password": fmt.Sprintf("Invalid credentials. Warning: %d more failed attempts will result in account lockout.", result.RemainingAttempts),
+						"password": "Invalid credentials. Password mismatch.",
+						"warning":  fmt.Sprintf("Warning: %d more failed attempts will result in account lockout.", result.RemainingAttempts),
 					},
 				})
 			}
@@ -159,14 +161,14 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 				}
 				return inertia.Render(ctx, "auth/Login", map[string]interface{}{
 					"errors": map[string]string{
-						"password": lockMessage,
+						"general": lockMessage,
 					},
 				})
 			}
 		}
 
 		return inertia.Render(ctx, "auth/Login", map[string]interface{}{
-			"errors": map[string]string{"password": "Invalid credentials"},
+			"errors": map[string]string{"password": "Invalid credentials. Password mismatch."},
 		})
 	}
 
