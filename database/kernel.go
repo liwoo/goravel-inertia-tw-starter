@@ -20,6 +20,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250626020332CreatePermissionsTable{},
 		&migrations.M20250626020339CreateUserRolesTable{},
 		&migrations.M20250626020345CreateRolePermissionsTable{},
+		&migrations.M20250628091858AddIsSuperAdminToUsersTable{},
 	}
 }
 
@@ -27,5 +28,6 @@ func (kernel Kernel) Seeders() []seeder.Seeder {
 	return []seeder.Seeder{
 		&seeders.DatabaseSeeder{},
 		&seeders.BookSeeder{},
+		&seeders.RBACSeeder{},
 	}
 }

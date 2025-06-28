@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// @ts-ignore
 import { Head, router } from '@inertiajs/react';
 import { Download, Upload, FileText, BarChart3, BookOpen, Users } from 'lucide-react';
 import { 
@@ -116,11 +117,20 @@ export default function BooksIndex({
     const format = prompt('Export format (csv, json, excel):') || 'csv';
     const options: BookExportOptions = {
       format: format as any,
-      filters: { ...filters, bookIds },
+      filters: filters,
     };
     
+    // Build params including bookIds separately
+    const params = new URLSearchParams({
+      format: format,
+      bookIds: bookIds.join(','),
+      ...Object.fromEntries(
+        Object.entries(filters || {}).map(([key, value]) => [key, String(value)])
+      ),
+    });
+    
     // Trigger download
-    window.open(`/api/books/export?${new URLSearchParams(options as any).toString()}`);
+    window.open(`/api/books/export?${params.toString()}`);
   };
 
   const handleBulkAddTags = (bookIds: number[]) => {

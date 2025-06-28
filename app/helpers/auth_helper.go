@@ -103,7 +103,7 @@ func (h *AuthHelper) IsSuperAdmin(user interface{}) bool {
 		return false
 	}
 	
-	return u.IsSuperAdmin()
+	return u.IsSuperAdminUser()
 }
 
 func (h *AuthHelper) IsAuthenticated(ctx http.Context) bool {

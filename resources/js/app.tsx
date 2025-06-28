@@ -4,7 +4,8 @@ import { createRoot } from 'react-dom/client';
 import { createInertiaApp, PageProps, AppType } from '@inertiajs/react';
 import '../css/app.css';
 import { Toaster } from 'sonner';
-import { PermissionsProvider } from '@/contexts/PermissionsContext'; 
+import { PermissionsProvider } from '@/contexts/PermissionsContext';
+import { ThemeProvider } from '@/context/ThemeContext'; 
 
 const appName = import.meta.env.VITE_APP_NAME || 'Blog';
 
@@ -21,12 +22,14 @@ createInertiaApp({
       throw new Error(`Page component "${name}" not found.`);
     }
 
-    // Wrap each page component with PermissionsProvider
+    // Wrap each page component with ThemeProvider and PermissionsProvider
     const PageComponent = pageModule.default;
     const WrappedPage = (props: any) => (
-      <PermissionsProvider>
-        <PageComponent {...props} />
-      </PermissionsProvider>
+      <ThemeProvider>
+        <PermissionsProvider>
+          <PageComponent {...props} />
+        </PermissionsProvider>
+      </ThemeProvider>
     );
 
     return WrappedPage;

@@ -18,7 +18,7 @@ cp .env.example .env
 # Setup database and permissions
 go run . artisan migrate
 go run . artisan key:generate
-go run . artisan seed --seeder=rbac
+go run . artisan seed #Seeds RBAC permissions as well as Books
 go run . artisan user:create-admin
 
 # Run the application

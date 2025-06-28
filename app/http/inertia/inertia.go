@@ -129,7 +129,7 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 					"role":        userWithRoles.Role,
 					"roles":       rolesList,
 					"permissions": userPermissions,
-					"isSuperAdmin": userWithRoles.IsSuperAdmin(),
+					"isSuperAdmin": userWithRoles.IsSuperAdminUser(),
 					"isAdmin":     userWithRoles.IsAdmin(),
 				},
 				"permissions": allPermissions,

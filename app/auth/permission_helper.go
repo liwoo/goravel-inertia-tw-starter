@@ -167,7 +167,7 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 		
 		// Admin permissions (legacy)
 		"isAdmin":      user.IsAdmin(),
-		"isSuperAdmin": user.IsSuperAdmin(),
+		"isSuperAdmin": user.IsSuperAdminUser(),
 	}
 	
 	fmt.Printf("DEBUG BuildPermissionsMap result for %s: %+v\n", resourceType, perms)
