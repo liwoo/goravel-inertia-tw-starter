@@ -2,6 +2,8 @@ module players
 
 go 1.24
 
+toolchain go1.24.4
+
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/goravel/framework v1.15.4

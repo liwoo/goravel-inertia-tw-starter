@@ -6,6 +6,8 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support"
 	"players/app/http/controllers"
+	"players/app/http/controllers/auth"
+	"players/app/http/controllers/books"
 	inertiaHelper "players/app/http/inertia"
 	"players/app/http/middleware"
 )
@@ -14,9 +16,11 @@ func Web() {
 	// Register the Inertia middleware globally
 	facades.Route().GlobalMiddleware(inertiaMiddleware)
 
-	authController := controllers.NewAuthController()
+	authController := auth.NewAuthController()
 	utilController := controllers.NewUtilController()
 	dashboardController := controllers.NewDashboardController()
+	booksPageController := books.NewBooksPageController()
+	permissionsPageController := auth.NewPermissionsPageController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
@@ -52,6 +56,15 @@ func Web() {
 
 		// Admin Dashboard - requires auth only
 		router.Get("/dashboard", dashboardController.Show)
+
+		// Books management page
+		router.Get("/admin/books", booksPageController.Index)
+
+		// Permissions/Role management pages
+		router.Get("/admin/permissions", permissionsPageController.Index)
+		router.Get("/admin/permissions/roles/create", permissionsPageController.RoleCreate)
+		router.Get("/admin/permissions/roles/:id", permissionsPageController.RoleShow)
+		router.Get("/admin/permissions/roles/:id/edit", permissionsPageController.RoleEdit)
 	})
 
 	// Add more routes as needed
@@ -59,7 +72,10 @@ func Web() {
 
 // inertiaMiddleware wraps the Inertia middleware
 func inertiaMiddleware(ctx http.Context) {
-	inertiaHelper.Middleware(func(c http.Context) http.Response {
-		return nil
-	})(ctx)
+	// The Inertia middleware should only set headers, not handle the full request
+	// Just set the headers directly here
+	if ctx.Request().Header("X-Inertia", "") == "true" {
+		ctx.Response().Header("X-Inertia", "true")
+		ctx.Response().Header("Vary", "Accept")
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/petaki/inertia-go"
 
 	"players/app/models" // Import the User model
+	"players/app/auth"   // Import auth for permission helper
 )
 
 // Version represents the current asset version
@@ -33,6 +34,7 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 	// Default to no authenticated user in shared props
 	sharedProps["auth"] = map[string]interface{}{
 		"user": nil,
+		"permissions": map[string]interface{}{}, // Empty permissions object
 	}
 
 	err := facades.Auth(ctx).User(&authUser)
@@ -46,13 +48,92 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 		}
 		// auth.user remains nil as per default
 	} else if authUser != nil && authUser.ID != 0 { // User successfully fetched and seems valid
-		sharedProps["auth"] = map[string]interface{}{
-			"user": map[string]interface{}{
-				"id":    authUser.ID,
-				"name":  authUser.Name,
-				"email": authUser.Email,
-				"role":  authUser.Role,
-			},
+		// Load user with roles for proper RBAC functionality
+		var userWithRoles models.User
+		err = facades.Orm().Query().
+			Where("id = ?", authUser.ID).
+			With("Roles").
+			First(&userWithRoles)
+		
+		if err != nil {
+			// Fallback to basic user info if roles loading fails
+			log.Printf("DEBUG: Error loading user roles: %v", err)
+			
+			// Get permission helper to build permissions map even without roles
+			permHelper := auth.GetPermissionHelper()
+			
+			// Build empty permissions for all services
+			allPermissions := make(map[string]map[string]bool)
+			allServices := auth.GetAllServiceRegistries()
+			
+			for _, service := range allServices {
+				// This will return false for all permissions since no roles are loaded
+				servicePerms := permHelper.BuildPermissionsMap(ctx, string(service))
+				allPermissions[string(service)] = servicePerms
+			}
+			
+			sharedProps["auth"] = map[string]interface{}{
+				"user": map[string]interface{}{
+					"id":    authUser.ID,
+					"name":  authUser.Name,
+					"email": authUser.Email,
+					"role":  authUser.Role,
+					"roles": []map[string]interface{}{}, // Empty roles array
+					"permissions": []string{}, // Empty permissions array
+					"isSuperAdmin": authUser.Role == "ADMIN", // Check legacy role
+					"isAdmin": authUser.Role == "ADMIN",
+				},
+				"permissions": allPermissions,
+			}
+		} else {
+			log.Printf("DEBUG: User %d loaded with %d roles", userWithRoles.ID, len(userWithRoles.Roles))
+			for _, role := range userWithRoles.Roles {
+				log.Printf("DEBUG: User has role: %s (active: %t)", role.Slug, role.IsActive)
+			}
+			
+			// Get permission helper to build permissions map
+			permHelper := auth.GetPermissionHelper()
+			
+			// Build permissions for all services the user might access
+			allPermissions := make(map[string]map[string]bool)
+			allServices := auth.GetAllServiceRegistries()
+			
+			for _, service := range allServices {
+				servicePerms := permHelper.BuildPermissionsMap(ctx, string(service))
+				allPermissions[string(service)] = servicePerms
+			}
+			
+			// Include roles data for frontend RBAC checks
+			rolesList := make([]map[string]interface{}, 0, len(userWithRoles.Roles))
+			for _, role := range userWithRoles.Roles {
+				if role.IsActive {
+					rolesList = append(rolesList, map[string]interface{}{
+						"id":          role.ID,
+						"name":        role.Name,
+						"slug":        role.Slug,
+						"description": role.Description,
+						"is_active":   role.IsActive,
+					})
+				}
+			}
+			
+			// Get user's actual permissions from their roles
+			userPermissions := permHelper.GetUserPermissions(ctx)
+			log.Printf("DEBUG: User permissions loaded: %v", userPermissions)
+			
+			sharedProps["auth"] = map[string]interface{}{
+				"user": map[string]interface{}{
+					"id":          userWithRoles.ID,
+					"name":        userWithRoles.Name,
+					"email":       userWithRoles.Email,
+					"role":        userWithRoles.Role,
+					"roles":       rolesList,
+					"permissions": userPermissions,
+					"isSuperAdmin": userWithRoles.IsSuperAdmin(),
+					"isAdmin":     userWithRoles.IsAdmin(),
+				},
+				"permissions": allPermissions,
+			}
 		}
 	}
 	// If err == nil but authUser is nil or authUser.ID == 0, auth.user remains nil (covered by default and the else if condition)
@@ -67,13 +148,23 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 		finalProps[k] = v
 	}
 
+	// Get the URL safely
+	requestURL := ctx.Request().FullUrl()
+	if requestURL == "" {
+		requestURL = ctx.Request().Url()
+	}
+	
 	// Create the page data
 	pageMap := map[string]interface{}{
 		"component": component,
 		"props":     finalProps, // Use the merged props
-		"url":       ctx.Request().FullUrl(),
+		"url":       requestURL,
 		"version":   Version,
 	}
+	
+	// Debug logging
+	log.Printf("DEBUG: Inertia page data - component: %s, url: %s, version: %s", component, requestURL, Version)
+	log.Printf("DEBUG: Props keys: %v", getMapKeys(finalProps))
 
 	// Check if this is an Inertia request
 	if ctx.Request().Header("X-Inertia", "") == "true" {
@@ -102,6 +193,15 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 		"appName": facades.Config().GetString("app.name", "Goravel"),
 		"isDev":   facades.Config().GetString("app.env", "production") != "production",
 	})
+}
+
+// getMapKeys returns the keys of a map for debugging
+func getMapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // Middleware wraps the Inertia middleware
