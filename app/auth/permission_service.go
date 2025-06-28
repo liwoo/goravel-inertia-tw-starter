@@ -42,7 +42,7 @@ func (s *PermissionService) HasPermission(user *models.User, permission string) 
 	}
 	
 	// Super admin has all permissions
-	if user.IsSuperAdmin() {
+	if user.IsSuperAdminUser() {
 		fmt.Printf("DEBUG HasPermission: user %d is super admin, returning true for %s\n", user.ID, permission)
 		return true
 	}
@@ -111,7 +111,7 @@ func (s *PermissionService) CanManageUser(manager *models.User, target *models.U
 	}
 	
 	// Super admin can manage anyone
-	if manager.IsSuperAdmin() {
+	if manager.IsSuperAdminUser() {
 		return true
 	}
 	

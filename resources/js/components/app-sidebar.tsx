@@ -1,24 +1,5 @@
 import * as React from "react"
-import {
-    BarChartIcon,
-    BookIcon,
-    CameraIcon,
-    ClipboardListIcon,
-    DatabaseIcon,
-    FileCodeIcon,
-    FileIcon,
-    FileTextIcon,
-    FolderIcon,
-    HelpCircleIcon,
-    LayoutDashboardIcon,
-    ListIcon,
-    MoonIcon,
-    SearchIcon,
-    SettingsIcon,
-    ShieldIcon,
-    SunIcon,
-    UsersIcon,
-} from "lucide-react"
+import { ShieldIcon } from "lucide-react"
 
 import {NavDocuments} from "@/components/nav-documents"
 import {NavMain} from "@/components/nav-main"
@@ -33,135 +14,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { usePermissions } from "@/contexts/PermissionsContext"
-
-// Navigation items with permission requirements
-const navigationConfig = {
-    navMain: [
-        {
-            title: "Dashboard",
-            url: "/dashboard",
-            icon: LayoutDashboardIcon,
-            // Dashboard is always accessible to authenticated users
-        },
-        {
-            title: "Books",
-            url: "/admin/books",
-            icon: BookIcon,
-            requiredService: "books",
-            requiredAction: "read" as const,
-        },
-        {
-            title: "Users",
-            url: "/admin/users",
-            icon: UsersIcon,
-            requiredService: "users",
-            requiredAction: "read" as const,
-        },
-        {
-            title: "Analytics",
-            url: "#",
-            icon: BarChartIcon,
-            requiredService: "reports",
-            requiredAction: "read" as const,
-        },
-    ],
-    navClouds: [
-        {
-            title: "Capture",
-            icon: CameraIcon,
-            isActive: true,
-            url: "#",
-            items: [
-                {
-                    title: "Active Proposals",
-                    url: "#",
-                },
-                {
-                    title: "Archived",
-                    url: "#",
-                },
-            ],
-        },
-        {
-            title: "Proposal",
-            icon: FileTextIcon,
-            url: "#",
-            items: [
-                {
-                    title: "Active Proposals",
-                    url: "#",
-                },
-                {
-                    title: "Archived",
-                    url: "#",
-                },
-            ],
-        },
-        {
-            title: "Prompts",
-            icon: FileCodeIcon,
-            url: "#",
-            items: [
-                {
-                    title: "Active Proposals",
-                    url: "#",
-                },
-                {
-                    title: "Archived",
-                    url: "#",
-                },
-            ],
-        },
-    ],
-    navSecondary: [
-        {
-            title: "Permissions",
-            url: "/admin/permissions",
-            icon: ShieldIcon,
-            requireSuperAdmin: true,
-        },
-        {
-            title: "Settings",
-            url: "/settings",
-            icon: SettingsIcon,
-            // Settings is always accessible to authenticated users
-        },
-        {
-            title: "Get Help",
-            url: "#",
-            icon: HelpCircleIcon,
-            // Help is always accessible
-        },
-        {
-            title: "Search",
-            url: "#",
-            icon: SearchIcon,
-            // Search is always accessible
-        },
-    ],
-    documents: [
-        {
-            name: "Data Library",
-            url: "#",
-            icon: DatabaseIcon,
-            requiredService: "reports",
-            requiredAction: "read" as const,
-        },
-        {
-            name: "Reports",
-            url: "#",
-            icon: ClipboardListIcon,
-            requiredService: "reports", 
-            requiredAction: "read" as const,
-        },
-        {
-            name: "Word Assistant",
-            url: "#",
-            icon: FileIcon,
-            // Always accessible
-        },
-    ],
-}
+import { navigationConfig } from "@/config/navigation"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     user?: any;
@@ -174,6 +27,11 @@ export function AppSidebar({user, ...props}: AppSidebarProps) {
     const navigationItems = React.useMemo(() => {
         // Filter main navigation
         const filteredNavMain = navigationConfig.navMain.filter(item => {
+            // Check super admin requirement
+            if (item.requireSuperAdmin) {
+                return checkIsSuperAdmin();
+            }
+            
             // If no permission requirement, show the item
             if (!item.requiredService && !item.requiredAction) {
                 return true;

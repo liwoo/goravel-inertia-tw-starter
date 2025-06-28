@@ -368,21 +368,22 @@ export function CrudPage<T extends { id: number }>({
     console.log('Created toast with ID:', toastId);
   }, []);
 
-  // Build default actions
-  const defaultActions: CrudAction<T>[] = React.useMemo(() => {
-    const actionsList: CrudAction<T>[] = [];
+  // Build final actions - always include defaults + any additional custom actions
+  const finalActions: CrudAction<T>[] = React.useMemo(() => {
+    const defaultActions: CrudAction<T>[] = [];
     
+    // Always include default actions if permissions allow
     if (canView && DetailView) {
-      actionsList.push({
+      defaultActions.push({
         key: 'view',
-        label: 'View details',
+        label: 'View',
         icon: <Eye className="w-4 h-4" />,
         onClick: handleView,
       });
     }
     
-    if (canEdit) {
-      actionsList.push({
+    if (canEdit && EditForm) {
+      defaultActions.push({
         key: 'edit',
         label: 'Edit',
         icon: <Edit className="w-4 h-4" />,
@@ -391,7 +392,7 @@ export function CrudPage<T extends { id: number }>({
     }
     
     if (canDelete) {
-      actionsList.push({
+      defaultActions.push({
         key: 'delete',
         label: 'Delete',
         icon: <Trash2 className="w-4 h-4" />,
@@ -402,8 +403,9 @@ export function CrudPage<T extends { id: number }>({
       });
     }
 
-    return [...actionsList, ...actions];
-  }, [canView, canEdit, canDelete, DetailView, handleView, handleEdit, handleDelete, resourceName, actions]);
+    // Add any additional custom actions
+    return [...defaultActions, ...(actions || [])];
+  }, [canView, canEdit, canDelete, DetailView, EditForm, handleView, handleEdit, handleDelete, resourceName, actions]);
 
   const activeFilterCount = Object.keys(activeFilters).filter(key => 
     activeFilters[key] !== undefined && activeFilters[key] !== '' && activeFilters[key] !== null
@@ -594,7 +596,7 @@ export function CrudPage<T extends { id: number }>({
           <CrudDataTable
             data={data.data}
             columns={columns}
-            actions={defaultActions}
+            actions={finalActions}
             sortField={filters.sort}
             sortDirection={filters.direction}
             onSort={handleSort}

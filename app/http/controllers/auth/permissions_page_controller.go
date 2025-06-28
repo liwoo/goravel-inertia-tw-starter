@@ -424,11 +424,11 @@ func (c *PermissionsPageController) requireSuperAdmin(ctx http.Context) error {
 	for _, role := range user.Roles {
 		fmt.Printf("DEBUG: User has role: %s (active: %t)\n", role.Slug, role.IsActive)
 	}
-	fmt.Printf("DEBUG: IsSuperAdmin() result: %t\n", user.IsSuperAdmin())
+	fmt.Printf("DEBUG: IsSuperAdmin() result: %t\n", user.IsSuperAdminUser())
 	fmt.Printf("DEBUG: HasRole('super-admin') result: %t\n", user.HasRole("super-admin"))
 	fmt.Printf("DEBUG: Legacy role check (role == 'ADMIN'): %t\n", user.Role == "ADMIN")
 
-	if !user.IsSuperAdmin() && user.Role != "ADMIN" {
+	if !user.IsSuperAdminUser() && user.Role != "ADMIN" {
 		return fmt.Errorf("super-admin access required")
 	}
 
@@ -482,7 +482,7 @@ func (c *PermissionsPageController) BuildPermissionsMap(ctx http.Context, resour
 
 	// Check if user is super-admin
 	userModel, ok := user.(*models.User)
-	if ok && userModel.IsSuperAdmin() {
+	if ok && userModel.IsSuperAdminUser() {
 		return map[string]bool{
 			"canCreate": true,
 			"canView":   true,

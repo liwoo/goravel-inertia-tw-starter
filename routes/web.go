@@ -21,6 +21,7 @@ func Web() {
 	dashboardController := controllers.NewDashboardController()
 	booksPageController := books.NewBooksPageController()
 	permissionsPageController := auth.NewPermissionsPageController()
+	userPageController := auth.NewUserPageController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
@@ -65,6 +66,9 @@ func Web() {
 		router.Get("/admin/permissions/roles/create", permissionsPageController.RoleCreate)
 		router.Get("/admin/permissions/roles/:id", permissionsPageController.RoleShow)
 		router.Get("/admin/permissions/roles/:id/edit", permissionsPageController.RoleEdit)
+
+		// User management pages (super admin only)
+		router.Get("/admin/users", userPageController.Index)
 	})
 
 	// Add more routes as needed

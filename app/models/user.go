@@ -16,6 +16,7 @@ type User struct {
 	
 	// User status and metadata
 	IsActive     bool   `gorm:"default:true" json:"is_active"`
+	IsSuperAdmin bool   `gorm:"default:false;index" json:"is_super_admin"`
 	EmailVerified bool  `gorm:"default:false" json:"email_verified"`
 	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
 	
@@ -121,8 +122,13 @@ func (u *User) CanManageUser(other *User) bool {
 	return userHighest.IsHigherThan(otherHighest)
 }
 
-// IsSuperAdmin checks if user has super admin privileges
-func (u *User) IsSuperAdmin() bool {
+// IsSuperAdminUser checks if user has super admin privileges
+func (u *User) IsSuperAdminUser() bool {
+	// First check the direct super admin flag
+	if u.IsSuperAdmin {
+		return true
+	}
+	
 	// Check legacy ADMIN role for backward compatibility
 	legacyAdmin := u.Role == "ADMIN" || u.Role == "SUPER_ADMIN"
 	
@@ -131,5 +137,5 @@ func (u *User) IsSuperAdmin() bool {
 
 // IsAdmin checks if user has admin privileges
 func (u *User) IsAdmin() bool {
-	return u.IsSuperAdmin() || u.HasRole("admin")
+	return u.IsSuperAdminUser() || u.HasRole("admin")
 }
