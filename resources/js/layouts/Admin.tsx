@@ -20,8 +20,8 @@ export default function AdminLayout({title, children}: AdminLayoutProps) {
             <AppSidebar variant="inset" user={user} />
             <SidebarInset>
                 <SiteHeader title={title || "Dashboard"}/>
-                <div className="flex flex-1 flex-col">
-                    <div className="@container/main flex flex-1 flex-col gap-2">
+                <div className="flex flex-1 flex-col min-w-0">
+                    <div className="@container/main flex flex-1 flex-col gap-2 min-w-0 overflow-hidden">
                         {/* Page-specific content will be rendered here */}
                         {children}
                     </div>

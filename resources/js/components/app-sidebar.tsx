@@ -1,6 +1,7 @@
 import * as React from "react"
 import {
     BarChartIcon,
+    BookIcon,
     CameraIcon,
     ClipboardListIcon,
     DatabaseIcon,
@@ -14,6 +15,7 @@ import {
     MoonIcon,
     SearchIcon,
     SettingsIcon,
+    ShieldIcon,
     SunIcon,
     UsersIcon,
 } from "lucide-react"
@@ -22,7 +24,6 @@ import {NavDocuments} from "@/components/nav-documents"
 import {NavMain} from "@/components/nav-main"
 import {NavSecondary} from "@/components/nav-secondary"
 import {NavUser} from "@/components/nav-user"
-import {useTheme} from "@/context/ThemeContext"
 import {
     Sidebar,
     SidebarContent,
@@ -31,38 +32,37 @@ import {
     SidebarMenu,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { usePermissions } from "@/contexts/PermissionsContext"
 
-const data = {
-    user: {
-        name: "shadcn",
-        email: "m@example.com",
-        avatar: "/avatars/shadcn.jpg",
-    },
+// Navigation items with permission requirements
+const navigationConfig = {
     navMain: [
         {
             title: "Dashboard",
             url: "/dashboard",
             icon: LayoutDashboardIcon,
+            // Dashboard is always accessible to authenticated users
         },
         {
-            title: "Lifecycle",
-            url: "#",
-            icon: ListIcon,
+            title: "Books",
+            url: "/admin/books",
+            icon: BookIcon,
+            requiredService: "books",
+            requiredAction: "read" as const,
+        },
+        {
+            title: "Users",
+            url: "/admin/users",
+            icon: UsersIcon,
+            requiredService: "users",
+            requiredAction: "read" as const,
         },
         {
             title: "Analytics",
             url: "#",
             icon: BarChartIcon,
-        },
-        {
-            title: "Projects",
-            url: "#",
-            icon: FolderIcon,
-        },
-        {
-            title: "Team",
-            url: "#",
-            icon: UsersIcon,
+            requiredService: "reports",
+            requiredAction: "read" as const,
         },
     ],
     navClouds: [
@@ -115,19 +115,28 @@ const data = {
     ],
     navSecondary: [
         {
+            title: "Permissions",
+            url: "/admin/permissions",
+            icon: ShieldIcon,
+            requireSuperAdmin: true,
+        },
+        {
             title: "Settings",
             url: "/settings",
             icon: SettingsIcon,
+            // Settings is always accessible to authenticated users
         },
         {
             title: "Get Help",
             url: "#",
             icon: HelpCircleIcon,
+            // Help is always accessible
         },
         {
             title: "Search",
             url: "#",
             icon: SearchIcon,
+            // Search is always accessible
         },
     ],
     documents: [
@@ -135,22 +144,80 @@ const data = {
             name: "Data Library",
             url: "#",
             icon: DatabaseIcon,
+            requiredService: "reports",
+            requiredAction: "read" as const,
         },
         {
             name: "Reports",
             url: "#",
             icon: ClipboardListIcon,
+            requiredService: "reports", 
+            requiredAction: "read" as const,
         },
         {
             name: "Word Assistant",
             url: "#",
             icon: FileIcon,
+            // Always accessible
         },
     ],
 }
 
-export function AppSidebar({user, ...props}: React.ComponentProps<typeof Sidebar>) {
-    const { theme, toggleTheme } = useTheme();
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+    user?: any;
+}
+
+export function AppSidebar({user, ...props}: AppSidebarProps) {
+    const { canPerformAction, isSuperAdmin: checkIsSuperAdmin, isAdmin } = usePermissions();
+    
+    // Filter navigation items based on permissions
+    const navigationItems = React.useMemo(() => {
+        // Filter main navigation
+        const filteredNavMain = navigationConfig.navMain.filter(item => {
+            // If no permission requirement, show the item
+            if (!item.requiredService && !item.requiredAction) {
+                return true;
+            }
+            
+            // Check service permission
+            if (item.requiredService && item.requiredAction) {
+                return canPerformAction(item.requiredService, item.requiredAction);
+            }
+            
+            return true;
+        });
+        
+        // Filter secondary navigation
+        const filteredNavSecondary = navigationConfig.navSecondary.filter(item => {
+            // Check super admin requirement
+            if (item.requireSuperAdmin) {
+                return checkIsSuperAdmin();
+            }
+            
+            // Check service permission
+            if (item.requiredService && item.requiredAction) {
+                return canPerformAction(item.requiredService, item.requiredAction);
+            }
+            
+            return true;
+        });
+        
+        // Filter documents
+        const filteredDocuments = navigationConfig.documents.filter(item => {
+            // Check service permission
+            if (item.requiredService && item.requiredAction) {
+                return canPerformAction(item.requiredService, item.requiredAction);
+            }
+            
+            return true;
+        });
+        
+        return {
+            navMain: filteredNavMain,
+            navSecondary: filteredNavSecondary,
+            documents: filteredDocuments,
+        };
+    }, [canPerformAction, checkIsSuperAdmin]);
     
     return (
         <Sidebar collapsible="offcanvas" {...props}>
@@ -159,23 +226,21 @@ export function AppSidebar({user, ...props}: React.ComponentProps<typeof Sidebar
                     <a href="/dashboard" className="flex items-center gap-2">
                         <img src="/placeholder.svg" alt="Logo" className="h-8 w-auto" />
                     </a>
-                    <button
-                        onClick={toggleTheme}
-                        className="rounded-md p-2 hover:bg-sidebar-accent transition-colors"
-                        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                    >
-                        {theme === 'dark' ? (
-                            <SunIcon className="h-5 w-5" />
-                        ) : (
-                            <MoonIcon className="h-5 w-5" />
-                        )}
-                    </button>
                 </div>
+                {/* Super Admin Badge */}
+                {checkIsSuperAdmin() && (
+                    <div className="px-3 pb-2">
+                        <div className="flex items-center gap-2 rounded-md bg-red-100 dark:bg-red-900/20 px-2 py-1 text-xs">
+                            <ShieldIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
+                            <span className="text-red-700 dark:text-red-300 font-medium">Super Admin</span>
+                        </div>
+                    </div>
+                )}
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={data.navMain}/>
-                <NavDocuments items={data.documents}/>
-                <NavSecondary items={data.navSecondary} className="mt-auto"/>
+                <NavMain items={navigationItems.navMain}/>
+                <NavDocuments items={navigationItems.documents}/>
+                <NavSecondary items={navigationItems.navSecondary} className="mt-auto"/>
             </SidebarContent>
             <SidebarFooter>
                 {user && (

@@ -28,5 +28,13 @@ func (kernel *Kernel) Schedule() {
 func (kernel *Kernel) Commands() []console.Command {
 	return []console.Command{
 		&commands.CreateAdminUser{},
+		&commands.SetupRBAC{},
+		&commands.SetupPermissionsCommand{},
+		&commands.AssignRole{},
+		&commands.MakeServiceCommand{},
+		&commands.MakeRequestCommand{},
+		&commands.MakeRepositoryCommand{},
+		&commands.MakeCrudCommand{},
+		&commands.MakeCrudE2E{},
 	}
 }

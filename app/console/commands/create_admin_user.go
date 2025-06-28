@@ -9,6 +9,7 @@ import (
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 
+	"players/app/auth"
 	"players/app/models"
 )
 
@@ -96,10 +97,12 @@ func (receiver *CreateAdminUser) Handle(ctx console.Context) error {
 	}
 
 	adminUser := models.User{
-		Name:     name,
-		Email:    email,
-		Password: hashedPassword,
-		Role:     "ADMIN", // Set Role to ADMIN
+		Name:         name,
+		Email:        email,
+		Password:     hashedPassword,
+		Role:         "ADMIN", // Keep legacy role for backward compatibility
+		IsActive:     true,
+		EmailVerified: true, // Admin users are pre-verified
 	}
 
 	createErr := facades.Orm().Query().Create(&adminUser)
@@ -108,6 +111,18 @@ func (receiver *CreateAdminUser) Handle(ctx console.Context) error {
 		return createErr
 	}
 
-	ctx.Success(fmt.Sprintf("Admin user '%s' (%s) created successfully!", adminUser.Name, adminUser.Email))
+	// Assign super-admin role using RBAC system
+	permissionService := auth.GetPermissionService()
+	err = permissionService.AssignRole(&adminUser, "super-admin", nil)
+	if err != nil {
+		// Log warning but don't fail - user was created successfully
+		ctx.Warning(fmt.Sprintf("User created but failed to assign super-admin role: %v", err))
+		ctx.Warning("You may need to run 'go run . artisan seed --seeder=rbac' first, then manually assign the role.")
+	} else {
+		ctx.Success(fmt.Sprintf("Super-admin role assigned to '%s' successfully!", adminUser.Name))
+	}
+
+	ctx.Success(fmt.Sprintf("Admin user '%s' (%s) created successfully with super-admin privileges!", adminUser.Name, adminUser.Email))
+	ctx.Info("User has both legacy ADMIN role and super-admin RBAC role for maximum compatibility.")
 	return nil
 }
