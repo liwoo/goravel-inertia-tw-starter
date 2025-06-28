@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import { ThemeToggleIcon } from '@/components/ThemeToggleIcon';
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -15,6 +16,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             {/* Optionally, add text next to logo if desired */}
             {/* <span className="text-lg font-semibold">Acme Inc.</span> */}
           </a>
+          <ThemeToggleIcon />
         </div>
         {/* Main content area */}
         <div className="flex flex-1 items-center justify-center">

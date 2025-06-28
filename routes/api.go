@@ -21,7 +21,6 @@ func Api(router route.Router) {
 	})
 
 	userController := auth.NewUserController()
-	router.Get("/users/{id}", userController.Show)
 
 	bookController := books.NewBookController()
 	authController := auth.NewAuthController()
@@ -56,6 +55,14 @@ func Api(router route.Router) {
 		// Permission assignment routes
 		protectedRouter.Post("/permissions/assign", permissionsController.Assign)
 		protectedRouter.Delete("/permissions/revoke", permissionsController.Revoke)
+
+		// User management routes (super admin only)
+		protectedRouter.Get("/users", userController.Index)
+		protectedRouter.Get("/users/{id}", userController.Show)
+		protectedRouter.Post("/users", userController.Store)
+		protectedRouter.Put("/users/{id}", userController.Update)
+		protectedRouter.Delete("/users/{id}", userController.Delete)
+		protectedRouter.Get("/users/roles", userController.GetRoles)
 	})
 
 	// This Prefix("auth") group will also be relative to the router passed in.

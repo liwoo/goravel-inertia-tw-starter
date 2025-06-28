@@ -5,19 +5,19 @@ type CorePermissionAction string
 
 const (
 	// Basic CRUD operations
-	PermissionCreate      CorePermissionAction = "create"
-	PermissionRead        CorePermissionAction = "read"
-	PermissionUpdate      CorePermissionAction = "update"
-	PermissionDelete      CorePermissionAction = "delete"
-	
+	PermissionCreate CorePermissionAction = "create"
+	PermissionRead   CorePermissionAction = "read"
+	PermissionUpdate CorePermissionAction = "update"
+	PermissionDelete CorePermissionAction = "delete"
+
 	// Additional common operations
-	PermissionExport      CorePermissionAction = "export"
-	PermissionBulkUpdate  CorePermissionAction = "bulk_update"
-	PermissionBulkDelete  CorePermissionAction = "bulk_delete"
-	
+	PermissionExport     CorePermissionAction = "export"
+	PermissionBulkUpdate CorePermissionAction = "bulk_update"
+	PermissionBulkDelete CorePermissionAction = "bulk_delete"
+
 	// Special operations
-	PermissionManage      CorePermissionAction = "manage"
-	PermissionView        CorePermissionAction = "view" // For listing/viewing
+	PermissionManage CorePermissionAction = "manage"
+	PermissionView   CorePermissionAction = "view" // For listing/viewing
 )
 
 // ServiceRegistry defines all registered services/entities in the system
@@ -29,7 +29,6 @@ const (
 	ServiceRoles       ServiceRegistry = "roles"
 	ServicePermissions ServiceRegistry = "permissions"
 	ServiceReports     ServiceRegistry = "reports"
-	ServiceSystem      ServiceRegistry = "system"
 )
 
 // GetAllCorePermissionActions returns all core permission actions
@@ -55,7 +54,6 @@ func GetAllServiceRegistries() []ServiceRegistry {
 		ServiceRoles,
 		ServicePermissions,
 		ServiceReports,
-		ServiceSystem,
 	}
 }
 
@@ -77,8 +75,6 @@ func GetServiceDisplayName(service ServiceRegistry) string {
 		return "Permission Management"
 	case ServiceReports:
 		return "Reports & Analytics"
-	case ServiceSystem:
-		return "System Administration"
 	default:
 		return string(service)
 	}
@@ -161,11 +157,6 @@ func GetServiceActions(service ServiceRegistry) []CorePermissionAction {
 		return []CorePermissionAction{
 			PermissionView,
 			PermissionExport,
-		}
-	case ServiceSystem:
-		return []CorePermissionAction{
-			PermissionView,
-			PermissionManage,
 		}
 	default:
 		return GetAllCorePermissionActions()
