@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 // @ts-ignore
 import { createInertiaApp, PageProps, AppType } from '@inertiajs/react';
 import '../css/app.css';
-import { ThemeProvider } from './context/ThemeContext'; 
+import { Toaster } from 'sonner';
+import { PermissionsProvider } from '@/contexts/PermissionsContext'; 
 
 const appName = import.meta.env.VITE_APP_NAME || 'Blog';
 
@@ -20,14 +21,29 @@ createInertiaApp({
       throw new Error(`Page component "${name}" not found.`);
     }
 
-    return pageModule.default;
+    // Wrap each page component with PermissionsProvider
+    const PageComponent = pageModule.default;
+    const WrappedPage = (props: any) => (
+      <PermissionsProvider>
+        <PageComponent {...props} />
+      </PermissionsProvider>
+    );
+
+    return WrappedPage;
   },
   setup({ el, App, props }: { el: HTMLElement; App: AppType<PageProps>; props: PageProps }) {
     const root = createRoot(el);
+    
     root.render(
-      <ThemeProvider>
+      <>
         <App {...props} />
-      </ThemeProvider>
+        <Toaster 
+          position="top-right"
+          expand={true}
+          richColors
+          closeButton
+        />
+      </>
     ); 
   },
   progress: {

@@ -22,11 +22,6 @@ The following components have been set up in this project:
 
 To render an Inertia page from your controller:
 
-```go
-import (
-    inertiaHelper "players/app/http/inertia"
-)
-
 func homeHandler(ctx http.Context) http.Response {
     return inertiaHelper.Render(ctx, "Home", map[string]interface{}{
         "title": "Welcome to my blog",

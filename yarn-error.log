@@ -1,0 +1,88 @@
+Arguments: 
+  /Users/liwu/.nvm/versions/node/v20.18.3/bin/node /usr/local/bin/yarn add @radix-ui/react-accordion
+
+PATH: 
+  /Users/liwu/.nvm/versions/node/v20.18.3/bin:/Users/liwu/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.0.darwin-arm64/bin:/Users/liwu/go/bin:/Users/liwu/.codeium/windsurf/bin:/Users/liwu/Library/pnpm:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/Cellar/helm/3.15.3_1/bin/:/Users/liwu/go/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/Library/Apple/usr/bin:/usr/local/share/dotnet:~/.dotnet/tools:/usr/local/go/bin:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/Users/liwu/.cargo/bin:/Users/liwu/Projects/go/blog/node_modules/.bin:/usr/local/go/bin:/usr/local/bin/multipass:/Users/liwu/flutter/bin:/Users/liwu/Library/Android/sdk/emulator:/Users/liwu/Library/Android/sdk/tools:/Users/liwu/Library/Android/sdk/tools/bin:/Users/liwu/Library/Android/sdk/platform-tools:/Users/liwu/.pub-cache/bin:/Users/liwu/.dotnet/tools
+
+Yarn version: 
+  1.22.19
+
+Node version: 
+  20.18.3
+
+Platform: 
+  darwin arm64
+
+Trace: 
+  Error: ENOENT: no such file or directory, copyfile '/Users/liwu/Library/Caches/Yarn/v6/npm-glob-parent-6.0.2-6d237d99083950c79290f24c7642a3de9a28f9e3-integrity/node_modules/glob-parent/README.md' -> '/Users/liwu/Projects/go/blog/node_modules/tailwindcss/node_modules/glob-parent/README.md'
+
+npm manifest: 
+  {
+    "name": "players",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+      "dev": "vite",
+      "build": "tsc && vite build",
+      "preview": "vite preview"
+    },
+    "dependencies": {
+      "@dnd-kit/core": "^6.3.1",
+      "@dnd-kit/modifiers": "^9.0.0",
+      "@dnd-kit/sortable": "^10.0.0",
+      "@dnd-kit/utilities": "^3.2.2",
+      "@inertiajs/core": "^2.0.11",
+      "@inertiajs/react": "^2.0.11",
+      "@radix-ui/react-avatar": "^1.1.10",
+      "@radix-ui/react-checkbox": "^1.3.2",
+      "@radix-ui/react-dialog": "^1.1.14",
+      "@radix-ui/react-dropdown-menu": "^2.1.15",
+      "@radix-ui/react-label": "^2.1.7",
+      "@radix-ui/react-select": "^2.2.5",
+      "@radix-ui/react-separator": "^1.1.7",
+      "@radix-ui/react-slot": "^1.2.3",
+      "@radix-ui/react-tabs": "^1.1.12",
+      "@radix-ui/react-toggle": "^1.1.9",
+      "@radix-ui/react-toggle-group": "^1.1.10",
+      "@radix-ui/react-tooltip": "^1.2.7",
+      "@tanstack/react-table": "^8.21.3",
+      "class-variance-authority": "^0.7.1",
+      "clsx": "^2.1.1",
+      "lucide-react": "^0.511.0",
+      "next-themes": "^0.4.6",
+      "react": "^19.1.0",
+      "react-dom": "^19.1.0",
+      "recharts": "^2.15.3",
+      "sonner": "^2.0.3",
+      "tailwind-merge": "^3.3.0",
+      "tailwindcss-animate": "^1.0.7",
+      "vaul": "^1.1.2",
+      "zod": "^3.25.30"
+    },
+    "devDependencies": {
+      "@types/node": "^20.11.0",
+      "@types/react": "^19.1.6",
+      "@types/react-dom": "^19.1.5",
+      "@vitejs/plugin-react": "^4.4.1",
+      "autoprefixer": "^10.4.16",
+      "postcss": "^8.4.32",
+      "tailwindcss": "^3.4.0",
+      "typescript": "^5.2.2",
+      "vite": "^6.3.5"
+    },
+    "description": "<div align=\"center\">",
+    "main": "postcss.config.js",
+    "directories": {
+      "test": "tests"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC"
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile

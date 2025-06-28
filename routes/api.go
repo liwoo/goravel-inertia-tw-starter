@@ -3,8 +3,9 @@ package routes
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
+	"players/app/http/controllers/auth"
+	"players/app/http/controllers/books"
 
-	"players/app/http/controllers"
 	"players/app/http/middleware"
 )
 
@@ -19,11 +20,43 @@ func Api(router route.Router) {
 		})
 	})
 
-	userController := controllers.NewUserController()
+	userController := auth.NewUserController()
 	router.Get("/users/{id}", userController.Show)
 
-	authController := controllers.NewAuthController()
+	bookController := books.NewBookController()
+	authController := auth.NewAuthController()
+	rolesController := &auth.RolesController{}
+	permissionsController := &auth.PermissionsController{}
 	jwtAuth := middleware.JwtAuth()
+
+	// Book resource routes
+	router.Get("/books", bookController.Index)
+	router.Get("/books/{id}", bookController.Show)
+	router.Get("/books/isbn/{isbn}", bookController.GetByISBN)
+	router.Get("/books/author/{author}", bookController.GetByAuthor)
+	router.Get("/books/available", bookController.GetAvailable)
+	router.Get("/books/advanced", bookController.Advanced)
+
+	// Protected routes (require authentication)
+	router.Middleware(jwtAuth).Group(func(protectedRouter route.Router) {
+		// Book routes
+		protectedRouter.Post("/books", bookController.Store)
+		protectedRouter.Put("/books/{id}", bookController.Update)
+		protectedRouter.Delete("/books/{id}", bookController.Delete)
+		protectedRouter.Post("/books/{id}/borrow", bookController.Borrow)
+		protectedRouter.Post("/books/{id}/return", bookController.Return)
+
+		// Role management routes
+		protectedRouter.Get("/roles", rolesController.Index)
+		protectedRouter.Post("/roles", rolesController.Store)
+		protectedRouter.Get("/roles/{id}", rolesController.Show)
+		protectedRouter.Put("/roles/{id}", rolesController.Update)
+		protectedRouter.Delete("/roles/{id}", rolesController.Destroy)
+
+		// Permission assignment routes
+		protectedRouter.Post("/permissions/assign", permissionsController.Assign)
+		protectedRouter.Delete("/permissions/revoke", permissionsController.Revoke)
+	})
 
 	// This Prefix("auth") group will also be relative to the router passed in.
 	// If called from RouteServiceProvider's /api group, this becomes /api/auth
