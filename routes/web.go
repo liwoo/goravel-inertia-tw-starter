@@ -64,9 +64,6 @@ func Web() {
 		// Permissions/Role management pages
 		router.Get("/admin/permissions", permissionsPageController.Index)
 
-		//router.Get("/admin/permissions/roles/create", permissionsPageController.RoleCreate)
-		//router.Get("/admin/permissions/roles/:id", permissionsPageController.RoleShow)
-		//router.Get("/admin/permissions/roles/:id/edit", permissionsPageController.RoleEdit)
 		router.Get("/admin/roles/:id/permissions", permissionsPageController.RolePermissions)
 
 		// User management pages (super admin only)
