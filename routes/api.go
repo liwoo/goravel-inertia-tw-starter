@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
+	"players/app/http/controllers"
 	"players/app/http/controllers/auth"
 	"players/app/http/controllers/books"
 
@@ -26,6 +27,7 @@ func Api(router route.Router) {
 	authController := auth.NewAuthController()
 	rolesController := &auth.RolesController{}
 	permissionsController := &auth.PermissionsController{}
+	searchController := controllers.NewSearchController()
 	jwtAuth := middleware.JwtAuth()
 
 	// Book resource routes
@@ -38,6 +40,9 @@ func Api(router route.Router) {
 
 	// Protected routes (require authentication)
 	router.Middleware(jwtAuth).Group(func(protectedRouter route.Router) {
+		// Global search
+		protectedRouter.Get("/search", searchController.GlobalSearch)
+		
 		// Book routes
 		protectedRouter.Post("/books", bookController.Store)
 		protectedRouter.Put("/books/{id}", bookController.Update)
@@ -51,6 +56,7 @@ func Api(router route.Router) {
 		protectedRouter.Get("/roles/{id}", rolesController.Show)
 		protectedRouter.Put("/roles/{id}", rolesController.Update)
 		protectedRouter.Delete("/roles/{id}", rolesController.Destroy)
+		protectedRouter.Put("/roles/{id}/permissions", rolesController.UpdatePermissions)
 
 		// Permission assignment routes
 		protectedRouter.Post("/permissions/assign", permissionsController.Assign)

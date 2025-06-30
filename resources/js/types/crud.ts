@@ -83,8 +83,8 @@ export interface CrudPageProps<T = any> {
   canView?: boolean;
   
   // Custom Components
-  createForm?: React.ComponentType<CrudFormProps>;
-  editForm?: React.ComponentType<CrudEditFormProps<T>>;
+  createForm?: React.ForwardRefExoticComponent<CrudFormProps & React.RefAttributes<any>>;
+  editForm?: React.ForwardRefExoticComponent<CrudEditFormProps<T> & React.RefAttributes<any>>;
   detailView?: React.ComponentType<CrudDetailViewProps<T>>;
   
   // Callbacks
@@ -101,6 +101,7 @@ export interface CrudFormProps {
   onError?: (errors: any) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  setIsSaving?: (saving: boolean) => void;
 }
 
 export interface CrudEditFormProps<T> {
@@ -109,6 +110,7 @@ export interface CrudEditFormProps<T> {
   onError?: (errors: any) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  setIsSaving?: (saving: boolean) => void;
 }
 
 export interface CrudDetailViewProps<T> {

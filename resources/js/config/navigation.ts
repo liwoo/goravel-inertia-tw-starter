@@ -9,7 +9,6 @@ import {
     FileTextIcon,
     HelpCircleIcon,
     LayoutDashboardIcon,
-    SearchIcon,
     SettingsIcon,
     ShieldIcon,
     UsersIcon,
@@ -68,7 +67,7 @@ export const navigationConfig: NavigationConfig = {
         },
 
         {
-            title: "Analytics",
+            title: "Analysis",
             url: "#",
             icon: BarChartIcon,
             requiredService: "reports",
@@ -141,12 +140,6 @@ export const navigationConfig: NavigationConfig = {
             url: "#",
             icon: HelpCircleIcon,
             // Help is always accessible
-        },
-        {
-            title: "Search",
-            url: "#",
-            icon: SearchIcon,
-            // Search is always accessible
         },
     ],
     documents: [

@@ -150,6 +150,10 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 	fmt.Printf("DEBUG BuildPermissionsMap for %s: checking permissions %s, %s, %s, %s\n", 
 		resourceType, readSlug, createSlug, updateSlug, deleteSlug)
 	
+	// Get all user permissions for debugging
+	userPerms := h.permissionService.GetUserPermissions(user)
+	fmt.Printf("DEBUG BuildPermissionsMap - User %s permissions: %v\n", user.Email, userPerms)
+	
 	perms := map[string]bool{
 		"canView":   h.permissionService.HasPermission(user, readSlug),
 		"canCreate": h.permissionService.HasPermission(user, createSlug),
