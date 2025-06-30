@@ -116,7 +116,7 @@ func (c *PermissionsPageController) Index(ctx http.Context) http.Response {
 	// Calculate stats
 	var totalRoles, activeRoles, inactiveRoles int64
 	var totalUsersWithRoles int64
-	
+
 	facades.Orm().Query().Model(&models.Role{}).Count(&totalRoles)
 	facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", true).Count(&activeRoles)
 	facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", false).Count(&inactiveRoles)
@@ -173,289 +173,6 @@ func (c *PermissionsPageController) Index(ctx http.Context) http.Response {
 		"matrixData":     matrixData,
 		"title":          "Role & Permission Management",
 		"subtitle":       "Manage roles and their permissions",
-	})
-}
-
-// RoleShow GET /admin/permissions/roles/:id - View role details page
-func (c *PermissionsPageController) RoleShow(ctx http.Context) http.Response {
-	// Super-admin only check
-	if err := c.requireSuperAdmin(ctx); err != nil {
-		return ctx.Response().Redirect(302, "/login")
-	}
-
-	// Get role ID from route
-	roleID := ctx.Request().Route("id")
-
-	var role models.Role
-	err := facades.Orm().Query().
-		Where("id = ?", roleID).
-		First(&role)
-
-	if err != nil {
-		return ctx.Response().Json(http.StatusNotFound, map[string]string{
-			"error": "Role not found",
-		})
-	}
-
-	// Get users with this role
-	var userRoles []models.UserRole
-	facades.Orm().Query().
-		Model(&models.UserRole{}).
-		Where("role_id = ? AND is_active = ?", role.ID, true).
-		Find(&userRoles)
-
-	// Collect user IDs
-	userIDs := make([]uint, 0)
-	for _, ur := range userRoles {
-		userIDs = append(userIDs, ur.UserID)
-	}
-	
-	// Load users
-	var users []models.User
-	if len(userIDs) > 0 {
-		facades.Orm().Query().
-			Where("id IN ?", userIDs).
-			Find(&users)
-	}
-	
-	// Create user map for easy lookup
-	userMap := make(map[uint]models.User)
-	for _, user := range users {
-		userMap[user.ID] = user
-	}
-
-	// Format users data
-	usersData := make([]map[string]interface{}, 0)
-	for _, userRole := range userRoles {
-		if user, exists := userMap[userRole.UserID]; exists {
-			usersData = append(usersData, map[string]interface{}{
-				"id":          user.ID,
-				"name":        user.Name,
-				"email":       user.Email,
-				"assigned_at": userRole.AssignedAt,
-				"is_active":   userRole.IsActive,
-			})
-		}
-	}
-
-	// Get active permissions for this role from the pivot table
-	var rolePermissions []models.RolePermission
-	facades.Orm().Query().
-		Model(&models.RolePermission{}).
-		Where("role_id = ? AND is_active = ?", role.ID, true).
-		Find(&rolePermissions)
-	
-	// Collect permission IDs
-	permissionIDs := make([]uint, 0)
-	for _, rp := range rolePermissions {
-		permissionIDs = append(permissionIDs, rp.PermissionID)
-	}
-	
-	// Load permissions
-	var permissions []models.Permission
-	if len(permissionIDs) > 0 {
-		facades.Orm().Query().
-			Where("id IN ? AND is_active = ?", permissionIDs, true).
-			Find(&permissions)
-	}
-	
-	// Format role permissions
-	permissionsData := make([]map[string]interface{}, 0)
-	for _, perm := range permissions {
-		permissionsData = append(permissionsData, map[string]interface{}{
-			"id":          perm.ID,
-			"name":        perm.Name,
-			"slug":        perm.Slug,
-			"description": perm.Description,
-			"category":    perm.Category,
-			"action":      perm.Action,
-		})
-	}
-
-	// Render Inertia page
-	return inertia.Render(ctx, "Permissions/RoleShow", map[string]interface{}{
-		"role": map[string]interface{}{
-			"id":          role.ID,
-			"name":        role.Name,
-			"slug":        role.Slug,
-			"description": role.Description,
-			"level":       role.Level,
-			"is_active":   role.IsActive,
-			"users_count": len(usersData),
-			"created_at":  role.CreatedAt,
-			"updated_at":  role.UpdatedAt,
-		},
-		"users":       usersData,
-		"permissions": permissionsData,
-	})
-}
-
-// RoleEdit GET /admin/permissions/roles/:id/edit - Edit role page
-func (c *PermissionsPageController) RoleEdit(ctx http.Context) http.Response {
-	// Super-admin only check
-	if err := c.requireSuperAdmin(ctx); err != nil {
-		return ctx.Response().Redirect(302, "/login")
-	}
-
-	// Get role ID from route
-	roleID := ctx.Request().Route("id")
-
-	var role models.Role
-	err := facades.Orm().Query().
-		Where("id = ?", roleID).
-		First(&role)
-
-	if err != nil {
-		return ctx.Response().Json(http.StatusNotFound, map[string]string{
-			"error": "Role not found",
-		})
-	}
-
-	// Get all services and actions for the permission matrix (using hardcoded auth constants)
-	services := auth.GetAllServiceRegistries()
-	actions := auth.GetAllCorePermissionActions()
-
-	// Build service data
-	servicesData := make([]map[string]interface{}, 0)
-	for _, service := range services {
-		serviceActions := auth.GetServiceActions(service)
-		actionsMap := make(map[string]bool)
-		for _, action := range serviceActions {
-			actionsMap[string(action)] = true
-		}
-
-		servicesData = append(servicesData, map[string]interface{}{
-			"id":      string(service),
-			"name":    auth.GetServiceDisplayName(service),
-			"slug":    string(service),
-			"actions": actionsMap,
-		})
-	}
-
-	// Build actions data
-	actionsData := make([]map[string]interface{}, 0)
-	for _, action := range actions {
-		actionsData = append(actionsData, map[string]interface{}{
-			"id":   string(action),
-			"name": auth.GetActionDisplayName(action),
-			"slug": string(action),
-		})
-	}
-
-	// Get all permissions for reference
-	var allPermissions []models.Permission
-	facades.Orm().Query().Where("is_active = ?", true).Find(&allPermissions)
-
-	// Get active permissions for this role from the pivot table
-	var rolePermissions []models.RolePermission
-	err = facades.Orm().Query().
-		Model(&models.RolePermission{}).
-		Where("role_id = ? AND is_active = ?", role.ID, true).
-		Find(&rolePermissions)
-	
-	if err != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": "Failed to load role permissions: " + err.Error(),
-		})
-	}
-
-	// Collect permission IDs
-	permissionIDs := make([]uint, 0)
-	for _, rp := range rolePermissions {
-		permissionIDs = append(permissionIDs, rp.PermissionID)
-	}
-	
-	// Load permissions
-	var permissions []models.Permission
-	if len(permissionIDs) > 0 {
-		err = facades.Orm().Query().
-			Where("id IN ? AND is_active = ?", permissionIDs, true).
-			Find(&permissions)
-		
-		if err != nil {
-			return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-				"error": "Failed to load permissions: " + err.Error(),
-			})
-		}
-	}
-
-	// Format role permissions as array of slugs
-	permissionSlugs := make([]string, 0)
-	for _, perm := range permissions {
-		permissionSlugs = append(permissionSlugs, perm.Slug)
-	}
-
-	// Render Inertia page
-	return inertia.Render(ctx, "Permissions/RoleEdit", map[string]interface{}{
-		"role": map[string]interface{}{
-			"id":          role.ID,
-			"name":        role.Name,
-			"slug":        role.Slug,
-			"description": role.Description,
-			"level":       role.Level,
-			"is_active":   role.IsActive,
-			"users_count": func() int {
-				var count int64
-				facades.Orm().Query().Model(&models.UserRole{}).
-					Where("role_id = ? AND is_active = ?", role.ID, true).
-					Count(&count)
-				return int(count)
-			}(),
-			"permissions": permissionSlugs,
-		},
-		"allPermissions": allPermissions,
-		"services":       servicesData,
-		"actions":        actionsData,
-	})
-}
-
-// RoleCreate GET /admin/permissions/roles/create - Create role page
-func (c *PermissionsPageController) RoleCreate(ctx http.Context) http.Response {
-	// Super-admin only check
-	if err := c.requireSuperAdmin(ctx); err != nil {
-		return ctx.Response().Redirect(302, "/login")
-	}
-
-	// Get all services and actions for the permission matrix (using hardcoded auth constants)
-	services := auth.GetAllServiceRegistries()
-	actions := auth.GetAllCorePermissionActions()
-
-	// Build service data
-	servicesData := make([]map[string]interface{}, 0)
-	for _, service := range services {
-		serviceActions := auth.GetServiceActions(service)
-		actionsMap := make(map[string]bool)
-		for _, action := range serviceActions {
-			actionsMap[string(action)] = true
-		}
-
-		servicesData = append(servicesData, map[string]interface{}{
-			"id":      string(service),
-			"name":    auth.GetServiceDisplayName(service),
-			"slug":    string(service),
-			"actions": actionsMap,
-		})
-	}
-
-	// Build actions data
-	actionsData := make([]map[string]interface{}, 0)
-	for _, action := range actions {
-		actionsData = append(actionsData, map[string]interface{}{
-			"id":   string(action),
-			"name": auth.GetActionDisplayName(action),
-			"slug": string(action),
-		})
-	}
-
-	// Get all permissions for reference
-	var allPermissions []models.Permission
-	facades.Orm().Query().Where("is_active = ?", true).Find(&allPermissions)
-
-	// Render Inertia page
-	return inertia.Render(ctx, "Permissions/RoleCreate", map[string]interface{}{
-		"allPermissions": allPermissions,
-		"services":       servicesData,
-		"actions":        actionsData,
 	})
 }
 
@@ -533,7 +250,7 @@ func (c *PermissionsPageController) getRolesWithPermissions() ([]map[string]inte
 			Model(&models.RolePermission{}).
 			Where("role_id = ? AND is_active = ?", role.ID, true).
 			Find(&rolePermissions)
-		
+
 		if err != nil {
 			continue // Skip this role on error
 		}
@@ -543,7 +260,7 @@ func (c *PermissionsPageController) getRolesWithPermissions() ([]map[string]inte
 		for _, rp := range rolePermissions {
 			permissionIDs = append(permissionIDs, rp.PermissionID)
 		}
-		
+
 		// Load permissions
 		var perms []models.Permission
 		if len(permissionIDs) > 0 {
@@ -569,8 +286,6 @@ func (c *PermissionsPageController) getRolesWithPermissions() ([]map[string]inte
 
 	return rolesList, nil
 }
-
-
 
 // requireSuperAdmin ensures the user is a super-admin
 func (c *PermissionsPageController) requireSuperAdmin(ctx http.Context) error {
@@ -685,7 +400,7 @@ func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Respo
 			"error": "Role not found",
 		})
 	}
-	
+
 	fmt.Printf("DEBUG: RolePermissions - found role: ID=%d, Name=%s, Slug=%s\n", role.ID, role.Name, role.Slug)
 
 	// Get all services and actions for the permission matrix (using hardcoded auth constants)
@@ -729,49 +444,49 @@ func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Respo
 		Model(&models.RolePermission{}).
 		Where("role_id = ? AND is_active = ?", role.ID, true).
 		Find(&rolePermissions)
-	
+
 	if err != nil {
 		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to load role permissions: " + err.Error(),
 		})
 	}
-	
+
 	// Now load the permissions manually
 	permissions := make([]models.Permission, 0)
 	permissionIDs := make([]uint, 0)
-	
+
 	// Collect all permission IDs
 	for _, rp := range rolePermissions {
 		permissionIDs = append(permissionIDs, rp.PermissionID)
 	}
-	
+
 	// Load all permissions at once if we have any
 	if len(permissionIDs) > 0 {
 		err = facades.Orm().Query().
 			Where("id IN ? AND is_active = ?", permissionIDs, true).
 			Find(&permissions)
-		
+
 		if err != nil {
 			// Skip if error loading permissions
 		}
 	}
-	
+
 	// Format role permissions as array of slugs
 	permissionSlugs := make([]string, 0)
 	for _, perm := range permissions {
 		permissionSlugs = append(permissionSlugs, perm.Slug)
 	}
-	
+
 	fmt.Printf("DEBUG: RolePermissions - services count: %d\n", len(servicesData))
 	fmt.Printf("DEBUG: RolePermissions - actions count: %d\n", len(actionsData))
 	fmt.Printf("DEBUG: RolePermissions - permission slugs count: %d\n", len(permissionSlugs))
 	fmt.Printf("DEBUG: RolePermissions - permission slugs: %v\n", permissionSlugs)
-	
+
 	// Log first service for debugging
 	if len(servicesData) > 0 {
 		fmt.Printf("DEBUG: RolePermissions - first service: %+v\n", servicesData[0])
 	}
-	
+
 	// Log first action for debugging
 	if len(actionsData) > 0 {
 		fmt.Printf("DEBUG: RolePermissions - first action: %+v\n", actionsData[0])
