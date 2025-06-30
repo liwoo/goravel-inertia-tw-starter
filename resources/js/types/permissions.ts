@@ -249,3 +249,9 @@ export const PERMISSION_ACTIONS = [
 
 export type PermissionCategory = typeof PERMISSION_CATEGORIES[number];
 export type PermissionAction = typeof PERMISSION_ACTIONS[number];
+
+// Service and Action types for permission matrix
+export interface ServiceAction {
+  service: string;
+  actions: string[];
+}

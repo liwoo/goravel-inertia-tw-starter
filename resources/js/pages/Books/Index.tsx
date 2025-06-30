@@ -12,8 +12,15 @@ import {
   BookImportData 
 } from '@/types/book';
 import { CrudPage } from '@/components/Crud/CrudPage';
-import { bookColumns, bookColumnsMobile, bookFilters, bookQuickFilters } from '@/components/Books/BookColumns';
-import { BookCreateForm, BookEditForm, BookDetailView } from '@/components/Books/BookForms';
+import { 
+  BookCreateForm, 
+  BookEditForm, 
+  BookDetailView,
+  bookColumns, 
+  bookColumnsMobile, 
+  bookFilters, 
+  bookQuickFilters 
+} from './sections';
 import { 
   BulkStatusUpdateDialog, 
   BulkTagsDialog, 
@@ -55,6 +62,8 @@ export default function BooksIndex({
   permissions,
   meta
 }: BooksIndexProps) {
+  console.log('Books permissions from backend:', permissions);
+  console.log('Current user info:', (window as any).Inertia?.page?.props?.auth?.user);
   const isMobile = useIsMobile();
   
   // Debug logging
@@ -187,13 +196,13 @@ export default function BooksIndex({
     <Admin title={"Books"}>
       <Head title="Books - Library Management" />
       
-      <div className="space-y-6 min-w-0 overflow-hidden">
+      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         {/* Statistics Cards */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+          <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
+            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Books</CardTitle>
+                <CardTitle className="text-base font-medium">Total Books</CardTitle>
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -207,9 +216,9 @@ export default function BooksIndex({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Available</CardTitle>
+                <CardTitle className="text-base font-medium">Available</CardTitle>
                 <div className="h-4 w-4 bg-green-500 rounded-full" />
               </CardHeader>
               <CardContent>
@@ -220,9 +229,9 @@ export default function BooksIndex({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Borrowed</CardTitle>
+                <CardTitle className="text-base font-medium">Borrowed</CardTitle>
                 <div className="h-4 w-4 bg-blue-500 rounded-full" />
               </CardHeader>
               <CardContent>
@@ -233,9 +242,9 @@ export default function BooksIndex({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Maintenance</CardTitle>
+                <CardTitle className="text-base font-medium">Maintenance</CardTitle>
                 <div className="h-4 w-4 bg-orange-500 rounded-full" />
               </CardHeader>
               <CardContent>
@@ -249,7 +258,7 @@ export default function BooksIndex({
         )}
 
         {/* Quick Filter Buttons */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 px-4 lg:px-6">
           {bookQuickFilters.map((filter) => (
             <Button
               key={filter.key}
@@ -272,9 +281,10 @@ export default function BooksIndex({
 
         {/* Top Authors */}
         {stats?.topAuthors && stats.topAuthors.length > 0 && (
-          <Card>
+          <div className="px-4 lg:px-6">
+            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-base">
                 <Users className="h-5 w-5" />
                 <span>Top Authors</span>
               </CardTitle>
@@ -299,12 +309,13 @@ export default function BooksIndex({
                 ))}
               </div>
             </CardContent>
-          </Card>
+            </Card>
+          </div>
         )}
 
         {/* Management Actions */}
         {permissions.canManageLibrary && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 px-4 lg:px-6">
             <Button 
               variant="outline" 
               size="sm"
@@ -331,7 +342,8 @@ export default function BooksIndex({
         )}
 
         {/* Main CRUD Component */}
-        <CrudPage<Book>
+        <div className="px-0">
+          <CrudPage<Book>
           data={data}
           filters={filters}
           title="My Books"
@@ -344,7 +356,13 @@ export default function BooksIndex({
           detailView={BookDetailView}
           onBulkAction={handleBulkAction}
           onRefresh={handleRefresh}
-        />
+          // Pass the permissions from backend instead of auto-detecting
+          canCreate={permissions.canCreate}
+          canEdit={permissions.canEdit}
+          canDelete={permissions.canDelete}
+          canView={true} // If they're on this page, they can view
+          />
+        </div>
 
         {/* Action Dialogs */}
         {showImportDialog && (

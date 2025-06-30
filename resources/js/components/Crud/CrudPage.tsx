@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from 'react';
+// @ts-ignore
 import { Head, router } from '@inertiajs/react';
 import { 
   Plus, 
@@ -15,6 +16,7 @@ import {
   Download,
   Upload,
   X,
+  Command,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CrudPageProps, CrudAction } from '@/types/crud';
@@ -46,7 +48,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useCrudSelection } from '@/hooks/useCrudSelection';
 import { usePageSize } from '@/hooks/usePageSize';
 import { usePermissions } from '@/contexts/PermissionsContext';
-import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { PermissionGate } from '@/components/Permissions/PermissionGate';
 import { toast } from 'sonner';
 
 export function CrudPage<T extends { id: number }>({
@@ -65,15 +67,21 @@ export function CrudPage<T extends { id: number }>({
   onBulkAction,
   className,
   tableClassName,
-}: Omit<CrudPageProps<T>, 'canCreate' | 'canEdit' | 'canDelete' | 'canView'>) {
+  // Accept permission props
+  canCreate: propCanCreate,
+  canEdit: propCanEdit,
+  canDelete: propCanDelete,
+  canView: propCanView,
+}: CrudPageProps<T>) {
   
-  // Auto-detect permissions based on resourceName
+  // Use provided permissions or auto-detect based on resourceName
   const { canPerformAction } = usePermissions();
   
-  const canCreate = canPerformAction(resourceName, 'create');
-  const canEdit = canPerformAction(resourceName, 'update');
-  const canDelete = canPerformAction(resourceName, 'delete');
-  const canView = canPerformAction(resourceName, 'read');
+  const canCreate = propCanCreate !== undefined ? propCanCreate : canPerformAction(resourceName, 'create');
+  const canEdit = propCanEdit !== undefined ? propCanEdit : canPerformAction(resourceName, 'update');
+  const canDelete = propCanDelete !== undefined ? propCanDelete : canPerformAction(resourceName, 'delete');
+  const canView = propCanView !== undefined ? propCanView : canPerformAction(resourceName, 'read');
+  
   const canExport = canPerformAction(resourceName, 'export');
   const canBulkUpdate = canPerformAction(resourceName, 'bulk_update');
   const canBulkDelete = canPerformAction(resourceName, 'bulk_delete');
@@ -81,12 +89,17 @@ export function CrudPage<T extends { id: number }>({
   const [selectedItem, setSelectedItem] = React.useState<T | null>(null);
   const [drawerState, setDrawerState] = React.useState<{
     isOpen: boolean;
-    type: 'create' | 'edit' | 'view' | null;
-  }>({ isOpen: false, type: null });
+    type: 'create' | 'edit' | 'view' | undefined;
+  }>({ isOpen: false, type: undefined });
+  const [isSaving, setIsSaving] = React.useState(false);
+  
+  // Refs to form components
+  const createFormRef = React.useRef<any>(null);
+  const editFormRef = React.useRef<any>(null);
 
   // Search and filters
-  const [searchTerm, setSearchTerm] = React.useState(filters.search || '');
-  const [activeFilters, setActiveFilters] = React.useState(filters.filters || {});
+  const [searchTerm, setSearchTerm] = React.useState(filters?.search || '');
+  const [activeFilters, setActiveFilters] = React.useState(filters?.filters || {});
   const [showFilters, setShowFilters] = React.useState(false);
   const [isSearching, setIsSearching] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
@@ -101,6 +114,7 @@ export function CrudPage<T extends { id: number }>({
     toggleSelection,
     toggleAllSelection,
     clearSelection,
+    setSelection,
   } = useCrudSelection(data.data);
 
   // Page size management with localStorage persistence
@@ -124,11 +138,11 @@ export function CrudPage<T extends { id: number }>({
 
   // Re-enable search functionality
   React.useEffect(() => {
-    if (debouncedSearchTerm !== (filters.search || '')) {
+    if (debouncedSearchTerm !== (filters?.search || '')) {
       setIsSearching(true);
       
       router.get(`/admin/${resourceName}`, {
-        ...filters,
+        ...(filters || {}),
         search: debouncedSearchTerm || undefined,
         page: 1,
         pageSize: pageSize,
@@ -152,10 +166,10 @@ export function CrudPage<T extends { id: number }>({
 
   const handleSort = React.useCallback((field: string) => {
     const newDirection = 
-      filters.sort === field && filters.direction === 'asc' ? 'desc' : 'asc';
+      filters?.sort === field && filters?.direction === 'asc' ? 'desc' : 'asc';
     
     router.get(`/admin/${resourceName}`, {
-      ...filters,
+      ...(filters || {}),
       sort: field,
       direction: newDirection,
       pageSize: pageSize,
@@ -168,7 +182,7 @@ export function CrudPage<T extends { id: number }>({
 
   const handlePageChange = React.useCallback((page: number) => {
     router.get(`/admin/${resourceName}`, {
-      ...filters,
+      ...(filters || {}),
       page,
       pageSize: pageSize,
     }, {
@@ -181,7 +195,7 @@ export function CrudPage<T extends { id: number }>({
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
     router.get(`/admin/${resourceName}`, {
-      ...filters,
+      ...(filters || {}),
       page: 1, // Reset to first page when changing page size
       pageSize: newPageSize,
     }, {
@@ -202,7 +216,7 @@ export function CrudPage<T extends { id: number }>({
     setActiveFilters(newFilters);
     
     router.get(`/admin/${resourceName}`, {
-      ...filters,
+      ...(filters || {}),
       filters: Object.keys(newFilters).length > 0 ? newFilters : undefined,
       page: 1,
       pageSize: pageSize,
@@ -281,7 +295,7 @@ export function CrudPage<T extends { id: number }>({
   }, [selectedIds, onBulkAction, clearSelection, handleError]);
 
   const closeDrawer = React.useCallback(() => {
-    setDrawerState({ isOpen: false, type: null });
+    setDrawerState({ isOpen: false, type: undefined });
     setSelectedItem(null);
   }, []);
 
@@ -411,6 +425,20 @@ export function CrudPage<T extends { id: number }>({
     activeFilters[key] !== undefined && activeFilters[key] !== '' && activeFilters[key] !== null
   ).length;
 
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + N to create new
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n' && canCreate && CreateForm) {
+        e.preventDefault();
+        handleCreate();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canCreate, CreateForm, handleCreate]);
+
   return (
     <>
       <Head title={title} />
@@ -492,11 +520,14 @@ export function CrudPage<T extends { id: number }>({
 
             {/* Create Button */}
             {canCreate && CreateForm && (
-              <Button onClick={handleCreate}>
+              <Button onClick={handleCreate} className="group">
                 <Plus className="h-4 w-4" />
                 <span className="hidden lg:inline ml-2 whitespace-nowrap">
                   Add {resourceName.slice(0, -1)}
                 </span>
+                <kbd className="ml-2 pointer-events-none hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-background">
+                  <Command className="h-3 w-3" />N
+                </kbd>
               </Button>
             )}
           </div>
@@ -543,7 +574,7 @@ export function CrudPage<T extends { id: number }>({
                 onClear={() => {
                   setActiveFilters({});
                   router.get(`/admin/${resourceName}`, {
-                    ...filters,
+                    ...(filters || {}),
                     filters: undefined,
                     page: 1,
                     pageSize: pageSize,
@@ -597,18 +628,19 @@ export function CrudPage<T extends { id: number }>({
             data={data.data}
             columns={columns}
             actions={finalActions}
-            sortField={filters.sort}
-            sortDirection={filters.direction}
+            sortField={filters?.sort}
+            sortDirection={filters?.direction}
             onSort={handleSort}
             selectedIds={selectedIds}
             onSelectionChange={(ids) => {
-              if (ids.length === data.data.length) {
+              // Handle clear all case
+              if (ids.length === 0) {
+                clearSelection();
+              } else if (ids.length === data.data.length) {
                 toggleAllSelection();
               } else {
-                const newId = ids.find(id => !selectedIds.includes(id));
-                const removedId = selectedIds.find(id => !ids.includes(id));
-                if (newId) toggleSelection(newId);
-                if (removedId) toggleSelection(removedId);
+                // Set the selection directly to match the table state
+                setSelection(ids);
               }
             }}
             enableSelection={!!onBulkAction}
@@ -637,27 +669,42 @@ export function CrudPage<T extends { id: number }>({
       <CrudDrawer
         isOpen={drawerState.isOpen}
         onClose={closeDrawer}
-        title={
-          drawerState.type === 'create' ? `Create ${resourceName.slice(0, -1)}` :
-          drawerState.type === 'edit' ? `Edit ${resourceName.slice(0, -1)}` :
-          drawerState.type === 'view' ? `View ${resourceName.slice(0, -1)}` : ''
+        title={title}
+        type={drawerState.type}
+        resourceName={resourceName}
+        size={drawerState.type === 'view' ? 'lg' : 'lg'}
+        canEdit={drawerState.type === 'view' ? canEdit : false}
+        canSave={drawerState.type === 'create' ? canCreate : drawerState.type === 'edit' ? canEdit : false}
+        isSaving={isSaving}
+        onEdit={drawerState.type === 'view' && canEdit ? () => {
+          setDrawerState({ isOpen: true, type: 'edit' });
+        } : undefined}
+        onSave={
+          drawerState.type === 'create' ? 
+            () => createFormRef.current?.handleSubmit?.() :
+          drawerState.type === 'edit' ?
+            () => editFormRef.current?.handleSubmit?.() :
+          undefined
         }
-        size={drawerState.type === 'view' ? 'lg' : 'md'}
       >
         {drawerState.type === 'create' && CreateForm && (
           <CreateForm
+            ref={createFormRef}
             onSuccess={handleDrawerSuccess}
             onError={handleDrawerError}
             onCancel={closeDrawer}
+            setIsSaving={setIsSaving}
           />
         )}
         
         {drawerState.type === 'edit' && EditForm && selectedItem && (
           <EditForm
+            ref={editFormRef}
             item={selectedItem}
             onSuccess={handleDrawerSuccess}
             onError={handleDrawerError}
             onCancel={closeDrawer}
+            setIsSaving={setIsSaving}
           />
         )}
         

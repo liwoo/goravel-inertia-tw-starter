@@ -5,7 +5,8 @@ import { createInertiaApp, PageProps, AppType } from '@inertiajs/react';
 import '../css/app.css';
 import { Toaster } from 'sonner';
 import { PermissionsProvider } from '@/contexts/PermissionsContext';
-import { ThemeProvider } from '@/context/ThemeContext'; 
+import { ThemeProvider } from '@/context/ThemeContext';
+import '@/lib/axios'; // Configure axios defaults 
 
 const appName = import.meta.env.VITE_APP_NAME || 'Blog';
 

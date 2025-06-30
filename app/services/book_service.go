@@ -38,13 +38,10 @@ func (s *BookService) GetList(req contracts.ListRequest) (*contracts.PaginatedRe
 		return nil, err
 	}
 	s.SanitizeListRequest(&req)
-	
-	// Debug logging
-	fmt.Printf("BookService.GetList - Sort: '%s', Direction: '%s', Search: '%s'\n", req.Sort, req.Direction, req.Search)
 
 	// Build query with sorting
 	query := facades.Orm().Query().Model(&models.Book{})
-	
+
 	// Apply search if provided using searchable fields
 	if req.Search != "" {
 		if err := s.ValidateSearchQuery(req.Search); err != nil {
@@ -61,7 +58,7 @@ func (s *BookService) GetList(req contracts.ListRequest) (*contracts.PaginatedRe
 			query = query.Where(strings.Join(conditions, " OR "), values...)
 		}
 	}
-	
+
 	// Apply sorting with field validation and mapping
 	if req.Sort != "" && req.Direction != "" {
 		if s.ValidateSortField(req.Sort) && s.ValidateSortDirection(req.Direction) {
@@ -88,7 +85,7 @@ func (s *BookService) GetList(req contracts.ListRequest) (*contracts.PaginatedRe
 		query = query.Order(defaultField + " " + defaultDir)
 		fmt.Printf("BookService.GetList - Using default sorting\n")
 	}
-	
+
 	// Get all books with applied filters and sorting
 	var allBooks []models.Book
 	if err := query.Find(&allBooks); err != nil {
@@ -99,21 +96,21 @@ func (s *BookService) GetList(req contracts.ListRequest) (*contracts.PaginatedRe
 	total := int64(len(allBooks))
 	offset := (req.Page - 1) * req.PageSize
 	end := offset + req.PageSize
-	
+
 	if offset > len(allBooks) {
 		offset = len(allBooks)
 	}
 	if end > len(allBooks) {
 		end = len(allBooks)
 	}
-	
+
 	var pageBooks []models.Book
 	if offset < len(allBooks) {
 		pageBooks = allBooks[offset:end]
 	}
-	
+
 	lastPage := int((total + int64(req.PageSize) - 1) / int64(req.PageSize))
-	
+
 	// Convert to interface slice
 	data := make([]interface{}, len(pageBooks))
 	for i, book := range pageBooks {
@@ -159,7 +156,7 @@ func (s *BookService) GetListAdvanced(req contracts.ListRequest, filters map[str
 		countQuery = countQuery.Where(searchCondition, searchValue)
 		dataQuery = dataQuery.Where(searchCondition, searchValue)
 	}
-	
+
 	// Apply validated filters to both queries
 	for field, value := range validatedFilters {
 		var condition string
@@ -193,14 +190,12 @@ func (s *BookService) GetListAdvanced(req contracts.ListRequest, filters map[str
 	// Calculate pagination
 	offset := (req.Page - 1) * req.PageSize
 	lastPage := int((total + int64(req.PageSize) - 1) / int64(req.PageSize))
-	
 
 	// Get paginated data
 	var books []models.Book
 	if err := dataQuery.Offset(offset).Limit(req.PageSize).Find(&books); err != nil {
 		return nil, err
 	}
-	
 
 	// Convert to interface slice
 	data := make([]interface{}, len(books))
@@ -288,10 +283,10 @@ func (s *BookService) createBook(data map[string]interface{}) (*models.Book, err
 
 	// Create book struct from data
 	book := models.Book{
-		Title:       data["title"].(string),
-		Author:      data["author"].(string),
-		ISBN:        data["isbn"].(string),
-		Status:      data["status"].(string),
+		Title:  data["title"].(string),
+		Author: data["author"].(string),
+		ISBN:   data["isbn"].(string),
+		Status: data["status"].(string),
 	}
 
 	if desc, ok := data["description"].(string); ok {
@@ -338,18 +333,18 @@ func (s *BookService) updateBook(id uint, data map[string]interface{}) (*models.
 	// Apply column mapping to transform frontend field names to database column names
 	columnMapping := s.GetColumnMapping()
 	mappedData := make(map[string]interface{})
-	
+
 	// Fields to ignore (not saved to database)
 	ignoredFields := map[string]bool{
 		"tags": true, // Tags are not stored in the books table yet
 	}
-	
+
 	for frontendField, value := range data {
 		// Skip ignored fields
 		if ignoredFields[frontendField] {
 			continue
 		}
-		
+
 		if dbColumn, exists := columnMapping[frontendField]; exists {
 			mappedData[dbColumn] = value
 		} else {
@@ -426,7 +421,6 @@ func (s *BookService) ReturnBook(id uint) error {
 
 	return nil
 }
-
 
 // validateBookData performs simple validation
 func (s *BookService) validateBookData(data map[string]interface{}, isUpdate bool) error {
@@ -538,19 +532,19 @@ func (s *BookService) GetSearchableFields() []string {
 
 func (s *BookService) BuildFilterQuery(filters map[string]interface{}) (map[string]interface{}, error) {
 	validatedFilters := make(map[string]interface{})
-	
+
 	for field, value := range filters {
 		if !s.ValidateFilterField(field) {
 			continue // Skip invalid fields
 		}
-		
+
 		if !s.ValidateFilterValue(field, value) {
 			continue // Skip invalid values
 		}
-		
+
 		validatedFilters[field] = value
 	}
-	
+
 	return validatedFilters, nil
 }
 
@@ -559,7 +553,7 @@ func (s *BookService) Search(query string, req contracts.ListRequest) (*contract
 	if err := s.ValidateSearchQuery(query); err != nil {
 		return nil, err
 	}
-	
+
 	req.Search = query
 	return s.GetList(req)
 }
@@ -580,7 +574,7 @@ func (s *BookService) BulkCreate(data []map[string]interface{}) ([]interface{}, 
 	if err := s.ValidateBulkOperation([]uint{uint(len(data))}); err != nil {
 		return nil, err
 	}
-	
+
 	results := make([]interface{}, 0, len(data))
 	for _, item := range data {
 		result, err := s.Create(item)
@@ -589,7 +583,7 @@ func (s *BookService) BulkCreate(data []map[string]interface{}) ([]interface{}, 
 		}
 		results = append(results, result)
 	}
-	
+
 	return results, nil
 }
 
@@ -597,14 +591,14 @@ func (s *BookService) BulkUpdate(ids []uint, data map[string]interface{}) error 
 	if err := s.ValidateBulkOperation(ids); err != nil {
 		return err
 	}
-	
+
 	for _, id := range ids {
 		_, err := s.Update(id, data)
 		if err != nil {
 			return fmt.Errorf("bulk update failed for ID %d: %w", id, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -612,13 +606,13 @@ func (s *BookService) BulkDelete(ids []uint) error {
 	if err := s.ValidateBulkOperation(ids); err != nil {
 		return err
 	}
-	
+
 	for _, id := range ids {
 		if err := s.Delete(id); err != nil {
 			return fmt.Errorf("bulk delete failed for ID %d: %w", id, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -641,18 +635,18 @@ func (s *BookService) GetValidationRules() map[string]interface{} {
 
 func (s *BookService) GetColumnMapping() map[string]string {
 	return map[string]string{
-		"id":          "id",
-		"title":       "title",
-		"author":      "author",
-		"isbn":        "isbn",
-		"price":       "price",
-		"status":      "status",
-		"description": "description",
-		"createdAt":   "created_at",
-		"updatedAt":   "updated_at",
-		"publishedAt": "published_at",
-		"created_at":  "created_at",
-		"updated_at":  "updated_at",
+		"id":           "id",
+		"title":        "title",
+		"author":       "author",
+		"isbn":         "isbn",
+		"price":        "price",
+		"status":       "status",
+		"description":  "description",
+		"createdAt":    "created_at",
+		"updatedAt":    "updated_at",
+		"publishedAt":  "published_at",
+		"created_at":   "created_at",
+		"updated_at":   "updated_at",
 		"published_at": "published_at",
 	}
 }
@@ -662,7 +656,7 @@ func (s *BookService) GetColumnMapping() map[string]string {
 // validateWithRules uses the validation rules from the contract
 func (s *BookService) validateWithRules(data map[string]interface{}, isUpdate bool) error {
 	rules := s.GetValidationRules()
-	
+
 	// For updates, make required fields optional
 	if isUpdate {
 		for field, rule := range rules {
@@ -674,7 +668,7 @@ func (s *BookService) validateWithRules(data map[string]interface{}, isUpdate bo
 			}
 		}
 	}
-	
+
 	// Basic validation implementation (can be enhanced with proper validator)
 	return s.validateBookData(data, isUpdate)
 }
