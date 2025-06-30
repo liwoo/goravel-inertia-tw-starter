@@ -1,207 +1,254 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Head, router } from '@inertiajs/react';
-import Admin from '@/layouts/Admin';
+import { Shield } from 'lucide-react';
+import { Role } from '@/types/permissions';
+import { CrudPage } from '@/components/Crud/CrudPage';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search, Plus, Eye, Edit, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { 
+  RoleCreateForm, 
+  RoleEditForm, 
+  RoleDetailView,
+  roleColumns, 
+  roleColumnsMobile, 
+  roleFilters,
+  roleQuickFilters,
+  createRoleAdditionalActions
+} from './sections';
+import Admin from '@/layouts/Admin';
 
-interface Role {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  level: number;
-  is_active: boolean;
-  users_count: number;
-  created_at: string;
-  updated_at: string;
+interface RoleListResponse {
+  data: Role[];
+  total: number;
+  perPage: number;
+  currentPage: number;
+  lastPage: number;
+  from: number | null;
+  to: number | null;
 }
 
 interface RolesIndexProps {
   auth: any;
-  roles: Role[];
-  title: string;
-  subtitle: string;
+  data: RoleListResponse;
+  filters: any;
+  stats?: {
+    total_roles: number;
+    active_roles: number;
+    inactive_roles: number;
+    total_users_with_roles: number;
+  };
+  permissions?: {
+    canCreate: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    canManage: boolean;
+  };
 }
 
-export default function RolesIndex({ auth, roles, title, subtitle }: RolesIndexProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const filteredRoles = roles.filter(role => 
-    role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    role.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleAddNewRole = () => {
-    router.visit('/admin/permissions/roles/create');
+export default function RolesIndex({ 
+  data, 
+  filters = {}, 
+  stats,
+  permissions = {
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+    canManage: true,
+  },
+  allPermissions = [],
+  services = [],
+  actions = []
+}: RolesIndexProps & {
+  allPermissions?: any[];
+  services?: any[];
+  actions?: any[];
+}) {
+  const isMobile = false; // Could use useIsMobile hook if available
+  
+  const handleRefresh = () => {
+    // Refresh logic handled by CrudPage
   };
 
-  const handleViewRole = (roleId: number) => {
-    router.visit(`/admin/permissions/roles/${roleId}`);
-  };
-
-  const handleEditRole = (roleId: number) => {
-    router.visit(`/admin/permissions/roles/${roleId}/edit`);
-  };
-
-  const handleDeleteRole = async (roleId: number) => {
-    if (!confirm('Are you sure you want to delete this role?')) return;
-
-    setLoading(true);
+  // Additional action handlers (beyond the default View/Edit/Delete)
+  const handleActivateRole = async (id: number) => {
     try {
-      const response = await fetch(`/api/roles/${roleId}`, {
-        method: 'DELETE',
+      const response = await fetch(`/api/roles/${id}/activate`, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
           'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
-        credentials: 'include'
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete role');
+      
+      if (response.ok) {
+        handleRefresh();
       }
-
-      toast.success('Role deleted successfully');
-      router.reload({ only: ['roles'] });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete role');
-    } finally {
-      setLoading(false);
+      console.error('Activate error:', error);
     }
   };
 
-  const formatUserCount = (count: number) => {
-    if (count === 0) return '0 user';
-    if (count === 1) return '1 user';
-    return `${count} users`;
+  const handleDeactivateRole = async (id: number) => {
+    try {
+      const response = await fetch(`/api/roles/${id}/deactivate`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+      
+      if (response.ok) {
+        handleRefresh();
+      }
+    } catch (error) {
+      console.error('Deactivate error:', error);
+    }
   };
 
+  const handleDuplicateRole = async (id: number) => {
+    if (confirm('Are you sure you want to duplicate this role?')) {
+      try {
+        const response = await fetch(`/api/roles/${id}/duplicate`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        });
+        
+        if (response.ok) {
+          handleRefresh();
+          alert('Role duplicated successfully');
+        }
+      } catch (error) {
+        console.error('Duplicate error:', error);
+      }
+    }
+  };
+
+  const handleAssignUsers = (id: number) => {
+    // Navigate to user assignment page
+    window.location.href = `/admin/roles/${id}/assign-users`;
+  };
+
+  const handleManagePermissions = (id: number) => {
+    // Navigate to permissions management page using Inertia
+    router.visit(`/admin/roles/${id}/permissions`);
+  };
+
+  // Create additional actions (beyond the default View/Edit/Delete that CrudPage provides)
+  const additionalActions = createRoleAdditionalActions({
+    onActivate: permissions.canEdit ? handleActivateRole : undefined,
+    onDeactivate: permissions.canEdit ? handleDeactivateRole : undefined,
+    onDuplicate: permissions.canCreate ? handleDuplicateRole : undefined,
+    onAssignUsers: permissions.canManage ? handleAssignUsers : undefined,
+    onManagePermissions: permissions.canManage ? handleManagePermissions : undefined,
+  });
+
+  // Custom form wrappers to include additional data
+  const CreateFormWithData = (props: any) => (
+    <RoleCreateForm {...props} allPermissions={allPermissions} services={services} actions={actions} />
+  );
+
+  const EditFormWithData = (props: any) => (
+    <RoleEditForm {...props} allPermissions={allPermissions} services={services} actions={actions} />
+  );
+
   return (
-    <Admin title={title}>
-      <Head title={title} />
+    <Admin title="Role Management">
+      <Head title="Roles - Management" />
       
-      <div className="space-y-6 min-w-0 overflow-hidden">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h1 className="text-3xl font-bold">{title}</h1>
-                <p className="text-muted-foreground mt-1">{subtitle}</p>
+      <div className="flex flex-col">
+        {/* Statistics Cards - Clean design matching Books page */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 border-b">
+            <div className="bg-card rounded-lg border p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Roles</p>
+                  <p className="text-3xl font-bold mt-1">{stats.total_roles}</p>
+                </div>
+                <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-muted-foreground" />
+                </div>
               </div>
-              <Button 
-                onClick={handleAddNewRole}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add new role
-              </Button>
+            </div>
+
+            <div className="bg-card rounded-lg border p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Active</p>
+                  <p className="text-3xl font-bold mt-1 text-green-600">{stats.active_roles}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stats.total_roles > 0 && `${Math.round((stats.active_roles / stats.total_roles) * 100)}% active`}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-green-500 opacity-20" />
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg border p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Inactive</p>
+                  <p className="text-3xl font-bold mt-1 text-gray-600">{stats.inactive_roles}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stats.total_roles > 0 && `${Math.round((stats.inactive_roles / stats.total_roles) * 100)}% inactive`}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-gray-500 opacity-20" />
+              </div>
+            </div>
+
+            <div className="bg-card rounded-lg border p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Users with Roles</p>
+                  <p className="text-3xl font-bold mt-1 text-blue-600">{stats.total_users_with_roles}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Total assigned</p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-blue-500 opacity-20" />
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-              <Input
-                type="search"
-                placeholder="Search roles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-background border-border text-foreground placeholder-muted-foreground focus:border-ring"
-              />
-            </div>
-          </div>
-
-          {/* Roles Table */}
-          <div className="bg-card rounded-lg border overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                    NAME
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                    DESCRIPTION
-                  </th>
-                  <th className="text-left px-6 py-4 text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                    USERS
-                  </th>
-                  <th className="text-right px-6 py-4"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredRoles.map((role) => (
-                  <tr key={role.id} className="hover:bg-muted/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-foreground">{role.name}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-muted-foreground">{role.description}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-muted-foreground">{formatUserCount(role.users_count)}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewRole(role.id)}
-                          className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                          disabled={loading}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditRole(role.id)}
-                          className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                          disabled={loading}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteRole(role.id)}
-                          className="text-muted-foreground hover:text-foreground hover:bg-muted"
-                          disabled={loading}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {filteredRoles.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                {searchQuery ? 'No roles found matching your search.' : 'No roles available.'}
-              </div>
-            )}
-          </div>
-
-          {/* Add new role row at bottom */}
-          <div className="mt-4">
+        {/* Quick Filters - Clean horizontal layout like Books */}
+        <div className="flex items-center gap-2 p-6 border-b">
+          {roleQuickFilters.map((filter) => (
             <Button
-              variant="ghost"
-              onClick={handleAddNewRole}
-              className="text-primary hover:text-primary/90 hover:bg-muted"
+              key={filter.key}
+              variant={JSON.stringify(filters) === JSON.stringify(filter.filters) ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                router.get('/admin/roles', filter.filters, {
+                  preserveState: true,
+                  preserveScroll: true,
+                  only: ['data', 'filters', 'stats'],
+                });
+              }}
+              className="flex items-center gap-2"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add new role
+              {filter.icon}
+              <span>{filter.label}</span>
             </Button>
-          </div>
+          ))}
         </div>
+
+        {/* Main CRUD Component - No extra padding */}
+        <CrudPage<Role>
+          data={data}
+          filters={filters}
+          title="My Roles"
+          resourceName="roles"
+          columns={isMobile ? roleColumnsMobile : roleColumns}
+          actions={additionalActions}
+          customFilters={roleFilters}
+          createForm={CreateFormWithData}
+          editForm={EditFormWithData}
+          detailView={RoleDetailView}
+          onRefresh={handleRefresh}
+        />
       </div>
     </Admin>
   );

@@ -38,7 +38,7 @@ export interface PermissionsContextType {
   permissions: Record<string, ServicePermissions>;
   hasPermission: (permission: string) => boolean;
   hasServicePermission: (service: string, action: string) => boolean;
-  canPerformAction: (service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete') => boolean;
+  canPerformAction: (service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage') => boolean;
   isSuperAdmin: () => boolean;
   isAdmin: () => boolean;
 }
@@ -64,16 +64,22 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     return auth.user.permissions?.includes(permissionSlug) || false;
   };
 
-  const canPerformAction = (service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete'): boolean => {
-    if (!auth?.user) return false;
-    if (auth.user.isSuperAdmin) return true;
+  const canPerformAction = (service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage'): boolean => {
+    if (!auth?.user) {
+      return false;
+    }
+    if (auth.user.isSuperAdmin) {
+      return true;
+    }
 
     // Check the permissions object for this service
     const servicePerms = auth?.permissions?.[service];
+    
     if (!servicePerms) {
       // Fallback to checking user's permission array
       const permissionSlug = `${service}_${action}`;
-      return auth.user.permissions?.includes(permissionSlug) || false;
+      const hasPermission = auth.user.permissions?.includes(permissionSlug) || false;
+      return hasPermission;
     }
 
     // Map actions to permission keys
@@ -85,10 +91,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       export: 'canExport',
       bulk_update: 'canBulkUpdate',
       bulk_delete: 'canBulkDelete',
+      write: 'canEdit', // Map 'write' to 'canEdit'
+      manage: 'canManage',
     };
 
     const permissionKey = actionMap[action];
-    return permissionKey ? servicePerms[permissionKey] : false;
+    const result = permissionKey ? servicePerms[permissionKey] : false;
+    
+    return result;
   };
 
   const isSuperAdmin = (): boolean => {
@@ -125,7 +135,7 @@ export function usePermissions(): PermissionsContextType {
 }
 
 // Convenience hooks for common permission checks
-export function useCanPerform(service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete'): boolean {
+export function useCanPerform(service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage'): boolean {
   const { canPerformAction } = usePermissions();
   return canPerformAction(service, action);
 }

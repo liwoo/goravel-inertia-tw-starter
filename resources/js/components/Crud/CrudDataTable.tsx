@@ -164,6 +164,7 @@ const createActionsColumn = <T extends { id: number }>(
             variant="ghost"
             className="data-[state=open]:bg-muted hover:bg-muted text-muted-foreground h-8 w-8 p-0"
             size="icon"
+            title="Actions menu (Alt+Enter)"
           >
             <MoreVertical className="h-4 w-4" />
             <span className="sr-only">Open menu</span>

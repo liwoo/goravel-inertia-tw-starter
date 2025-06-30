@@ -7,8 +7,16 @@ import {
   UserFormData 
 } from '@/types/user';
 import { CrudPage } from '@/components/Crud/CrudPage';
-import { userColumns, userColumnsMobile, userFilters, userQuickFilters, createUserAdditionalActions } from '@/components/Users/UserColumns';
-import { UserCreateForm, UserEditForm, UserDetailView } from '@/components/Users/UserForms';
+import { 
+  UserCreateForm, 
+  UserEditForm, 
+  UserDetailView,
+  userColumns, 
+  userColumnsMobile, 
+  userFilters, 
+  userQuickFilters, 
+  createUserAdditionalActions
+} from './sections';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -223,23 +231,34 @@ export default function UsersIndex({
     <Admin title="User Management">
       <Head title="Users - Management" />
       
-      <div className="space-y-6">
+      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         {/* Admin Notice */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <div className="flex items-center space-x-2">
-            <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              <strong>Super Admin Access:</strong> This page is only accessible to super administrators.
-            </p>
-          </div>
+        <div className="px-4 lg:px-6">
+          <Card className="bg-gradient-to-t from-primary/5 to-card shadow-xs">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Super Admin Access
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    This page is only accessible to super administrators.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Statistics Cards */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
+          <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
+            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <CardTitle className="text-base font-medium">Total Users</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -247,9 +266,9 @@ export default function UsersIndex({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                <CardTitle className="text-base font-medium">Active Users</CardTitle>
                 <div className="h-4 w-4 bg-green-500 rounded-full" />
               </CardHeader>
               <CardContent>
@@ -260,9 +279,9 @@ export default function UsersIndex({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Inactive Users</CardTitle>
+                <CardTitle className="text-base font-medium">Inactive Users</CardTitle>
                 <div className="h-4 w-4 bg-gray-500 rounded-full" />
               </CardHeader>
               <CardContent>
@@ -273,9 +292,9 @@ export default function UsersIndex({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Super Admins</CardTitle>
+                <CardTitle className="text-base font-medium">Super Admins</CardTitle>
                 <Shield className="h-4 w-4 text-blue-500" />
               </CardHeader>
               <CardContent>
@@ -289,7 +308,7 @@ export default function UsersIndex({
         )}
 
         {/* Quick Filter Buttons */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 px-4 lg:px-6">
           {userQuickFilters.map((filter) => (
             <Button
               key={filter.key}
@@ -312,7 +331,7 @@ export default function UsersIndex({
 
         {/* Management Actions */}
         {permissions.canManage && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 px-4 lg:px-6">
             <Button 
               variant="outline" 
               size="sm"
@@ -341,7 +360,8 @@ export default function UsersIndex({
         )}
 
         {/* Main CRUD Component */}
-        <CrudPage<User>
+        <div className="px-0">
+          <CrudPage<User>
           data={data}
           filters={filters}
           title="Users"
@@ -358,7 +378,8 @@ export default function UsersIndex({
           canEdit={permissions.canEdit}
           canDelete={permissions.canDelete}
           canView={true}
-        />
+          />
+        </div>
       </div>
     </Admin>
   );
