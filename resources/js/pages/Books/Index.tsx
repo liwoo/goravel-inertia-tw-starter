@@ -12,6 +12,7 @@ import {
   BookImportData 
 } from '@/types/book';
 import { CrudPage } from '@/components/Crud/CrudPage';
+import { PageAction, SimpleFilter } from '@/types/crud';
 import { 
   BookCreateForm, 
   BookEditForm, 
@@ -192,6 +193,56 @@ export default function BooksIndex({
     router.reload({ only: ['data', 'stats'] });
   };
 
+  // Convert quick filters to SimpleFilter format
+  const simpleFilters: SimpleFilter[] = [
+    {
+      key: 'available',
+      label: 'Available',
+      value: 'AVAILABLE',
+      badge: stats?.availableBooks || 0,
+    },
+    {
+      key: 'borrowed',
+      label: 'Borrowed',
+      value: 'BORROWED',
+      badge: stats?.borrowedBooks || 0,
+    },
+    {
+      key: 'maintenance',
+      label: 'Maintenance',
+      value: 'MAINTENANCE',
+      badge: stats?.maintenanceBooks || 0,
+    },
+  ];
+
+  // Convert management actions to PageAction format
+  const pageActions: PageAction[] = [];
+  
+  if (permissions.canManageLibrary) {
+    pageActions.push({
+      key: 'import',
+      label: 'Import Books',
+      icon: <Upload className="h-4 w-4" />,
+      handler: () => setShowImportDialog(true),
+    });
+    
+    pageActions.push({
+      key: 'export',
+      label: 'Export Books',
+      icon: <Download className="h-4 w-4" />,
+      handler: () => setShowExportDialog(true),
+    });
+    
+    if (permissions.canViewReports) {
+      pageActions.push({
+        key: 'reports',
+        label: 'View Reports',
+        icon: <BarChart3 className="h-4 w-4" />,
+        handler: () => router.visit('/admin/books/reports'),
+      });
+    }
+  }
+
   return (
     <Admin title={"Books"}>
       <Head title="Books - Library Management" />
@@ -257,27 +308,6 @@ export default function BooksIndex({
           </div>
         )}
 
-        {/* Quick Filter Buttons */}
-        <div className="flex flex-wrap gap-2 px-4 lg:px-6">
-          {bookQuickFilters.map((filter) => (
-            <Button
-              key={filter.key}
-              variant={JSON.stringify(filters) === JSON.stringify(filter.filters) ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                router.get('/admin/books', filter.filters, {
-                  preserveState: true,
-                  preserveScroll: true,
-                  only: ['data', 'filters', 'stats'],
-                });
-              }}
-              className="flex items-center space-x-2"
-            >
-              {filter.icon}
-              <span>{filter.label}</span>
-            </Button>
-          ))}
-        </div>
 
         {/* Top Authors */}
         {stats?.topAuthors && stats.topAuthors.length > 0 && (
@@ -313,33 +343,6 @@ export default function BooksIndex({
           </div>
         )}
 
-        {/* Management Actions */}
-        {permissions.canManageLibrary && (
-          <div className="flex flex-wrap gap-2 px-4 lg:px-6">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowImportDialog(true)}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Import Books
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowExportDialog(true)}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export Books
-            </Button>
-            {permissions.canViewReports && (
-              <Button variant="outline" size="sm">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                View Reports
-              </Button>
-            )}
-          </div>
-        )}
 
         {/* Main CRUD Component */}
         <div className="px-0">
@@ -350,6 +353,8 @@ export default function BooksIndex({
           resourceName="books"
           columns={isMobile ? bookColumnsMobile : bookColumns}
           customFilters={bookFilters}
+          simpleFilters={simpleFilters}
+          pageActions={pageActions}
           paginationConfig={meta?.pagination}
           createForm={BookCreateForm}
           editForm={BookEditForm}

@@ -78,8 +78,8 @@ func (c *BookController) Show(ctx http.Context) http.Response {
 
 // Store POST /books - Implements CrudControllerContract
 func (c *BookController) Store(ctx http.Context) http.Response {
-	// Check authorization
-	if err := c.CheckPermission(ctx, "books.create", nil); err != nil {
+	// Check authorization using new permission format
+	if err := c.CheckPermission(ctx, "books_create", nil); err != nil {
 		return c.ForbiddenResponse(ctx, "Access denied: "+err.Error())
 	}
 
@@ -116,8 +116,8 @@ func (c *BookController) Update(ctx http.Context) http.Response {
 		return c.ResourceNotFoundResponse(ctx, "book", id)
 	}
 
-	// Check authorization
-	if err := c.CheckPermission(ctx, "books.update", nil); err != nil {
+	// Check authorization using new permission format
+	if err := c.CheckPermission(ctx, "books_update", nil); err != nil {
 		return c.ForbiddenResponse(ctx, "Access denied: "+err.Error())
 	}
 
@@ -154,8 +154,8 @@ func (c *BookController) Delete(ctx http.Context) http.Response {
 		return c.ResourceNotFoundResponse(ctx, "book", id)
 	}
 
-	// Check authorization
-	if err := c.CheckPermission(ctx, "books.delete", nil); err != nil {
+	// Check authorization using new permission format
+	if err := c.CheckPermission(ctx, "books_delete", nil); err != nil {
 		return c.ForbiddenResponse(ctx, "Access denied: "+err.Error())
 	}
 

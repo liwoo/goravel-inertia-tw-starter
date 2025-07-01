@@ -28,11 +28,11 @@ func (h *PermissionHelper) GetAuthenticatedUser(ctx http.Context) *models.User {
 		return nil
 	}
 	
-	// Load user with roles and permissions
+	// Load user with roles only (permissions will be loaded separately through pivot table)
 	var userWithRoles models.User
 	err = facades.Orm().Query().
 		Where("id = ?", user.ID).
-		With("Roles.Permissions").  // Preload roles AND their permissions
+		With("Roles").  // Only preload roles, not permissions
 		First(&userWithRoles)
 	
 	if err != nil {
@@ -142,20 +142,22 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 	}
 	
 	// Use the new service_action format
+	viewSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionView)
 	readSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionRead)
 	createSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionCreate)
 	updateSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionUpdate)
 	deleteSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionDelete)
 	
-	fmt.Printf("DEBUG BuildPermissionsMap for %s: checking permissions %s, %s, %s, %s\n", 
-		resourceType, readSlug, createSlug, updateSlug, deleteSlug)
+	fmt.Printf("DEBUG BuildPermissionsMap for %s: checking permissions %s, %s, %s, %s, %s\n", 
+		resourceType, viewSlug, readSlug, createSlug, updateSlug, deleteSlug)
 	
 	// Get all user permissions for debugging
 	userPerms := h.permissionService.GetUserPermissions(user)
 	fmt.Printf("DEBUG BuildPermissionsMap - User %s permissions: %v\n", user.Email, userPerms)
 	
 	perms := map[string]bool{
-		"canView":   h.permissionService.HasPermission(user, readSlug),
+		// Use 'view' permission for listing/viewing, 'read' for accessing individual items
+		"canView":   h.permissionService.HasPermission(user, viewSlug) || h.permissionService.HasPermission(user, readSlug),
 		"canCreate": h.permissionService.HasPermission(user, createSlug),
 		"canEdit":   h.permissionService.HasPermission(user, updateSlug),
 		"canDelete": h.permissionService.HasPermission(user, deleteSlug),
