@@ -65,9 +65,12 @@ export interface CrudPageProps<T = any> {
   // Configuration
   title: string;
   resourceName: string; // e.g., 'teams', 'players'
+  route?: string; // Optional route override (e.g., '/admin/permissions' for roles)
   columns: CrudColumn<T>[];
   actions?: CrudAction<T>[];
   customFilters?: CrudFilter[];
+  pageActions?: PageAction[];
+  simpleFilters?: SimpleFilter[];
   
   // Pagination metadata (optional - will fallback to defaults if not provided)
   paginationConfig?: {
@@ -205,6 +208,27 @@ export interface StatusBadgeProps {
   status: StatusType | string;
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'info';
   className?: string;
+}
+
+// Page action types
+export interface PageAction {
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+  handler: () => void | Promise<void>;
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
+  className?: string;
+}
+
+// Simple filter types
+export interface SimpleFilter {
+  key: string;
+  label: string;
+  value: string | number | boolean;
+  badge?: number | string;
+  icon?: React.ReactNode;
+  // The actual filter parameters to apply when this filter is selected
+  filterParams?: Record<string, any>;
 }
 
 // Bulk action types

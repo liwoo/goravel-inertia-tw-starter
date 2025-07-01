@@ -162,7 +162,7 @@ func (c *PermissionsPageController) Index(ctx http.Context) http.Response {
 	}
 
 	// Render Inertia page
-	return inertia.Render(ctx, "Permissions/Index", map[string]interface{}{
+	return inertia.Render(ctx, "Permissions/RolesIndex", map[string]interface{}{
 		"data":           data,
 		"filters":        map[string]interface{}{},
 		"stats":          stats,
@@ -450,6 +450,20 @@ func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Respo
 			"error": "Failed to load role permissions: " + err.Error(),
 		})
 	}
+	
+	fmt.Printf("DEBUG: RolePermissions - Found %d active permission assignments for role %d\n", len(rolePermissions), role.ID)
+	
+	// Debug: Also check ALL permissions (active and inactive) for this role
+	var allRolePermissions []models.RolePermission
+	facades.Orm().Query().
+		Model(&models.RolePermission{}).
+		Where("role_id = ?", role.ID).
+		Find(&allRolePermissions)
+	
+	fmt.Printf("DEBUG: RolePermissions - Total permission assignments for role %d: %d (including inactive)\n", role.ID, len(allRolePermissions))
+	for _, rp := range allRolePermissions {
+		fmt.Printf("DEBUG: RolePermission - RoleID: %d, PermID: %d, IsActive: %v\n", rp.RoleID, rp.PermissionID, rp.IsActive)
+	}
 
 	// Now load the permissions manually
 	permissions := make([]models.Permission, 0)
@@ -477,6 +491,12 @@ func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Respo
 		permissionSlugs = append(permissionSlugs, perm.Slug)
 	}
 
+	// Additional debug logging
+	fmt.Printf("DEBUG: RolePermissions - Active permissions loaded: %d\n", len(permissions))
+	for _, perm := range permissions {
+		fmt.Printf("DEBUG: Permission - ID: %d, Slug: %s, IsActive: %v\n", perm.ID, perm.Slug, perm.IsActive)
+	}
+
 	fmt.Printf("DEBUG: RolePermissions - services count: %d\n", len(servicesData))
 	fmt.Printf("DEBUG: RolePermissions - actions count: %d\n", len(actionsData))
 	fmt.Printf("DEBUG: RolePermissions - permission slugs count: %d\n", len(permissionSlugs))
@@ -492,17 +512,23 @@ func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Respo
 		fmt.Printf("DEBUG: RolePermissions - first action: %+v\n", actionsData[0])
 	}
 
+	// Final debug output before rendering
+	roleData := map[string]interface{}{
+		"id":          role.ID,
+		"name":        role.Name,
+		"slug":        role.Slug,
+		"description": role.Description,
+		"level":       role.Level,
+		"is_active":   role.IsActive,
+		"permissions": permissionSlugs,
+	}
+	
+	fmt.Printf("DEBUG: Final role data being sent to frontend: %+v\n", roleData)
+	fmt.Printf("DEBUG: Role permissions array: %v\n", permissionSlugs)
+
 	// Render Inertia page for permission management
 	return inertia.Render(ctx, "Permissions/RolePermissions", map[string]interface{}{
-		"role": map[string]interface{}{
-			"id":          role.ID,
-			"name":        role.Name,
-			"slug":        role.Slug,
-			"description": role.Description,
-			"level":       role.Level,
-			"is_active":   role.IsActive,
-			"permissions": permissionSlugs,
-		},
+		"role":           roleData,
 		"allPermissions": allPermissions,
 		"services":       servicesData,
 		"actions":        actionsData,
