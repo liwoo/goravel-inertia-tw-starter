@@ -7,6 +7,7 @@ import {
   UserFormData 
 } from '@/types/user';
 import { CrudPage } from '@/components/Crud/CrudPage';
+import { PageAction, SimpleFilter } from '@/types/crud';
 import { 
   UserCreateForm, 
   UserEditForm, 
@@ -227,6 +228,54 @@ export default function UsersIndex({
     <UserEditForm {...props} roles={roles} />
   );
 
+  // Convert quick filters to SimpleFilter format
+  const simpleFilters: SimpleFilter[] = [
+    {
+      key: 'active',
+      label: 'Active',
+      value: 'active',
+      badge: stats?.activeUsers || 0,
+    },
+    {
+      key: 'inactive',
+      label: 'Inactive',
+      value: 'inactive',
+      badge: stats?.inactiveUsers || 0,
+    },
+    {
+      key: 'super_admins',
+      label: 'Super Admins',
+      value: 'super_admin',
+      badge: stats?.superAdmins || 0,
+    },
+  ];
+
+  // Convert management actions to PageAction format
+  const pageActions: PageAction[] = [];
+  
+  if (permissions.canManage) {
+    pageActions.push({
+      key: 'import',
+      label: 'Import Users',
+      icon: <Upload className="h-4 w-4" />,
+      handler: () => setShowImportDialog(true),
+    });
+    
+    pageActions.push({
+      key: 'export',
+      label: 'Export Users',
+      icon: <Download className="h-4 w-4" />,
+      handler: () => setShowExportDialog(true),
+    });
+    
+    pageActions.push({
+      key: 'refresh',
+      label: 'Refresh',
+      icon: <RefreshCw className="h-4 w-4" />,
+      handler: handleRefresh,
+    });
+  }
+
   return (
     <Admin title="User Management">
       <Head title="Users - Management" />
@@ -307,57 +356,7 @@ export default function UsersIndex({
           </div>
         )}
 
-        {/* Quick Filter Buttons */}
-        <div className="flex flex-wrap gap-2 px-4 lg:px-6">
-          {userQuickFilters.map((filter) => (
-            <Button
-              key={filter.key}
-              variant={JSON.stringify(filters) === JSON.stringify(filter.filters) ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                router.get('/admin/users', filter.filters, {
-                  preserveState: true,
-                  preserveScroll: true,
-                  only: ['data', 'filters', 'stats'],
-                });
-              }}
-              className="flex items-center space-x-2"
-            >
-              {filter.icon}
-              <span>{filter.label}</span>
-            </Button>
-          ))}
-        </div>
 
-        {/* Management Actions */}
-        {permissions.canManage && (
-          <div className="flex flex-wrap gap-2 px-4 lg:px-6">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setShowImportDialog(true)}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Import Users
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowExportDialog(true)}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export Users
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleRefresh}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
-        )}
 
         {/* Main CRUD Component */}
         <div className="px-0">
@@ -369,6 +368,8 @@ export default function UsersIndex({
           columns={isMobile ? userColumnsMobile : userColumns}
           actions={additionalActions}
           customFilters={updatedUserFilters}
+          simpleFilters={simpleFilters}
+          pageActions={pageActions}
           createForm={CreateFormWithRoles}
           editForm={EditFormWithRoles}
           detailView={UserDetailView}

@@ -40,9 +40,9 @@ func NewBooksPageController() *BooksPageController {
 
 // Index renders the Books management page with data and permissions - Implements PageControllerContract
 func (c *BooksPageController) Index(ctx http.Context) http.Response {
-	// Check if user has at least read permission for books
+	// Check if user has at least view permission for books (for listing)
 	permHelper := auth.GetPermissionHelper()
-	_, err := permHelper.RequireServicePermission(ctx, auth.ServiceBooks, auth.PermissionRead)
+	_, err := permHelper.RequireServicePermission(ctx, auth.ServiceBooks, auth.PermissionView)
 	if err != nil {
 		// Return 403 Forbidden
 		return ctx.Response().Status(403).Json(map[string]interface{}{

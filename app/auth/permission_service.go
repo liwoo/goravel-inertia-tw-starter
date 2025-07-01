@@ -315,11 +315,11 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	
 	fmt.Printf("DEBUG loadUserPermissions: loading permissions for user %d\n", user.ID)
 	
-	// Load user with roles and their permissions
+	// First, load user with roles (without permissions to avoid the many2many issue)
 	var userWithRoles models.User
 	err := facades.Orm().Query().
 		Where("id = ?", user.ID).
-		With("Roles.Permissions").
+		With("Roles").
 		First(&userWithRoles)
 	
 	if err != nil {
@@ -329,7 +329,7 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	
 	fmt.Printf("DEBUG loadUserPermissions: user has %d roles\n", len(userWithRoles.Roles))
 	
-	// Collect all permissions from all roles
+	// Collect all permissions from all roles through the pivot table
 	permissionMap := make(map[string]bool)
 	
 	for _, role := range userWithRoles.Roles {
@@ -338,10 +338,38 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 			continue
 		}
 		
-		fmt.Printf("DEBUG loadUserPermissions: role %s has %d permissions\n", role.Slug, len(role.Permissions))
-		for _, permission := range role.Permissions {
-			fmt.Printf("DEBUG loadUserPermissions: permission %s (active: %t)\n", permission.Slug, permission.IsActive)
-			if permission.IsActive {
+		// Load permissions through the pivot table to respect is_active status
+		var rolePermissions []models.RolePermission
+		err := facades.Orm().Query().
+			Where("role_id = ? AND is_active = ?", role.ID, true).
+			Find(&rolePermissions)
+		
+		if err != nil {
+			fmt.Printf("DEBUG loadUserPermissions: error loading role permissions: %v\n", err)
+			continue
+		}
+		
+		fmt.Printf("DEBUG loadUserPermissions: role %s has %d active permission assignments\n", role.Slug, len(rolePermissions))
+		
+		// Now load the actual permissions
+		if len(rolePermissions) > 0 {
+			permissionIDs := make([]uint, 0)
+			for _, rp := range rolePermissions {
+				permissionIDs = append(permissionIDs, rp.PermissionID)
+			}
+			
+			var perms []models.Permission
+			err = facades.Orm().Query().
+				Where("id IN ? AND is_active = ?", permissionIDs, true).
+				Find(&perms)
+			
+			if err != nil {
+				fmt.Printf("DEBUG loadUserPermissions: error loading permissions: %v\n", err)
+				continue
+			}
+			
+			for _, permission := range perms {
+				fmt.Printf("DEBUG loadUserPermissions: permission %s (active: %t)\n", permission.Slug, permission.IsActive)
 				permissionMap[permission.Slug] = true
 			}
 		}

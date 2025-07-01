@@ -19,7 +19,7 @@ import {
   Command,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CrudPageProps, CrudAction } from '@/types/crud';
+import { CrudPageProps, CrudAction, PageAction, SimpleFilter } from '@/types/crud';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CrudDataTable } from './CrudDataTable';
 import { SearchBar } from './SearchBar';
 import { FilterPanel } from './FilterPanel';
@@ -56,9 +57,12 @@ export function CrudPage<T extends { id: number }>({
   filters,
   title,
   resourceName,
+  route,
   columns,
   actions = [],
   customFilters = [],
+  pageActions = [],
+  simpleFilters = [],
   paginationConfig,
   createForm: CreateForm,
   editForm: EditForm,
@@ -73,9 +77,21 @@ export function CrudPage<T extends { id: number }>({
   canDelete: propCanDelete,
   canView: propCanView,
 }: CrudPageProps<T>) {
+  // Guard against undefined data
+  if (!data || !data.data) {
+    console.error('CrudPage: data prop is undefined or missing data.data', { data, resourceName });
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">No data available</p>
+      </div>
+    );
+  }
   
   // Use provided permissions or auto-detect based on resourceName
   const { canPerformAction } = usePermissions();
+  
+  // Use provided route or default to /admin/{resourceName}
+  const baseRoute = route || `/admin/${resourceName}`;
   
   const canCreate = propCanCreate !== undefined ? propCanCreate : canPerformAction(resourceName, 'create');
   const canEdit = propCanEdit !== undefined ? propCanEdit : canPerformAction(resourceName, 'update');
@@ -103,6 +119,9 @@ export function CrudPage<T extends { id: number }>({
   const [showFilters, setShowFilters] = React.useState(false);
   const [isSearching, setIsSearching] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [activeSimpleFilter, setActiveSimpleFilter] = React.useState<string | undefined>(
+    filters?.filters?.simpleFilter || undefined
+  );
 
   // Debounce search to avoid excessive requests
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -141,7 +160,7 @@ export function CrudPage<T extends { id: number }>({
     if (debouncedSearchTerm !== (filters?.search || '')) {
       setIsSearching(true);
       
-      router.get(`/admin/${resourceName}`, {
+      router.get(baseRoute, {
         ...(filters || {}),
         search: debouncedSearchTerm || undefined,
         page: 1,
@@ -168,7 +187,9 @@ export function CrudPage<T extends { id: number }>({
     const newDirection = 
       filters?.sort === field && filters?.direction === 'asc' ? 'desc' : 'asc';
     
-    router.get(`/admin/${resourceName}`, {
+    
+    
+    router.get(routePath, {
       ...(filters || {}),
       sort: field,
       direction: newDirection,
@@ -181,10 +202,12 @@ export function CrudPage<T extends { id: number }>({
   }, [resourceName, filters]);
 
   const handlePageChange = React.useCallback((page: number) => {
-    router.get(`/admin/${resourceName}`, {
+    
+    
+    router.get(routePath, {
       ...(filters || {}),
       page,
-      pageSize: pageSize,
+      ...(pageSize && { pageSize: pageSize }),
     }, {
       preserveState: true,
       preserveScroll: true,
@@ -194,7 +217,9 @@ export function CrudPage<T extends { id: number }>({
 
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
-    router.get(`/admin/${resourceName}`, {
+    
+    
+    router.get(routePath, {
       ...(filters || {}),
       page: 1, // Reset to first page when changing page size
       pageSize: newPageSize,
@@ -215,17 +240,73 @@ export function CrudPage<T extends { id: number }>({
     
     setActiveFilters(newFilters);
     
-    router.get(`/admin/${resourceName}`, {
+    
+    
+    router.get(routePath, {
       ...(filters || {}),
       filters: Object.keys(newFilters).length > 0 ? newFilters : undefined,
       page: 1,
-      pageSize: pageSize,
+      ...(pageSize && { pageSize: pageSize }),
     }, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
     });
   }, [resourceName, filters, activeFilters, pageSize]);
+
+  const handleSimpleFilterChange = React.useCallback((filterValue: string | undefined) => {
+    setActiveSimpleFilter(filterValue);
+    
+    // Build the filters based on the simple filter value
+    const filterParams: Record<string, any> = { ...(filters || {}) };
+    
+    if (filterValue === undefined) {
+      // Clear status/active filters when "All" is selected
+      delete filterParams.status;
+      delete filterParams.is_active;
+      delete filterParams.level_min;
+      delete filterParams.level_max;
+      delete filterParams.role;
+    } else {
+      // For book status filters
+      if (['AVAILABLE', 'BORROWED', 'MAINTENANCE'].includes(filterValue)) {
+        filterParams.status = filterValue;
+      }
+      // For user/role active/inactive filters
+      else if (filterValue === 'active') {
+        filterParams.is_active = 'true';
+      }
+      else if (filterValue === 'inactive') {
+        filterParams.is_active = 'false';
+      }
+      // For role level filters
+      else if (filterValue === 'super_admin') {
+        filterParams.level_min = '90';
+        delete filterParams.level_max;
+      }
+      else if (filterValue === 'admin') {
+        filterParams.level_min = '50';
+        filterParams.level_max = '89';
+      }
+      else if (filterValue === 'user') {
+        delete filterParams.level_min;
+        filterParams.level_max = '49';
+      }
+    }
+    
+    // Special handling for permissions page which uses 'roles' as resourceName but 'permissions' as route
+    
+    
+    router.get(routePath, {
+      ...filterParams,
+      page: 1,
+      ...(pageSize && { pageSize: pageSize }),
+    }, {
+      preserveState: true,
+      preserveScroll: true,
+      only: ['data', 'filters'],
+    });
+  }, [resourceName, filters, pageSize]);
 
   const handleCreate = React.useCallback(() => {
     setSelectedItem(null);
@@ -490,8 +571,8 @@ export function CrudPage<T extends { id: number }>({
               </Button>
             )}
 
-            {/* Export/Import Actions */}
-            {(canExport || canBulkUpdate) && (
+            {/* Page Actions */}
+            {pageActions.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -502,18 +583,16 @@ export function CrudPage<T extends { id: number }>({
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {canExport && (
-                    <DropdownMenuItem>
-                      <Download className="mr-2 h-4 w-4" />
-                      Export Data
+                  {pageActions.map((action) => (
+                    <DropdownMenuItem
+                      key={action.key}
+                      onClick={action.handler}
+                      className={action.className}
+                    >
+                      {action.icon && <span className="mr-2">{action.icon}</span>}
+                      {action.label}
                     </DropdownMenuItem>
-                  )}
-                  {canBulkUpdate && (
-                    <DropdownMenuItem>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Import Data
-                    </DropdownMenuItem>
-                  )}
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -554,6 +633,30 @@ export function CrudPage<T extends { id: number }>({
             </div>
           </div>
 
+          {/* Simple Filters */}
+          {simpleFilters.length > 0 && (
+            <Tabs 
+              value={activeSimpleFilter || "all"} 
+              onValueChange={(value) => handleSimpleFilterChange(value === "all" ? undefined : value)}
+              className="w-fit"
+            >
+              <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 flex">
+                <TabsTrigger value="all">All</TabsTrigger>
+                {simpleFilters.slice(0, 5).map((filter) => (
+                  <TabsTrigger key={filter.key} value={filter.value.toString()}>
+                    {filter.icon && <span className="mr-2">{filter.icon}</span>}
+                    {filter.label}
+                    {filter.badge !== undefined && (
+                      <Badge variant="secondary" className="ml-2">
+                        {filter.badge}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          )}
+
           {/* Filter Panel */}
           {showFilters && customFilters.length > 0 && (
             <div className="rounded-lg border bg-card p-4 min-w-0 overflow-hidden">
@@ -573,7 +676,9 @@ export function CrudPage<T extends { id: number }>({
                 onChange={handleFilterChange}
                 onClear={() => {
                   setActiveFilters({});
-                  router.get(`/admin/${resourceName}`, {
+                  
+                  
+                  router.get(routePath, {
                     ...(filters || {}),
                     filters: undefined,
                     page: 1,
