@@ -12,7 +12,6 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support"
-	"players/app/helpers"
 )
 
 type AuthController struct {
