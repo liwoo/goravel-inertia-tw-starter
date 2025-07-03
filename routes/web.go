@@ -1,15 +1,16 @@
 package routes
 
 import (
-	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/route"
-	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support"
 	"players/app/http/controllers"
 	"players/app/http/controllers/auth"
 	"players/app/http/controllers/books"
 	inertiaHelper "players/app/http/inertia"
 	"players/app/http/middleware"
+
+	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/route"
+	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support"
 )
 
 func Web() {
@@ -26,6 +27,17 @@ func Web() {
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
 		return inertiaHelper.Render(ctx, "auth/Login", map[string]interface{}{
+			"version": support.Version,
+		})
+	})
+	facades.Route().Get("/forgot-password", func(ctx http.Context) http.Response {
+		return inertiaHelper.Render(ctx, "auth/ForgotPassword", map[string]interface{}{
+			"version": support.Version,
+		})
+	})
+	facades.Route().Post("/forgot-password", authController.ForgotPassword)
+	facades.Route().Get("/forgot-password-confirmation", func(ctx http.Context) http.Response {
+		return inertiaHelper.Render(ctx, "auth/ForgotPasswordConfirmation", map[string]interface{}{
 			"version": support.Version,
 		})
 	})

@@ -2,11 +2,13 @@ package auth
 
 import (
 	"fmt"
+	"players/app/models" // Assuming your User model is here
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/facades"
-	"players/app/models" // Assuming your User model is here
-	"time"
 )
 
 type AuthController struct {
@@ -131,4 +133,65 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 
 	return ctx.Response().Redirect(http.StatusFound, "/")
 
+}
+
+// ForgotPasswordRequest defines the structure for forgot password requests.
+type ForgotPasswordRequest struct {
+	Email string `form:"email" json:"email"`
+}
+
+func (r *ForgotPasswordRequest) Authorize(ctx http.Context) error {
+	return nil
+}
+
+func (r *ForgotPasswordRequest) Rules(ctx http.Context) map[string]string {
+	return map[string]string{
+		"email": "required|email",
+	}
+}
+
+func (r *ForgotPasswordRequest) Messages(ctx http.Context) map[string]string {
+	return map[string]string{
+		"email.required": "Email is required.",
+		"email.email":    "Please provide a valid email address.",
+	}
+}
+
+// ForgotPassword handles sending a password reset link (logs to console)
+func (r *AuthController) ForgotPassword(ctx http.Context) http.Response {
+	var req ForgotPasswordRequest
+	errors, err := ctx.Request().ValidateRequest(&req)
+	if err != nil {
+		return ctx.Response().Status(http.StatusInternalServerError).Json(http.Json{
+			"message": "Error validating request: " + err.Error(),
+		})
+	}
+	if errors != nil {
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(errors.All())
+	}
+
+	// Find user by email (do not reveal if not found)
+	var user models.User
+	userExists := facades.Orm().Query().Where("email", req.Email).First(&user) == nil
+
+	if userExists {
+		// Generate a reset token and expiration (1 hour from now)
+		token := uuid.NewString()
+		expires := time.Now().Add(1 * time.Hour)
+		// Build base URL from env vars
+		appURL := facades.Config().GetString("app.url", "http://localhost")
+		appPort := facades.Config().GetString("app.port", "3000")
+		baseURL := appURL
+		if appPort != "80" && appPort != "443" && appPort != "" {
+			// Only append port if not default
+			baseURL = fmt.Sprintf("%s:%s", appURL, appPort)
+		}
+		resetLink := fmt.Sprintf("%s/reset-password?token=%s&email=%s", baseURL, token, req.Email)
+		facades.Log().Info(fmt.Sprintf("Password reset link for %s (expires %s): %s", req.Email, expires.Format(time.RFC3339), resetLink))
+		fmt.Printf("Password reset link for %s (expires %s): %s\n", req.Email, expires.Format(time.RFC3339), resetLink)
+		// TODO: Store token and expiration in DB for real implementation
+	}
+
+	// Always return success (do not reveal if email exists)
+	return ctx.Response().Redirect(http.StatusFound, "/forgot-password-confirmation")
 }
