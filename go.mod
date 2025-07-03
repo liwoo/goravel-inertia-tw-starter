@@ -6,8 +6,10 @@ toolchain go1.24.4
 
 require (
 	github.com/gin-gonic/gin v1.10.0
-	github.com/goravel/framework v1.15.4
+	github.com/google/uuid v1.6.0
+	github.com/goravel/framework v1.15.5
 	github.com/goravel/gin v1.3.3
+	github.com/goravel/redis v1.3.1
 	github.com/petaki/inertia-go v1.10.0
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/grpc v1.70.0
@@ -79,7 +81,6 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gookit/color v1.5.4 // indirect
