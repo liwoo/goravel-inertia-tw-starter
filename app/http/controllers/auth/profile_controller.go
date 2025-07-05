@@ -24,56 +24,64 @@ func (c *ProfileController) UpdatePassword(ctx http.Context) http.Response {
 
 	// Bind the data to the struct
 	if err := ctx.Request().Bind(&passwordRequest); err != nil {
-		return ctx.Response().Status(http.StatusBadRequest).Json(map[string]interface{}{
-			"errors": map[string]string{"server": "Data binding failed: " + err.Error()},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"server": "Data binding failed: " + err.Error(),
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 
 	// Manual validation - check required fields
 	if passwordRequest.CurrentPassword == "" {
-		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(map[string]interface{}{
-			"errors": map[string]string{"current_password": "Current password is required"},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"current_password": "Current password is required",
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 	if passwordRequest.Password == "" {
-		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(map[string]interface{}{
-			"errors": map[string]string{"password": "New password is required"},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"password": "New password is required",
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 	if passwordRequest.PasswordConfirmation == "" {
-		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(map[string]interface{}{
-			"errors": map[string]string{"password_confirmation": "Password confirmation is required"},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"password_confirmation": "Password confirmation is required",
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 
 	// Validate password requirements
 	if err := passwordRequest.ValidatePasswordRequirements(); err != nil {
-		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(map[string]interface{}{
-			"errors": map[string]string{"password": err.Error()},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"password": err.Error(),
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 
 	// Validate password confirmation
 	if err := passwordRequest.ValidatePasswordConfirmation(); err != nil {
-		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(map[string]interface{}{
-			"errors": map[string]string{"password_confirmation": err.Error()},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"password_confirmation": err.Error(),
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 
 	// Get authenticated user
 	permHelper := auth.GetPermissionHelper()
 	user, err := permHelper.RequireAuthentication(ctx)
 	if err != nil {
-		return ctx.Response().Status(http.StatusUnauthorized).Json(map[string]interface{}{
-			"errors": map[string]string{"auth": "Authentication required"},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"auth": "Authentication required",
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 
 	// Validate current password
 	if !facades.Hash().Check(passwordRequest.CurrentPassword, user.Password) {
-		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(map[string]interface{}{
-			"errors": map[string]string{"current_password": "Current password is incorrect"},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"current_password": "Current password is incorrect",
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 
 	// Hash new password
@@ -83,9 +91,10 @@ func (c *ProfileController) UpdatePassword(ctx http.Context) http.Response {
 			"user_id": user.ID,
 			"error":   err.Error(),
 		})
-		return ctx.Response().Status(http.StatusInternalServerError).Json(map[string]interface{}{
-			"errors": map[string]string{"server": "Failed to process password"},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"server": "Failed to process password",
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 
 	// Update password in database
@@ -98,9 +107,10 @@ func (c *ProfileController) UpdatePassword(ctx http.Context) http.Response {
 			"user_id": user.ID,
 			"error":   err.Error(),
 		})
-		return ctx.Response().Status(http.StatusInternalServerError).Json(map[string]interface{}{
-			"errors": map[string]string{"server": "Failed to update password"},
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"server": "Failed to update password",
 		})
+		return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 	}
 
 	// Log the password change for security auditing
@@ -112,7 +122,7 @@ func (c *ProfileController) UpdatePassword(ctx http.Context) http.Response {
 		"user_agent": ctx.Request().Header("User-Agent", ""),
 	})
 
-	return ctx.Response().Status(http.StatusOK).Json(map[string]interface{}{
-		"message": "Password updated successfully",
-	})
+	// For Inertia.js, we need to redirect back with success message
+	ctx.Request().Session().Flash("success", "Password updated successfully!")
+	return ctx.Response().Redirect(http.StatusSeeOther, "/account")
 }

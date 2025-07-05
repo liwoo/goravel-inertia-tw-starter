@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 // @ts-ignore
-import { useForm } from "@inertiajs/react";
+import { useForm, usePage } from "@inertiajs/react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -23,17 +23,33 @@ export function ProfileForm({ user, className, ...props }: ProfileFormProps & Re
         password_confirmation: '',
     });
 
+    const { props: pageProps } = usePage();
+    const { success, errors: flashErrors } = pageProps as any;
+
+    // Handle flash messages on component mount and updates
+    useEffect(() => {
+        if (success) {
+            toast.success(success);
+        }
+
+        if (flashErrors) {
+            Object.keys(flashErrors).forEach(field => {
+                if (flashErrors[field]) {
+                    toast.error(flashErrors[field]);
+                }
+            });
+        }
+    }, [success, flashErrors]);
+
     const handlePasswordUpdate = (e: React.FormEvent) => {
         e.preventDefault();
         put('/profile/password', {
             onSuccess: () => {
-                toast.success('Password updated successfully!');
                 reset('current_password', 'password', 'password_confirmation');
             },
             onError: (errors: any) => {
-                if (errors.current_password) toast.error(errors.current_password);
-                if (errors.password) toast.error(errors.password);
-                if (errors.password_confirmation) toast.error(errors.password_confirmation);
+                // Handle any additional client-side errors
+                console.error('Form submission error:', errors);
             }
         });
     };
@@ -175,11 +191,11 @@ export function ProfileForm({ user, className, ...props }: ProfileFormProps & Re
                                             type="password"
                                             value={data.current_password}
                                             onChange={(e) => setData('current_password', e.target.value)}
-                                            className={errors.current_password ? "border-red-500" : ""}
+                                            className={(errors.current_password || flashErrors?.current_password) ? "border-red-500" : ""}
                                             placeholder="Enter your current password"
                                         />
-                                        {errors.current_password && (
-                                            <p className="text-xs text-red-500">{errors.current_password}</p>
+                                        {(errors.current_password || flashErrors?.current_password) && (
+                                            <p className="text-xs text-red-500">{errors.current_password || flashErrors?.current_password}</p>
                                         )}
                                     </div>
 
@@ -191,11 +207,11 @@ export function ProfileForm({ user, className, ...props }: ProfileFormProps & Re
                                                 type="password"
                                                 value={data.password}
                                                 onChange={(e) => setData('password', e.target.value)}
-                                                className={errors.password ? "border-red-500" : ""}
+                                                className={(errors.password || flashErrors?.password) ? "border-red-500" : ""}
                                                 placeholder="Enter new password"
                                             />
-                                            {errors.password && (
-                                                <p className="text-xs text-red-500">{errors.password}</p>
+                                            {(errors.password || flashErrors?.password) && (
+                                                <p className="text-xs text-red-500">{errors.password || flashErrors?.password}</p>
                                             )}
                                         </div>
                                         <div className="space-y-2">
@@ -205,11 +221,11 @@ export function ProfileForm({ user, className, ...props }: ProfileFormProps & Re
                                                 type="password"
                                                 value={data.password_confirmation}
                                                 onChange={(e) => setData('password_confirmation', e.target.value)}
-                                                className={errors.password_confirmation ? "border-red-500" : ""}
+                                                className={(errors.password_confirmation || flashErrors?.password_confirmation) ? "border-red-500" : ""}
                                                 placeholder="Confirm new password"
                                             />
-                                            {errors.password_confirmation && (
-                                                <p className="text-xs text-red-500">{errors.password_confirmation}</p>
+                                            {(errors.password_confirmation || flashErrors?.password_confirmation) && (
+                                                <p className="text-xs text-red-500">{errors.password_confirmation || flashErrors?.password_confirmation}</p>
                                             )}
                                         </div>
                                     </div>

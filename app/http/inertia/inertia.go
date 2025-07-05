@@ -28,7 +28,7 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 	// Prepare shared props, including auth user
 	sharedProps := make(map[string]interface{})
 
-	// Add session errors to shared props for Inertia.js
+	// Add session flash messages to shared props for Inertia.js
 	if ctx.Request().HasSession() {
 		session := ctx.Request().Session()
 
@@ -46,6 +46,12 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 			} else {
 				sharedProps["errors"] = map[string]interface{}{}
 			}
+		}
+
+		// Get success messages from session flash data
+		success := session.Get("success")
+		if success != nil {
+			sharedProps["success"] = success
 		}
 	} else {
 		sharedProps["errors"] = map[string]interface{}{}
