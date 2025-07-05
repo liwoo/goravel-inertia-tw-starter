@@ -1,15 +1,16 @@
 package routes
 
 import (
-	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/route"
-	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support"
 	"players/app/http/controllers"
 	"players/app/http/controllers/auth"
 	"players/app/http/controllers/books"
 	inertiaHelper "players/app/http/inertia"
 	"players/app/http/middleware"
+
+	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/route"
+	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support"
 )
 
 func Web() {
@@ -17,6 +18,7 @@ func Web() {
 	facades.Route().GlobalMiddleware(inertiaMiddleware)
 
 	authController := auth.NewAuthController()
+	profileController := auth.NewProfileController()
 	utilController := controllers.NewUtilController()
 	dashboardController := controllers.NewDashboardController()
 	booksPageController := books.NewBooksPageController()
@@ -42,6 +44,9 @@ func Web() {
 	// Authenticated routes
 	facades.Route().Middleware(middleware.JwtAuth()).Group(func(router route.Router) {
 		router.Post("/logout", authController.Logout)
+
+		// Profile routes
+		router.Put("/profile/password", profileController.UpdatePassword)
 
 		router.Get("/settings", func(ctx http.Context) http.Response {
 			return inertiaHelper.Render(ctx, "settings/Index", map[string]interface{}{
