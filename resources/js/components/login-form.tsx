@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { useForm, usePage } from '@inertiajs/react';
 import React from 'react';
 import { toast } from "sonner";
+import { AlertCircle } from "lucide-react";
 
 export function LoginForm({
   className,
@@ -45,10 +46,13 @@ export function LoginForm({
         </p>
       </div>
 
-      {/* Display general errors */}
+      {/* Display general errors - Updated for proper accessibility contrast */}
       {page.props.errors?.general && (
-        <div className="text-sm text-red-500 text-center bg-red-50 p-2 rounded">
-          {page.props.errors.general}
+        <div className="flex items-start gap-3 text-sm bg-destructive text-destructive-foreground border border-destructive p-3 rounded-md">
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            {page.props.errors.general}
+          </div>
         </div>
       )}
 
@@ -64,7 +68,7 @@ export function LoginForm({
             required
           />
           {(errors.email || page.props.errors?.email) && (
-            <p className="text-xs text-red-500 mt-1">
+            <p className="text-xs text-destructive mt-1">
               {errors.email || page.props.errors?.email}
             </p>
           )}
@@ -87,7 +91,7 @@ export function LoginForm({
             required
           />
           {(errors.password || page.props.errors?.password) && (
-            <p className="text-xs text-red-500 mt-1">
+            <p className="text-xs text-destructive mt-1">
               {errors.password || page.props.errors?.password}
             </p>
           )}

@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/gin-gonic/gin v1.10.0
-	github.com/goravel/framework v1.15.4
+	github.com/goravel/framework v1.15.5
 	github.com/goravel/gin v1.3.3
 	github.com/petaki/inertia-go v1.10.0
 	github.com/stretchr/testify v1.10.0
@@ -87,6 +87,7 @@ require (
 	github.com/gookit/goutil v0.6.18 // indirect
 	github.com/gookit/validate v1.5.4 // indirect
 	github.com/goravel/file-rotatelogs/v2 v2.4.2 // indirect
+	github.com/goravel/redis v1.3.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect

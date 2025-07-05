@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"players/app/models" // Assuming your User model is here
+	"players/app/services"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -12,10 +14,13 @@ import (
 
 type AuthController struct {
 	// Dependencies can be injected here
+	passwordAttemptService *services.PasswordAttemptService
 }
 
 func NewAuthController() *AuthController {
-	return &AuthController{}
+	return &AuthController{
+		passwordAttemptService: services.NewPasswordAttemptService(),
+	}
 }
 
 // LoginRequest defines the structure for login requests.
@@ -76,9 +81,32 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
 
+	// Check if user is locked before attempting login
+	attemptResult, err := r.passwordAttemptService.CheckUserStatus(context.Background(), loginRequest.Email)
+	if err != nil {
+		facades.Log().Error("Error checking user status: " + err.Error())
+		ctx.Request().Session().Flash("error", "Authentication service error")
+		return ctx.Response().Redirect(http.StatusFound, "/login")
+	}
+
+	if attemptResult.IsLocked {
+		lockMessage := "Account temporarily locked due to too many failed attempts."
+		if attemptResult.LockExpiresAt != nil {
+			lockMessage = fmt.Sprintf("Account locked until %s due to too many failed attempts.",
+				attemptResult.LockExpiresAt.Format("3:04 PM"))
+		}
+		ctx.Request().Session().Flash("error", lockMessage)
+		return ctx.Response().Redirect(http.StatusFound, "/login")
+	}
+
 	var user models.User
 	// Find user by email
 	if err := facades.Orm().Query().Where("email", loginRequest.Email).First(&user); err != nil {
+
+		// Record failed attempt for non-existent user too (security measure)
+		if _, attemptErr := r.passwordAttemptService.RecordFailedAttempt(context.Background(), loginRequest.Email); attemptErr != nil {
+			facades.Log().Error("Error recording failed attempt: " + attemptErr.Error())
+		}
 		// Flash field-specific error
 		ctx.Request().Session().Flash("errors", map[string]interface{}{
 			"email": "Invalid credentials (Email not found)",
@@ -88,11 +116,39 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 	// Check password
 	if !facades.Hash().Check(loginRequest.Password, user.Password) {
+		// Record failed attempt
+		attemptResult, err := r.passwordAttemptService.RecordFailedAttempt(context.Background(), loginRequest.Email)
+		if err != nil {
+			facades.Log().Error("Error recording failed attempt: " + err.Error())
+		}
+
+		// Prepare error message based on attempt result
+		errorMessage := "Password is incorrect"
+		if attemptResult != nil {
+			if attemptResult.IsLocked {
+				lockMessage := "Account temporarily locked due to too many failed attempts."
+				if attemptResult.LockExpiresAt != nil {
+					lockMessage = fmt.Sprintf("Account locked until %s due to too many failed attempts.",
+						attemptResult.LockExpiresAt.Format("3:04 PM"))
+				}
+				ctx.Request().Session().Flash("error", lockMessage)
+				return ctx.Response().Redirect(http.StatusFound, "/login")
+			} else if attemptResult.ShouldWarn {
+				errorMessage = fmt.Sprintf("Invalid password. Warning: %d more failed attempts will lock your account for 1 hour.",
+					attemptResult.RemainingAttempts)
+			}
+		}
+
 		// Flash field-specific error
 		ctx.Request().Session().Flash("errors", map[string]interface{}{
-			"password": "Password is incorrect",
+			"password": errorMessage,
 		})
 		return ctx.Response().Redirect(http.StatusFound, "/login")
+	}
+
+	// Clear any failed attempts on successful login
+	if err := r.passwordAttemptService.ClearAttempts(context.Background(), loginRequest.Email); err != nil {
+		facades.Log().Error("Error clearing failed attempts: " + err.Error())
 	}
 
 	// Log the user in and get the token
