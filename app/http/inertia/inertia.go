@@ -8,8 +8,8 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/petaki/inertia-go"
 
-	"players/app/models" // Import the User model
 	"players/app/auth"   // Import auth for permission helper
+	"players/app/models" // Import the User model
 )
 
 // Version represents the current asset version
@@ -28,12 +28,35 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 	// Prepare shared props, including auth user
 	sharedProps := make(map[string]interface{})
 
+	// Add session errors to shared props for Inertia.js
+	if ctx.Request().HasSession() {
+		session := ctx.Request().Session()
+
+		// Get errors from session flash data
+		errors := session.Get("errors")
+		if errors != nil {
+			sharedProps["errors"] = errors
+		} else {
+			// Check for individual error messages
+			errorMsg := session.Get("error")
+			if errorMsg != nil {
+				sharedProps["errors"] = map[string]interface{}{
+					"general": errorMsg,
+				}
+			} else {
+				sharedProps["errors"] = map[string]interface{}{}
+			}
+		}
+	} else {
+		sharedProps["errors"] = map[string]interface{}{}
+	}
+
 	// Add authenticated user information
 	var authUser *models.User
 
 	// Default to no authenticated user in shared props
 	sharedProps["auth"] = map[string]interface{}{
-		"user": nil,
+		"user":        nil,
 		"permissions": map[string]interface{}{}, // Empty permissions object
 	}
 
@@ -54,34 +77,34 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 			Where("id = ?", authUser.ID).
 			With("Roles").
 			First(&userWithRoles)
-		
+
 		if err != nil {
 			// Fallback to basic user info if roles loading fails
 			log.Printf("DEBUG: Error loading user roles: %v", err)
-			
+
 			// Get permission helper to build permissions map even without roles
 			permHelper := auth.GetPermissionHelper()
-			
+
 			// Build empty permissions for all services
 			allPermissions := make(map[string]map[string]bool)
 			allServices := auth.GetAllServiceRegistries()
-			
+
 			for _, service := range allServices {
 				// This will return false for all permissions since no roles are loaded
 				servicePerms := permHelper.BuildPermissionsMap(ctx, string(service))
 				allPermissions[string(service)] = servicePerms
 			}
-			
+
 			sharedProps["auth"] = map[string]interface{}{
 				"user": map[string]interface{}{
-					"id":    authUser.ID,
-					"name":  authUser.Name,
-					"email": authUser.Email,
-					"role":  authUser.Role,
-					"roles": []map[string]interface{}{}, // Empty roles array
-					"permissions": []string{}, // Empty permissions array
-					"isSuperAdmin": authUser.Role == "ADMIN", // Check legacy role
-					"isAdmin": authUser.Role == "ADMIN",
+					"id":           authUser.ID,
+					"name":         authUser.Name,
+					"email":        authUser.Email,
+					"role":         authUser.Role,
+					"roles":        []map[string]interface{}{}, // Empty roles array
+					"permissions":  []string{},                 // Empty permissions array
+					"isSuperAdmin": authUser.Role == "ADMIN",   // Check legacy role
+					"isAdmin":      authUser.Role == "ADMIN",
 				},
 				"permissions": allPermissions,
 			}
@@ -90,19 +113,19 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 			for _, role := range userWithRoles.Roles {
 				log.Printf("DEBUG: User has role: %s (active: %t)", role.Slug, role.IsActive)
 			}
-			
+
 			// Get permission helper to build permissions map
 			permHelper := auth.GetPermissionHelper()
-			
+
 			// Build permissions for all services the user might access
 			allPermissions := make(map[string]map[string]bool)
 			allServices := auth.GetAllServiceRegistries()
-			
+
 			for _, service := range allServices {
 				servicePerms := permHelper.BuildPermissionsMap(ctx, string(service))
 				allPermissions[string(service)] = servicePerms
 			}
-			
+
 			// Include roles data for frontend RBAC checks
 			rolesList := make([]map[string]interface{}, 0, len(userWithRoles.Roles))
 			for _, role := range userWithRoles.Roles {
@@ -116,21 +139,21 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 					})
 				}
 			}
-			
+
 			// Get user's actual permissions from their roles
 			userPermissions := permHelper.GetUserPermissions(ctx)
 			log.Printf("DEBUG: User permissions loaded: %v", userPermissions)
-			
+
 			sharedProps["auth"] = map[string]interface{}{
 				"user": map[string]interface{}{
-					"id":          userWithRoles.ID,
-					"name":        userWithRoles.Name,
-					"email":       userWithRoles.Email,
-					"role":        userWithRoles.Role,
-					"roles":       rolesList,
-					"permissions": userPermissions,
+					"id":           userWithRoles.ID,
+					"name":         userWithRoles.Name,
+					"email":        userWithRoles.Email,
+					"role":         userWithRoles.Role,
+					"roles":        rolesList,
+					"permissions":  userPermissions,
 					"isSuperAdmin": userWithRoles.IsSuperAdminUser(),
-					"isAdmin":     userWithRoles.IsAdmin(),
+					"isAdmin":      userWithRoles.IsAdmin(),
 				},
 				"permissions": allPermissions,
 			}
@@ -153,7 +176,7 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 	if requestURL == "" {
 		requestURL = ctx.Request().Url()
 	}
-	
+
 	// Create the page data
 	pageMap := map[string]interface{}{
 		"component": component,
@@ -161,7 +184,7 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 		"url":       requestURL,
 		"version":   Version,
 	}
-	
+
 	// Debug logging
 	log.Printf("DEBUG: Inertia page data - component: %s, url: %s, version: %s", component, requestURL, Version)
 	log.Printf("DEBUG: Props keys: %v", getMapKeys(finalProps))
