@@ -134,7 +134,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 				ctx.Request().Session().Flash("error", lockMessage)
 				return ctx.Response().Redirect(http.StatusFound, "/login")
 			} else if attemptResult.ShouldWarn {
-				errorMessage = fmt.Sprintf("Invalid password. Warning: %d more failed attempts will lock your account for 1 hour.",
+				errorMessage = fmt.Sprintf("Password is incorrect. Warning: %d more failed attempts will lock your account for 1 hour.",
 					attemptResult.RemainingAttempts)
 			}
 		}
