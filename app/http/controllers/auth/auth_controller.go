@@ -2,7 +2,6 @@ package auth
 
 import (
 	"fmt"
-	"players/app/helpers"
 	"players/app/models" // Assuming your User model is here
 	"time"
 
@@ -13,13 +12,10 @@ import (
 
 type AuthController struct {
 	// Dependencies can be injected here
-	validationHelper *helpers.ValidationHelper
 }
 
 func NewAuthController() *AuthController {
-	return &AuthController{
-		validationHelper: helpers.NewValidationHelper(),
-	}
+	return &AuthController{}
 }
 
 // LoginRequest defines the structure for login requests.
@@ -69,33 +65,42 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	errors, err := ctx.Request().ValidateRequest(&loginRequest)
 	if err != nil {
 		// Flash general error message and redirect back
-		ctx.Request().Session().Flash("error", "Error validating request: "+err.Error())
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"general": "Error validating request: " + err.Error(),
+		})
 		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
 	if errors != nil {
-		// Use validation helper to format and redirect
-		return r.validationHelper.FlashValidationErrorsAndRedirect(ctx, errors, "/login")
+		// Flash validation errors directly
+		ctx.Request().Session().Flash("errors", errors.All())
+		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
 
 	var user models.User
 	// Find user by email
 	if err := facades.Orm().Query().Where("email", loginRequest.Email).First(&user); err != nil {
-		// Use validation helper to create and flash field error
-		fieldError := r.validationHelper.CreateFieldError("email", helpers.ErrEmailNotFound)
-		return r.validationHelper.FlashErrorsAndRedirect(ctx, fieldError, "/login")
+		// Flash field-specific error
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"email": "Invalid credentials (Email not found)",
+		})
+		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
 
 	// Check password
 	if !facades.Hash().Check(loginRequest.Password, user.Password) {
-		// Use validation helper to create and flash field error
-		fieldError := r.validationHelper.CreateFieldError("password", helpers.ErrPasswordMismatch)
-		return r.validationHelper.FlashErrorsAndRedirect(ctx, fieldError, "/login")
+		// Flash field-specific error
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"password": "Password is incorrect",
+		})
+		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
 
 	// Log the user in and get the token
 	token, err := facades.Auth(ctx).Login(&user)
 	if err != nil {
-		ctx.Request().Session().Flash("error", "Error during login: "+err.Error())
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"general": "Error during login: " + err.Error(),
+		})
 		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
 
