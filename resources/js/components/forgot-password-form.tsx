@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 // @ts-ignore
-import { useForm, Link } from '@inertiajs/react';
+import { useForm, usePage, Link } from '@inertiajs/react';
 import React from 'react';
+import { toast } from "sonner";
 
 export function ForgotPasswordForm({
     className,
@@ -13,11 +14,19 @@ export function ForgotPasswordForm({
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
     });
-
+    const page = usePage();
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         post('/forgot-password', {
             onFinish: () => reset('email'), // Optional: reset email field on finish
+            onError: (errors: any) => {
+                if (errors.email) {
+                    toast.error(errors.email);
+                }
+                if (errors.general) {
+                    toast.error(errors.general);
+                }
+            }
         });
     };
 
@@ -29,7 +38,12 @@ export function ForgotPasswordForm({
                     Enter your email address and we'll send you a link to reset your password
                 </p>
             </div>
-
+            {/* Display general errors */}
+            {page.props.errors?.general && (
+                <div className="text-sm text-red-500 text-center bg-red-50 p-2 rounded">
+                    {page.props.errors.general}
+                </div>
+            )}
             <div className="grid gap-6">
                 <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
@@ -42,8 +56,10 @@ export function ForgotPasswordForm({
                         required
                         disabled={processing}
                     />
-                    {errors.email && (
-                        <p className="text-xs text-red-500 mt-1">{errors.email}</p>
+                    {(errors.email || page.props.errors?.email) && (
+                        <p className="text-xs text-red-500 mt-1">
+                            {errors.email || page.props.errors?.email}
+                        </p>
                     )}
                 </div>
 
