@@ -15,8 +15,21 @@ axios.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      // Redirect to login page
-      window.location.href = '/login';
+      // Don't redirect if we're already on auth pages or making auth requests
+      const currentPath = window.location.pathname;
+      const isAuthPage = currentPath === '/login' || currentPath === '/' || currentPath === '/una';
+      const isAuthRequest = error.config?.url?.includes('/login') || error.config?.url?.includes('/auth');
+
+      // Only redirect to /una if we're not on auth pages and not making auth requests
+      if (!isAuthPage && !isAuthRequest) {
+        window.location.href = '/una';
+      }
+    } else if (error.response?.status === 409) {
+      // Handle Inertia redirect conflicts
+      const location = error.response.headers['x-inertia-location'];
+      if (location) {
+        window.location.href = location;
+      }
     }
     return Promise.reject(error);
   }
