@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 // @ts-ignore
 import { useForm, usePage, Link } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import React from 'react';
 import { toast } from "sonner";
 

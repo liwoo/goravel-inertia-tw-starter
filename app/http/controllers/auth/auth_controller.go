@@ -12,6 +12,9 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support"
+	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/validation"
+	"github.com/goravel/framework/facades"
 )
 
 type AuthController struct {
