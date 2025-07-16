@@ -14,6 +14,9 @@ type CrudControllerContract interface {
 	Update(ctx http.Context) http.Response // PUT /resource/{id} - Update existing resource
 	Delete(ctx http.Context) http.Response // DELETE /resource/{id} - Delete resource
 
+	// Search endpoint - MUST be implemented
+	Search(ctx http.Context) http.Response // GET /resource/search - Search resources
+
 	// Pagination contract - MUST be implemented for Index
 	PaginationControllerContract
 
@@ -22,6 +25,9 @@ type CrudControllerContract interface {
 
 	// Response contract - MUST be implemented for consistent responses
 	ResponseControllerContract
+
+	// Search contract - MUST be implemented for Search
+	SearchControllerContract
 }
 
 // PaginationControllerContract enforces pagination in listing endpoints
@@ -112,6 +118,18 @@ type PageResponseContract interface {
 
 	// ValidatePageRequest validates request parameters for page rendering
 	ValidatePageRequest(ctx http.Context) (*ListRequest, error)
+}
+
+// SearchControllerContract enforces search functionality in controllers
+type SearchControllerContract interface {
+	// ValidateSearchRequest validates search parameters
+	ValidateSearchRequest(ctx http.Context) (*SearchRequest, error)
+
+	// GetSearchableFields returns fields that can be searched
+	GetSearchableFields() []string
+
+	// BuildSearchResponse creates standardized search response
+	BuildSearchResponse(result *PaginatedResult, request *SearchRequest) map[string]interface{}
 }
 
 // ResourceControllerContract combines all controller contracts for complete resource management

@@ -42,7 +42,7 @@ func (s *BookService) GetList(req contracts.ListRequest) (*contracts.PaginatedRe
 	// Build query with sorting
 	query := facades.Orm().Query().Model(&models.Book{})
 
-	// Apply search if provided using searchable fields
+	// Apply search if provided using searchable fields (Repetitive Code)
 	if req.Search != "" {
 		if err := s.ValidateSearchQuery(req.Search); err != nil {
 			return nil, err
@@ -59,7 +59,7 @@ func (s *BookService) GetList(req contracts.ListRequest) (*contracts.PaginatedRe
 		}
 	}
 
-	// Apply sorting with field validation and mapping
+	// Apply sorting with field validation and mapping = REPETITIVE CODE
 	if req.Sort != "" && req.Direction != "" {
 		if s.ValidateSortField(req.Sort) && s.ValidateSortDirection(req.Direction) {
 			dbColumn, valid := s.MapSortField(req.Sort)

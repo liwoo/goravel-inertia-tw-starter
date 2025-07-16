@@ -4,6 +4,8 @@ import {SiteHeader} from "@/components/site-header";
 import {SidebarInset, SidebarProvider} from "@/components/ui/sidebar";
 import {usePage} from "@inertiajs/react";
 import {SharedData} from "@/types/app";
+import {MessageProvider} from "@/contexts/MessageContext";
+import {NotificationProvider} from "@/contexts/NotificationContext";
 
 interface AdminLayoutProps {
     title?: string;
@@ -16,17 +18,21 @@ export default function AdminLayout({title, children}: AdminLayoutProps) {
     const { props } = usePage<SharedData>();
     const user = props.auth?.user;
     return (
-        <SidebarProvider>
-            <AppSidebar variant="inset" user={user} />
-            <SidebarInset>
-                <SiteHeader title={title || "Dashboard"}/>
-                <div className="flex flex-1 flex-col min-w-0">
-                    <div className="@container/main flex flex-1 flex-col gap-2 min-w-0 overflow-hidden">
-                        {/* Page-specific content will be rendered here */}
-                        {children}
-                    </div>
-                </div>
-            </SidebarInset>
-        </SidebarProvider>
+        <MessageProvider>
+            <NotificationProvider>
+                <SidebarProvider>
+                    <AppSidebar variant="inset" user={user} />
+                    <SidebarInset>
+                        <SiteHeader title={title || "Dashboard"}/>
+                        <div className="flex flex-1 flex-col min-w-0">
+                            <div className="@container/main flex flex-1 flex-col gap-2 min-w-0 overflow-hidden">
+                                {/* Page-specific content will be rendered here */}
+                                {children}
+                            </div>
+                        </div>
+                    </SidebarInset>
+                </SidebarProvider>
+            </NotificationProvider>
+        </MessageProvider>
     );
 }

@@ -172,7 +172,7 @@ func (c *SearchController) searchRoles(query string) []SearchResult {
 			Title:    role.Name,
 			Subtitle: role.Description,
 			Type:     "role",
-			URL:      fmt.Sprintf("/admin/permissions/roles?search=%s", query),
+			URL:      fmt.Sprintf("/admin/permissions?search=%s", query),
 		})
 	}
 

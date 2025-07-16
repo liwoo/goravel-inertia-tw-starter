@@ -62,14 +62,26 @@ function DataTableColumnHeader<TData, TValue>({
   column,
   title,
   className,
+  onSort,
 }: {
   column: any
   title: string
   className?: string
+  onSort?: (field: string, direction: 'asc' | 'desc') => void
 }) {
   if (!column.getCanSort()) {
     return <div className={cn(className)}>{title}</div>
   }
+
+  const handleSort = (desc: boolean) => {
+    if (onSort) {
+      // Use the external onSort handler for server-side sorting
+      onSort(column.id, desc ? 'desc' : 'asc');
+    } else {
+      // Fall back to client-side sorting
+      column.toggleSorting(desc);
+    }
+  };
 
   return (
     <div className={cn("flex items-center space-x-2", className)}>
@@ -91,11 +103,11 @@ function DataTableColumnHeader<TData, TValue>({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
+          <DropdownMenuItem onClick={() => handleSort(false)}>
             <ChevronUp className="mr-2 h-3 w-3 text-muted-foreground/70" />
             Asc
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
+          <DropdownMenuItem onClick={() => handleSort(true)}>
             <ChevronDown className="mr-2 h-3 w-3 text-muted-foreground/70" />
             Desc
           </DropdownMenuItem>
@@ -107,7 +119,8 @@ function DataTableColumnHeader<TData, TValue>({
 
 // Helper function to convert CrudColumn to ColumnDef
 const createColumnDef = <T extends { id: number }>(
-  column: CrudColumn<T>
+  column: CrudColumn<T>,
+  onSort?: (field: string, direction: 'asc' | 'desc') => void
 ): ColumnDef<T> => ({
   accessorKey: column.key,
   id: column.key,
@@ -116,6 +129,7 @@ const createColumnDef = <T extends { id: number }>(
       column={tanColumn} 
       title={column.label}
       className={column.className}
+      onSort={onSort}
     />
   ),
   cell: ({ row }) => {
@@ -414,7 +428,7 @@ export function CrudDataTable<T extends { id: number }>({
 
     // Data columns
     columns.forEach(column => {
-      cols.push(createColumnDef(column))
+      cols.push(createColumnDef(column, onSort))
     })
 
     // Actions column - always show if actions are provided
@@ -423,7 +437,7 @@ export function CrudDataTable<T extends { id: number }>({
     }
 
     return cols
-  }, [columns, actions, enableSelection])
+  }, [columns, actions, enableSelection, onSort])
 
   const table = useReactTable({
     data,

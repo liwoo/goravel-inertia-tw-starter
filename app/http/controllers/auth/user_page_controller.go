@@ -82,36 +82,17 @@ func (c *UserPageController) Index(ctx http.Context) http.Response {
 	// Get all roles for the form
 	roles, _ := c.userService.GetAllRoles()
 
-	// Build standardized page props using contract
-	data := map[string]interface{}{
-		"data":        usersResult.Data,
-		"total":       usersResult.Total,
-		"currentPage": usersResult.CurrentPage,
-		"lastPage":    usersResult.LastPage,
-		"perPage":     usersResult.PerPage,
-		"from":        usersResult.From,
-		"to":          usersResult.To,
-		"hasNext":     usersResult.HasNext,
-		"hasPrev":     usersResult.HasPrev,
-	}
+	// Build typed permissions
+	typedPermissions := c.BuildTypedPermissions(permissions)
 
-	filters := map[string]interface{}{
-		"page":      req.Page,
-		"pageSize":  req.PageSize,
-		"search":    req.Search,
-		"sort":      req.Sort,
-		"direction": req.Direction,
-		"filters":   req.Filters,
-	}
+	// Use new typed GetProps method
+	props := c.GetProps(usersResult, req, typedPermissions, stats)
+	
+	// Add extra data (roles) using the ToMap method
+	propsMap := props.ToMap()
+	propsMap["roles"] = roles
 
-	meta := map[string]interface{}{
-		"stats": stats,
-		"roles": roles,
-	}
-
-	props := c.BuildPageProps(data, filters, permissions, meta)
-
-	return inertia.Render(ctx, "Users/Index", props)
+	return inertia.Render(ctx, "Users/Index", propsMap)
 }
 
 // getUserStatistics returns user statistics for the dashboard

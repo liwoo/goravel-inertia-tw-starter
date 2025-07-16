@@ -15,7 +15,7 @@ import (
 
 // PermissionsPageController handles Inertia.js page rendering for permission matrix
 type PermissionsPageController struct {
-	*contracts.BaseCrudController
+	*contracts.BasePageController
 	permissionsService *services.PermissionsService
 	authHelper         contracts.AuthHelper
 }
@@ -28,7 +28,7 @@ func (c *PermissionsPageController) GetServiceIdentifier() auth.ServiceRegistry 
 // NewPermissionsPageController creates a new permissions page controller
 func NewPermissionsPageController() *PermissionsPageController {
 	return &PermissionsPageController{
-		BaseCrudController: contracts.NewBaseCrudController("permissions"),
+		BasePageController: contracts.NewBasePageController("permissions", "Permissions/RolesIndex"),
 		permissionsService: services.NewPermissionsService(),
 		authHelper:         helpers.NewAuthHelper(),
 	}
@@ -161,19 +161,42 @@ func (c *PermissionsPageController) Index(ctx http.Context) http.Response {
 		},
 	}
 
-	// Render Inertia page
-	return inertia.Render(ctx, "Permissions/RolesIndex", map[string]interface{}{
-		"data":           data,
-		"filters":        map[string]interface{}{},
-		"stats":          stats,
-		"permissions":    permissions,
-		"allPermissions": allPermissions,
-		"services":       servicesData,
-		"actions":        actionsData,
-		"matrixData":     matrixData,
-		"title":          "Role & Permission Management",
-		"subtitle":       "Manage roles and their permissions",
-	})
+	// Build typed permissions
+	typedPermissions := c.BuildTypedPermissions(permissions)
+
+	// Convert allPermissions to interface slice
+	allPermissionsData := make([]interface{}, len(allPermissions))
+	for i, p := range allPermissions {
+		allPermissionsData[i] = p
+	}
+
+	// Convert services and actions to interface slices
+	servicesIface := make([]interface{}, len(servicesData))
+	for i, s := range servicesData {
+		servicesIface[i] = s
+	}
+	
+	actionsIface := make([]interface{}, len(actionsData))
+	for i, a := range actionsData {
+		actionsIface[i] = a
+	}
+
+	// Use typed GetPermissionMatrixProps method
+	props := c.GetPermissionMatrixProps(
+		data,
+		map[string]interface{}{},
+		typedPermissions,
+		stats,
+		allPermissionsData,
+		servicesIface,
+		actionsIface,
+		matrixData,
+		"Role & Permission Management",
+		"Manage roles and their permissions",
+	)
+
+	// Convert to map and render
+	return inertia.Render(ctx, "Permissions/RolesIndex", props.ToMap())
 }
 
 // getPermissionMatrixData builds the permission matrix using the new service/action structure

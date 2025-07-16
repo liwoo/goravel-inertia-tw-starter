@@ -183,13 +183,12 @@ export function CrudPage<T extends { id: number }>({
     setTimeout(() => setIsRefreshing(false), 1000);
   }, [onRefresh]);
 
-  const handleSort = React.useCallback((field: string) => {
-    const newDirection = 
-      filters?.sort === field && filters?.direction === 'asc' ? 'desc' : 'asc';
+  const handleSort = React.useCallback((field: string, direction?: 'asc' | 'desc') => {
+    // If direction is explicitly provided, use it; otherwise toggle
+    const newDirection = direction || 
+      (filters?.sort === field && filters?.direction === 'asc' ? 'desc' : 'asc');
     
-    
-    
-    router.get(routePath, {
+    router.get(baseRoute, {
       ...(filters || {}),
       sort: field,
       direction: newDirection,
@@ -199,12 +198,10 @@ export function CrudPage<T extends { id: number }>({
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [resourceName, filters]);
+  }, [baseRoute, filters, pageSize]);
 
   const handlePageChange = React.useCallback((page: number) => {
-    
-    
-    router.get(routePath, {
+    router.get(baseRoute, {
       ...(filters || {}),
       page,
       ...(pageSize && { pageSize: pageSize }),
@@ -213,13 +210,12 @@ export function CrudPage<T extends { id: number }>({
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [resourceName, filters, pageSize]);
+  }, [baseRoute, filters, pageSize]);
 
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
     
-    
-    router.get(routePath, {
+    router.get(baseRoute, {
       ...(filters || {}),
       page: 1, // Reset to first page when changing page size
       pageSize: newPageSize,
@@ -228,7 +224,7 @@ export function CrudPage<T extends { id: number }>({
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [resourceName, filters, setPageSize]);
+  }, [baseRoute, filters, setPageSize]);
 
   const handleFilterChange = React.useCallback((filterKey: string, value: any) => {
     const newFilters = { ...activeFilters };
@@ -240,9 +236,7 @@ export function CrudPage<T extends { id: number }>({
     
     setActiveFilters(newFilters);
     
-    
-    
-    router.get(routePath, {
+    router.get(baseRoute, {
       ...(filters || {}),
       filters: Object.keys(newFilters).length > 0 ? newFilters : undefined,
       page: 1,
@@ -252,7 +246,7 @@ export function CrudPage<T extends { id: number }>({
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [resourceName, filters, activeFilters, pageSize]);
+  }, [baseRoute, filters, activeFilters, pageSize]);
 
   const handleSimpleFilterChange = React.useCallback((filterValue: string | undefined) => {
     setActiveSimpleFilter(filterValue);
@@ -294,10 +288,7 @@ export function CrudPage<T extends { id: number }>({
       }
     }
     
-    // Special handling for permissions page which uses 'roles' as resourceName but 'permissions' as route
-    
-    
-    router.get(routePath, {
+    router.get(baseRoute, {
       ...filterParams,
       page: 1,
       ...(pageSize && { pageSize: pageSize }),
@@ -306,7 +297,7 @@ export function CrudPage<T extends { id: number }>({
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [resourceName, filters, pageSize]);
+  }, [baseRoute, filters, pageSize]);
 
   const handleCreate = React.useCallback(() => {
     setSelectedItem(null);
@@ -677,8 +668,7 @@ export function CrudPage<T extends { id: number }>({
                 onClear={() => {
                   setActiveFilters({});
                   
-                  
-                  router.get(routePath, {
+                  router.get(baseRoute, {
                     ...(filters || {}),
                     filters: undefined,
                     page: 1,

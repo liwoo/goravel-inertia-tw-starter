@@ -85,52 +85,14 @@ func (c *BooksPageController) Index(ctx http.Context) http.Response {
 		stats = c.getBookStatistics()
 	}
 
-	// Build standardized page props using contract
-	data := map[string]interface{}{
-		"data":        booksResult.Data,
-		"total":       booksResult.Total,
-		"currentPage": booksResult.CurrentPage,
-		"lastPage":    booksResult.LastPage,
-		"perPage":     booksResult.PerPage,
-		"from":        booksResult.From,
-		"to":          booksResult.To,
-		"hasNext":     booksResult.HasNext,
-		"hasPrev":     booksResult.HasPrev,
-	}
+	// Build typed permissions
+	typedPermissions := c.BuildTypedPermissions(permissions)
 
-	filters := map[string]interface{}{
-		"page":      req.Page,
-		"pageSize":  req.PageSize,
-		"search":    req.Search,
-		"sort":      req.Sort,
-		"direction": req.Direction,
-		"filters":   req.Filters,
-	}
+	// Use new typed GetProps method
+	props := c.GetProps(booksResult, req, typedPermissions, stats)
 
-	meta := map[string]interface{}{
-		"stats": stats,
-	}
-
-	props := c.BuildPageProps(data, filters, permissions, meta)
-
-	// Ensure all required props are present and not nil
-	if props["data"] == nil {
-		props["data"] = map[string]interface{}{
-			"data":        []interface{}{},
-			"total":       0,
-			"currentPage": 1,
-			"lastPage":    1,
-			"perPage":     20,
-		}
-	}
-	if props["filters"] == nil {
-		props["filters"] = map[string]interface{}{}
-	}
-	if props["permissions"] == nil {
-		props["permissions"] = map[string]interface{}{}
-	}
-
-	return inertia.Render(ctx, "Books/Index", props)
+	// Convert to map for Inertia rendering
+	return inertia.Render(ctx, "Books/Index", props.ToMap())
 }
 
 // getBookStatistics returns book statistics for the dashboard

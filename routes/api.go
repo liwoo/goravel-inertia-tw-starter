@@ -28,10 +28,13 @@ func Api(router route.Router) {
 	rolesController := &auth.RolesController{}
 	permissionsController := &auth.PermissionsController{}
 	searchController := controllers.NewSearchController()
+	messageController := controllers.NewMessageController()
+	notificationController := controllers.NewNotificationController()
 	jwtAuth := middleware.JwtAuth()
 
 	// Book resource routes
 	router.Get("/books", bookController.Index)
+	router.Get("/books/search", bookController.Search) // Search endpoint (must be before {id})
 	router.Get("/books/{id}", bookController.Show)
 	router.Get("/books/isbn/{isbn}", bookController.GetByISBN)
 	router.Get("/books/author/{author}", bookController.GetByAuthor)
@@ -69,6 +72,47 @@ func Api(router route.Router) {
 		protectedRouter.Put("/users/{id}", userController.Update)
 		protectedRouter.Delete("/users/{id}", userController.Delete)
 		protectedRouter.Get("/users/roles", userController.GetRoles)
+
+		// Messaging routes
+		protectedRouter.Prefix("messages").Group(func(messageRouter route.Router) {
+			// Send and manage messages
+			messageRouter.Post("/", messageController.SendMessage)
+			messageRouter.Get("/conversations", messageController.GetConversations)
+			messageRouter.Get("/conversation/{userId}", messageController.GetConversation)
+			messageRouter.Put("/conversation/{userId}/read", messageController.MarkAsRead)
+			messageRouter.Get("/users", messageController.GetMessagableUsers)
+			messageRouter.Get("/search-users", messageController.SearchUsers)
+			messageRouter.Get("/unread-count", messageController.GetUnreadCount)
+			
+			// Individual message management
+			messageRouter.Get("/{id}", messageController.GetMessage)
+			messageRouter.Put("/{id}", messageController.EditMessage)
+			messageRouter.Delete("/{id}", messageController.DeleteMessage)
+			messageRouter.Post("/{id}/reply", messageController.ReplyToMessage)
+		})
+
+		// Notification routes
+		protectedRouter.Prefix("notifications").Group(func(notificationRouter route.Router) {
+			// User notifications
+			notificationRouter.Get("/", notificationController.GetNotifications)
+			notificationRouter.Get("/counts", notificationController.GetCounts)
+			notificationRouter.Get("/type/{type}", notificationController.GetByType)
+			
+			// Mark as read/dismiss
+			notificationRouter.Put("/{id}/read", notificationController.MarkAsRead)
+			notificationRouter.Put("/read-all", notificationController.MarkAllAsRead)
+			notificationRouter.Delete("/{id}", notificationController.DismissNotification)
+			notificationRouter.Delete("/", notificationController.DismissAllNotifications)
+			
+			// Batch operations
+			notificationRouter.Put("/batch/read", notificationController.BatchMarkAsRead)
+			notificationRouter.Delete("/batch", notificationController.BatchDismiss)
+			
+			// Admin operations
+			notificationRouter.Post("/", notificationController.CreateNotification)
+			notificationRouter.Post("/system", notificationController.CreateSystemNotification)
+			notificationRouter.Post("/cleanup", notificationController.CleanupExpired)
+		})
 	})
 
 	// This Prefix("auth") group will also be relative to the router passed in.

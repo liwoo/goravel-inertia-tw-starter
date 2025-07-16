@@ -139,3 +139,34 @@ func (u *User) IsSuperAdminUser() bool {
 func (u *User) IsAdmin() bool {
 	return u.IsSuperAdminUser() || u.HasRole("admin")
 }
+
+// SharesRoleWith checks if this user shares any active role with another user
+func (u *User) SharesRoleWith(other *User) bool {
+	if u.ID == other.ID {
+		return true
+	}
+	
+	userRoles := make(map[uint]bool)
+	for _, role := range u.GetActiveRoles() {
+		userRoles[role.ID] = true
+	}
+	
+	for _, role := range other.GetActiveRoles() {
+		if userRoles[role.ID] {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// CanMessageUser checks if this user can send messages to another user
+func (u *User) CanMessageUser(other *User) bool {
+	// Super admins can message anyone
+	if u.IsSuperAdminUser() {
+		return true
+	}
+	
+	// Users can message others with shared roles
+	return u.SharesRoleWith(other)
+}

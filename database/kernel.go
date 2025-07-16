@@ -21,6 +21,9 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250626020339CreateUserRolesTable{},
 		&migrations.M20250626020345CreateRolePermissionsTable{},
 		&migrations.M20250628091858AddIsSuperAdminToUsersTable{},
+		&migrations.CreateMessagesTable{},
+		&migrations.CreateMessageMentionsTable{},
+		&migrations.CreateNotificationsTable{},
 	}
 }
 

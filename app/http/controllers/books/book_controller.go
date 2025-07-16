@@ -138,6 +138,32 @@ func (c *BookController) Update(ctx http.Context) http.Response {
 	return c.ResourceUpdatedResponse(ctx, updatedBook, "book")
 }
 
+// Search GET /books/search - Implements CrudControllerContract
+func (c *BookController) Search(ctx http.Context) http.Response {
+	// Validate search request using contract
+	req, err := c.ValidateSearchRequest(ctx)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid search parameters", map[string]interface{}{
+			"validation_error": err.Error(),
+		})
+	}
+
+	// Perform search using service
+	result, err := c.bookService.Search(req.Query, req.ToListRequest())
+	if err != nil {
+		return c.InternalErrorResponse(ctx, "Search failed: "+err.Error())
+	}
+
+	// Build standardized search response
+	response := c.BuildSearchResponse(result, req)
+	return c.SuccessResponse(ctx, response, fmt.Sprintf("Found %d results for '%s'", result.Total, req.Query))
+}
+
+// GetSearchableFields returns the fields that can be searched for books
+func (c *BookController) GetSearchableFields() []string {
+	return c.bookService.GetSearchableFields()
+}
+
 // Delete DELETE /books/{id} - Implements CrudControllerContract
 func (c *BookController) Delete(ctx http.Context) http.Response {
 	// Validate ID parameter using contract

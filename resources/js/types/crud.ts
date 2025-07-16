@@ -130,7 +130,7 @@ export interface DataTableProps<T> {
   actions: CrudAction<T>[];
   sortField?: string;
   sortDirection?: 'asc' | 'desc';
-  onSort: (field: string) => void;
+  onSort: (field: string, direction?: 'asc' | 'desc') => void;
   selectedIds: number[];
   onSelectionChange: (ids: number[]) => void;
   enableSelection?: boolean;

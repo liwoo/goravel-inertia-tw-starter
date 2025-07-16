@@ -41,9 +41,9 @@ export const userColumns: CrudColumn<User>[] = [
     render: (user) => (
       <div className="flex flex-wrap gap-1">
         {user.roles && user.roles.length > 0 ? (
-          user.roles.map((role) => (
+          user.roles.map((role, index) => (
             <Badge 
-              key={role.id} 
+              key={`${user.id}-role-${role.id}-${index}`} 
               variant="secondary" 
               className="text-xs bg-secondary/50 dark:bg-secondary/30"
             >

@@ -174,6 +174,66 @@ func (b *BaseCrudService) ValidateBulkOperation(ids []uint) error {
 	return nil
 }
 
+// SEARCH CONTRACT IMPLEMENTATION (enforced)
+
+func (b *BaseCrudService) ValidateSearchQuery(query string) error {
+	// Trim whitespace
+	query = strings.TrimSpace(query)
+	
+	// Check minimum length
+	if len(query) < 2 {
+		return errors.New("search query must be at least 2 characters long")
+	}
+	
+	// Check maximum length
+	if len(query) > 200 {
+		return errors.New("search query cannot exceed 200 characters")
+	}
+	
+	// Check for SQL injection patterns (basic)
+	lowerQuery := strings.ToLower(query)
+	dangerousPatterns := []string{
+		"drop ", "delete ", "insert ", "update ", "alter ", "create ",
+		"truncate ", "exec ", "execute ", "--", "/*", "*/", "xp_", "sp_",
+	}
+	
+	for _, pattern := range dangerousPatterns {
+		if strings.Contains(lowerQuery, pattern) {
+			return fmt.Errorf("search query contains invalid pattern: %s", pattern)
+		}
+	}
+	
+	return nil
+}
+
+func (b *BaseCrudService) BuildSearchQuery(query string, searchableFields []string) string {
+	// Escape special characters for LIKE queries
+	query = strings.ReplaceAll(query, "%", "\\%")
+	query = strings.ReplaceAll(query, "_", "\\_")
+	
+	// Add wildcards for fuzzy search
+	return "%" + query + "%"
+}
+
+func (b *BaseCrudService) ValidateSearchRequest(req *SearchRequest) error {
+	// Validate search query
+	if err := b.ValidateSearchQuery(req.Query); err != nil {
+		return fmt.Errorf("search query validation failed: %w", err)
+	}
+	
+	// Validate pagination
+	if err := b.ValidatePaginationParams(req.Page, req.PageSize); err != nil {
+		return fmt.Errorf("pagination validation failed: %w", err)
+	}
+	
+	// Validate sort direction if provided
+	if req.Direction != "" && !b.ValidateSortDirection(req.Direction) {
+		return fmt.Errorf("invalid sort direction: %s", req.Direction)
+	}
+	
+	return nil
+}
+
 // METADATA GENERATION
 
 func (b *BaseCrudService) GenerateMetadata(name, version string, service CompleteCrudService) ServiceMetadata {
