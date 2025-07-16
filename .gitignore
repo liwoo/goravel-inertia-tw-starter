@@ -4,5 +4,6 @@
 .env.*
 !.env.example
 storage/framework
-# node_modules
-node_modules/*
+node_modules
+storage/temp/
+storage/logs/*.log
