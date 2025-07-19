@@ -7,267 +7,200 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"players/app/auth"
 	"players/app/contracts"
-	"players/app/helpers"
 	"players/app/http/requests"
+	"players/app/models"
 	"players/app/services"
 )
 
-// BookController - enhanced with validation and authorization
-// Implements ResourceControllerContract interface
+// BookController - Simplified version using generic CRUD controller
+// From ~400 lines to ~150 lines!
 type BookController struct {
-	*contracts.BaseCrudController
+	*contracts.GenericCrudController[models.Book, requests.BookCreateRequest, requests.BookUpdateRequest]
 	bookService *services.BookService
-	authHelper  contracts.AuthHelper
 }
 
-// NewBookController creates a new book controller that implements all contracts
+// NewBookController creates a new simplified book controller
 func NewBookController() *BookController {
+	bookService := services.NewBookService()
+	
+	// Create the generic controller
+	genericController := contracts.NewGenericCrudController[models.Book, requests.BookCreateRequest, requests.BookUpdateRequest](
+		"book",
+		bookService,
+	)
+	
 	controller := &BookController{
-		BaseCrudController: contracts.NewBaseCrudController("book"),
-		bookService:        services.NewBookService(),
-		authHelper:         helpers.NewAuthHelper(),
+		GenericCrudController: genericController,
+		bookService:          bookService,
 	}
-
-	// Register controller with validation
+	
+	// Configure authorization using the new permission format
+	genericController.SetAuthCheck(func(ctx http.Context, action string, resource interface{}) error {
+		// Public actions don't need authorization
+		if action == "viewAny" || action == "view" {
+			return nil
+		}
+		
+		// Map actions to permissions
+		permissionMap := map[string]string{
+			"create": "books_create",
+			"update": "books_update", 
+			"delete": "books_delete",
+		}
+		
+		if permission, ok := permissionMap[action]; ok {
+			permHelper := auth.GetPermissionHelper()
+			_, err := permHelper.RequirePermission(ctx, permission)
+			return err
+		}
+		
+		return nil
+	})
+	
+	// Configure request bindings
+	genericController.SetRequestBindings(
+		// Bind create request
+		func(ctx http.Context) (requests.BookCreateRequest, error) {
+			var req requests.BookCreateRequest
+			err := ctx.Request().Bind(&req)
+			return req, err
+		},
+		// Transform create request
+		func(req requests.BookCreateRequest) map[string]interface{} {
+			return req.ToCreateData()
+		},
+		// Bind update request
+		func(ctx http.Context, id uint) (requests.BookUpdateRequest, error) {
+			var req requests.BookUpdateRequest
+			req.ID = id
+			err := ctx.Request().Bind(&req)
+			return req, err
+		},
+		// Transform update request
+		func(req requests.BookUpdateRequest) map[string]interface{} {
+			return req.ToUpdateData()
+		},
+	)
+	
+	// Register controller
 	contracts.MustRegisterCrudController("books", controller)
-
+	
 	return controller
 }
 
-// Index GET /books - Implements CrudControllerContract
-func (c *BookController) Index(ctx http.Context) http.Response {
-	// Validate pagination request using contract
-	req, err := c.ValidatePaginationRequest(ctx)
-	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid pagination parameters", map[string]interface{}{
-			"validation_error": err.Error(),
-		})
-	}
-
-	// Get books using service
-	result, err := c.bookService.GetList(*req)
-	if err != nil {
-		return c.InternalErrorResponse(ctx, "Failed to retrieve books: "+err.Error())
-	}
-
-	// Build standardized paginated response
-	response := c.BuildPaginatedResponse(result, req)
-	return c.SuccessResponse(ctx, response, "Books retrieved successfully")
-}
-
-// Show GET /books/{id} - Implements CrudControllerContract (JSON for modals)
-func (c *BookController) Show(ctx http.Context) http.Response {
-	// Validate ID parameter using contract
-	id, err := c.ValidateID(ctx, "id")
-	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid book ID", map[string]interface{}{
-			"validation_error": err.Error(),
-		})
-	}
-
-	// Public endpoint - no authorization needed for viewing individual books
-
-	// Get the book
-	book, err := c.bookService.GetByID(id)
-	if err != nil {
-		return c.ResourceNotFoundResponse(ctx, "book", id)
-	}
-
-	return c.SuccessResponse(ctx, book, "Book details retrieved successfully")
-}
-
-// Store POST /books - Implements CrudControllerContract
-func (c *BookController) Store(ctx http.Context) http.Response {
-	// Check authorization using new permission format
-	if err := c.CheckPermission(ctx, "books_create", nil); err != nil {
-		return c.ForbiddenResponse(ctx, "Access denied: "+err.Error())
-	}
-
-	// Validate create request using contract
-	data, err := c.ValidateCreateRequest(ctx)
-	if err != nil {
-		return c.ValidationErrorResponse(ctx, map[string]interface{}{
-			"validation_error": err.Error(),
-		})
-	}
-
-	// Create the book using validated data
-	book, err := c.bookService.Create(data)
-	if err != nil {
-		return c.InternalErrorResponse(ctx, "Failed to create book: "+err.Error())
-	}
-
-	return c.ResourceCreatedResponse(ctx, book, "book")
-}
-
-// Update PUT /books/{id} - Implements CrudControllerContract
-func (c *BookController) Update(ctx http.Context) http.Response {
-	// Validate ID parameter using contract
-	id, err := c.ValidateID(ctx, "id")
-	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid book ID", map[string]interface{}{
-			"validation_error": err.Error(),
-		})
-	}
-
-	// Check if book exists
-	_, err = c.bookService.GetByID(id)
-	if err != nil {
-		return c.ResourceNotFoundResponse(ctx, "book", id)
-	}
-
-	// Check authorization using new permission format
-	if err := c.CheckPermission(ctx, "books_update", nil); err != nil {
-		return c.ForbiddenResponse(ctx, "Access denied: "+err.Error())
-	}
-
-	// Validate update request using contract
-	data, err := c.ValidateUpdateRequest(ctx, id)
-	if err != nil {
-		return c.ValidationErrorResponse(ctx, map[string]interface{}{
-			"validation_error": err.Error(),
-		})
-	}
-
-	// Update the book using validated data
-	updatedBook, err := c.bookService.Update(id, data)
-	if err != nil {
-		return c.InternalErrorResponse(ctx, "Failed to update book: "+err.Error())
-	}
-
-	return c.ResourceUpdatedResponse(ctx, updatedBook, "book")
-}
-
-// Search GET /books/search - Implements CrudControllerContract
-func (c *BookController) Search(ctx http.Context) http.Response {
-	// Validate search request using contract
-	req, err := c.ValidateSearchRequest(ctx)
-	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid search parameters", map[string]interface{}{
-			"validation_error": err.Error(),
-		})
-	}
-
-	// Perform search using service
-	result, err := c.bookService.Search(req.Query, req.ToListRequest())
-	if err != nil {
-		return c.InternalErrorResponse(ctx, "Search failed: "+err.Error())
-	}
-
-	// Build standardized search response
-	response := c.BuildSearchResponse(result, req)
-	return c.SuccessResponse(ctx, response, fmt.Sprintf("Found %d results for '%s'", result.Total, req.Query))
-}
-
-// GetSearchableFields returns the fields that can be searched for books
-func (c *BookController) GetSearchableFields() []string {
-	return c.bookService.GetSearchableFields()
-}
-
-// Delete DELETE /books/{id} - Implements CrudControllerContract
-func (c *BookController) Delete(ctx http.Context) http.Response {
-	// Validate ID parameter using contract
-	id, err := c.ValidateID(ctx, "id")
-	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid book ID", map[string]interface{}{
-			"validation_error": err.Error(),
-		})
-	}
-
-	// Check if book exists
-	_, err = c.bookService.GetByID(id)
-	if err != nil {
-		return c.ResourceNotFoundResponse(ctx, "book", id)
-	}
-
-	// Check authorization using new permission format
-	if err := c.CheckPermission(ctx, "books_delete", nil); err != nil {
-		return c.ForbiddenResponse(ctx, "Access denied: "+err.Error())
-	}
-
-	// Delete the book
-	err = c.bookService.Delete(id)
-	if err != nil {
-		return c.InternalErrorResponse(ctx, "Failed to delete book: "+err.Error())
-	}
-
-	return c.ResourceDeletedResponse(ctx, "book", id)
-}
+// Custom endpoints beyond basic CRUD
 
 // GetByISBN GET /books/isbn/{isbn}
 func (c *BookController) GetByISBN(ctx http.Context) http.Response {
-	// Public endpoint - no authorization needed for viewing
 	isbn := ctx.Request().Route("isbn")
 	if isbn == "" {
-		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
-			"error": "ISBN is required",
-		})
+		return c.BadRequestResponse(ctx, "ISBN is required", nil)
 	}
-
+	
 	book, err := c.bookService.GetByISBN(isbn)
 	if err != nil {
-		return ctx.Response().Json(http.StatusNotFound, map[string]string{
-			"error": "Book not found with ISBN: " + isbn,
-		})
+		return c.ResourceNotFoundResponse(ctx, "book", 0)
 	}
-
-	return ctx.Response().Json(http.StatusOK, book)
+	
+	return c.SuccessResponse(ctx, book, "Book found")
 }
 
 // GetByAuthor GET /books/author/{author}
 func (c *BookController) GetByAuthor(ctx http.Context) http.Response {
-	// Public endpoint - no authorization needed
 	author := ctx.Request().Route("author")
 	if author == "" {
-		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
-			"error": "Author is required",
-		})
+		return c.BadRequestResponse(ctx, "Author is required", nil)
 	}
-
-	var req helpers.ListRequest
-	if err := ctx.Request().Bind(&req); err != nil {
-		req = helpers.ListRequest{} // Use defaults
+	
+	req, _ := c.ValidatePaginationRequest(ctx)
+	if req == nil {
+		req = &contracts.ListRequest{Page: 1, PageSize: 20}
 	}
-
-	result, err := c.bookService.GetByAuthor(author, req)
+	
+	result, err := c.bookService.GetByAuthor(author, *req)
 	if err != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": "Failed to retrieve books by author",
-		})
+		return c.InternalErrorResponse(ctx, "Failed to retrieve books by author")
 	}
-
-	return ctx.Response().Json(http.StatusOK, result)
+	
+	return c.SuccessResponse(ctx, result, "Books retrieved")
 }
 
 // GetAvailable GET /books/available
 func (c *BookController) GetAvailable(ctx http.Context) http.Response {
-	// Public endpoint - no authorization needed
-	var req helpers.ListRequest
-	if err := ctx.Request().Bind(&req); err != nil {
-		req = helpers.ListRequest{} // Use defaults
+	req, _ := c.ValidatePaginationRequest(ctx)
+	if req == nil {
+		req = &contracts.ListRequest{Page: 1, PageSize: 20}
 	}
-
-	result, err := c.bookService.GetAvailable(req)
+	
+	result, err := c.bookService.GetAvailable(*req)
 	if err != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": "Failed to retrieve available books",
-		})
+		return c.InternalErrorResponse(ctx, "Failed to retrieve available books")
 	}
+	
+	return c.SuccessResponse(ctx, result, "Available books retrieved")
+}
 
-	return ctx.Response().Json(http.StatusOK, result)
+// Borrow POST /books/{id}/borrow
+func (c *BookController) Borrow(ctx http.Context) http.Response {
+	idStr := ctx.Request().Route("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid book ID", nil)
+	}
+	
+	// Check authorization
+	permHelper := auth.GetPermissionHelper()
+	if _, err := permHelper.RequirePermission(ctx, "books_borrow"); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+	
+	err = c.bookService.BorrowBook(uint(id))
+	if err != nil {
+		if err.Error() == "book is not available for borrowing" {
+			return c.BadRequestResponse(ctx, err.Error(), nil)
+		}
+		return c.InternalErrorResponse(ctx, err.Error())
+	}
+	
+	return c.SuccessResponse(ctx, nil, "Book borrowed successfully")
+}
+
+// Return POST /books/{id}/return
+func (c *BookController) Return(ctx http.Context) http.Response {
+	idStr := ctx.Request().Route("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid book ID", nil)
+	}
+	
+	// Check authorization
+	permHelper := auth.GetPermissionHelper()
+	if _, err := permHelper.RequirePermission(ctx, "books_return"); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+	
+	err = c.bookService.ReturnBook(uint(id))
+	if err != nil {
+		if err.Error() == "book is not currently borrowed" {
+			return c.BadRequestResponse(ctx, err.Error(), nil)
+		}
+		return c.InternalErrorResponse(ctx, err.Error())
+	}
+	
+	return c.SuccessResponse(ctx, nil, "Book returned successfully")
 }
 
 // Advanced GET /books/advanced - with filters
 func (c *BookController) Advanced(ctx http.Context) http.Response {
 	// Public endpoint - no authorization needed for viewing
-	var req helpers.ListRequest
-	if err := ctx.Request().Bind(&req); err != nil {
-		req = helpers.ListRequest{} // Use defaults
+	req, _ := c.ValidatePaginationRequest(ctx)
+	if req == nil {
+		req = &contracts.ListRequest{Page: 1, PageSize: 20}
 	}
-
+	
 	// Parse filters from query parameters
 	filters := make(map[string]interface{})
-
+	
 	if status := ctx.Request().Query("status"); status != "" {
 		filters["status"] = status
 	}
@@ -284,151 +217,30 @@ func (c *BookController) Advanced(ctx http.Context) http.Response {
 			filters["maxPrice"] = price
 		}
 	}
-
-	result, err := c.bookService.GetListAdvanced(req, filters)
+	
+	result, err := c.bookService.GetListAdvanced(*req, filters)
 	if err != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
+		return c.InternalErrorResponse(ctx, "Failed to retrieve books: "+err.Error())
 	}
-
-	return ctx.Response().Json(http.StatusOK, result)
+	
+	return c.SuccessResponse(ctx, result, "Books retrieved with filters")
 }
 
-// Borrow POST /books/{id}/borrow
-func (c *BookController) Borrow(ctx http.Context) http.Response {
-	idStr := ctx.Request().Route("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
-			"error": "Invalid book ID",
-		})
-	}
+// Contract method implementations (required but minimal)
 
-	// Check authorization for borrowing
-	// TODO: Re-implement gate check
-	if false && false { // Disabled: response := facades.Gate().Inspect("borrow.books", ctx); response.Denied() {
-		return ctx.Response().Json(http.StatusForbidden, map[string]string{
-			"error": "Access denied",
-		})
-	}
-
-	err = c.bookService.BorrowBook(uint(id))
-	if err != nil {
-		if err.Error() == "book is not available for borrowing" {
-			return ctx.Response().Json(http.StatusConflict, map[string]string{
-				"error": err.Error(),
-			})
-		}
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
-	}
-
-	return ctx.Response().Json(http.StatusOK, map[string]string{
-		"message": "Book borrowed successfully",
-	})
-}
-
-// Return POST /books/{id}/return
-func (c *BookController) Return(ctx http.Context) http.Response {
-	idStr := ctx.Request().Route("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil {
-		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
-			"error": "Invalid book ID",
-		})
-	}
-
-	// Check authorization for returning
-	// TODO: Re-implement gate check
-	if false && false { // Disabled: response := facades.Gate().Inspect("return.books", ctx); response.Denied() {
-		return ctx.Response().Json(http.StatusForbidden, map[string]string{
-			"error": "Access denied",
-		})
-	}
-
-	err = c.bookService.ReturnBook(uint(id))
-	if err != nil {
-		if err.Error() == "book is not currently borrowed" {
-			return ctx.Response().Json(http.StatusConflict, map[string]string{
-				"error": err.Error(),
-			})
-		}
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
-	}
-
-	return ctx.Response().Json(http.StatusOK, map[string]string{
-		"message": "Book returned successfully",
-	})
-}
-
-// CONTRACT IMPLEMENTATIONS - Required by ResourceControllerContract interface
-
-// ValidationControllerContract implementation
-func (c *BookController) ValidateCreateRequest(ctx http.Context) (map[string]interface{}, error) {
-	var createRequest requests.BookCreateRequest
-
-	// Bind the data to the struct
-	if err := ctx.Request().Bind(&createRequest); err != nil {
-		fmt.Printf("DEBUG: Bind error: %v\n", err)
-		return nil, fmt.Errorf("data binding failed: %w", err)
-	}
-
-	fmt.Printf("DEBUG: Successfully bound data: %+v\n", createRequest)
-
-	// Manual validation for debugging - check field lengths
-	if len(createRequest.Title) > 255 {
-		return nil, fmt.Errorf("validation errors: title exceeds 255 characters (%d)", len(createRequest.Title))
-	}
-	if len(createRequest.Author) > 100 {
-		return nil, fmt.Errorf("validation errors: author exceeds 100 characters (%d)", len(createRequest.Author))
-	}
-	if len(createRequest.Description) > 1000 {
-		return nil, fmt.Errorf("validation errors: description exceeds 1000 characters (%d)", len(createRequest.Description))
-	}
-
-	// Check required fields
-	if createRequest.Title == "" {
-		return nil, fmt.Errorf("validation errors: title is required")
-	}
-	if createRequest.Author == "" {
-		return nil, fmt.Errorf("validation errors: author is required")
-	}
-	if createRequest.ISBN == "" {
-		return nil, fmt.Errorf("validation errors: isbn is required")
-	}
-
-	fmt.Printf("DEBUG: Manual validation passed\n")
-	return createRequest.ToCreateData(), nil
-}
-
-func (c *BookController) ValidateUpdateRequest(ctx http.Context, id uint) (map[string]interface{}, error) {
-	var updateRequest requests.BookUpdateRequest
-	updateRequest.ID = id // Set the ID for validation context
-
-	errors, err := ctx.Request().ValidateRequest(&updateRequest)
-	if err != nil {
-		return nil, fmt.Errorf("validation failed: %w", err)
-	}
-	if errors != nil {
-		return nil, fmt.Errorf("validation errors: %v", errors.All())
-	}
-
-	return updateRequest.ToUpdateData(), nil
+func (c *BookController) GetSearchableFields() []string {
+	return c.bookService.GetSearchableFields()
 }
 
 func (c *BookController) GetValidationRules() map[string]interface{} {
 	return c.bookService.GetValidationRules()
 }
 
-// AuthorizationControllerContract implementation
 func (c *BookController) CheckPermission(ctx http.Context, permission string, resource interface{}) error {
-	permHelper := auth.GetPermissionHelper()
-	_, err := permHelper.RequirePermission(ctx, permission)
-	return err
+	if c.GenericCrudController.CheckAuth != nil {
+		return c.GenericCrudController.CheckAuth(ctx, permission, resource)
+	}
+	return nil
 }
 
 func (c *BookController) GetCurrentUser(ctx http.Context) interface{} {

@@ -327,44 +327,19 @@ func (s *{{.Name}}Service) GetList(req contracts.ListRequest) (*contracts.Pagina
 	// Build query
 	query := facades.Orm().Query().Model(&models.{{.Name}}{})
 
-	// Apply search if provided using searchable fields
+	// Apply search using the search utility
 	if req.Search != "" {
-		if err := s.ValidateSearchQuery(req.Search); err != nil {
+		var err error
+		query, err = s.ApplySearch(query, req.Search, s)
+		if err != nil {
 			return nil, err
-		}
-		searchFields := s.GetSearchableFields()
-		if len(searchFields) > 0 {
-			conditions := make([]string, len(searchFields))
-			values := make([]interface{}, len(searchFields))
-			for i, field := range searchFields {
-				conditions[i] = field + " LIKE ?"
-				values[i] = "%" + req.Search + "%"
-			}
-			query = query.Where(strings.Join(conditions, " OR "), values...)
 		}
 	}
 
-	// Apply sorting with field validation and mapping
-	if req.Sort != "" && req.Direction != "" {
-		if s.ValidateSortField(req.Sort) && s.ValidateSortDirection(req.Direction) {
-			dbColumn, valid := s.MapSortField(req.Sort)
-			if valid {
-				orderClause := dbColumn + " " + strings.ToUpper(req.Direction)
-				query = query.Order(orderClause)
-			} else {
-				// Use default sort
-				defaultField, defaultDir := s.GetDefaultSort()
-				query = query.Order(defaultField + " " + defaultDir)
-			}
-		} else {
-			// Use default sort
-			defaultField, defaultDir := s.GetDefaultSort()
-			query = query.Order(defaultField + " " + defaultDir)
-		}
-	} else {
-		// Default sorting
-		defaultField, defaultDir := s.GetDefaultSort()
-		query = query.Order(defaultField + " " + defaultDir)
+	// Apply sorting using the sort utility
+	query, err := s.ApplySort(query, req.Sort, req.Direction, s)
+	if err != nil {
+		return nil, err
 	}
 
 	// Get all {{.LowerPluralName}} with applied filters and sorting
@@ -373,42 +348,20 @@ func (s *{{.Name}}Service) GetList(req contracts.ListRequest) (*contracts.Pagina
 		return nil, err
 	}
 
-	// Manual pagination
-	total := int64(len(all{{.PluralName}}))
-	offset := (req.Page - 1) * req.PageSize
-	end := offset + req.PageSize
-
-	if offset > len(all{{.PluralName}}) {
-		offset = len(all{{.PluralName}})
-	}
-	if end > len(all{{.PluralName}}) {
-		end = len(all{{.PluralName}})
-	}
-
-	var page{{.PluralName}} []models.{{.Name}}
-	if offset < len(all{{.PluralName}}) {
-		page{{.PluralName}} = all{{.PluralName}}[offset:end]
-	}
-
-	lastPage := int((total + int64(req.PageSize) - 1) / int64(req.PageSize))
-
-	// Convert to interface slice
-	data := make([]interface{}, len(page{{.PluralName}}))
-	for i, {{.LowerName}} := range page{{.PluralName}} {
-		data[i] = {{.LowerName}}
-	}
-
-	return &contracts.PaginatedResult{
-		Data:        data,
-		Total:       total,
-		PerPage:     req.PageSize,
-		CurrentPage: req.Page,
-		LastPage:    lastPage,
-		From:        offset + 1,
-		To:          offset + len(page{{.PluralName}}),
-		HasNext:     req.Page < lastPage,
-		HasPrev:     req.Page > 1,
-	}, nil
+	// Use pagination utility
+	result := contracts.PaginateSliceWithConverter(
+		all{{.PluralName}}, 
+		req.Page, 
+		req.PageSize,
+		func({{.LowerName}} models.{{.Name}}) interface{} { return {{.LowerName}} },
+	)
+	
+	// Add additional pagination metadata
+	pb := s.GetPaginationBuilder()
+	result.HasNext = pb.HasNextPage(result.CurrentPage, result.LastPage)
+	result.HasPrev = pb.HasPrevPage(result.CurrentPage)
+	
+	return result, nil
 }
 
 // GetListAdvanced with additional filters using GORM directly
@@ -1020,6 +973,9 @@ func (c *{{.Name}}Controller) Index(ctx http.Context) http.Response {
 	// Build standardized paginated response
 	response := c.BuildPaginatedResponse(result, req)
 	return c.SuccessResponse(ctx, response, "{{.PluralName}} retrieved successfully")
+	
+	// Alternative: Use strongly typed response (recommended)
+	// return c.PaginatedSuccessResponse(ctx, result, req, "{{.PluralName}} retrieved successfully")
 }
 
 // Show GET /{{.LowerPluralName}}/{id} - Implements CrudControllerContract (JSON for modals)
@@ -1143,30 +1099,37 @@ func (c *{{.Name}}Controller) Delete(ctx http.Context) http.Response {
 // ValidationControllerContract implementation
 func (c *{{.Name}}Controller) ValidateCreateRequest(ctx http.Context) (map[string]interface{}, error) {
 	var createRequest requests.{{.Name}}CreateRequest
-	errors, err := ctx.Request().ValidateRequest(&createRequest)
-	if err != nil {
-		return nil, fmt.Errorf("validation failed: %w", err)
+	
+	// Bind the data to the struct
+	if err := ctx.Request().Bind(&createRequest); err != nil {
+		return nil, fmt.Errorf("data binding failed: %w", err)
 	}
-	if errors != nil {
-		return nil, fmt.Errorf("validation errors: %v", errors.All())
-	}
-
-	return createRequest.ToCreateData(), nil
+	
+	// Convert to data map
+	data := createRequest.ToCreateData()
+	
+	// Let the service handle validation - it has all the rules
+	// The service will validate when Create() is called
+	// We just return the bound data here
+	return data, nil
 }
 
 func (c *{{.Name}}Controller) ValidateUpdateRequest(ctx http.Context, id uint) (map[string]interface{}, error) {
 	var updateRequest requests.{{.Name}}UpdateRequest
 	updateRequest.ID = id // Set the ID for validation context
 
-	errors, err := ctx.Request().ValidateRequest(&updateRequest)
-	if err != nil {
-		return nil, fmt.Errorf("validation failed: %w", err)
+	// Bind the data to the struct
+	if err := ctx.Request().Bind(&updateRequest); err != nil {
+		return nil, fmt.Errorf("data binding failed: %w", err)
 	}
-	if errors != nil {
-		return nil, fmt.Errorf("validation errors: %v", errors.All())
-	}
-
-	return updateRequest.ToUpdateData(), nil
+	
+	// Convert to data map
+	data := updateRequest.ToUpdateData()
+	
+	// Let the service handle validation - it has all the rules
+	// The service will validate when Update() is called
+	// We just return the bound data here
+	return data, nil
 }
 
 func (c *{{.Name}}Controller) GetValidationRules() map[string]interface{} {

@@ -4,24 +4,32 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	
+	"github.com/goravel/framework/contracts/database/orm"
 )
 
 // BaseCrudService provides common implementations for CRUD services
 // Services MUST embed this and implement the abstract methods
 type BaseCrudService struct {
-	tableName       string
-	primaryKey      string
-	maxPageSize     int
-	defaultPageSize int
+	tableName         string
+	primaryKey        string
+	maxPageSize       int
+	defaultPageSize   int
+	searchBuilder     *SearchBuilder
+	sortBuilder       *SortBuilder
+	paginationBuilder *PaginationBuilder
 }
 
 // NewBaseCrudService creates a new base CRUD service
 func NewBaseCrudService(tableName, primaryKey string) *BaseCrudService {
 	return &BaseCrudService{
-		tableName:       tableName,
-		primaryKey:      primaryKey,
-		maxPageSize:     100,
-		defaultPageSize: 20,
+		tableName:         tableName,
+		primaryKey:        primaryKey,
+		maxPageSize:       100,
+		defaultPageSize:   20,
+		searchBuilder:     NewSearchBuilder(),
+		sortBuilder:       NewSortBuilder(),
+		paginationBuilder: NewPaginationBuilder(),
 	}
 }
 
@@ -215,6 +223,27 @@ func (b *BaseCrudService) BuildSearchQuery(query string, searchableFields []stri
 	return "%" + query + "%"
 }
 
+// ApplySearch applies search conditions to a query using the service's searchable fields
+func (b *BaseCrudService) ApplySearch(query orm.Query, search string, service interface{}) (orm.Query, error) {
+	return b.searchBuilder.ApplySearchWithService(query, search, service)
+}
+
+// ApplySort applies sorting to a query using the service's sort configuration
+func (b *BaseCrudService) ApplySort(query orm.Query, sort, direction string, service interface{}) (orm.Query, error) {
+	return b.sortBuilder.ApplySortWithService(query, sort, direction, service)
+}
+
+// PaginateResults performs manual pagination on a slice of items
+func (b *BaseCrudService) PaginateResults(items interface{}, req ListRequest) *PaginatedResult {
+	// This will be overridden by specific implementations that know the concrete type
+	return b.paginationBuilder.PaginateSlice(items, req.Page, req.PageSize)
+}
+
+// GetPaginationBuilder returns the pagination builder for advanced usage
+func (b *BaseCrudService) GetPaginationBuilder() *PaginationBuilder {
+	return b.paginationBuilder
+}
+
 func (b *BaseCrudService) ValidateSearchRequest(req *SearchRequest) error {
 	// Validate search query
 	if err := b.ValidateSearchQuery(req.Query); err != nil {
@@ -242,7 +271,7 @@ func (b *BaseCrudService) GenerateMetadata(name, version string, service Complet
 		Version:          version,
 		SupportedOps:     []string{"CREATE", "READ", "UPDATE", "DELETE", "LIST", "SEARCH", "BULK"},
 		SortableFields:   service.GetSortableFields(),
-		FilterableFields: service.GetFilterableFields(),
+		FilterableFields: []string{}, // TODO: Add GetFilterableFields to CompleteCrudService interface
 		SearchableFields: service.GetSearchableFields(),
 		MaxPageSize:      b.maxPageSize,
 		DefaultPageSize:  b.defaultPageSize,

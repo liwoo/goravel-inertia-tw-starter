@@ -37,33 +37,26 @@ func NewPermissionService() *PermissionService {
 // HasPermission checks if a user has a specific permission
 func (s *PermissionService) HasPermission(user *models.User, permission string) bool {
 	if user == nil {
-		fmt.Printf("DEBUG HasPermission: user is nil, returning false\n")
 		return false
 	}
 	
 	// Super admin has all permissions
 	if user.IsSuperAdminUser() {
-		fmt.Printf("DEBUG HasPermission: user %d is super admin, returning true for %s\n", user.ID, permission)
 		return true
 	}
 	
-	// Always load fresh permissions (disable cache for debugging)
+	// Always load fresh permissions
 	permissions := s.loadUserPermissions(user)
-	fmt.Printf("DEBUG HasPermission: user %d has permissions: %v\n", user.ID, permissions)
-	fmt.Printf("DEBUG HasPermission: checking permission: %s\n", permission)
 	
 	// Check direct permission match
 	for _, perm := range permissions {
 		if perm == permission {
-			fmt.Printf("DEBUG HasPermission: found direct match for %s\n", permission)
 			return true
 		}
 	}
 	
 	// Check wildcard permissions
-	hasWildcard := s.hasWildcardPermission(permissions, permission)
-	fmt.Printf("DEBUG HasPermission: wildcard check for %s: %t\n", permission, hasWildcard)
-	return hasWildcard
+	return s.hasWildcardPermission(permissions, permission)
 }
 
 // HasRole checks if a user has a specific role
@@ -313,8 +306,6 @@ func (s *PermissionService) GrantPermissionToRole(roleSlug, permissionSlug strin
 func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	var permissions []string
 	
-	fmt.Printf("DEBUG loadUserPermissions: loading permissions for user %d\n", user.ID)
-	
 	// First, load user with roles (without permissions to avoid the many2many issue)
 	var userWithRoles models.User
 	err := facades.Orm().Query().
@@ -323,17 +314,13 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 		First(&userWithRoles)
 	
 	if err != nil {
-		fmt.Printf("DEBUG loadUserPermissions: error loading user with roles: %v\n", err)
 		return permissions
 	}
-	
-	fmt.Printf("DEBUG loadUserPermissions: user has %d roles\n", len(userWithRoles.Roles))
 	
 	// Collect all permissions from all roles through the pivot table
 	permissionMap := make(map[string]bool)
 	
 	for _, role := range userWithRoles.Roles {
-		fmt.Printf("DEBUG loadUserPermissions: checking role %s (active: %t)\n", role.Slug, role.IsActive)
 		if !role.IsActive {
 			continue
 		}
@@ -345,11 +332,8 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 			Find(&rolePermissions)
 		
 		if err != nil {
-			fmt.Printf("DEBUG loadUserPermissions: error loading role permissions: %v\n", err)
 			continue
 		}
-		
-		fmt.Printf("DEBUG loadUserPermissions: role %s has %d active permission assignments\n", role.Slug, len(rolePermissions))
 		
 		// Now load the actual permissions
 		if len(rolePermissions) > 0 {
@@ -364,12 +348,10 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 				Find(&perms)
 			
 			if err != nil {
-				fmt.Printf("DEBUG loadUserPermissions: error loading permissions: %v\n", err)
 				continue
 			}
 			
 			for _, permission := range perms {
-				fmt.Printf("DEBUG loadUserPermissions: permission %s (active: %t)\n", permission.Slug, permission.IsActive)
 				permissionMap[permission.Slug] = true
 			}
 		}
@@ -380,7 +362,6 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 		permissions = append(permissions, permission)
 	}
 	
-	fmt.Printf("DEBUG loadUserPermissions: final permissions list: %v\n", permissions)
 	return permissions
 }
 

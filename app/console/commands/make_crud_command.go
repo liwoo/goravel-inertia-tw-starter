@@ -191,6 +191,7 @@ func generateControllerContent(controllerName string) (string, error) {
 	tmpl := `package controllers
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/goravel/framework/contracts/http"
@@ -278,23 +279,16 @@ func (c *{{.ControllerName}}) Store(ctx http.Context) http.Response {
 		})
 	}
 
-	// Create and validate request
-	var createRequest requests.{{.CreateRequestName}}
-	errors, err := ctx.Request().ValidateRequest(&createRequest)
+	// Validate create request using contract
+	data, err := c.ValidateCreateRequest(ctx)
 	if err != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": "Validation failed: " + err.Error(),
-		})
-	}
-	if errors != nil {
-		return ctx.Response().Json(http.StatusUnprocessableEntity, map[string]interface{}{
-			"error":  "Validation failed",
-			"errors": errors.All(),
+		return ctx.Response().Json(http.StatusBadRequest, map[string]interface{}{
+			"validation_error": err.Error(),
 		})
 	}
 
 	// Create the {{.ResourceNameLower}} using validated data
-	{{.ResourceNameLower}}, err := c.{{.ServiceField}}.Create(createRequest.ToCreateData())
+	{{.ResourceNameLower}}, err := c.{{.ServiceField}}.Create(data)
 	if err != nil {
 		return ctx.Response().Json(http.StatusUnprocessableEntity, map[string]string{
 			"error": err.Error(),
@@ -329,25 +323,16 @@ func (c *{{.ControllerName}}) Update(ctx http.Context) http.Response {
 		})
 	}
 
-	// Create and validate update request
-	var updateRequest requests.{{.UpdateRequestName}}
-	updateRequest.ID = uint(id) // Set the ID for validation context
-
-	errors, err := ctx.Request().ValidateRequest(&updateRequest)
+	// Validate update request using contract
+	data, err := c.ValidateUpdateRequest(ctx, uint(id))
 	if err != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": "Validation failed: " + err.Error(),
-		})
-	}
-	if errors != nil {
-		return ctx.Response().Json(http.StatusUnprocessableEntity, map[string]interface{}{
-			"error":  "Validation failed",
-			"errors": errors.All(),
+		return ctx.Response().Json(http.StatusBadRequest, map[string]interface{}{
+			"validation_error": err.Error(),
 		})
 	}
 
 	// Update the {{.ResourceNameLower}} using validated data
-	updated{{.ModelName}}, err := c.{{.ServiceField}}.Update(uint(id), updateRequest.ToUpdateData())
+	updated{{.ModelName}}, err := c.{{.ServiceField}}.Update(uint(id), data)
 	if err != nil {
 		return ctx.Response().Json(http.StatusUnprocessableEntity, map[string]string{
 			"error": err.Error(),
@@ -419,6 +404,43 @@ func (c *{{.ControllerName}}) Advanced(ctx http.Context) http.Response {
 	}
 
 	return ctx.Response().Json(http.StatusOK, result)
+}
+
+// ValidateCreateRequest validates the create request
+func (c *{{.ControllerName}}) ValidateCreateRequest(ctx http.Context) (map[string]interface{}, error) {
+	var createRequest requests.{{.CreateRequestName}}
+	
+	// Bind the data to the struct
+	if err := ctx.Request().Bind(&createRequest); err != nil {
+		return nil, fmt.Errorf("data binding failed: %w", err)
+	}
+	
+	// Convert to data map
+	data := createRequest.ToCreateData()
+	
+	// Let the service handle validation - it has all the rules
+	// The service will validate when Create() is called
+	// We just return the bound data here
+	return data, nil
+}
+
+// ValidateUpdateRequest validates the update request
+func (c *{{.ControllerName}}) ValidateUpdateRequest(ctx http.Context, id uint) (map[string]interface{}, error) {
+	var updateRequest requests.{{.UpdateRequestName}}
+	updateRequest.ID = id // Set the ID for validation context
+
+	// Bind the data to the struct
+	if err := ctx.Request().Bind(&updateRequest); err != nil {
+		return nil, fmt.Errorf("data binding failed: %w", err)
+	}
+	
+	// Convert to data map
+	data := updateRequest.ToUpdateData()
+	
+	// Let the service handle validation - it has all the rules
+	// The service will validate when Update() is called
+	// We just return the bound data here
+	return data, nil
 }
 `
 

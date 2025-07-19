@@ -4,496 +4,334 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"regexp"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
 	"players/app/contracts"
 	"players/app/models"
 )
 
+// MessageService - Simplified version using generic CRUD service
 type MessageService struct {
-	*contracts.BaseCrudService
+	*contracts.GenericCrudService[models.Message]
 }
 
+// NewMessageService creates a new simplified message service
 func NewMessageService() *MessageService {
-	return &MessageService{
-		BaseCrudService: contracts.NewBaseCrudService("message", "id"),
+	// Create the generic service
+	genericService := contracts.NewGenericCrudService[models.Message]("message", "id")
+	
+	// Configure the service
+	genericService.
+		SetSearchFields("content", "subject").
+		SetSortFields("id", "created_at", "updated_at", "read_at").
+		SetFilterFields("sender_id", "recipient_id", "type", "status").
+		SetRelations("Sender", "Recipient", "Thread", "Parent").
+		SetValidationRules(map[string]interface{}{
+			"sender_id":    "required|numeric",
+			"recipient_id": "required|numeric",
+			"content":      "required|string|max:5000",
+			"type":         "required|string|in:direct,broadcast,system",
+			"subject":      "string|max:255",
+		}).
+		SetBeforeCreate(func(data map[string]interface{}) error {
+			// Set defaults
+			if _, exists := data["status"]; !exists {
+				data["status"] = string(models.MessageStatusSent)
+			}
+			if _, exists := data["type"]; !exists {
+				data["type"] = string(models.MessageTypeDirect)
+			}
+			
+			// Validate sender and recipient
+			senderID, ok := data["sender_id"].(float64)
+			if !ok {
+				return fmt.Errorf("invalid sender_id")
+			}
+			recipientID, ok := data["recipient_id"].(float64)
+			if !ok {
+				return fmt.Errorf("invalid recipient_id")
+			}
+			
+			// Check if sender exists and is active
+			var sender models.User
+			if err := facades.Orm().Query().Model(&models.User{}).
+				With("Roles").
+				Where("id = ? AND is_active = ?", uint(senderID), true).
+				First(&sender); err != nil {
+				return fmt.Errorf("sender not found or inactive")
+			}
+			
+			// Check if recipient exists and is active
+			var recipient models.User
+			if err := facades.Orm().Query().Model(&models.User{}).
+				With("Roles").
+				Where("id = ? AND is_active = ?", uint(recipientID), true).
+				First(&recipient); err != nil {
+				return fmt.Errorf("recipient not found or inactive")
+			}
+			
+			// Check messaging permissions
+			if !sender.CanMessageUser(&recipient) {
+				return fmt.Errorf("insufficient permissions to message this user")
+			}
+			
+			// Validate content
+			content, ok := data["content"].(string)
+			if !ok {
+				return fmt.Errorf("content must be a string")
+			}
+			content = strings.TrimSpace(content)
+			if content == "" {
+				return fmt.Errorf("message content cannot be empty")
+			}
+			data["content"] = content
+			
+			return nil
+		}).
+		SetCustomQuery(func(query orm.Query) orm.Query {
+			// Always order messages by created_at desc by default
+			return query.Order("created_at DESC")
+		}).
+		SetCustomFilters(func(query orm.Query, filters map[string]interface{}) orm.Query {
+			for field, value := range filters {
+				switch field {
+				case "sender_id", "recipient_id":
+					query = query.Where(field+" = ?", value)
+				case "type":
+					query = query.Where("type = ?", value)
+				case "status":
+					query = query.Where("status = ?", value)
+				case "unread":
+					if unread, ok := value.(bool); ok && unread {
+						query = query.Where("read_at IS NULL")
+					}
+				case "thread_id":
+					query = query.Where("thread_id = ?", value)
+				case "parent_id":
+					query = query.Where("parent_id = ?", value)
+				}
+			}
+			return query
+		})
+	
+	service := &MessageService{
+		GenericCrudService: genericService,
 	}
+	
+	// Register service
+	contracts.MustRegisterCrudService("messages", service)
+	
+	return service
 }
+
+// Custom methods for messaging functionality
 
 // SendMessage creates and sends a new message
 func (s *MessageService) SendMessage(senderID uint, recipientID uint, content string, messageType models.MessageType) (*models.Message, error) {
-	// Validate sender exists and get with roles
-	var sender models.User
-	if err := facades.Orm().Query().Model(&models.User{}).With("Roles").Where("id = ? AND is_active = ?", senderID, true).First(&sender); err != nil {
-		return nil, fmt.Errorf("sender not found or inactive")
+	data := map[string]interface{}{
+		"sender_id":    float64(senderID),
+		"recipient_id": float64(recipientID),
+		"content":      content,
+		"type":         string(messageType),
 	}
-
-	// Validate recipient exists and get with roles
-	var recipient models.User
-	if err := facades.Orm().Query().Model(&models.User{}).With("Roles").Where("id = ? AND is_active = ?", recipientID, true).First(&recipient); err != nil {
-		return nil, fmt.Errorf("recipient not found or inactive")
+	
+	result, err := s.Create(data)
+	if err != nil {
+		return nil, err
 	}
-
-	// Check messaging permissions
-	if !sender.CanMessageUser(&recipient) {
-		return nil, fmt.Errorf("insufficient permissions to message this user")
-	}
-
-	// Validate content
-	content = strings.TrimSpace(content)
-	if content == "" {
-		return nil, fmt.Errorf("message content cannot be empty")
-	}
-	if len(content) > 5000 {
-		return nil, fmt.Errorf("message content too long (max 5000 characters)")
-	}
-
-	// Create message
-	message := &models.Message{
-		Content:     content,
-		Type:        messageType,
-		Status:      models.MessageStatusSent,
-		SenderID:    senderID,
-		RecipientID: &recipientID,
-	}
-
-	if err := facades.Orm().Query().Create(message); err != nil {
-		return nil, fmt.Errorf("failed to create message: %v", err)
-	}
-
-	// Process mentions
-	if err := s.processMentions(message, content); err != nil {
-		// Log error but don't fail the message send
-		facades.Log().Warning("Failed to process mentions for message %d: %v", message.ID, err)
-	}
-
-	// Mark as delivered immediately (for now)
-	message.MarkAsDelivered()
-	facades.Orm().Query().Save(message)
-
-	// Create notification for recipient
-	s.createMessageNotification(message, &recipient)
-
-	// Load relations for response
-	facades.Orm().Query().Model(&models.Message{}).With("Sender").With("Recipient").Where("id = ?", message.ID).First(message)
-
-	return message, nil
+	
+	return result.(*models.Message), nil
 }
 
-// GetConversation retrieves messages between two users
-func (s *MessageService) GetConversation(userID, otherUserID uint, request contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	// Validate both users exist and have proper permissions
-	var user, otherUser models.User
-	if err := facades.Orm().Query().Model(&models.User{}).With("Roles").Where("id = ? AND is_active = ?", userID, true).First(&user); err != nil {
-		return nil, fmt.Errorf("user not found or inactive")
-	}
-	if err := facades.Orm().Query().Model(&models.User{}).With("Roles").Where("id = ? AND is_active = ?", otherUserID, true).First(&otherUser); err != nil {
-		return nil, fmt.Errorf("other user not found or inactive")
-	}
-
-	// Check if user can view conversation with other user
-	if !user.CanMessageUser(&otherUser) {
-		return nil, fmt.Errorf("insufficient permissions to view conversation")
-	}
-
-	// Build query for conversation messages
-	query := facades.Orm().Query().Model(&models.Message{}).
-		With("Sender").
-		With("Recipient").
-		Where("(sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)", 
-			userID, otherUserID, otherUserID, userID).
-		Where("status != ?", models.MessageStatusDeleted)
-
-	// Apply search if provided
-	if request.Search != "" {
-		searchPattern := "%" + request.Search + "%"
-		query = query.Where("content LIKE ?", searchPattern)
-	}
-
-	// Apply sorting
-	if request.Sort == "" {
-		request.Sort = "created_at"
-		request.Direction = "DESC"
-	}
-	orderClause := fmt.Sprintf("%s %s", request.Sort, request.Direction)
-	query = query.Order(orderClause)
-
-	// Get total count
-	var total int64
-	query.Model(&models.Message{}).Count(&total)
-
-	// Apply pagination
-	offset := (request.Page - 1) * request.PageSize
-	var messages []models.Message
-	if err := query.Offset(offset).Limit(request.PageSize).Find(&messages); err != nil {
-		return nil, fmt.Errorf("failed to retrieve messages: %v", err)
-	}
-
-	// Convert to interface slice
-	data := make([]interface{}, len(messages))
-	for i, message := range messages {
-		data[i] = message
-	}
-
-	// Calculate pagination metadata
-	lastPage := int((total + int64(request.PageSize) - 1) / int64(request.PageSize))
-	if lastPage < 1 {
-		lastPage = 1
-	}
-
-	return &contracts.PaginatedResult{
-		Data:        data,
-		Total:       total,
-		CurrentPage: request.Page,
-		LastPage:    lastPage,
-		PerPage:     request.PageSize,
-		From:        offset + 1,
-		To:          offset + len(messages),
-		HasNext:     request.Page < lastPage,
-		HasPrev:     request.Page > 1,
-	}, nil
-}
-
-// GetUserConversations retrieves all conversations for a user
-func (s *MessageService) GetUserConversations(userID uint, request contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	// Get all messages for the user to build conversations
-	var allMessages []models.Message
-	if err := facades.Orm().Query().Model(&models.Message{}).
-		With("Sender").
-		With("Recipient").
-		Where("(sender_id = ? OR recipient_id = ?) AND status != ?", userID, userID, models.MessageStatusDeleted).
-		Order("created_at DESC").
-		Find(&allMessages); err != nil {
-		return nil, fmt.Errorf("failed to retrieve messages: %v", err)
-	}
-
-	// Group messages by conversation partner
-	conversationMap := make(map[uint]*models.Message)
-	unreadCounts := make(map[uint]int64)
-
-	for _, message := range allMessages {
-		var otherUserID uint
-		if message.SenderID == userID {
-			if message.RecipientID != nil {
-				otherUserID = *message.RecipientID
-			} else {
-				continue
-			}
-		} else {
-			otherUserID = message.SenderID
+// SendBroadcast sends a broadcast message to multiple recipients
+func (s *MessageService) SendBroadcast(senderID uint, recipientIDs []uint, content string, subject string) ([]*models.Message, error) {
+	var messages []*models.Message
+	
+	for _, recipientID := range recipientIDs {
+		data := map[string]interface{}{
+			"sender_id":    float64(senderID),
+			"recipient_id": float64(recipientID),
+			"content":      content,
+			"subject":      subject,
+			"type":         string(models.MessageTypeSystem),
 		}
-
-		// Keep track of latest message per conversation
-		if _, exists := conversationMap[otherUserID]; !exists {
-			conversationMap[otherUserID] = &message
-		}
-
-		// Count unread messages (messages sent TO the current user that are unread)
-		if message.SenderID == otherUserID && message.RecipientID != nil && *message.RecipientID == userID {
-			if message.Status != models.MessageStatusRead && message.ReadAt == nil {
-				unreadCounts[otherUserID]++
-			}
-		}
-	}
-
-	// Convert map to slice and get user details
-	conversations := make([]interface{}, 0, len(conversationMap))
-	for otherUserID, latestMessage := range conversationMap {
-		// Get other user details
-		var otherUser models.User
-		if err := facades.Orm().Query().Model(&models.User{}).With("Roles").Where("id = ?", otherUserID).First(&otherUser); err != nil {
+		
+		result, err := s.Create(data)
+		if err != nil {
+			// Log error but continue with other recipients
+			facades.Log().Error("Failed to send broadcast to recipient", map[string]interface{}{
+				"recipient_id": recipientID,
+				"error":        err.Error(),
+			})
 			continue
 		}
-
-		conversations = append(conversations, map[string]interface{}{
-			"user":           otherUser,
-			"latest_message": *latestMessage,
-			"unread_count":   unreadCounts[otherUserID],
-			"last_activity":  latestMessage.CreatedAt.StdTime().Format(time.RFC3339),
-		})
+		
+		messages = append(messages, result.(*models.Message))
 	}
-
-	// Sort conversations by last activity (most recent first)
-	// Since we're already getting messages ordered by created_at DESC, 
-	// the first message we encounter for each user is the latest
-
-	// Apply pagination
-	total := int64(len(conversations))
-	offset := (request.Page - 1) * request.PageSize
-	end := offset + request.PageSize
-
-	if offset > len(conversations) {
-		offset = len(conversations)
-	}
-	if end > len(conversations) {
-		end = len(conversations)
-	}
-
-	var pageConversations []interface{}
-	if offset < len(conversations) {
-		pageConversations = conversations[offset:end]
-	}
-
-	lastPage := int((total + int64(request.PageSize) - 1) / int64(request.PageSize))
-	if lastPage < 1 {
-		lastPage = 1
-	}
-
-	return &contracts.PaginatedResult{
-		Data:        pageConversations,
-		Total:       total,
-		CurrentPage: request.Page,
-		LastPage:    lastPage,
-		PerPage:     request.PageSize,
-		From:        offset + 1,
-		To:          offset + len(pageConversations),
-		HasNext:     request.Page < lastPage,
-		HasPrev:     request.Page > 1,
-	}, nil
+	
+	return messages, nil
 }
 
-// GetMessagableUsers returns users that the current user can message
-func (s *MessageService) GetMessagableUsers(currentUserID uint, request contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	// Get current user with roles
-	var currentUser models.User
-	if err := facades.Orm().Query().Model(&models.User{}).With("Roles").Where("id = ? AND is_active = ?", currentUserID, true).First(&currentUser); err != nil {
-		return nil, fmt.Errorf("current user not found or inactive")
+// GetInbox retrieves messages for a user with pagination
+func (s *MessageService) GetInbox(userID uint, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	filters := map[string]interface{}{
+		"recipient_id": userID,
 	}
-
-	query := facades.Orm().Query().Model(&models.User{}).
-		With("Roles").
-		Where("id != ? AND is_active = ?", currentUserID, true)
-
-	// If not super admin, filter by shared roles
-	if !currentUser.IsSuperAdminUser() {
-		// Get current user's role IDs
-		roleIDs := make([]uint, 0, len(currentUser.GetActiveRoles()))
-		for _, role := range currentUser.GetActiveRoles() {
-			roleIDs = append(roleIDs, role.ID)
-		}
-
-		if len(roleIDs) > 0 {
-			query = query.
-				Where("EXISTS (SELECT 1 FROM user_roles WHERE user_roles.user_id = users.id AND user_roles.role_id IN ?)", roleIDs)
-		} else {
-			// User has no roles, can't message anyone
-			return &contracts.PaginatedResult{
-				Data:        []interface{}{},
-				Total:       0,
-				CurrentPage: request.Page,
-				LastPage:    1,
-				PerPage:     request.PageSize,
-			}, nil
-		}
-	}
-
-	// Apply search
-	if request.Search != "" {
-		searchPattern := "%" + request.Search + "%"
-		query = query.Where("name LIKE ? OR email LIKE ?", searchPattern, searchPattern)
-	}
-
-	// Apply sorting
-	if request.Sort == "" {
-		request.Sort = "name"
-		request.Direction = "ASC"
-	}
-	orderClause := fmt.Sprintf("%s %s", request.Sort, request.Direction)
-	query = query.Order(orderClause)
-
-	// Get total count
-	var total int64
-	query.Model(&models.User{}).Count(&total)
-
-	// Apply pagination
-	offset := (request.Page - 1) * request.PageSize
-	var users []models.User
-	if err := query.Offset(offset).Limit(request.PageSize).Find(&users); err != nil {
-		return nil, fmt.Errorf("failed to retrieve users: %v", err)
-	}
-
-	// Convert to interface slice
-	data := make([]interface{}, len(users))
-	for i, user := range users {
-		data[i] = user
-	}
-
-	lastPage := int((total + int64(request.PageSize) - 1) / int64(request.PageSize))
-	if lastPage < 1 {
-		lastPage = 1
-	}
-
-	return &contracts.PaginatedResult{
-		Data:        data,
-		Total:       total,
-		CurrentPage: request.Page,
-		LastPage:    lastPage,
-		PerPage:     request.PageSize,
-		From:        offset + 1,
-		To:          offset + len(users),
-		HasNext:     request.Page < lastPage,
-		HasPrev:     request.Page > 1,
-	}, nil
+	return s.GetListAdvanced(req, filters)
 }
 
-// MarkMessagesAsRead marks messages in a conversation as read
-func (s *MessageService) MarkMessagesAsRead(userID, senderID uint) error {
-	_, err := facades.Orm().Query().
-		Model(&models.Message{}).
-		Where("sender_id = ? AND recipient_id = ? AND status != ?", senderID, userID, models.MessageStatusRead).
-		Update(map[string]interface{}{
-			"status":  models.MessageStatusRead,
-			"read_at": time.Now(),
-		})
+// GetSentMessages retrieves sent messages for a user
+func (s *MessageService) GetSentMessages(userID uint, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	filters := map[string]interface{}{
+		"sender_id": userID,
+	}
+	return s.GetListAdvanced(req, filters)
+}
+
+// GetUnreadMessages retrieves unread messages for a user
+func (s *MessageService) GetUnreadMessages(userID uint, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	filters := map[string]interface{}{
+		"recipient_id": userID,
+		"unread":       true,
+	}
+	return s.GetListAdvanced(req, filters)
+}
+
+// GetUnreadCount gets the count of unread messages
+func (s *MessageService) GetUnreadCount(userID uint) (int64, error) {
+	var count int64
+	err := facades.Orm().Query().Model(&models.Message{}).
+		Where("recipient_id = ? AND read_at IS NULL", userID).
+		Count(&count)
+	return count, err
+}
+
+// GetThreadMessages retrieves all messages in a thread
+func (s *MessageService) GetThreadMessages(threadID uint, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	filters := map[string]interface{}{
+		"thread_id": threadID,
+	}
+	return s.GetListAdvanced(req, filters)
+}
+
+// MarkAsRead marks a message as read
+func (s *MessageService) MarkAsRead(messageID uint, userID uint) error {
+	// Verify the user is the recipient
+	result, err := s.GetByID(messageID)
+	if err != nil {
+		return err
+	}
+	
+	message := result.(*models.Message)
+	if message.RecipientID == nil || *message.RecipientID != userID {
+		return fmt.Errorf("unauthorized to mark this message as read")
+	}
+	
+	// Check if already read by checking ReadAt
+	if message.ReadAt != nil {
+		return nil // Already read
+	}
+	
+	_, err = s.Update(messageID, map[string]interface{}{
+		"status":  string(models.MessageStatusRead),
+		"read_at": time.Now(),
+	})
+	
 	return err
 }
 
-// DeleteMessage soft deletes a message (only sender can delete)
-func (s *MessageService) DeleteMessage(messageID, userID uint) error {
-	var message models.Message
-	if err := facades.Orm().Query().Where("id = ?", messageID).First(&message); err != nil {
-		return fmt.Errorf("message not found")
+// MarkAsImportant marks a message as important/unimportant
+// Note: This would need a schema change to add is_important field to messages table
+func (s *MessageService) MarkAsImportant(messageID uint, userID uint, important bool) error {
+	// Verify the user is either sender or recipient
+	result, err := s.GetByID(messageID)
+	if err != nil {
+		return err
 	}
-
-	if message.SenderID != userID {
-		return fmt.Errorf("unauthorized: only sender can delete message")
+	
+	message := result.(*models.Message)
+	if message.SenderID != userID && (message.RecipientID == nil || *message.RecipientID != userID) {
+		return fmt.Errorf("unauthorized to modify this message")
 	}
-
-	message.Status = models.MessageStatusDeleted
-	return facades.Orm().Query().Save(&message)
+	
+	// TODO: Add is_important field to Message model and migration
+	return fmt.Errorf("marking messages as important is not yet implemented")
 }
 
-// EditMessage edits a message (only sender within time limit)
-func (s *MessageService) EditMessage(messageID, userID uint, newContent string) (*models.Message, error) {
-	var message models.Message
-	if err := facades.Orm().Query().Where("id = ?", messageID).First(&message); err != nil {
-		return nil, fmt.Errorf("message not found")
+// DeleteMessage soft deletes a message (marks it as deleted for a user)
+func (s *MessageService) DeleteMessage(messageID uint, userID uint) error {
+	// Verify the user is either sender or recipient
+	result, err := s.GetByID(messageID)
+	if err != nil {
+		return err
 	}
-
-	// Get user for permission check
-	var user models.User
-	if err := facades.Orm().Query().Where("id = ?", userID).First(&user); err != nil {
-		return nil, fmt.Errorf("user not found")
+	
+	message := result.(*models.Message)
+	if message.SenderID != userID && (message.RecipientID == nil || *message.RecipientID != userID) {
+		return fmt.Errorf("unauthorized to delete this message")
 	}
-
-	if !message.CanEditMessage(&user) {
-		return nil, fmt.Errorf("unauthorized: cannot edit this message")
-	}
-
-	// Validate new content
-	newContent = strings.TrimSpace(newContent)
-	if newContent == "" {
-		return nil, fmt.Errorf("message content cannot be empty")
-	}
-	if len(newContent) > 5000 {
-		return nil, fmt.Errorf("message content too long (max 5000 characters)")
-	}
-
-	// Update message
-	now := time.Now()
-	message.Content = newContent
-	message.IsEdited = true
-	message.EditedAt = &now
-
-	if err := facades.Orm().Query().Save(&message); err != nil {
-		return nil, fmt.Errorf("failed to update message: %v", err)
-	}
-
-	// Load relations for response
-	facades.Orm().Query().Model(&models.Message{}).With("Sender").With("Recipient").Where("id = ?", message.ID).First(&message)
-
-	return &message, nil
+	
+	// For now, we'll use the generic delete which soft deletes the entire message
+	// In a real app, you might want to track deletion per user
+	return s.Delete(messageID)
 }
 
-// processMentions extracts and creates mentions from message content
-func (s *MessageService) processMentions(message *models.Message, content string) error {
-	// Extract @mentions using regex
-	mentionRegex := regexp.MustCompile(`@(\w+)`)
-	matches := mentionRegex.FindAllStringSubmatch(content, -1)
-
-	for _, match := range matches {
-		if len(match) < 2 {
-			continue
-		}
-
-		username := match[1]
-		
-		// Find user by name (you might want to use username field instead)
-		var mentionedUser models.User
-		if err := facades.Orm().Query().Where("name = ? AND is_active = ?", username, true).First(&mentionedUser); err != nil {
-			continue // User not found, skip mention
-		}
-
-		// Create mention record
-		mention := &models.MessageMention{
-			MessageID: message.ID,
-			UserID:    mentionedUser.ID,
-			Position:  strings.Index(content, "@"+username),
-			Length:    len("@" + username),
-		}
-
-		if err := facades.Orm().Query().Create(mention); err != nil {
-			facades.Log().Warning("Failed to create mention for user %d in message %d: %v", mentionedUser.ID, message.ID, err)
-		}
-
-		// Create notification for mentioned user
-		s.createMentionNotification(message, &mentionedUser)
+// GetConversation retrieves messages between two users
+func (s *MessageService) GetConversation(user1ID uint, user2ID uint, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	// Create a custom query for conversation
+	var messages []models.Message
+	query := facades.Orm().Query().Model(&models.Message{}).
+		With("Sender", "Recipient").
+		Where("(sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)",
+			user1ID, user2ID, user2ID, user1ID).
+		Order("created_at DESC")
+	
+	// Apply pagination manually
+	var total int64
+	if err := query.Count(&total); err != nil {
+		return nil, err
 	}
-
-	return nil
+	
+	offset := (req.Page - 1) * req.PageSize
+	if err := query.Offset(offset).Limit(req.PageSize).Find(&messages); err != nil {
+		return nil, err
+	}
+	
+	// Convert to interface slice
+	data := make([]interface{}, len(messages))
+	for i, msg := range messages {
+		data[i] = msg
+	}
+	
+	// Use pagination utility
+	return &contracts.PaginatedResult{
+		Data:        data,
+		Total:       total,
+		PerPage:     req.PageSize,
+		CurrentPage: req.Page,
+		LastPage:    int((total + int64(req.PageSize) - 1) / int64(req.PageSize)),
+		From:        offset + 1,
+		To:          offset + len(messages),
+		HasNext:     req.Page < int((total+int64(req.PageSize)-1)/int64(req.PageSize)),
+		HasPrev:     req.Page > 1,
+	}, nil
 }
 
-// createMessageNotification creates a notification for new messages
-func (s *MessageService) createMessageNotification(message *models.Message, recipient *models.User) {
-	notification := &models.Notification{
-		Title:         fmt.Sprintf("New message from %s", message.Sender.Name),
-		Message:       s.truncateContent(message.Content, 100),
-		Type:          "message",
-		UserID:        recipient.ID,
-		TriggerUserID: &message.SenderID,
-		RelatedType:   "message",
-		RelatedID:     &message.ID,
-		Priority:      "normal",
+// GetColumnMapping returns database column mappings
+func (s *MessageService) GetColumnMapping() map[string]string {
+	return map[string]string{
+		"id":          "id",
+		"senderId":    "sender_id",
+		"recipientId": "recipient_id",
+		"content":     "content",
+		"type":        "type",
+		"subject":     "subject",
+		"threadId":    "thread_id",
+		"parentId":    "parent_id",
+		"status":      "status",
+		"readAt":      "read_at",
+		"createdAt":   "created_at",
+		"updatedAt":   "updated_at",
 	}
-
-	if err := facades.Orm().Query().Create(notification); err != nil {
-		facades.Log().Warning("Failed to create message notification: %v", err)
-	}
-}
-
-// createMentionNotification creates a notification for mentions
-func (s *MessageService) createMentionNotification(message *models.Message, mentionedUser *models.User) {
-	notification := &models.Notification{
-		Title:         fmt.Sprintf("You were mentioned by %s", message.Sender.Name),
-		Message:       s.truncateContent(message.Content, 100),
-		Type:          "mention",
-		UserID:        mentionedUser.ID,
-		TriggerUserID: &message.SenderID,
-		RelatedType:   "message",
-		RelatedID:     &message.ID,
-		Priority:      "high",
-	}
-
-	if err := facades.Orm().Query().Create(notification); err != nil {
-		facades.Log().Warning("Failed to create mention notification: %v", err)
-	}
-}
-
-// truncateContent truncates content to specified length with ellipsis
-func (s *MessageService) truncateContent(content string, maxLength int) string {
-	if len(content) <= maxLength {
-		return content
-	}
-	return content[:maxLength-3] + "..."
-}
-
-// GetUnreadMessageCount returns unread message count for a user
-func (s *MessageService) GetUnreadMessageCount(userID uint) (int64, error) {
-	var count int64
-	err := facades.Orm().Query().Model(&models.Message{}).
-		Where("recipient_id = ? AND status != ? AND (read_at IS NULL OR status != ?)", 
-			userID, models.MessageStatusDeleted, models.MessageStatusRead).
-		Count(&count)
-	return count, err
 }

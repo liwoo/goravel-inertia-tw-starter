@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 	"players/app/contracts"
 	"players/app/helpers"
 	"players/app/models"
@@ -336,61 +337,90 @@ func (s *PermissionsService) GetPermissionsByCategory() (map[string][]models.Per
 
 // SyncPermissionsFromGates syncs the registered gates to the permissions table
 func (s *PermissionsService) SyncPermissionsFromGates() error {
-	// Define the permissions based on what's registered in the GateServiceProvider
-	gatePermissions := []struct {
-		Name        string
-		Slug        string
-		Category    string
-		Resource    string
-		Action      string
-		Description string
-	}{
-		// Books permissions
-		{"View Any Books", "books.viewAny", "books", "books", "viewAny", "View any books in the system"},
-		{"View Books", "books.view", "books", "books", "view", "View specific books"},
-		{"Create Books", "books.create", "books", "books", "create", "Create new books"},
-		{"Update Books", "books.update", "books", "books", "update", "Update existing books"},
-		{"Delete Books", "books.delete", "books", "books", "delete", "Delete books"},
-		{"Borrow Books", "books.borrow", "books", "books", "borrow", "Borrow books"},
-		{"Return Books", "books.return", "books", "books", "return", "Return books"},
-		{"Manage Books", "books.manage", "books", "books", "manage", "Full book management"},
-		{"Export Books", "books.export", "books", "books", "export", "Export book data"},
-
-		// Users permissions
-		{"View Any Users", "users.viewAny", "users", "users", "viewAny", "View any users in the system"},
-		{"View Users", "users.view", "users", "users", "view", "View specific users"},
-		{"Create Users", "users.create", "users", "users", "create", "Create new users"},
-		{"Update Users", "users.update", "users", "users", "update", "Update existing users"},
-		{"Delete Users", "users.delete", "users", "users", "delete", "Delete users"},
-		{"Impersonate Users", "users.impersonate", "users", "users", "impersonate", "Impersonate other users"},
-		{"Manage Users", "users.manage", "users", "users", "manage", "Full user management"},
-
-		// System permissions
-		{"Manage System", "system.manage", "system", "system", "manage", "Full system management"},
-		{"Backup System", "system.backup", "system", "system", "backup", "Create system backups"},
-		{"Configure System", "system.configure", "system", "system", "configure", "Configure system settings"},
-		{"View Reports", "reports.view", "reports", "reports", "view", "View reports and analytics"},
-		{"Export Reports", "reports.export", "reports", "reports", "export", "Export reports"},
+	// Import the auth package to access permission constants
+	auth := helpers.GetAuth()
+	
+	// Generate permissions dynamically from the service registry
+	var permissions []models.Permission
+	
+	// Iterate through all registered services
+	for _, service := range auth.GetAllServiceRegistries() {
+		// Get valid actions for this service
+		actions := auth.GetServiceActions(service)
+		
+		for _, action := range actions {
+			// Build the permission slug using the new format
+			slug := auth.BuildPermissionSlug(service, action)
+			
+			// Create permission name and description
+			name := fmt.Sprintf("%s %s", auth.GetActionDisplayName(action), auth.GetServiceDisplayName(service))
+			description := fmt.Sprintf("Permission to %s for %s", string(action), auth.GetServiceDisplayName(service))
+			
+			// Special handling for certain actions
+			switch action {
+			case auth.PermissionView():
+				description = fmt.Sprintf("View and list %s", strings.ToLower(auth.GetServiceDisplayName(service)))
+			case auth.PermissionManage():
+				description = fmt.Sprintf("Full management access for %s", strings.ToLower(auth.GetServiceDisplayName(service)))
+			case auth.PermissionExport():
+				description = fmt.Sprintf("Export data from %s", strings.ToLower(auth.GetServiceDisplayName(service)))
+			}
+			
+			permission := models.Permission{
+				Name:        name,
+				Slug:        slug,
+				Category:    string(service),
+				Resource:    string(service),
+				Action:      string(action),
+				Description: description,
+				IsActive:    true,
+			}
+			
+			permissions = append(permissions, permission)
+		}
 	}
-
-	// Insert or update each permission
-	for _, perm := range gatePermissions {
+	
+	// Add any custom permissions that don't fit the standard pattern
+	customPermissions := []models.Permission{
+		{
+			Name:        "Impersonate Users",
+			Slug:        "users_impersonate",
+			Category:    "users",
+			Resource:    "users",
+			Action:      "impersonate",
+			Description: "Ability to impersonate other users",
+			IsActive:    true,
+		},
+		{
+			Name:        "Backup System",
+			Slug:        "system_backup",
+			Category:    "system",
+			Resource:    "system",
+			Action:      "backup",
+			Description: "Create system backups",
+			IsActive:    true,
+		},
+		{
+			Name:        "Configure System",
+			Slug:        "system_configure",
+			Category:    "system",
+			Resource:    "system",
+			Action:      "configure",
+			Description: "Configure system settings",
+			IsActive:    true,
+		},
+	}
+	
+	permissions = append(permissions, customPermissions...)
+	
+	// Sync all permissions to the database
+	for _, perm := range permissions {
 		var existing models.Permission
 		err := facades.Orm().Query().Where("slug = ?", perm.Slug).First(&existing)
 		
 		if err != nil {
 			// Permission doesn't exist, create it
-			permission := models.Permission{
-				Name:        perm.Name,
-				Slug:        perm.Slug,
-				Category:    perm.Category,
-				Resource:    perm.Resource,
-				Action:      perm.Action,
-				Description: perm.Description,
-				IsActive:    true,
-			}
-			
-			if err := facades.Orm().Query().Create(&permission); err != nil {
+			if err := facades.Orm().Query().Create(&perm); err != nil {
 				return fmt.Errorf("failed to create permission %s: %w", perm.Slug, err)
 			}
 		} else {
@@ -409,6 +439,30 @@ func (s *PermissionsService) SyncPermissionsFromGates() error {
 			}
 		}
 	}
-
+	
+	// Mark any permissions not in our list as inactive
+	var allDbPermissions []models.Permission
+	if err := facades.Orm().Query().Find(&allDbPermissions); err != nil {
+		return fmt.Errorf("failed to fetch all permissions: %w", err)
+	}
+	
+	// Create a map of active permission slugs
+	activeSlugMap := make(map[string]bool)
+	for _, perm := range permissions {
+		activeSlugMap[perm.Slug] = true
+	}
+	
+	// Deactivate permissions not in our active list
+	for _, dbPerm := range allDbPermissions {
+		if !activeSlugMap[dbPerm.Slug] && dbPerm.IsActive {
+			updateData := map[string]interface{}{
+				"is_active": false,
+			}
+			if _, err := facades.Orm().Query().Model(&dbPerm).Where("id = ?", dbPerm.ID).Update(updateData); err != nil {
+				return fmt.Errorf("failed to deactivate permission %s: %w", dbPerm.Slug, err)
+			}
+		}
+	}
+	
 	return nil
 }

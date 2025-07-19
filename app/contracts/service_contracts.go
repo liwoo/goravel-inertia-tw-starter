@@ -55,6 +55,9 @@ type FilterableServiceContract interface {
 
 	// GetSearchableFields returns fields that support text search
 	GetSearchableFields() []string
+	
+	// BuildFilterQuery applies filters to the query
+	BuildFilterQuery(query interface{}, filters map[string]interface{}) interface{}
 }
 
 // SearchableServiceContract enforces search functionality

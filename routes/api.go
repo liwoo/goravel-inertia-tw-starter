@@ -6,6 +6,7 @@ import (
 	"players/app/http/controllers"
 	"players/app/http/controllers/auth"
 	"players/app/http/controllers/books"
+	"players/app/http/controllers/messages"
 
 	"players/app/http/middleware"
 )
@@ -28,8 +29,8 @@ func Api(router route.Router) {
 	rolesController := &auth.RolesController{}
 	permissionsController := &auth.PermissionsController{}
 	searchController := controllers.NewSearchController()
-	messageController := controllers.NewMessageController()
-	notificationController := controllers.NewNotificationController()
+	messageController := messages.NewMessageController()
+	notificationController := messages.NewNotificationController()
 	jwtAuth := middleware.JwtAuth()
 
 	// Book resource routes
@@ -45,7 +46,7 @@ func Api(router route.Router) {
 	router.Middleware(jwtAuth).Group(func(protectedRouter route.Router) {
 		// Global search
 		protectedRouter.Get("/search", searchController.GlobalSearch)
-		
+
 		// Book routes
 		protectedRouter.Post("/books", bookController.Store)
 		protectedRouter.Put("/books/{id}", bookController.Update)
@@ -77,18 +78,18 @@ func Api(router route.Router) {
 		protectedRouter.Prefix("messages").Group(func(messageRouter route.Router) {
 			// Send and manage messages
 			messageRouter.Post("/", messageController.SendMessage)
-			messageRouter.Get("/conversations", messageController.GetConversations)
+			// messageRouter.Get("/conversations", messageController.GetConversations) // TODO: implement
 			messageRouter.Get("/conversation/{userId}", messageController.GetConversation)
-			messageRouter.Put("/conversation/{userId}/read", messageController.MarkAsRead)
-			messageRouter.Get("/users", messageController.GetMessagableUsers)
-			messageRouter.Get("/search-users", messageController.SearchUsers)
-			messageRouter.Get("/unread-count", messageController.GetUnreadCount)
-			
+			messageRouter.Put("/{id}/read", messageController.MarkAsRead)
+			// messageRouter.Get("/users", messageController.GetMessagableUsers) // TODO: implement
+			// messageRouter.Get("/search-users", messageController.SearchUsers) // TODO: implement
+			// messageRouter.Get("/unread-count", messageController.GetUnreadCount) // TODO: implement as endpoint
+
 			// Individual message management
-			messageRouter.Get("/{id}", messageController.GetMessage)
-			messageRouter.Put("/{id}", messageController.EditMessage)
-			messageRouter.Delete("/{id}", messageController.DeleteMessage)
-			messageRouter.Post("/{id}/reply", messageController.ReplyToMessage)
+			// messageRouter.Get("/{id}", messageController.GetMessage) // TODO: use Show method
+			// messageRouter.Put("/{id}", messageController.EditMessage) // TODO: implement
+			messageRouter.Delete("/{id}", messageController.Delete)
+			// messageRouter.Post("/{id}/reply", messageController.ReplyToMessage) // TODO: implement
 		})
 
 		// Notification routes
@@ -97,17 +98,17 @@ func Api(router route.Router) {
 			notificationRouter.Get("/", notificationController.GetNotifications)
 			notificationRouter.Get("/counts", notificationController.GetCounts)
 			notificationRouter.Get("/type/{type}", notificationController.GetByType)
-			
+
 			// Mark as read/dismiss
 			notificationRouter.Put("/{id}/read", notificationController.MarkAsRead)
 			notificationRouter.Put("/read-all", notificationController.MarkAllAsRead)
 			notificationRouter.Delete("/{id}", notificationController.DismissNotification)
 			notificationRouter.Delete("/", notificationController.DismissAllNotifications)
-			
+
 			// Batch operations
 			notificationRouter.Put("/batch/read", notificationController.BatchMarkAsRead)
 			notificationRouter.Delete("/batch", notificationController.BatchDismiss)
-			
+
 			// Admin operations
 			notificationRouter.Post("/", notificationController.CreateNotification)
 			notificationRouter.Post("/system", notificationController.CreateSystemNotification)

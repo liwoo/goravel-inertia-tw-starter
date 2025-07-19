@@ -252,27 +252,13 @@ func (c *BaseCrudController) GetPaginationDefaults() (page int, pageSize int, ma
 }
 
 func (c *BaseCrudController) BuildPaginatedResponse(result *PaginatedResult, request *ListRequest) map[string]interface{} {
-	return map[string]interface{}{
-		"data": result.Data,
-		"pagination": map[string]interface{}{
-			"current_page": result.CurrentPage,
-			"last_page":    result.LastPage,
-			"per_page":     result.PerPage,
-			"total":        result.Total,
-			"from":         result.From,
-			"to":           result.To,
-			"has_next":     result.HasNext,
-			"has_prev":     result.HasPrev,
-		},
-		"filters": map[string]interface{}{
-			"page":      request.Page,
-			"pageSize":  request.PageSize,
-			"search":    request.Search,
-			"sort":      request.Sort,
-			"direction": request.Direction,
-			"filters":   request.Filters,
-		},
-	}
+	response := NewPaginatedResponse(result, request)
+	return response.ToMap()
+}
+
+// BuildTypedPaginatedResponse returns a strongly typed paginated response
+func (c *BaseCrudController) BuildTypedPaginatedResponse(result *PaginatedResult, request *ListRequest) *PaginatedResponse {
+	return NewPaginatedResponse(result, request)
 }
 
 // SEARCH CONTRACT IMPLEMENTATION (enforced)
@@ -321,18 +307,13 @@ func (c *BaseCrudController) ValidateSearchRequest(ctx http.Context) (*SearchReq
 }
 
 func (c *BaseCrudController) BuildSearchResponse(result *PaginatedResult, request *SearchRequest) map[string]interface{} {
+	// Build typed response
+	response := c.BuildTypedSearchResponse(result, request)
+	
+	// Convert to map with legacy structure for compatibility
 	return map[string]interface{}{
-		"data": result.Data,
-		"pagination": map[string]interface{}{
-			"current_page": result.CurrentPage,
-			"last_page":    result.LastPage,
-			"per_page":     result.PerPage,
-			"total":        result.Total,
-			"from":         result.From,
-			"to":           result.To,
-			"has_next":     result.HasNext,
-			"has_prev":     result.HasPrev,
-		},
+		"data":       response.Results,
+		"pagination": response.Pagination,
 		"search": map[string]interface{}{
 			"query":       request.Query,
 			"sort":        request.Sort,
@@ -343,6 +324,39 @@ func (c *BaseCrudController) BuildSearchResponse(result *PaginatedResult, reques
 			"filters":     request.Filters,
 		},
 	}
+}
+
+// BuildTypedSearchResponse returns a strongly typed search response
+func (c *BaseCrudController) BuildTypedSearchResponse(result *PaginatedResult, request *SearchRequest) *SearchResponse {
+	pagination := PaginationInfo{
+		CurrentPage: result.CurrentPage,
+		LastPage:    result.LastPage,
+		PerPage:     result.PerPage,
+		Total:       result.Total,
+		From:        result.From,
+		To:          result.To,
+		HasNext:     result.HasNext,
+		HasPrev:     result.HasPrev,
+	}
+	
+	filters := FiltersMeta{
+		Page:      request.Page,
+		PageSize:  request.PageSize,
+		Search:    request.Query,
+		Sort:      request.Sort,
+		Direction: request.Direction,
+		Filters:   request.Filters,
+	}
+	
+	response := NewSearchResponse(result.Data, request.Query, pagination, filters)
+	
+	// Add search metadata
+	if len(request.SearchIn) > 0 {
+		response.Meta.SearchedIn = request.SearchIn
+	}
+	response.Meta.Highlighted = request.Highlight
+	
+	return response
 }
 
 // VALIDATION CONTRACT IMPLEMENTATION (enforced)
@@ -490,6 +504,62 @@ func (c *BaseCrudController) Search(ctx http.Context) http.Response {
 // GetSearchableFields returns empty by default - controllers must override
 func (c *BaseCrudController) GetSearchableFields() []string {
 	return []string{}
+}
+
+// TYPED RESPONSE HELPERS
+
+// PaginatedSuccessResponse returns a typed paginated success response
+func (c *BaseCrudController) PaginatedSuccessResponse(ctx http.Context, result *PaginatedResult, request *ListRequest, message string) http.Response {
+	paginatedResponse := NewPaginatedResponse(result, request)
+	response := ResponseFormat{
+		Success: true,
+		Data:    paginatedResponse,
+		Message: message,
+	}
+	return ctx.Response().Json(http.StatusOK, response)
+}
+
+// SearchSuccessResponse returns a typed search success response
+func (c *BaseCrudController) SearchSuccessResponse(ctx http.Context, result *PaginatedResult, request *SearchRequest, message string) http.Response {
+	searchResponse := c.BuildTypedSearchResponse(result, request)
+	response := ResponseFormat{
+		Success: true,
+		Data:    searchResponse,
+		Message: message,
+	}
+	return ctx.Response().Json(http.StatusOK, response)
+}
+
+// SingleResourceResponse returns a typed single resource response
+func (c *BaseCrudController) SingleResourceResponse(ctx http.Context, resource interface{}, message string) http.Response {
+	singleResponse := &SingleResourceResponse{
+		Data: resource,
+	}
+	response := ResponseFormat{
+		Success: true,
+		Data:    singleResponse,
+		Message: message,
+	}
+	return ctx.Response().Json(http.StatusOK, response)
+}
+
+// BulkOperationResponse returns a typed bulk operation response
+func (c *BaseCrudController) BulkOperationResponse(ctx http.Context, bulkResult *BulkOperationResponse, message string) http.Response {
+	response := ResponseFormat{
+		Success: bulkResult.IsCompleteSuccess(),
+		Data:    bulkResult,
+		Message: message,
+	}
+	
+	// Determine appropriate status code
+	statusCode := http.StatusOK
+	if bulkResult.FailedCount > 0 && bulkResult.SuccessCount == 0 {
+		statusCode = http.StatusBadRequest
+	} else if bulkResult.FailedCount > 0 {
+		statusCode = http.StatusPartialContent
+	}
+	
+	return ctx.Response().Json(statusCode, response)
 }
 
 // METADATA GENERATION

@@ -1,4 +1,4 @@
-package controllers
+package messages
 
 import (
 	"strconv"
@@ -171,13 +171,13 @@ func (c *NotificationController) CreateNotification(ctx http.Context) http.Respo
 
 	// Parse request
 	var request struct {
-		UserID        uint    `json:"user_id" validate:"required"`
-		Title         string  `json:"title" validate:"required,max:255"`
-		Message       string  `json:"message" validate:"max:1000"`
-		Type          string  `json:"type" validate:"required,max:50"`
-		Priority      string  `json:"priority"`
-		ExpiresInDays *int    `json:"expires_in_days"`
-		Data          string  `json:"data"`
+		UserID        uint   `json:"user_id" validate:"required"`
+		Title         string `json:"title" validate:"required,max:255"`
+		Message       string `json:"message" validate:"max:1000"`
+		Type          string `json:"type" validate:"required,max:50"`
+		Priority      string `json:"priority"`
+		ExpiresInDays *int   `json:"expires_in_days"`
+		Data          string `json:"data"`
 	}
 
 	if err := ctx.Request().Bind(&request); err != nil {

@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"players/app/auth"
 	"players/app/contracts"
 	"players/app/models"
@@ -8,6 +9,7 @@ import (
 	accessImpl "github.com/goravel/framework/auth/access"
 	"github.com/goravel/framework/contracts/auth/access"
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
 )
 
 // AuthHelper implements authorization helper functions with RBAC support
@@ -21,6 +23,44 @@ func NewAuthHelper() contracts.AuthHelper {
 		permissionHelper: auth.GetPermissionHelper(),
 	}
 }
+
+// GetAuth returns a helper for accessing auth constants and functions
+func GetAuth() *authConstantsHelper {
+	return &authConstantsHelper{}
+}
+
+// authConstantsHelper provides access to auth constants
+type authConstantsHelper struct{}
+
+// GetAllServiceRegistries returns all registered services
+func (a *authConstantsHelper) GetAllServiceRegistries() []auth.ServiceRegistry {
+	return auth.GetAllServiceRegistries()
+}
+
+// GetServiceActions returns the valid actions for a specific service
+func (a *authConstantsHelper) GetServiceActions(service auth.ServiceRegistry) []auth.CorePermissionAction {
+	return auth.GetServiceActions(service)
+}
+
+// BuildPermissionSlug creates a permission slug in the format: service_action
+func (a *authConstantsHelper) BuildPermissionSlug(service auth.ServiceRegistry, action auth.CorePermissionAction) string {
+	return auth.BuildPermissionSlug(service, action)
+}
+
+// GetServiceDisplayName returns the human-readable name for a service
+func (a *authConstantsHelper) GetServiceDisplayName(service auth.ServiceRegistry) string {
+	return auth.GetServiceDisplayName(service)
+}
+
+// GetActionDisplayName returns the human-readable name for an action
+func (a *authConstantsHelper) GetActionDisplayName(action auth.CorePermissionAction) string {
+	return auth.GetActionDisplayName(action)
+}
+
+// Permission action constants
+func (a *authConstantsHelper) PermissionView() auth.CorePermissionAction { return auth.PermissionView }
+func (a *authConstantsHelper) PermissionManage() auth.CorePermissionAction { return auth.PermissionManage }
+func (a *authConstantsHelper) PermissionExport() auth.CorePermissionAction { return auth.PermissionExport }
 
 // Role checks
 func (h *AuthHelper) HasRole(user interface{}, roles ...string) bool {
@@ -178,13 +218,71 @@ func (g *GateHelper) ConditionalAccess(condition func(ctx http.Context, user int
 
 // RegisterResourceGates registers standard CRUD gates for a resource
 func (g *GateHelper) RegisterResourceGates(resource string, config contracts.GateConfig) {
-	// TODO: Implement gate registration with proper signatures
-	// For now, this is disabled to allow the build to succeed
-	// Gates will be handled through middleware and direct authorization checks
+	// Map resource name to ServiceRegistry
+	var service auth.ServiceRegistry
+	switch resource {
+	case "books":
+		service = auth.ServiceBooks
+	case "users":
+		service = auth.ServiceUsers
+	case "roles":
+		service = auth.ServiceRoles
+	case "permissions":
+		service = auth.ServicePermissions
+	default:
+		service = auth.ServiceRegistry(resource)
+	}
+	
+	// Register viewAny gate
+	if config.ViewAnyHandler != nil {
+		g.RegisterGate(auth.BuildPermissionSlug(service, auth.PermissionView), config.ViewAnyHandler)
+	}
+	
+	// Register view gate (for individual resources)
+	if config.ViewHandler != nil {
+		viewGate := auth.BuildPermissionSlug(service, auth.PermissionRead)
+		facades.Gate().Define(viewGate, func(ctx context.Context, args map[string]any) access.Response {
+			// TODO: Convert context.Context to http.Context when needed
+			// For now, we'll skip the context conversion
+			user := args["user"]
+			model := args["model"]
+			return config.ViewHandler(nil, user, model)
+		})
+	}
+	
+	// Register create gate
+	if config.CreateHandler != nil {
+		g.RegisterGate(auth.BuildPermissionSlug(service, auth.PermissionCreate), config.CreateHandler)
+	}
+	
+	// Register update gate
+	if config.UpdateHandler != nil {
+		updateGate := auth.BuildPermissionSlug(service, auth.PermissionUpdate)
+		facades.Gate().Define(updateGate, func(ctx context.Context, args map[string]any) access.Response {
+			// TODO: Convert context.Context to http.Context when needed
+			user := args["user"]
+			model := args["model"]
+			return config.UpdateHandler(nil, user, model)
+		})
+	}
+	
+	// Register delete gate
+	if config.DeleteHandler != nil {
+		deleteGate := auth.BuildPermissionSlug(service, auth.PermissionDelete)
+		facades.Gate().Define(deleteGate, func(ctx context.Context, args map[string]any) access.Response {
+			// TODO: Convert context.Context to http.Context when needed
+			user := args["user"]
+			model := args["model"]
+			return config.DeleteHandler(nil, user, model)
+		})
+	}
 }
 
 // RegisterGate registers a single gate
 func (g *GateHelper) RegisterGate(name string, handler func(ctx http.Context, user interface{}) access.Response) {
-	// TODO: Implement gate registration
-	// For now, this is disabled to allow the build to succeed
+	facades.Gate().Define(name, func(ctx context.Context, args map[string]any) access.Response {
+		// TODO: Convert context.Context to http.Context when needed
+		user := args["user"]
+		return handler(nil, user)
+	})
 }

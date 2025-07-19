@@ -148,13 +148,6 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 	updateSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionUpdate)
 	deleteSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionDelete)
 	
-	fmt.Printf("DEBUG BuildPermissionsMap for %s: checking permissions %s, %s, %s, %s, %s\n", 
-		resourceType, viewSlug, readSlug, createSlug, updateSlug, deleteSlug)
-	
-	// Get all user permissions for debugging
-	userPerms := h.permissionService.GetUserPermissions(user)
-	fmt.Printf("DEBUG BuildPermissionsMap - User %s permissions: %v\n", user.Email, userPerms)
-	
 	perms := map[string]bool{
 		// Use 'view' permission for listing/viewing, 'read' for accessing individual items
 		"canView":   h.permissionService.HasPermission(user, viewSlug) || h.permissionService.HasPermission(user, readSlug),
@@ -176,7 +169,6 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 		"isSuperAdmin": user.IsSuperAdminUser(),
 	}
 	
-	fmt.Printf("DEBUG BuildPermissionsMap result for %s: %+v\n", resourceType, perms)
 	return perms
 }
 
