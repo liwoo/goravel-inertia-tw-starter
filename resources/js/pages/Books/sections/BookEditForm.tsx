@@ -61,6 +61,13 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
     setIsSaving?.(true);
     
     try {
+      // Transform camelCase to snake_case for backend
+      const transformedData = {
+        ...formData,
+        published_at: formData.publishedAt,
+      };
+      delete transformedData.publishedAt;
+      
       const response = await fetch(`/api/books/${book.id}`, {
         method: 'PUT',
         headers: {
@@ -68,7 +75,7 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(transformedData),
       });
 
       if (response.ok) {

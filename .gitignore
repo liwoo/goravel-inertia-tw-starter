@@ -34,3 +34,9 @@ go.work
 
 # Air tmp directory
 tmp/
+
+# Database files
+database/database.sqlite
+*.sqlite
+*.sqlite3
+*.db

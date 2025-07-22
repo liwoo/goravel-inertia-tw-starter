@@ -7,6 +7,7 @@ export interface User {
   is_super_admin: boolean;
   created_at: string;
   updated_at: string;
+  email_verified?: boolean;
   roles?: Role[];
 }
 

@@ -1,7 +1,7 @@
 package contracts
 
 import (
-	"math"
+	"github.com/goravel/framework/support/collect"
 )
 
 // PaginationBuilder provides utilities for manual pagination
@@ -253,11 +253,11 @@ func (pb *PaginationBuilder) GetPageRange(currentPage, lastPage, maxVisible int)
 	// Adjust boundaries
 	if start < 1 {
 		start = 1
-		end = int(math.Min(float64(maxVisible), float64(lastPage)))
+		end = collect.Min([]int{maxVisible, lastPage})
 	}
 	if end > lastPage {
 		end = lastPage
-		start = int(math.Max(1, float64(end-maxVisible+1)))
+		start = collect.Max([]int{1, end - maxVisible + 1})
 	}
 	
 	// Build page range

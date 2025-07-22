@@ -202,8 +202,38 @@ func (c *BaseCrudController) ValidatePaginationRequest(ctx http.Context) (*ListR
 	req.Sort = ctx.Request().Query("sort", "")
 	req.Direction = ctx.Request().Query("direction", "")
 	
-	// Parse filters
+	// Normalize direction to uppercase for consistency
+	if req.Direction != "" {
+		req.Direction = strings.ToUpper(req.Direction)
+	}
+	
+	
+	// Parse filters from query parameters
 	req.Filters = make(map[string]interface{})
+	
+	// Get all query parameters as strings
+	queries := ctx.Request().Queries()
+	
+	// List of known non-filter parameters
+	knownParams := map[string]bool{
+		"page":      true,
+		"pageSize":  true,
+		"search":    true,
+		"sort":      true,
+		"direction": true,
+	}
+	
+	// Add all other query parameters as filters
+	for key := range queries {
+		if !knownParams[key] {
+			// Get the value as a string
+			value := ctx.Request().Query(key, "")
+			if value != "" {
+				req.Filters[key] = value
+			}
+		}
+	}
+	
 	
 	// Validate pagination parameters
 	if req.Page <= 0 {
@@ -283,8 +313,31 @@ func (c *BaseCrudController) ValidateSearchRequest(ctx http.Context) (*SearchReq
 	req.Exact = ctx.Request().Query("exact", "false") == "true"
 	req.Highlight = ctx.Request().Query("highlight", "true") == "true"
 	
-	// Parse filters
+	// Parse filters from query parameters
 	req.Filters = make(map[string]interface{})
+	
+	// Get all query parameters
+	queries := ctx.Request().Queries()
+	
+	// List of known non-filter parameters for search
+	knownParams := map[string]bool{
+		"q":          true,
+		"page":       true,
+		"pageSize":   true,
+		"sort":       true,
+		"direction":  true,
+		"searchIn":   true,
+		"exact":      true,
+		"highlight":  true,
+	}
+	
+	// Add all other query parameters as filters
+	for key, values := range queries {
+		if !knownParams[key] && len(values) > 0 {
+			// Use the first value if multiple are provided
+			req.Filters[key] = values[0]
+		}
+	}
 	
 	// Validate search query
 	if strings.TrimSpace(req.Query) == "" {

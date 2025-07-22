@@ -62,10 +62,6 @@ func (r *ListRequest) SetDefaults() {
 	if r.Direction == "" {
 		r.Direction = "DESC"
 	}
-	// Additional validation to prevent issues
-	if r.PageSize == 0 {
-		r.PageSize = 20
-	}
 }
 
 // SetDefaults applies sensible defaults to SearchRequest

@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Download, Upload, Plus, RefreshCw, Shield, Users } from 'lucide-react';
 import { 
   User, 
   UserIndexProps,
   UserFormData 
 } from '@/types/user';
 import { CrudPage } from '@/components/Crud/CrudPage';
-import { PageAction, SimpleFilter } from '@/types/crud';
 import { 
   UserCreateForm, 
   UserEditForm, 
@@ -15,12 +13,17 @@ import {
   userColumns, 
   userColumnsMobile, 
   userFilters, 
-  userQuickFilters, 
-  createUserAdditionalActions
+  createUserAdditionalActions,
+  userStatsConfigs,
+  userSimpleFilters,
+  getUserPageActions,
+  userActionHandlers
 } from './sections';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  renderStatsCards, 
+  createPageActions, 
+  createSimpleFilters 
+} from '@/lib/crud-page-utils';
 // import { useIsMobile } from '@/hooks/use-mobile';
 import Admin from '@/layouts/Admin';
 
@@ -32,13 +35,6 @@ export default function UsersIndex({
   permissions 
 }: UserIndexProps) {
   const isMobile = false; // useIsMobile();
-  
-  // Debug logging
-  console.log('UsersIndex - data:', data);
-  console.log('UsersIndex - filters:', filters);
-  console.log('UsersIndex - stats:', stats);
-  console.log('UsersIndex - roles:', roles);
-  console.log('UsersIndex - permissions:', permissions);
   
   // Dialog states
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -114,109 +110,13 @@ export default function UsersIndex({
     router.reload({ only: ['data', 'stats'] });
   };
 
-  // Additional action handlers (beyond the default View/Edit/Delete)
-  const handleActivateUser = async (id: number) => {
-    try {
-      const response = await fetch(`/api/users/${id}/activate`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-      
-      if (response.ok) {
-        handleRefresh();
-      }
-    } catch (error) {
-      console.error('Activate error:', error);
-    }
-  };
-
-  const handleDeactivateUser = async (id: number) => {
-    try {
-      const response = await fetch(`/api/users/${id}/deactivate`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-      
-      if (response.ok) {
-        handleRefresh();
-      }
-    } catch (error) {
-      console.error('Deactivate error:', error);
-    }
-  };
-
-  const handleResetPassword = async (id: number) => {
-    if (confirm('Are you sure you want to reset this user\'s password?')) {
-      try {
-        const response = await fetch(`/api/users/${id}/reset-password`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-        });
-        
-        if (response.ok) {
-          alert('Password reset email sent successfully');
-        }
-      } catch (error) {
-        console.error('Reset password error:', error);
-      }
-    }
-  };
-
-  const handleImpersonateUser = async (id: number) => {
-    if (confirm('Are you sure you want to impersonate this user?')) {
-      try {
-        const response = await fetch(`/api/users/${id}/impersonate`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-        });
-        
-        if (response.ok) {
-          // Redirect to dashboard as the impersonated user
-          window.location.href = '/admin/dashboard';
-        }
-      } catch (error) {
-        console.error('Impersonate error:', error);
-      }
-    }
-  };
-
-  const handleSendWelcomeEmail = async (id: number) => {
-    try {
-      const response = await fetch(`/api/users/${id}/send-welcome`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-      
-      if (response.ok) {
-        alert('Welcome email sent successfully');
-      }
-    } catch (error) {
-      console.error('Send welcome email error:', error);
-    }
-  };
-
-  // Create additional actions (beyond the default View/Edit/Delete that CrudPage provides)
+  // Create additional actions using the extracted handlers
   const additionalActions = createUserAdditionalActions({
-    onActivate: permissions.canEdit ? handleActivateUser : undefined,
-    onDeactivate: permissions.canEdit ? handleDeactivateUser : undefined,
-    onResetPassword: permissions.canEdit ? handleResetPassword : undefined,
-    onImpersonate: permissions.canManage ? handleImpersonateUser : undefined,
-    onSendWelcomeEmail: permissions.canEdit ? handleSendWelcomeEmail : undefined,
+    onActivate: permissions.canEdit ? userActionHandlers.activate : undefined,
+    onDeactivate: permissions.canEdit ? userActionHandlers.deactivate : undefined,
+    onResetPassword: permissions.canEdit ? userActionHandlers.resetPassword : undefined,
+    onImpersonate: permissions.canManage ? userActionHandlers.impersonate : undefined,
+    onSendWelcomeEmail: permissions.canEdit ? userActionHandlers.sendWelcomeEmail : undefined,
   });
 
   // Custom form wrappers to include roles
@@ -228,133 +128,24 @@ export default function UsersIndex({
     <UserEditForm {...props} roles={roles} />
   );
 
-  // Convert quick filters to SimpleFilter format
-  const simpleFilters: SimpleFilter[] = [
-    {
-      key: 'active',
-      label: 'Active',
-      value: 'active',
-      badge: stats?.activeUsers || 0,
-    },
-    {
-      key: 'inactive',
-      label: 'Inactive',
-      value: 'inactive',
-      badge: stats?.inactiveUsers || 0,
-    },
-    {
-      key: 'super_admins',
-      label: 'Super Admins',
-      value: 'super_admin',
-      badge: stats?.superAdmins || 0,
-    },
-  ];
-
-  // Convert management actions to PageAction format
-  const pageActions: PageAction[] = [];
+  // Use extracted configurations
+  const simpleFilters = createSimpleFilters(userSimpleFilters(stats));
   
-  if (permissions.canManage) {
-    pageActions.push({
-      key: 'import',
-      label: 'Import Users',
-      icon: <Upload className="h-4 w-4" />,
-      handler: () => setShowImportDialog(true),
-    });
-    
-    pageActions.push({
-      key: 'export',
-      label: 'Export Users',
-      icon: <Download className="h-4 w-4" />,
-      handler: () => setShowExportDialog(true),
-    });
-    
-    pageActions.push({
-      key: 'refresh',
-      label: 'Refresh',
-      icon: <RefreshCw className="h-4 w-4" />,
-      handler: handleRefresh,
-    });
-  }
+  const pageActions = createPageActions(
+    getUserPageActions(permissions, {
+      onImport: () => setShowImportDialog(true),
+      onExport: () => setShowExportDialog(true),
+      onRefresh: handleRefresh,
+    })
+  );
 
   return (
     <Admin title="User Management">
       <Head title="Users - Management" />
       
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-        {/* Admin Notice */}
-        <div className="px-4 lg:px-6">
-          <Card className="bg-gradient-to-t from-primary/5 to-card shadow-xs">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                    Super Admin Access
-                  </p>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    This page is only accessible to super administrators.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Statistics Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Active Users</CardTitle>
-                <div className="h-4 w-4 bg-green-500 rounded-full" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.activeUsers}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.totalUsers > 0 && `${Math.round((stats.activeUsers / stats.totalUsers) * 100)}% of total`}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Inactive Users</CardTitle>
-                <div className="h-4 w-4 bg-gray-500 rounded-full" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-600">{stats.inactiveUsers}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.totalUsers > 0 && `${Math.round((stats.inactiveUsers / stats.totalUsers) * 100)}% of total`}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Super Admins</CardTitle>
-                <Shield className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.superAdmins}</div>
-                <p className="text-xs text-muted-foreground">
-                  Full system access
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        {renderStatsCards(stats, userStatsConfigs)}
 
 
 

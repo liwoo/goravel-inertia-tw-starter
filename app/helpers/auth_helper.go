@@ -83,6 +83,7 @@ func (h *AuthHelper) HasAnyRole(user interface{}, roles []string) bool {
 		return false
 	}
 	
+	// Use traditional loop since collect doesn't have Contains method for custom logic
 	for _, role := range roles {
 		if u.HasRole(role) {
 			return true
@@ -97,6 +98,7 @@ func (h *AuthHelper) HasAllRoles(user interface{}, roles []string) bool {
 		return false
 	}
 	
+	// Check if user has all required roles
 	for _, role := range roles {
 		if !u.HasRole(role) {
 			return false

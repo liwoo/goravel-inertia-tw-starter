@@ -20,7 +20,7 @@ type UserService struct {
 func NewUserService() *UserService {
 	// Create the generic service
 	genericService := contracts.NewGenericCrudService[models.User]("user", "id")
-	
+
 	// Configure the service
 	genericService.
 		SetSearchFields("name", "email").
@@ -43,7 +43,7 @@ func NewUserService() *UserService {
 			if _, exists := data["is_super_admin"]; !exists {
 				data["is_super_admin"] = false
 			}
-			
+
 			// Check email uniqueness
 			var count int64
 			err := facades.Orm().Query().Model(&models.User{}).
@@ -55,7 +55,7 @@ func NewUserService() *UserService {
 			if count > 0 {
 				return fmt.Errorf("email already exists")
 			}
-			
+
 			// Hash password if provided
 			if password, ok := data["password"].(string); ok && password != "" {
 				hashedPassword, err := facades.Hash().Make(password)
@@ -64,7 +64,7 @@ func NewUserService() *UserService {
 				}
 				data["password"] = hashedPassword
 			}
-			
+
 			return nil
 		}).
 		SetAfterCreate(func(user *models.User) error {
@@ -81,7 +81,7 @@ func NewUserService() *UserService {
 			if err != nil {
 				return err
 			}
-			
+
 			// Check email uniqueness if being changed
 			if email, ok := data["email"].(string); ok && email != existingUser.Email {
 				var count int64
@@ -95,7 +95,7 @@ func NewUserService() *UserService {
 					return fmt.Errorf("email already exists")
 				}
 			}
-			
+
 			// Hash password if provided
 			if password, ok := data["password"].(string); ok && password != "" {
 				hashedPassword, err := facades.Hash().Make(password)
@@ -107,7 +107,7 @@ func NewUserService() *UserService {
 				// Remove password from update if empty
 				delete(data, "password")
 			}
-			
+
 			return nil
 		}).
 		SetCustomSearch(func(query orm.Query, search string) orm.Query {
@@ -115,27 +115,63 @@ func NewUserService() *UserService {
 			return query.Where("name LIKE ? OR email LIKE ?", searchValue, searchValue)
 		}).
 		SetCustomFilters(func(query orm.Query, filters map[string]interface{}) orm.Query {
+			fmt.Printf("DEBUG UserService.CustomFilters: Received filters=%+v\n", filters)
 			for field, value := range filters {
 				switch field {
 				case "is_active":
-					query = query.Where("is_active = ?", value)
+					// Convert string to boolean
+					fmt.Printf("DEBUG UserService.CustomFilters: Processing is_active with value='%v' (type=%T)\n", value, value)
+					switch v := value.(type) {
+					case string:
+						if v == "true" {
+							query = query.Where("is_active = ?", true)
+						} else if v == "false" {
+							query = query.Where("is_active = ?", false)
+						}
+					case bool:
+						query = query.Where("is_active = ?", v)
+					}
 				case "is_super_admin":
-					query = query.Where("is_super_admin = ?", value)
+					// Convert string to boolean
+					switch v := value.(type) {
+					case string:
+						if v == "true" {
+							query = query.Where("is_super_admin = ?", true)
+						} else if v == "false" {
+							query = query.Where("is_super_admin = ?", false)
+						}
+					case bool:
+						query = query.Where("is_super_admin = ?", v)
+					}
 				case "role":
 					// Filter by role slug
 					query = query.Where("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = users.id AND r.slug = ?)", value)
+				case "level_min":
+					// For super admin filtering - check if user is super admin
+					if level, ok := value.(string); ok {
+						if level == "90" {
+							// Filter for super admins
+							query = query.Where("is_super_admin = ?", true)
+						}
+					}
+				case "level_max":
+					// For role level filtering - not implemented for now
+					// Would need a different approach without joins
 				}
 			}
 			return query
 		})
-	
+
 	service := &UserService{
 		GenericCrudService: genericService,
 	}
-	
+
+	// Set the actual service reference so method resolution works correctly
+	genericService.SetActualService(service)
+
 	// Register service
 	contracts.MustRegisterCrudService("users", service)
-	
+
 	return service
 }
 
@@ -149,13 +185,13 @@ func (s *UserService) Create(data map[string]interface{}) (interface{}, error) {
 		// Don't save role_id to user table
 		delete(data, "role_id")
 	}
-	
+
 	// Create user using generic implementation
 	result, err := s.GenericCrudService.Create(data)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Assign role if provided
 	if roleID != nil {
 		user := result.(models.User)
@@ -174,7 +210,7 @@ func (s *UserService) Create(data map[string]interface{}) (interface{}, error) {
 			})
 		}
 	}
-	
+
 	// Reload with roles
 	return s.GetByID(result.(models.User).ID)
 }
@@ -189,18 +225,18 @@ func (s *UserService) Update(id uint, data map[string]interface{}) (interface{},
 		// Don't save role_id to user table
 		delete(data, "role_id")
 	}
-	
+
 	// Update user using generic implementation
 	_, err := s.GenericCrudService.Update(id, data)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Update role if provided
 	if roleID != nil {
 		// Remove existing roles
 		facades.Orm().Query().Where("user_id = ?", id).Delete(&models.UserRole{})
-		
+
 		// Assign new role
 		userRole := models.UserRole{
 			UserID:     id,
@@ -217,7 +253,7 @@ func (s *UserService) Update(id uint, data map[string]interface{}) (interface{},
 			})
 		}
 	}
-	
+
 	// Reload with roles
 	return s.GetByID(id)
 }
@@ -246,4 +282,27 @@ func (s *UserService) GetColumnMapping() map[string]string {
 		"is_active":      "is_active",
 		"is_super_admin": "is_super_admin",
 	}
+}
+
+// MapSortField maps frontend field names to database field names
+// This handles camelCase to snake_case conversion
+func (s *UserService) MapSortField(frontendField string) (string, bool) {
+	// Map camelCase fields to snake_case
+	fieldMap := map[string]string{
+		"isActive":     "is_active",
+		"isSuperAdmin": "is_super_admin",
+		"createdAt":    "created_at",
+		"updatedAt":    "updated_at",
+	}
+
+	// Check if we have a mapping
+	if dbField, exists := fieldMap[frontendField]; exists {
+		// Validate the mapped field
+		if s.ValidateSortField(dbField) {
+			return dbField, true
+		}
+	}
+
+	// Otherwise delegate to the base implementation
+	return s.GenericCrudService.MapSortField(frontendField)
 }

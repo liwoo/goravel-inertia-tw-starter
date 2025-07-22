@@ -7,3 +7,9 @@ export {
   bookFilters, 
   bookQuickFilters 
 } from './BookColumns';
+export {
+  bookStatsConfigs,
+  bookSimpleFilters,
+  getBookPageActions,
+  bookBulkActions
+} from './bookPageConfig';

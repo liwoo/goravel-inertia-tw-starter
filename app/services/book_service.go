@@ -19,11 +19,11 @@ type BookService struct {
 func NewBookService() *BookService {
 	// Create the generic service
 	genericService := contracts.NewGenericCrudService[models.Book]("book", "id")
-	
+
 	// Configure the service
 	genericService.
 		SetSearchFields("title", "author", "isbn", "description").
-		SetSortFields("id", "title", "author", "price", "published_at", "created_at", "updated_at").
+		SetSortFields("id", "title", "author", "price", "status", "published_at", "created_at", "updated_at").
 		SetFilterFields("status", "author", "isbn", "is_available").
 		SetValidationRules(map[string]interface{}{
 			"title":        "required|string|max:255",
@@ -31,18 +31,21 @@ func NewBookService() *BookService {
 			"isbn":         "required|string|max:20",
 			"description":  "string|max:1000",
 			"price":        "numeric|min:0",
-			"status":       "string|in:available,borrowed,reserved,lost",
+			"status":       "string|in:AVAILABLE,BORROWED,MAINTENANCE",
 			"published_at": "date",
 		}).
 		SetBeforeCreate(func(data map[string]interface{}) error {
+			// Remove tags field as it's not a database column (has gorm:"-" tag)
+			delete(data, "tags")
+			
 			// Set default status if not provided
 			if _, exists := data["status"]; !exists {
-				data["status"] = "available"
+				data["status"] = "AVAILABLE"
 			}
 			if _, exists := data["is_available"]; !exists {
 				data["is_available"] = true
 			}
-			
+
 			// Check ISBN uniqueness
 			var count int64
 			err := facades.Orm().Query().Model(&models.Book{}).
@@ -54,10 +57,13 @@ func NewBookService() *BookService {
 			if count > 0 {
 				return fmt.Errorf("ISBN already exists")
 			}
-			
+
 			return nil
 		}).
 		SetBeforeUpdate(func(id uint, data map[string]interface{}) error {
+			// Remove tags field as it's not a database column (has gorm:"-" tag)
+			delete(data, "tags")
+			
 			// Check ISBN uniqueness if being changed
 			if isbn, ok := data["isbn"].(string); ok {
 				var count int64
@@ -79,9 +85,11 @@ func NewBookService() *BookService {
 				searchValue, searchValue, searchValue, searchValue)
 		}).
 		SetCustomFilters(func(query orm.Query, filters map[string]interface{}) orm.Query {
+			fmt.Printf("DEBUG BookService.CustomFilters: Received filters=%+v\n", filters)
 			for field, value := range filters {
 				switch field {
 				case "status":
+					fmt.Printf("DEBUG BookService.CustomFilters: Applying status filter with value='%v' (type=%T)\n", value, value)
 					query = query.Where("status = ?", value)
 				case "author":
 					query = query.Where("author = ?", value)
@@ -99,15 +107,44 @@ func NewBookService() *BookService {
 			}
 			return query
 		})
-	
+
 	service := &BookService{
 		GenericCrudService: genericService,
 	}
-	
+
+	// Set the actual service reference so method resolution works correctly
+	genericService.SetActualService(service)
+
 	// Register service
 	contracts.MustRegisterCrudService("books", service)
-	
+
 	return service
+}
+
+// MapSortField maps frontend field names to database field names
+// This handles camelCase to snake_case conversion
+func (s *BookService) MapSortField(frontendField string) (string, bool) {
+	fmt.Printf("DEBUG BookService.MapSortField: Input field='%s'\n", frontendField)
+
+	// Map camelCase fields to snake_case
+	fieldMap := map[string]string{
+		"publishedAt": "published_at",
+		"createdAt":   "created_at",
+		"updatedAt":   "updated_at",
+		"isAvailable": "is_available",
+	}
+
+	// Check if we have a mapping
+	if dbField, exists := fieldMap[frontendField]; exists {
+		// Validate the mapped field
+		if s.ValidateSortField(dbField) {
+			return dbField, true
+		}
+		// If validation failed, return false
+		return "", false
+	}
+	// Otherwise delegate to the base implementation
+	return s.GenericCrudService.MapSortField(frontendField)
 }
 
 // Custom methods beyond basic CRUD
@@ -146,18 +183,18 @@ func (s *BookService) BorrowBook(id uint) error {
 	if err != nil {
 		return err
 	}
-	
+
 	bookModel := book.(*models.Book)
 	if bookModel.Status != "available" {
 		return fmt.Errorf("book is not available for borrowing")
 	}
-	
+
 	// Update book status
 	updateData := map[string]interface{}{
 		"status":       "borrowed",
 		"is_available": false,
 	}
-	
+
 	_, err = s.Update(id, updateData)
 	return err
 }
@@ -168,18 +205,18 @@ func (s *BookService) ReturnBook(id uint) error {
 	if err != nil {
 		return err
 	}
-	
+
 	bookModel := book.(*models.Book)
 	if bookModel.Status != "borrowed" {
 		return fmt.Errorf("book is not currently borrowed")
 	}
-	
+
 	// Update book status
 	updateData := map[string]interface{}{
 		"status":       "available",
 		"is_available": true,
 	}
-	
+
 	_, err = s.Update(id, updateData)
 	return err
 }
@@ -187,15 +224,15 @@ func (s *BookService) ReturnBook(id uint) error {
 // Contract method implementations
 func (s *BookService) GetColumnMapping() map[string]string {
 	return map[string]string{
-		"id":           "id",
-		"title":        "title",
-		"author":       "author",
-		"isbn":         "isbn",
-		"price":        "price",
-		"publishedAt":  "published_at",
-		"createdAt":    "created_at",
-		"updatedAt":    "updated_at",
-		"isAvailable":  "is_available",
-		"status":       "status",
+		"id":          "id",
+		"title":       "title",
+		"author":      "author",
+		"isbn":        "isbn",
+		"price":       "price",
+		"publishedAt": "published_at",
+		"createdAt":   "created_at",
+		"updatedAt":   "updated_at",
+		"isAvailable": "is_available",
+		"status":      "status",
 	}
 }

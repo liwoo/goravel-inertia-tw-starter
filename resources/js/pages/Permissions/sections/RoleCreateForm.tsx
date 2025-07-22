@@ -43,6 +43,11 @@ export const RoleCreateForm = forwardRef<any, RoleCreateFormProps>(({
   };
 
   const handleSubmit = async () => {
+    // Prevent submission if form data is empty or invalid
+    if (!formData.name || formData.name.trim() === '') {
+      console.warn('Prevented submission of empty role form');
+      return;
+    }
     
     // Basic validation
     const newErrors: Record<string, string> = {};
@@ -87,6 +92,21 @@ export const RoleCreateForm = forwardRef<any, RoleCreateFormProps>(({
       setIsSaving?.(false);
     }
   };
+
+  // Reset form on unmount to prevent stale data
+  React.useEffect(() => {
+    return () => {
+      // Reset form data when component unmounts
+      setFormData({
+        name: '',
+        slug: '',
+        description: '',
+        level: 1,
+        is_active: true,
+      });
+      setErrors({});
+    };
+  }, []);
 
   // Expose handleSubmit to parent component
   useImperativeHandle(ref, () => ({

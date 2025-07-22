@@ -8,6 +8,7 @@ import (
 
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
+	"github.com/goravel/framework/support/collect"
 )
 
 // MakeCrudGenericCommand creates CRUD resources using the generic implementation
@@ -418,9 +419,8 @@ func formatStringSlice(fields []string) string {
 	if len(fields) == 0 {
 		return ""
 	}
-	quoted := make([]string, len(fields))
-	for i, field := range fields {
-		quoted[i] = fmt.Sprintf(`"%s"`, field)
-	}
+	quoted := collect.Map(fields, func(field string, index int) string {
+		return fmt.Sprintf(`"%s"`, field)
+	})
 	return strings.Join(quoted, ", ")
 }

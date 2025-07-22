@@ -30,7 +30,7 @@ const (
 	ServicePermissions ServiceRegistry = "permissions"
 	ServiceReports     ServiceRegistry = "reports"
 	ServiceSystem      ServiceRegistry = "system"
-	ServiceBundles     ServiceRegistry = "bundles"
+	ServiceProducts    ServiceRegistry = "products"
 )
 
 // GetAllCorePermissionActions returns all core permission actions
@@ -57,7 +57,7 @@ func GetAllServiceRegistries() []ServiceRegistry {
 		ServicePermissions,
 		ServiceReports,
 		ServiceSystem,
-		ServiceBundles,
+		ServiceProducts,
 	}
 }
 
@@ -81,8 +81,8 @@ func GetServiceDisplayName(service ServiceRegistry) string {
 		return "Reports & Analytics"
 	case ServiceSystem:
 		return "System Administration"
-	case ServiceBundles:
-		return "SME Management"
+	case ServiceProducts:
+		return "Products Management"
 	default:
 		return string(service)
 	}
@@ -135,14 +135,12 @@ func GetServiceActions(service ServiceRegistry) []CorePermissionAction {
 			PermissionBulkDelete,
 			PermissionView,
 		}
-	case ServiceBundles:
+	case ServiceProducts:
 		return []CorePermissionAction{
 			PermissionCreate,
 			PermissionRead,
 			PermissionUpdate,
 			PermissionDelete,
-			PermissionExport,
-			PermissionBulkUpdate,
 			PermissionBulkDelete,
 			PermissionView,
 		}

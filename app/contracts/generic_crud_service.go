@@ -20,6 +20,9 @@ type GenericCrudService[T any] struct {
 	relations      []string
 	validationRules map[string]interface{}
 	
+	// Reference to the actual service (e.g., BookService) for method resolution
+	actualService  interface{}
+	
 	// Customizable hooks
 	beforeCreate   func(data map[string]interface{}) error
 	afterCreate    func(model *T) error
@@ -89,30 +92,104 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 		}
 	}
 	
-	// Apply sorting
-	query, err := s.ApplySort(query, req.Sort, req.Direction, s)
+	// Apply filters from request
+	if len(req.Filters) > 0 {
+		if s.customFilters != nil {
+			query = s.customFilters(query, req.Filters)
+		} else {
+			// Default filter implementation
+			for field, value := range req.Filters {
+				if s.ValidateFilterField(field) {
+					query = query.Where(field+" = ?", value)
+				}
+			}
+		}
+	}
+	
+	// Apply sorting - use actualService if available, otherwise use self
+	serviceToUse := interface{}(s)
+	if s.actualService != nil {
+		serviceToUse = s.actualService
+	}
+	query, err := s.ApplySort(query, req.Sort, req.Direction, serviceToUse)
 	if err != nil {
 		return nil, err
 	}
 	
-	// Get all items
+	// Get total count before pagination
+	var total int64
+	// Create a new query instance for counting to avoid modifying the original
+	var countModel T
+	countQuery := facades.Orm().Query().Model(&countModel)
+	
+	// Re-apply the same conditions for counting
+	// Load relations if configured
+	for _, relation := range s.relations {
+		countQuery = countQuery.With(relation)
+	}
+	
+	// Apply custom query if set
+	if s.customQuery != nil {
+		countQuery = s.customQuery(countQuery)
+	}
+	
+	// Apply search if present
+	if req.Search != "" {
+		if s.customSearch != nil {
+			countQuery = s.customSearch(countQuery, req.Search)
+		} else {
+			countQuery, _ = s.ApplySearch(countQuery, req.Search, s)
+		}
+	}
+	
+	// Apply filters if present
+	if len(req.Filters) > 0 {
+		if s.customFilters != nil {
+			countQuery = s.customFilters(countQuery, req.Filters)
+		} else {
+			for field, value := range req.Filters {
+				if s.ValidateFilterField(field) {
+					countQuery = countQuery.Where(field+" = ?", value)
+				}
+			}
+		}
+	}
+	
+	if err := countQuery.Count(&total); err != nil {
+		return nil, err
+	}
+	
+	// Apply pagination at database level
+	offset := (req.Page - 1) * req.PageSize
+	query = query.Offset(offset).Limit(req.PageSize)
+	
+	// Get paginated items
 	var items []T
 	if err := query.Find(&items); err != nil {
 		return nil, err
 	}
 	
-	// Use pagination utility
-	result := PaginateSliceWithConverter(
-		items,
-		req.Page,
-		req.PageSize,
-		func(item T) interface{} { return item },
-	)
+	// Convert items to interface slice
+	data := make([]interface{}, len(items))
+	for i, item := range items {
+		data[i] = item
+	}
 	
-	// Add additional pagination metadata
+	// Build pagination metadata
 	pb := s.GetPaginationBuilder()
-	result.HasNext = pb.HasNextPage(result.CurrentPage, result.LastPage)
-	result.HasPrev = pb.HasPrevPage(result.CurrentPage)
+	lastPage := pb.CalculateLastPage(total, int64(req.PageSize))
+	
+	result := &PaginatedResult{
+		Data:        data,
+		Total:       total,
+		PerPage:     req.PageSize,
+		CurrentPage: req.Page,
+		LastPage:    lastPage,
+		From:        pb.CalculateFrom(offset, len(items)),
+		To:          pb.CalculateTo(offset, len(items)),
+		HasNext:     pb.HasNextPage(req.Page, lastPage),
+		HasPrev:     pb.HasPrevPage(req.Page),
+	}
 	
 	return result, nil
 }
@@ -164,25 +241,81 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 		}
 	}
 	
-	// Apply sorting
-	query, err := s.ApplySort(query, req.Sort, req.Direction, s)
+	// Apply sorting - use actualService if available, otherwise use self
+	serviceToUse := interface{}(s)
+	if s.actualService != nil {
+		serviceToUse = s.actualService
+	}
+	query, err := s.ApplySort(query, req.Sort, req.Direction, serviceToUse)
 	if err != nil {
 		return nil, err
 	}
 	
-	// Get all items
+	// Get total count before pagination
+	var total int64
+	// Create count query with same filters
+	var countModel T
+	countQuery := facades.Orm().Query().Model(&countModel)
+	
+	// Re-apply all conditions for counting
+	for _, relation := range s.relations {
+		countQuery = countQuery.With(relation)
+	}
+	if s.customQuery != nil {
+		countQuery = s.customQuery(countQuery)
+	}
+	if s.customFilters != nil {
+		countQuery = s.customFilters(countQuery, filters)
+	} else {
+		for field, value := range filters {
+			if s.ValidateFilterField(field) {
+				countQuery = countQuery.Where(field+" = ?", value)
+			}
+		}
+	}
+	if req.Search != "" {
+		if s.customSearch != nil {
+			countQuery = s.customSearch(countQuery, req.Search)
+		} else {
+			countQuery, _ = s.ApplySearch(countQuery, req.Search, s)
+		}
+	}
+	
+	if err := countQuery.Count(&total); err != nil {
+		return nil, err
+	}
+	
+	// Apply pagination at database level
+	offset := (req.Page - 1) * req.PageSize
+	query = query.Offset(offset).Limit(req.PageSize)
+	
+	// Get paginated items
 	var items []T
 	if err := query.Find(&items); err != nil {
 		return nil, err
 	}
 	
-	// Use pagination utility
-	result := PaginateSliceWithConverter(
-		items,
-		req.Page,
-		req.PageSize,
-		func(item T) interface{} { return item },
-	)
+	// Convert items to interface slice
+	data := make([]interface{}, len(items))
+	for i, item := range items {
+		data[i] = item
+	}
+	
+	// Build result
+	pb := s.GetPaginationBuilder()
+	lastPage := pb.CalculateLastPage(total, int64(req.PageSize))
+	
+	result := &PaginatedResult{
+		Data:        data,
+		Total:       total,
+		PerPage:     req.PageSize,
+		CurrentPage: req.Page,
+		LastPage:    lastPage,
+		From:        pb.CalculateFrom(offset, len(items)),
+		To:          pb.CalculateTo(offset, len(items)),
+		HasNext:     pb.HasNextPage(req.Page, lastPage),
+		HasPrev:     pb.HasPrevPage(req.Page),
+	}
 	
 	return result, nil
 }
@@ -376,6 +509,12 @@ func (s *GenericCrudService[T]) Search(query string, req ListRequest) (*Paginate
 }
 
 // Configuration methods
+
+// SetActualService sets the reference to the actual service for proper method resolution
+func (s *GenericCrudService[T]) SetActualService(service interface{}) *GenericCrudService[T] {
+	s.actualService = service
+	return s
+}
 
 // SetSearchFields sets the fields to search
 func (s *GenericCrudService[T]) SetSearchFields(fields ...string) *GenericCrudService[T] {
@@ -703,12 +842,14 @@ func (s *GenericCrudService[T]) GetDefaultPageSize() int {
 
 // GetDefaultSort returns the default sort configuration
 func (s *GenericCrudService[T]) GetDefaultSort() (field string, direction string) {
-	return "id", "desc"
+	// Delegate to base service for consistency
+	return s.BaseCrudService.GetDefaultSort()
 }
 
 // ValidateSortDirection validates sort direction
 func (s *GenericCrudService[T]) ValidateSortDirection(direction string) bool {
-	return direction == "asc" || direction == "desc"
+	// Delegate to base service which handles case-insensitive validation
+	return s.BaseCrudService.ValidateSortDirection(direction)
 }
 
 // SearchableServiceContract interface methods

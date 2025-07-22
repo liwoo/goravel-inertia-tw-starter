@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -61,10 +62,39 @@ func (c *RolesController) Store(ctx http.Context) http.Response {
 			"error": "Invalid request data",
 		})
 	}
+	
+	// Log the request for debugging
+	facades.Log().Debug("RolesController.Store called", map[string]interface{}{
+		"method": ctx.Request().Method(),
+		"path": ctx.Request().Path(),
+		"url": ctx.Request().Url(),
+		"referer": ctx.Request().Header("Referer"),
+		"user_agent": ctx.Request().Header("User-Agent"),
+		"x_inertia": ctx.Request().Header("X-Inertia"),
+		"x_inertia_version": ctx.Request().Header("X-Inertia-Version"),
+		"content_type": ctx.Request().Header("Content-Type"),
+		"data": requestData,
+		"query_params": ctx.Request().Queries(),
+	})
+
+	// Check if request data is empty or contains only empty values
+	if len(requestData) == 0 {
+		facades.Log().Error("RolesController.Store: Rejecting empty request body", map[string]interface{}{
+			"stack_trace": string(debug.Stack()),
+		})
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+			"error": "Request body cannot be empty",
+		})
+	}
 
 	// Validate required fields
 	name, nameOk := requestData["name"].(string)
 	if !nameOk || strings.TrimSpace(name) == "" {
+		facades.Log().Error("RolesController.Store: Name validation failed", map[string]interface{}{
+			"name_ok": nameOk,
+			"name": name,
+			"request_id": ctx.Request().Header("X-Request-ID"),
+		})
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
 			"error": "Role name is required",
 		})
@@ -76,25 +106,49 @@ func (c *RolesController) Store(ctx http.Context) http.Response {
 		level = int(levelFloat)
 	}
 
-	// Create slug from name
-	slug := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(name), " ", "-"))
-
-	// Validate slug is not empty
-	if slug == "" {
+	// Create slug from name with more robust handling
+	// Remove all non-alphanumeric characters except spaces and hyphens
+	cleanName := strings.TrimSpace(name)
+	slug := strings.ToLower(cleanName)
+	
+	// Replace spaces with hyphens and remove consecutive hyphens
+	slug = strings.ReplaceAll(slug, " ", "-")
+	
+	// Remove any character that's not alphanumeric or hyphen
+	var slugBuilder strings.Builder
+	for _, r := range slug {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			slugBuilder.WriteRune(r)
+		}
+	}
+	slug = slugBuilder.String()
+	
+	// Remove leading/trailing hyphens and collapse multiple hyphens
+	slug = strings.Trim(slug, "-")
+	
+	// Validate slug is not empty after cleaning
+	if slug == "" || cleanName == "" {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
-			"error": "Role name cannot be empty",
+			"error": "Role name must contain at least one alphanumeric character",
 		})
 	}
 
-	// Check if role with this slug already exists (only check non-empty slugs)
+	// Check if role with this slug already exists
 	var existingRole models.Role
 	err = facades.Orm().Query().Where("slug = ?", slug).First(&existingRole)
-	if err == nil && existingRole.ID > 0 && existingRole.Slug != "" {
+	if err == nil && existingRole.ID > 0 {
 		return ctx.Response().Json(http.StatusConflict, map[string]string{
 			"error": "A role with this name already exists",
 		})
 	}
 
+	// Additional validation to ensure name and slug are never empty
+	if name == "" || slug == "" {
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+			"error": "Role name and slug cannot be empty",
+		})
+	}
+	
 	// Create new role
 	role := models.Role{
 		Name:        name,
@@ -216,9 +270,44 @@ func (c *RolesController) Update(ctx http.Context) http.Response {
 	}
 
 	// Update fields if provided
-	if name, ok := requestData["name"].(string); ok && strings.TrimSpace(name) != "" {
-		role.Name = strings.TrimSpace(name)
-		role.Slug = strings.ToLower(strings.ReplaceAll(role.Name, " ", "-"))
+	if name, ok := requestData["name"].(string); ok {
+		cleanName := strings.TrimSpace(name)
+		if cleanName != "" {
+			// Create slug with same robust handling as in Store
+			slug := strings.ToLower(cleanName)
+			slug = strings.ReplaceAll(slug, " ", "-")
+			
+			// Remove any character that's not alphanumeric or hyphen
+			var slugBuilder strings.Builder
+			for _, r := range slug {
+				if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+					slugBuilder.WriteRune(r)
+				}
+			}
+			slug = slugBuilder.String()
+			slug = strings.Trim(slug, "-")
+			
+			// Validate slug is not empty after cleaning
+			if slug == "" {
+				return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+					"error": "Role name must contain at least one alphanumeric character",
+				})
+			}
+			
+			// Check if another role already has this slug
+			var existingRole models.Role
+			err := facades.Orm().Query().
+				Where("slug = ? AND id != ?", slug, roleID).
+				First(&existingRole)
+			if err == nil && existingRole.ID > 0 {
+				return ctx.Response().Json(http.StatusConflict, map[string]string{
+					"error": "A role with this name already exists",
+				})
+			}
+			
+			role.Name = cleanName
+			role.Slug = slug
+		}
 	}
 
 	if description, ok := requestData["description"].(string); ok {
@@ -357,14 +446,23 @@ func (c *RolesController) Destroy(ctx http.Context) http.Response {
 		})
 	}
 
-	// Soft delete the role
-	role.IsActive = false
-	err = facades.Orm().Query().Save(&role)
+	// Soft delete the role by using Delete method which handles soft deletes
+	_, err = facades.Orm().Query().Model(&models.Role{}).Where("id = ?", roleID).Delete(&models.Role{})
 	if err != nil {
+		facades.Log().Error("Failed to soft delete role", map[string]interface{}{
+			"role_id": roleID,
+			"error": err.Error(),
+			"stack": string(debug.Stack()),
+		})
 		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": "Failed to delete role",
+			"error": "Failed to delete role: " + err.Error(),
 		})
 	}
+
+	facades.Log().Info("Role soft deleted successfully", map[string]interface{}{
+		"role_id": roleID,
+		"role_name": role.Name,
+	})
 
 	return ctx.Response().Json(http.StatusOK, map[string]interface{}{
 		"message": "Role deleted successfully",

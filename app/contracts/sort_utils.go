@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/goravel/framework/contracts/database/orm"
+	"github.com/goravel/framework/support/str"
 )
 
 // SortConfig defines the configuration for sort operations
@@ -30,7 +31,7 @@ func (sb *SortBuilder) ApplySort(query orm.Query, config SortConfig) orm.Query {
 	field, direction := sb.determineSortParams(config)
 	
 	// Build and apply the order clause
-	orderClause := field + " " + strings.ToUpper(direction)
+	orderClause := field + " " + str.Of(direction).Upper().String()
 	return query.Order(orderClause)
 }
 
@@ -58,9 +59,8 @@ func (sb *SortBuilder) ApplySortWithService(query orm.Query, sort, direction str
 	
 	// Validate direction separately
 	if direction != "" && !sortable.ValidateSortDirection(direction) {
-		// Use default if direction is invalid
-		defaultField, defaultDir := sortable.GetDefaultSort()
-		config.Field = defaultField
+		// Only replace the direction, keep the field
+		_, defaultDir := sortable.GetDefaultSort()
 		config.Direction = defaultDir
 	}
 
@@ -69,24 +69,17 @@ func (sb *SortBuilder) ApplySortWithService(query orm.Query, sort, direction str
 
 // determineSortParams determines the final sort field and direction
 func (sb *SortBuilder) determineSortParams(config SortConfig) (field, direction string) {
+	
 	// If no sort field specified, use default
 	if config.Field == "" || config.Direction == "" {
 		if config.GetDefaultFunc != nil {
-			return config.GetDefaultFunc()
+			field, direction = config.GetDefaultFunc()
+			return field, direction
 		}
 		return "id", "DESC" // Ultimate fallback
 	}
 
-	// Validate the sort field if validation function provided
-	if config.ValidateFunc != nil && !config.ValidateFunc(config.Field) {
-		// Invalid field, use default
-		if config.GetDefaultFunc != nil {
-			return config.GetDefaultFunc()
-		}
-		return "id", "DESC"
-	}
-
-	// Map the field if mapping function provided
+	// If mapping function is provided, use it (it includes validation)
 	if config.MapFieldFunc != nil {
 		mappedField, valid := config.MapFieldFunc(config.Field)
 		if valid {
@@ -94,7 +87,18 @@ func (sb *SortBuilder) determineSortParams(config SortConfig) (field, direction 
 		}
 		// Invalid mapping, use default
 		if config.GetDefaultFunc != nil {
-			return config.GetDefaultFunc()
+			field, direction = config.GetDefaultFunc()
+			return field, direction
+		}
+		return "id", "DESC"
+	}
+
+	// Validate the sort field if validation function provided (only if no mapping function)
+	if config.ValidateFunc != nil && !config.ValidateFunc(config.Field) {
+		// Invalid field, use default
+		if config.GetDefaultFunc != nil {
+			field, direction = config.GetDefaultFunc()
+			return field, direction
 		}
 		return "id", "DESC"
 	}
@@ -109,7 +113,7 @@ func (sb *SortBuilder) BuildSortClause(field, direction string) string {
 		return ""
 	}
 	
-	direction = strings.ToUpper(direction)
+	direction = str.Of(direction).Upper().String()
 	if direction != "ASC" && direction != "DESC" {
 		direction = "DESC"
 	}
@@ -119,13 +123,13 @@ func (sb *SortBuilder) BuildSortClause(field, direction string) string {
 
 // ValidateSortDirection validates sort direction
 func (sb *SortBuilder) ValidateSortDirection(direction string) bool {
-	normalized := strings.ToUpper(strings.TrimSpace(direction))
+	normalized := str.Of(direction).Trim().Upper().String()
 	return normalized == "ASC" || normalized == "DESC"
 }
 
 // NormalizeSortDirection normalizes sort direction
 func (sb *SortBuilder) NormalizeSortDirection(direction string) string {
-	normalized := strings.ToUpper(strings.TrimSpace(direction))
+	normalized := str.Of(direction).Trim().Upper().String()
 	if normalized != "ASC" && normalized != "DESC" {
 		return "DESC"
 	}
@@ -153,7 +157,7 @@ func (sb *SortBuilder) ParseSortString(sortString string) []struct{ Field, Direc
 	
 	parts := strings.Split(sortString, ",")
 	for _, part := range parts {
-		part = strings.TrimSpace(part)
+		part = str.Of(part).Trim().String()
 		if part == "" {
 			continue
 		}
@@ -161,13 +165,13 @@ func (sb *SortBuilder) ParseSortString(sortString string) []struct{ Field, Direc
 		fieldDir := strings.Split(part, ":")
 		if len(fieldDir) == 2 {
 			result = append(result, struct{ Field, Direction string }{
-				Field:     strings.TrimSpace(fieldDir[0]),
+				Field:     str.Of(fieldDir[0]).Trim().String(),
 				Direction: sb.NormalizeSortDirection(fieldDir[1]),
 			})
 		} else if len(fieldDir) == 1 {
 			// Default to DESC if no direction specified
 			result = append(result, struct{ Field, Direction string }{
-				Field:     strings.TrimSpace(fieldDir[0]),
+				Field:     str.Of(fieldDir[0]).Trim().String(),
 				Direction: "DESC",
 			})
 		}

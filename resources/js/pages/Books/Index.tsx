@@ -12,15 +12,17 @@ import {
   BookImportData 
 } from '@/types/book';
 import { CrudPage } from '@/components/Crud/CrudPage';
-import { PageAction, SimpleFilter } from '@/types/crud';
 import { 
   BookCreateForm, 
   BookEditForm, 
   BookDetailView,
   bookColumns, 
   bookColumnsMobile, 
-  bookFilters, 
-  bookQuickFilters 
+  bookFilters,
+  bookStatsConfigs,
+  bookSimpleFilters,
+  getBookPageActions,
+  bookBulkActions
 } from './sections';
 import { 
   BulkStatusUpdateDialog, 
@@ -28,7 +30,11 @@ import {
   BookExportDialog, 
   BookImportDialog 
 } from '@/components/Books/BookActions';
-import { Button } from '@/components/ui/button';
+import { 
+  renderStatsCards, 
+  createPageActions, 
+  createSimpleFilters 
+} from '@/lib/crud-page-utils';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -70,6 +76,8 @@ export default function BooksIndex({
   // Debug logging
   console.log('BooksIndex - data:', data);
   console.log('BooksIndex - filters:', filters);
+  console.log('BooksIndex - filters.status:', filters?.status);
+  console.log('BooksIndex - filters.filters:', filters?.filters);
   console.log('BooksIndex - stats:', stats);
   console.log('BooksIndex - permissions:', permissions);
   
@@ -89,69 +97,15 @@ export default function BooksIndex({
     setSelectedBooks(selected);
 
     const operations: Record<string, () => void> = {
-      delete: () => handleBulkDelete(selectedIds),
+      delete: () => bookBulkActions.handleBulkDelete(selectedIds),
       updateStatus: () => setShowBulkStatusDialog(true),
-      export: () => handleBulkExport(selectedIds),
+      export: () => bookBulkActions.handleBulkExport(selectedIds, filters),
       addTags: () => setShowBulkTagsDialog(true),
     };
 
     const operation = operations[action];
     if (operation) {
       operation();
-    }
-  };
-
-  const handleBulkDelete = (bookIds: number[]) => {
-    const confirmMessage = `Are you sure you want to delete ${bookIds.length} book(s)? This action cannot be undone.`;
-    if (confirm(confirmMessage)) {
-      router.delete('/api/books/bulk', {
-        data: { bookIds },
-        onSuccess: () => {
-          // Refresh will be handled by the parent
-        },
-      });
-    }
-  };
-
-  const handleBulkStatusUpdate = (bookIds: number[]) => {
-    const status = prompt('Enter new status (AVAILABLE, BORROWED, MAINTENANCE):');
-    if (status && ['AVAILABLE', 'BORROWED', 'MAINTENANCE'].includes(status)) {
-      router.put('/api/books/bulk/status', {
-        bookIds,
-        status,
-      });
-    }
-  };
-
-  const handleBulkExport = (bookIds: number[]) => {
-    const format = prompt('Export format (csv, json, excel):') || 'csv';
-    const options: BookExportOptions = {
-      format: format as any,
-      filters: filters,
-    };
-    
-    // Build params including bookIds separately
-    const params = new URLSearchParams({
-      format: format,
-      bookIds: bookIds.join(','),
-      ...Object.fromEntries(
-        Object.entries(filters || {}).map(([key, value]) => [key, String(value)])
-      ),
-    });
-    
-    // Trigger download
-    window.open(`/api/books/export?${params.toString()}`);
-  };
-
-  const handleBulkAddTags = (bookIds: number[]) => {
-    const tags = prompt('Enter tags to add (comma-separated):');
-    if (tags) {
-      const tagArray = tags.split(',').map(tag => tag.trim()).filter(Boolean);
-      router.put('/api/books/bulk/tags', {
-        bookIds,
-        tags: tagArray,
-        action: 'add',
-      });
     }
   };
 
@@ -193,55 +147,16 @@ export default function BooksIndex({
     router.reload({ only: ['data', 'stats'] });
   };
 
-  // Convert quick filters to SimpleFilter format
-  const simpleFilters: SimpleFilter[] = [
-    {
-      key: 'available',
-      label: 'Available',
-      value: 'AVAILABLE',
-      badge: stats?.availableBooks || 0,
-    },
-    {
-      key: 'borrowed',
-      label: 'Borrowed',
-      value: 'BORROWED',
-      badge: stats?.borrowedBooks || 0,
-    },
-    {
-      key: 'maintenance',
-      label: 'Maintenance',
-      value: 'MAINTENANCE',
-      badge: stats?.maintenanceBooks || 0,
-    },
-  ];
-
-  // Convert management actions to PageAction format
-  const pageActions: PageAction[] = [];
+  // Use extracted configurations
+  const simpleFilters = createSimpleFilters(bookSimpleFilters(stats));
   
-  if (permissions.canManageLibrary) {
-    pageActions.push({
-      key: 'import',
-      label: 'Import Books',
-      icon: <Upload className="h-4 w-4" />,
-      handler: () => setShowImportDialog(true),
-    });
-    
-    pageActions.push({
-      key: 'export',
-      label: 'Export Books',
-      icon: <Download className="h-4 w-4" />,
-      handler: () => setShowExportDialog(true),
-    });
-    
-    if (permissions.canViewReports) {
-      pageActions.push({
-        key: 'reports',
-        label: 'View Reports',
-        icon: <BarChart3 className="h-4 w-4" />,
-        handler: () => router.visit('/admin/books/reports'),
-      });
-    }
-  }
+  const pageActions = createPageActions(
+    getBookPageActions(permissions, {
+      onImport: () => setShowImportDialog(true),
+      onExport: () => setShowExportDialog(true),
+      onReports: () => router.visit('/admin/books/reports'),
+    })
+  );
 
   return (
     <Admin title={"Books"}>
@@ -249,64 +164,7 @@ export default function BooksIndex({
       
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         {/* Statistics Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Total Books</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalBooks}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.totalValue > 0 && `Worth ${new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                  }).format(stats.totalValue)}`}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Available</CardTitle>
-                <div className="h-4 w-4 bg-green-500 rounded-full" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.availableBooks}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.totalBooks > 0 && `${Math.round((stats.availableBooks / stats.totalBooks) * 100)}% available`}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Borrowed</CardTitle>
-                <div className="h-4 w-4 bg-blue-500 rounded-full" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.borrowedBooks}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.totalBooks > 0 && `${Math.round((stats.borrowedBooks / stats.totalBooks) * 100)}% borrowed`}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-medium">Maintenance</CardTitle>
-                <div className="h-4 w-4 bg-orange-500 rounded-full" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{stats.maintenanceBooks}</div>
-                <p className="text-xs text-muted-foreground">
-                  Avg. price ${stats.averagePrice.toFixed(2)}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        {renderStatsCards(stats, bookStatsConfigs)}
 
 
         {/* Top Authors */}

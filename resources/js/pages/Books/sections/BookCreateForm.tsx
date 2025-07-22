@@ -60,6 +60,13 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
     setIsSaving?.(true);
     
     try {
+      // Transform camelCase to snake_case for backend
+      const transformedData = {
+        ...formData,
+        published_at: formData.publishedAt,
+      };
+      delete transformedData.publishedAt;
+      
       const response = await fetch('/api/books', {
         method: 'POST',
         headers: {
@@ -67,7 +74,7 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(transformedData),
       });
 
       if (response.ok) {

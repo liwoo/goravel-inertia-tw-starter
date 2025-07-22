@@ -72,7 +72,8 @@ func (b *BaseCrudService) SetDefaultPageSize(size int) {
 
 func (b *BaseCrudService) ValidateSortDirection(direction string) bool {
 	upper := strings.ToUpper(direction)
-	return upper == "ASC" || upper == "DESC"
+	result := upper == "ASC" || upper == "DESC"
+	return result
 }
 
 func (b *BaseCrudService) GetDefaultSort() (field string, direction string) {

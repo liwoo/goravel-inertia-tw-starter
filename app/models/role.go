@@ -1,7 +1,10 @@
 package models
 
 import (
+	"fmt"
+	
 	"github.com/goravel/framework/database/orm"
+	"gorm.io/gorm"
 )
 
 // Role represents a user role with hierarchical structure
@@ -28,6 +31,17 @@ type Role struct {
 // TableName returns the table name for Role model
 func (Role) TableName() string {
 	return "roles"
+}
+
+// BeforeCreate validates role data before creating
+func (r *Role) BeforeCreate(tx *gorm.DB) error {
+	if r.Name == "" {
+		return fmt.Errorf("role name cannot be empty")
+	}
+	if r.Slug == "" {
+		return fmt.Errorf("role slug cannot be empty")
+	}
+	return nil
 }
 
 // HasPermission checks if role has a specific permission

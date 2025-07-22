@@ -4,7 +4,13 @@ export { UserEditForm } from './UserEditForm';
 export { 
   userColumns, 
   userColumnsMobile, 
-  createUserAdditionalActions, 
   userFilters, 
-  userQuickFilters 
+  userQuickFilters,
+  createUserAdditionalActions 
 } from './UserColumns';
+export {
+  userStatsConfigs,
+  userSimpleFilters,
+  getUserPageActions,
+  userActionHandlers
+} from './userPageConfig';

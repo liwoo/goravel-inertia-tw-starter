@@ -112,6 +112,7 @@ export function CrudPage<T extends { id: number }>({
   // Refs to form components
   const createFormRef = React.useRef<any>(null);
   const editFormRef = React.useRef<any>(null);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   // Search and filters
   const [searchTerm, setSearchTerm] = React.useState(filters?.search || '');
@@ -119,9 +120,50 @@ export function CrudPage<T extends { id: number }>({
   const [showFilters, setShowFilters] = React.useState(false);
   const [isSearching, setIsSearching] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  // Determine active simple filter based on current filters
+  const getActiveSimpleFilter = React.useCallback(() => {
+    if (!filters || !simpleFilters) return undefined;
+    
+    // Check both direct filters and nested filters.filters
+    const actualFilters = filters.filters || filters;
+    
+    // Check each simple filter to see if its conditions match the current URL state
+    for (const simpleFilter of simpleFilters) {
+      if (simpleFilter.filterParams) {
+        // Check if all filterParams match current filters
+        const allParamsMatch = Object.entries(simpleFilter.filterParams).every(([key, value]) => {
+          return actualFilters[key] === value || filters[key] === value;
+        });
+        
+        if (allParamsMatch) {
+          return simpleFilter.value.toString();
+        }
+      } else {
+        // Default check: does the filter's key match its value in current filters?
+        const filterValue = actualFilters[simpleFilter.key] || filters[simpleFilter.key];
+        if (filterValue === simpleFilter.value) {
+          return simpleFilter.value.toString();
+        }
+      }
+    }
+    
+    return undefined;
+  }, [filters, simpleFilters]);
+  
   const [activeSimpleFilter, setActiveSimpleFilter] = React.useState<string | undefined>(
-    filters?.filters?.simpleFilter || undefined
+    getActiveSimpleFilter()
   );
+  
+  // Update active filter when URL filters change
+  React.useEffect(() => {
+    const activeFilter = getActiveSimpleFilter();
+    console.log('Filter state update:', { 
+      filters, 
+      activeFilter,
+      status: filters?.status 
+    });
+    setActiveSimpleFilter(activeFilter);
+  }, [filters, getActiveSimpleFilter]);
 
   // Debounce search to avoid excessive requests
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -160,17 +202,44 @@ export function CrudPage<T extends { id: number }>({
     if (debouncedSearchTerm !== (filters?.search || '')) {
       setIsSearching(true);
       
-      router.get(baseRoute, {
-        ...(filters || {}),
+      // Build clean parameters preserving current filters but avoiding nesting
+      const params: Record<string, any> = {
         search: debouncedSearchTerm || undefined,
         page: 1,
         pageSize: pageSize,
-      }, {
+      };
+      
+      // Preserve all current parameters except nested filters and search
+      if (filters) {
+        Object.keys(filters).forEach(key => {
+          if (key !== 'filters' && key !== 'page' && key !== 'search' && key !== 'pageSize') {
+            params[key] = filters[key];
+          }
+        });
+        
+        // If there's a nested filters object, spread its contents
+        if (filters.filters && typeof filters.filters === 'object') {
+          Object.assign(params, filters.filters);
+        }
+      }
+      
+      console.log('Search params:', params);
+      
+      router.get(baseRoute, params, {
         preserveState: true,
         preserveScroll: true,
         only: ['data', 'filters'],
         onFinish: () => {
           setIsSearching(false);
+          // Refocus the search input after update with a small delay
+          setTimeout(() => {
+            if (searchInputRef.current) {
+              searchInputRef.current.focus();
+              // Restore cursor position to end
+              const length = searchInputRef.current.value.length;
+              searchInputRef.current.setSelectionRange(length, length);
+            }
+          }, 50);
         },
       });
     }
@@ -188,12 +257,30 @@ export function CrudPage<T extends { id: number }>({
     const newDirection = direction || 
       (filters?.sort === field && filters?.direction === 'asc' ? 'desc' : 'asc');
     
-    router.get(baseRoute, {
-      ...(filters || {}),
+    // Build clean parameters preserving current filters but avoiding nesting
+    const params: Record<string, any> = {
+      page: 1,
       sort: field,
       direction: newDirection,
       pageSize: pageSize,
-    }, {
+    };
+    
+    // Preserve all current parameters except nested filters, sort, and direction
+    if (filters) {
+      Object.keys(filters).forEach(key => {
+        // Skip nested filter objects and params we're explicitly setting
+        if (key !== 'filters' && key !== 'page' && key !== 'sort' && key !== 'direction' && key !== 'pageSize') {
+          params[key] = filters[key];
+        }
+      });
+      
+      // If there's a nested filters object, spread its contents
+      if (filters.filters && typeof filters.filters === 'object') {
+        Object.assign(params, filters.filters);
+      }
+    }
+    
+    router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
@@ -201,11 +288,28 @@ export function CrudPage<T extends { id: number }>({
   }, [baseRoute, filters, pageSize]);
 
   const handlePageChange = React.useCallback((page: number) => {
-    router.get(baseRoute, {
-      ...(filters || {}),
+    // Build clean parameters preserving current filters but avoiding nesting
+    const params: Record<string, any> = {
       page,
       ...(pageSize && { pageSize: pageSize }),
-    }, {
+    };
+    
+    // Preserve all current parameters except nested filters and pagination
+    if (filters) {
+      Object.keys(filters).forEach(key => {
+        // Skip nested filter objects and page-related params
+        if (key !== 'filters' && key !== 'page' && key !== 'pageSize') {
+          params[key] = filters[key];
+        }
+      });
+      
+      // If there's a nested filters object, spread its contents
+      if (filters.filters && typeof filters.filters === 'object') {
+        Object.assign(params, filters.filters);
+      }
+    }
+    
+    router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
@@ -215,11 +319,28 @@ export function CrudPage<T extends { id: number }>({
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
     
-    router.get(baseRoute, {
-      ...(filters || {}),
+    // Build clean parameters preserving current filters but avoiding nesting
+    const params: Record<string, any> = {
       page: 1, // Reset to first page when changing page size
       pageSize: newPageSize,
-    }, {
+    };
+    
+    // Preserve all current parameters except nested filters and pagination
+    if (filters) {
+      Object.keys(filters).forEach(key => {
+        // Skip nested filter objects and page-related params
+        if (key !== 'filters' && key !== 'page' && key !== 'pageSize') {
+          params[key] = filters[key];
+        }
+      });
+      
+      // If there's a nested filters object, spread its contents
+      if (filters.filters && typeof filters.filters === 'object') {
+        Object.assign(params, filters.filters);
+      }
+    }
+    
+    router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
@@ -236,12 +357,21 @@ export function CrudPage<T extends { id: number }>({
     
     setActiveFilters(newFilters);
     
-    router.get(baseRoute, {
-      ...(filters || {}),
-      filters: Object.keys(newFilters).length > 0 ? newFilters : undefined,
+    // Build clean parameters with only non-filter values from current filters
+    const params: Record<string, any> = {
       page: 1,
       ...(pageSize && { pageSize: pageSize }),
-    }, {
+    };
+    
+    // Preserve sort and search parameters
+    if (filters?.sort) params.sort = filters.sort;
+    if (filters?.direction) params.direction = filters.direction;
+    if (filters?.search) params.search = filters.search;
+    
+    // Add the new filters
+    Object.assign(params, newFilters);
+    
+    router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
@@ -251,55 +381,45 @@ export function CrudPage<T extends { id: number }>({
   const handleSimpleFilterChange = React.useCallback((filterValue: string | undefined) => {
     setActiveSimpleFilter(filterValue);
     
-    // Build the filters based on the simple filter value
-    const filterParams: Record<string, any> = { ...(filters || {}) };
+    // Build clean parameters without nested filters
+    const params: Record<string, any> = {
+      page: 1,
+      ...(pageSize && { pageSize: pageSize }),
+    };
+    
+    // Preserve sort and search parameters
+    if (filters?.sort) params.sort = filters.sort;
+    if (filters?.direction) params.direction = filters.direction;
+    if (filters?.search) params.search = filters.search;
     
     if (filterValue === undefined) {
-      // Clear status/active filters when "All" is selected
-      delete filterParams.status;
-      delete filterParams.is_active;
-      delete filterParams.level_min;
-      delete filterParams.level_max;
-      delete filterParams.role;
+      // "All" was selected - don't apply any filters
+      // The parent component should handle clearing any resource-specific filters
     } else {
-      // For book status filters
-      if (['AVAILABLE', 'BORROWED', 'MAINTENANCE'].includes(filterValue)) {
-        filterParams.status = filterValue;
-      }
-      // For user/role active/inactive filters
-      else if (filterValue === 'active') {
-        filterParams.is_active = 'true';
-      }
-      else if (filterValue === 'inactive') {
-        filterParams.is_active = 'false';
-      }
-      // For role level filters
-      else if (filterValue === 'super_admin') {
-        filterParams.level_min = '90';
-        delete filterParams.level_max;
-      }
-      else if (filterValue === 'admin') {
-        filterParams.level_min = '50';
-        filterParams.level_max = '89';
-      }
-      else if (filterValue === 'user') {
-        delete filterParams.level_min;
-        filterParams.level_max = '49';
+      // Find the selected filter
+      const selectedFilter = simpleFilters.find(f => f.value.toString() === filterValue);
+      if (selectedFilter) {
+        // Apply the filter's parameters
+        if (selectedFilter.filterParams) {
+          // Use the explicitly defined filter parameters
+          Object.assign(params, selectedFilter.filterParams);
+        } else {
+          // Default behavior: use the filter's key and value
+          params[selectedFilter.key] = selectedFilter.value;
+        }
       }
     }
     
-    router.get(baseRoute, {
-      ...filterParams,
-      page: 1,
-      ...(pageSize && { pageSize: pageSize }),
-    }, {
+    router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [baseRoute, filters, pageSize]);
+  }, [baseRoute, filters, pageSize, simpleFilters]);
 
   const handleCreate = React.useCallback(() => {
+    // Reset form refs before opening create drawer
+    createFormRef.current = null;
     setSelectedItem(null);
     setDrawerState({ isOpen: true, type: 'create' });
   }, []);
@@ -334,8 +454,18 @@ export function CrudPage<T extends { id: number }>({
 
         if (response.ok) {
           toast.success(`${resourceName.slice(0, -1)} deleted successfully`);
-          // Refresh the page data
-          router.reload({ only: ['data', 'filters', 'stats'] });
+          // Close drawer first if it's open
+          if (drawerState.isOpen) {
+            closeDrawer();
+          }
+          // Refresh the page data after a small delay to ensure drawer is closed
+          setTimeout(() => {
+            router.reload({ 
+              only: ['data', 'filters', 'stats'],
+              preserveState: false,
+              preserveScroll: true 
+            });
+          }, 100);
           if (selectedIds.includes(item.id)) {
             clearSelection();
           }
@@ -369,6 +499,9 @@ export function CrudPage<T extends { id: number }>({
   const closeDrawer = React.useCallback(() => {
     setDrawerState({ isOpen: false, type: undefined });
     setSelectedItem(null);
+    // Reset form refs to prevent stale form data
+    createFormRef.current = null;
+    editFormRef.current = null;
   }, []);
 
   const handleDrawerSuccess = React.useCallback((message?: string) => {
@@ -377,7 +510,11 @@ export function CrudPage<T extends { id: number }>({
       toast.success(message);
     }
     // Refresh the page data
-    router.reload({ only: ['data', 'filters', 'stats'] });
+    router.reload({ 
+      only: ['data', 'filters', 'stats'],
+      preserveState: false,
+      preserveScroll: true 
+    });
   }, [closeDrawer]);
 
   const handleDrawerError = React.useCallback((errors: any) => {
@@ -595,7 +732,7 @@ export function CrudPage<T extends { id: number }>({
                 <span className="hidden lg:inline ml-2 whitespace-nowrap">
                   Add {resourceName.slice(0, -1)}
                 </span>
-                <kbd className="ml-2 pointer-events-none hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-background">
+                <kbd className="ml-2 pointer-events-none hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100">
                   <Command className="h-3 w-3" />N
                 </kbd>
               </Button>
@@ -616,10 +753,12 @@ export function CrudPage<T extends { id: number }>({
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               )}
               <Input
+                ref={searchInputRef}
                 placeholder={`Search ${resourceName}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
+                autoFocus
               />
             </div>
           </div>
@@ -668,12 +807,18 @@ export function CrudPage<T extends { id: number }>({
                 onClear={() => {
                   setActiveFilters({});
                   
-                  router.get(baseRoute, {
-                    ...(filters || {}),
-                    filters: undefined,
+                  // Build a clean URL without any filter parameters
+                  const cleanParams: Record<string, any> = {
                     page: 1,
                     pageSize: pageSize,
-                  }, {
+                  };
+                  
+                  // Only include non-filter parameters from current filters
+                  if (filters?.sort) cleanParams.sort = filters.sort;
+                  if (filters?.direction) cleanParams.direction = filters.direction;
+                  if (filters?.search) cleanParams.search = filters.search;
+                  
+                  router.get(baseRoute, cleanParams, {
                     preserveState: true,
                     preserveScroll: true,
                     only: ['data', 'filters'],
@@ -762,6 +907,7 @@ export function CrudPage<T extends { id: number }>({
 
       {/* Drawers for Create/Edit/View */}
       <CrudDrawer
+        key={`${drawerState.type}-${selectedItem?.id || 'new'}`}
         isOpen={drawerState.isOpen}
         onClose={closeDrawer}
         title={title}
@@ -782,7 +928,7 @@ export function CrudPage<T extends { id: number }>({
           undefined
         }
       >
-        {drawerState.type === 'create' && CreateForm && (
+        {drawerState.isOpen && drawerState.type === 'create' && CreateForm && (
           <CreateForm
             ref={createFormRef}
             onSuccess={handleDrawerSuccess}
@@ -792,7 +938,7 @@ export function CrudPage<T extends { id: number }>({
           />
         )}
         
-        {drawerState.type === 'edit' && EditForm && selectedItem && (
+        {drawerState.isOpen && drawerState.type === 'edit' && EditForm && selectedItem && (
           <EditForm
             ref={editFormRef}
             item={selectedItem}
@@ -803,7 +949,7 @@ export function CrudPage<T extends { id: number }>({
           />
         )}
         
-        {drawerState.type === 'view' && DetailView && selectedItem && (
+        {drawerState.isOpen && drawerState.type === 'view' && DetailView && selectedItem && (
           <DetailView
             item={selectedItem}
             onEdit={canEdit ? () => {

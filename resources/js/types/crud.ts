@@ -228,6 +228,7 @@ export interface SimpleFilter {
   badge?: number | string;
   icon?: React.ReactNode;
   // The actual filter parameters to apply when this filter is selected
+  // If not provided, defaults to { [key]: value }
   filterParams?: Record<string, any>;
 }
 
