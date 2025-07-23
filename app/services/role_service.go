@@ -78,6 +78,12 @@ func NewRoleService() *RoleService {
 			if _, exists := data["is_active"]; !exists {
 				data["is_active"] = true
 			}
+			
+			// Set created_by if provided (from context)
+			if createdBy, exists := data["created_by"]; exists && createdBy != nil {
+				data["created_by"] = createdBy
+			}
+			
 			return nil
 		})
 

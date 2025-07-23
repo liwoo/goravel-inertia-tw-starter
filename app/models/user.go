@@ -2,11 +2,11 @@ package models
 
 import (
 	"time"
-	"github.com/goravel/framework/database/orm"
 )
 
 type User struct {
-	orm.Model
+	BaseAuditableModel
+	
 	Name     string `gorm:"not null" json:"name"`
 	Email    string `gorm:"uniqueIndex;not null" json:"email"`
 	Password string `gorm:"not null" json:"-"`
@@ -22,8 +22,6 @@ type User struct {
 	
 	// Many-to-many relationships
 	Roles []Role `gorm:"many2many:user_roles" json:"roles,omitempty"`
-	
-	orm.SoftDeletes
 }
 
 // TableName returns the table name for User model

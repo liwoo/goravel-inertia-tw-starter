@@ -1,4 +1,4 @@
-package auth
+package users
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"players/app/auth"
 	"players/app/contracts"
+	"players/app/helpers"
 	"players/app/http/requests"
 	"players/app/models"
 	"players/app/services"
@@ -21,18 +22,18 @@ type UserController struct {
 // NewUserController creates a new simplified user controller
 func NewUserController() *UserController {
 	userService := services.NewUserService()
-	
+
 	// Create the generic controller
 	genericController := contracts.NewGenericCrudController[models.User, requests.UserCreateRequest, requests.UserUpdateRequest](
 		"user",
 		userService,
 	)
-	
+
 	controller := &UserController{
 		GenericCrudController: genericController,
 		userService:           userService,
 	}
-	
+
 	// Configure authorization - User management requires super admin
 	genericController.SetAuthCheck(func(ctx http.Context, action string, resource interface{}) error {
 		permHelper := auth.GetPermissionHelper()
@@ -42,7 +43,21 @@ func NewUserController() *UserController {
 		}
 		return nil
 	})
-	
+
+	// Configure BeforeStore hook to set audit fields for creation
+	genericController.SetBeforeStore(func(ctx http.Context, data map[string]interface{}) error {
+		auditHelper := helpers.GetAuditHelper()
+		auditHelper.SetCreateAuditFields(ctx, data)
+		return nil
+	})
+
+	// Configure BeforeUpdate hook to set audit fields for updates
+	genericController.SetBeforeUpdate(func(ctx http.Context, id uint, data map[string]interface{}) error {
+		auditHelper := helpers.GetAuditHelper()
+		auditHelper.SetUpdateAuditFields(ctx, data)
+		return nil
+	})
+
 	// Configure request bindings
 	genericController.SetRequestBindings(
 		// Bind create request
@@ -67,19 +82,19 @@ func NewUserController() *UserController {
 			return req.ToUpdateData()
 		},
 	)
-	
+
 	// Override error handling for specific cases
 	genericController.SetAfterStore(func(ctx http.Context, result interface{}) http.Response {
 		return controller.ResourceCreatedResponse(ctx, result, "user")
 	})
-	
+
 	genericController.SetAfterUpdate(func(ctx http.Context, result interface{}) http.Response {
 		return controller.ResourceUpdatedResponse(ctx, result, "user")
 	})
-	
+
 	// Register controller
 	contracts.MustRegisterCrudController("users", controller)
-	
+
 	return controller
 }
 
@@ -91,12 +106,12 @@ func (c *UserController) GetRoles(ctx http.Context) http.Response {
 			return c.ForbiddenResponse(ctx, "Access denied: Super admin privileges required")
 		}
 	}
-	
+
 	roles, err := c.userService.GetAllRoles()
 	if err != nil {
 		return c.InternalErrorResponse(ctx, "Failed to retrieve roles: "+err.Error())
 	}
-	
+
 	return c.SuccessResponse(ctx, roles, "Roles retrieved successfully")
 }
 
@@ -135,7 +150,7 @@ func (c *UserController) BuildPermissionsMap(ctx http.Context, resourceType stri
 	permHelper := auth.GetPermissionHelper()
 	user := permHelper.GetAuthenticatedUser(ctx)
 	isSuperAdmin := user != nil && user.IsSuperAdmin
-	
+
 	return map[string]bool{
 		"canCreate":      isSuperAdmin,
 		"canEdit":        isSuperAdmin,

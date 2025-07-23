@@ -7,6 +7,8 @@ import (
 	"github.com/goravel/framework/support"
 	"players/app/http/controllers"
 	"players/app/http/controllers/auth"
+	"players/app/http/controllers/auth/perimissions"
+	"players/app/http/controllers/auth/users"
 	"players/app/http/controllers/books"
 	inertiaHelper "players/app/http/inertia"
 	"players/app/http/middleware"
@@ -20,8 +22,8 @@ func Web() {
 	utilController := controllers.NewUtilController()
 	dashboardController := controllers.NewDashboardController()
 	booksPageController := books.NewBooksPageController()
-	permissionsPageController := auth.NewPermissionsPageController()
-	userPageController := auth.NewUserPageController()
+	permissionsPageController := perimissions.NewPermissionsPageController()
+	userPageController := users.NewUserPageController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {

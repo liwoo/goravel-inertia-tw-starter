@@ -26,7 +26,6 @@ func NewUserService() *UserService {
 		SetSearchFields("name", "email").
 		SetSortFields("id", "name", "email", "is_active", "is_super_admin", "created_at", "updated_at").
 		SetFilterFields("is_active", "is_super_admin", "role").
-		SetRelations("Roles").
 		SetValidationRules(map[string]interface{}{
 			"name":           "required|string|max:255",
 			"email":          "required|email|max:255",
@@ -42,6 +41,11 @@ func NewUserService() *UserService {
 			}
 			if _, exists := data["is_super_admin"]; !exists {
 				data["is_super_admin"] = false
+			}
+			
+			// Set created_by if provided (from context)
+			if createdBy, exists := data["created_by"]; exists && createdBy != nil {
+				data["created_by"] = createdBy
 			}
 
 			// Check email uniqueness
@@ -265,6 +269,80 @@ func (s *UserService) GetAllRoles() ([]models.Role, error) {
 		return nil, fmt.Errorf("failed to get roles: %w", err)
 	}
 	return roles, nil
+}
+
+
+// Override GetByID to load active roles through user_roles pivot table
+func (s *UserService) GetByID(id uint) (interface{}, error) {
+	var user models.User
+	
+	// First load the user without roles
+	err := facades.Orm().Query().
+		Where("id = ?", id).
+		First(&user)
+	if err != nil {
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
+	
+	// Load active roles through the pivot table
+	var userRoles []models.UserRole
+	err = facades.Orm().Query().
+		Where("user_id = ? AND is_active = ?", user.ID, true).
+		With("Role").
+		Find(&userRoles)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load user roles: %w", err)
+	}
+	
+	// Extract the roles from userRoles
+	user.Roles = make([]models.Role, 0)
+	for _, ur := range userRoles {
+		if ur.Role.IsActive { // Also check if the role itself is active
+			user.Roles = append(user.Roles, ur.Role)
+		}
+	}
+	
+	return user, nil
+}
+
+// Override GetList to load active roles for all users
+func (s *UserService) GetList(req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	// Get list using generic implementation (without roles)
+	result, err := s.GenericCrudService.GetList(req)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Load active roles for each user
+	users := make([]models.User, 0)
+	for _, item := range result.Data {
+		if user, ok := item.(models.User); ok {
+			// Load active roles for this user
+			var userRoles []models.UserRole
+			err = facades.Orm().Query().
+				Where("user_id = ? AND is_active = ?", user.ID, true).
+				With("Role").
+				Find(&userRoles)
+			if err == nil {
+				user.Roles = make([]models.Role, 0)
+				for _, ur := range userRoles {
+					if ur.Role.IsActive {
+						user.Roles = append(user.Roles, ur.Role)
+					}
+				}
+			}
+			users = append(users, user)
+		}
+	}
+	
+	// Convert back to interface{} slice
+	data := make([]interface{}, len(users))
+	for i, user := range users {
+		data[i] = user
+	}
+	result.Data = data
+	
+	return result, nil
 }
 
 // GetColumnMapping returns database column mappings

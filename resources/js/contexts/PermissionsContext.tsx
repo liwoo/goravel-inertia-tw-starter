@@ -33,12 +33,15 @@ export interface ServicePermissions {
   isSuperAdmin: boolean;
 }
 
+export type PermissionScope = 'by_all' | 'by_my_role' | 'by_me' | null;
+
 export interface PermissionsContextType {
   user: UserPermissions | null;
   permissions: Record<string, ServicePermissions>;
   hasPermission: (permission: string) => boolean;
   hasServicePermission: (service: string, action: string) => boolean;
   canPerformAction: (service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage') => boolean;
+  getPermissionScope: (service: string, action: string) => PermissionScope;
   isSuperAdmin: () => boolean;
   isAdmin: () => boolean;
 }
@@ -59,9 +62,18 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     if (!auth?.user) return false;
     if (auth.user.isSuperAdmin) return true;
     
-    // Check specific permission in format "service_action"
-    const permissionSlug = `${service}_${action}`;
-    return auth.user.permissions?.includes(permissionSlug) || false;
+    // Check for any scoped version of the permission
+    // e.g., for service="books" and action="read", check for:
+    // books_read, books_read_by_all, books_read_by_my_role, books_read_by_me
+    const basePermission = `${service}_${action}`;
+    const scopedPermissions = [
+      basePermission,
+      `${basePermission}_by_all`,
+      `${basePermission}_by_my_role`,
+      `${basePermission}_by_me`
+    ];
+    
+    return scopedPermissions.some(perm => auth.user.permissions?.includes(perm)) || false;
   };
 
   const canPerformAction = (service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage'): boolean => {
@@ -76,9 +88,16 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     const servicePerms = auth?.permissions?.[service];
     
     if (!servicePerms) {
-      // Fallback to checking user's permission array
-      const permissionSlug = `${service}_${action}`;
-      const hasPermission = auth.user.permissions?.includes(permissionSlug) || false;
+      // Fallback to checking user's permission array with scope support
+      const basePermission = `${service}_${action}`;
+      const scopedPermissions = [
+        basePermission,
+        `${basePermission}_by_all`,
+        `${basePermission}_by_my_role`,
+        `${basePermission}_by_me`
+      ];
+      
+      const hasPermission = scopedPermissions.some(perm => auth.user.permissions?.includes(perm)) || false;
       return hasPermission;
     }
 
@@ -109,12 +128,34 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     return auth.user?.isAdmin || false;
   };
 
+  const getPermissionScope = (service: string, action: string): PermissionScope => {
+    if (!auth?.user) return null;
+    if (auth.user.isSuperAdmin) return 'by_all'; // Super admins always have full scope
+    
+    const basePermission = `${service}_${action}`;
+    
+    // Check from most restrictive to least restrictive
+    if (auth.user.permissions?.includes(`${basePermission}_by_me`)) {
+      return 'by_me';
+    }
+    if (auth.user.permissions?.includes(`${basePermission}_by_my_role`)) {
+      return 'by_my_role';
+    }
+    if (auth.user.permissions?.includes(`${basePermission}_by_all`) || 
+        auth.user.permissions?.includes(basePermission)) {
+      return 'by_all';
+    }
+    
+    return null; // No permission
+  };
+
   const contextValue: PermissionsContextType = {
     user: auth?.user || null,
     permissions: auth?.permissions || {},
     hasPermission,
     hasServicePermission,
     canPerformAction,
+    getPermissionScope,
     isSuperAdmin,
     isAdmin,
   };

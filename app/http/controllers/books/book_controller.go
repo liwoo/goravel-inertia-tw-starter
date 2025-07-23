@@ -7,6 +7,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"players/app/auth"
 	"players/app/contracts"
+	"players/app/helpers"
 	"players/app/http/requests"
 	"players/app/models"
 	"players/app/services"
@@ -54,6 +55,20 @@ func NewBookController() *BookController {
 			return err
 		}
 		
+		return nil
+	})
+	
+	// Configure BeforeStore hook to set audit fields for creation
+	genericController.SetBeforeStore(func(ctx http.Context, data map[string]interface{}) error {
+		auditHelper := helpers.GetAuditHelper()
+		auditHelper.SetCreateAuditFields(ctx, data)
+		return nil
+	})
+	
+	// Configure BeforeUpdate hook to set audit fields for updates
+	genericController.SetBeforeUpdate(func(ctx http.Context, id uint, data map[string]interface{}) error {
+		auditHelper := helpers.GetAuditHelper()
+		auditHelper.SetUpdateAuditFields(ctx, data)
 		return nil
 	})
 	
@@ -114,7 +129,7 @@ func (c *BookController) GetByAuthor(ctx http.Context) http.Response {
 	
 	req, _ := c.ValidatePaginationRequest(ctx)
 	if req == nil {
-		req = &contracts.ListRequest{Page: 1, PageSize: 20}
+		req = &contracts.ListRequest{Page: 1, PageSize: 20, Context: ctx}
 	}
 	
 	result, err := c.bookService.GetByAuthor(author, *req)
@@ -129,7 +144,7 @@ func (c *BookController) GetByAuthor(ctx http.Context) http.Response {
 func (c *BookController) GetAvailable(ctx http.Context) http.Response {
 	req, _ := c.ValidatePaginationRequest(ctx)
 	if req == nil {
-		req = &contracts.ListRequest{Page: 1, PageSize: 20}
+		req = &contracts.ListRequest{Page: 1, PageSize: 20, Context: ctx}
 	}
 	
 	result, err := c.bookService.GetAvailable(*req)
@@ -195,7 +210,7 @@ func (c *BookController) Advanced(ctx http.Context) http.Response {
 	// Public endpoint - no authorization needed for viewing
 	req, _ := c.ValidatePaginationRequest(ctx)
 	if req == nil {
-		req = &contracts.ListRequest{Page: 1, PageSize: 20}
+		req = &contracts.ListRequest{Page: 1, PageSize: 20, Context: ctx}
 	}
 	
 	// Parse filters from query parameters

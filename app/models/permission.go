@@ -1,18 +1,16 @@
 package models
 
-import (
-	"github.com/goravel/framework/database/orm"
-)
-
 // Permission represents a specific permission that can be granted to roles
 type Permission struct {
-	orm.Model
+	BaseAuditableModel
+	
 	Name        string `gorm:"uniqueIndex;not null" json:"name"`
 	Slug        string `gorm:"uniqueIndex;not null" json:"slug"`
 	Description string `gorm:"type:text" json:"description"`
 	Category    string `gorm:"index;not null" json:"category"` // e.g., "books", "users", "system"
 	Resource    string `gorm:"index" json:"resource"`          // Specific resource type
 	Action      string `gorm:"index;not null" json:"action"`   // e.g., "create", "read", "update", "delete"
+	Scope       string `gorm:"index;default:'by_all'" json:"scope"` // by_me, by_my_role, by_all
 	IsActive    bool   `gorm:"default:true" json:"is_active"`
 	
 	// Permission metadata
@@ -21,8 +19,6 @@ type Permission struct {
 	
 	// Relationships
 	Roles []Role `gorm:"many2many:role_permissions" json:"roles,omitempty"`
-	
-	orm.SoftDeletes
 }
 
 // TableName returns the table name for Permission model

@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/goravel/framework/contracts/database/orm"
+	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"players/app/auth"
 )
 
 // GenericCrudService provides a complete CRUD service implementation with minimal code
@@ -22,6 +24,11 @@ type GenericCrudService[T any] struct {
 	
 	// Reference to the actual service (e.g., BookService) for method resolution
 	actualService  interface{}
+	
+	// Permission scope configuration
+	enableScopeFiltering bool
+	scopeUserField      string // Field that contains the user ID (e.g., "created_by", "user_id", "owner_id")
+	serviceRegistry     auth.ServiceRegistry
 	
 	// Customizable hooks
 	beforeCreate   func(data map[string]interface{}) error
@@ -54,6 +61,8 @@ func NewGenericCrudService[T any](resourceName string, primaryKey string) *Gener
 		filterFields:    []string{},
 		relations:       []string{},
 		validationRules: make(map[string]interface{}),
+		enableScopeFiltering: false,
+		scopeUserField:      "created_by", // Default to created_by
 	}
 }
 
@@ -77,6 +86,30 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 	// Apply custom query if set
 	if s.customQuery != nil {
 		query = s.customQuery(query)
+	}
+	
+	// Apply permission-based scope filtering if enabled and context is available
+	if s.enableScopeFiltering && req.Context != nil {
+		facades.Log().Info("Applying scope filter", map[string]interface{}{
+			"service": s.tableName,
+			"userField": s.scopeUserField,
+			"hasContext": req.Context != nil,
+		})
+		var err error
+		query, err = s.applyScopeFilter(req.Context, query, auth.PermissionRead)
+		if err != nil {
+			facades.Log().Warning("Failed to apply scope filter", map[string]interface{}{
+				"error": err.Error(),
+				"service": s.tableName,
+			})
+			// Continue without scope filtering rather than failing the request
+		}
+	} else {
+		facades.Log().Info("Scope filtering not applied", map[string]interface{}{
+			"enableScopeFiltering": s.enableScopeFiltering,
+			"hasContext": req.Context != nil,
+			"service": s.tableName,
+		})
 	}
 	
 	// Apply search
@@ -131,6 +164,19 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 	// Apply custom query if set
 	if s.customQuery != nil {
 		countQuery = s.customQuery(countQuery)
+	}
+	
+	// Apply permission-based scope filtering if enabled
+	if s.enableScopeFiltering && req.Context != nil {
+		var err error
+		countQuery, err = s.applyScopeFilter(req.Context, countQuery, auth.PermissionRead)
+		if err != nil {
+			// Log but continue without scope filtering
+			facades.Log().Warning("Failed to apply scope filter to count query", map[string]interface{}{
+				"error": err.Error(),
+				"service": s.tableName,
+			})
+		}
 	}
 	
 	// Apply search if present
@@ -337,6 +383,41 @@ func (s *GenericCrudService[T]) GetByID(id uint) (interface{}, error) {
 	// Apply custom query if set
 	if s.customQuery != nil {
 		query = s.customQuery(query)
+	}
+	
+	if err := query.Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
+		return nil, fmt.Errorf("%s not found: %w", s.BaseCrudService.tableName, err)
+	}
+	
+	return model, nil
+}
+
+// GetByIDWithContext retrieves a single resource by ID with permission scope check
+func (s *GenericCrudService[T]) GetByIDWithContext(ctx http.Context, id uint) (interface{}, error) {
+	if id == 0 {
+		return nil, fmt.Errorf("invalid ID: %d", id)
+	}
+	
+	var model T
+	query := facades.Orm().Query().Model(&model)
+	
+	// Load relations if configured
+	for _, relation := range s.relations {
+		query = query.With(relation)
+	}
+	
+	// Apply custom query if set
+	if s.customQuery != nil {
+		query = s.customQuery(query)
+	}
+	
+	// Apply scope filtering if enabled
+	if s.enableScopeFiltering && ctx != nil {
+		var err error
+		query, err = s.applyScopeFilter(ctx, query, auth.PermissionRead)
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply scope filter: %w", err)
+		}
 	}
 	
 	if err := query.Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
@@ -600,6 +681,20 @@ func (s *GenericCrudService[T]) SetCustomFilters(filters func(query orm.Query, f
 	return s
 }
 
+// EnableScopeFiltering enables permission-based scope filtering
+func (s *GenericCrudService[T]) EnableScopeFiltering(serviceRegistry auth.ServiceRegistry, userField string) *GenericCrudService[T] {
+	s.enableScopeFiltering = true
+	s.serviceRegistry = serviceRegistry
+	s.scopeUserField = userField
+	return s
+}
+
+// SetScopeUserField sets the field name that contains the user ID for scope filtering
+func (s *GenericCrudService[T]) SetScopeUserField(field string) *GenericCrudService[T] {
+	s.scopeUserField = field
+	return s
+}
+
 // PaginationServiceContract implementation
 func (s *GenericCrudService[T]) GetPaginatedList(req ListRequest) (*PaginatedResult, error) {
 	return s.GetList(req)
@@ -744,6 +839,16 @@ func (s *GenericCrudService[T]) getIDFromModel(model *T) uint {
 		}
 	}
 	return 0
+}
+
+// applyScopeFilter applies permission-based scope filtering to queries
+func (s *GenericCrudService[T]) applyScopeFilter(ctx http.Context, query orm.Query, action auth.CorePermissionAction) (orm.Query, error) {
+	if !s.enableScopeFiltering || s.serviceRegistry == "" {
+		return query, nil
+	}
+	
+	scopeHelper := auth.GetScopeHelper()
+	return scopeHelper.ApplyScopeToQuery(ctx, query, s.serviceRegistry, action, s.scopeUserField)
 }
 
 // BuildFilterQuery applies filters to the query

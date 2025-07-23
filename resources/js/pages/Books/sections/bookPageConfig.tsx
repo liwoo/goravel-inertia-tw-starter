@@ -56,21 +56,21 @@ export const bookStatsConfigs: StatsCardConfig[] = [
  */
 export const bookSimpleFilters = (stats: any): SimpleFilterConfig[] => [
   {
-    key: 'status',
+    key: 'status-available',
     label: 'Available',
     value: 'AVAILABLE',
     badge: stats?.availableBooks || 0,
     filterParams: { status: 'AVAILABLE' }
   },
   {
-    key: 'status',
+    key: 'status-borrowed',
     label: 'Borrowed',
     value: 'BORROWED',
     badge: stats?.borrowedBooks || 0,
     filterParams: { status: 'BORROWED' }
   },
   {
-    key: 'status',
+    key: 'status-maintenance',
     label: 'Maintenance',
     value: 'MAINTENANCE',
     badge: stats?.maintenanceBooks || 0,

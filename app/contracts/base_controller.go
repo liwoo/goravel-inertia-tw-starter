@@ -195,6 +195,9 @@ func NewBaseCrudController(resourceType string) *BaseCrudController {
 func (c *BaseCrudController) ValidatePaginationRequest(ctx http.Context) (*ListRequest, error) {
 	req := &ListRequest{}
 	
+	// Set the HTTP context for permission checks
+	req.Context = ctx
+	
 	// Parse pagination parameters
 	req.Page = ctx.Request().QueryInt("page", 1)
 	req.PageSize = ctx.Request().QueryInt("pageSize", c.defaultPageSize)

@@ -3,13 +3,13 @@ package models
 import (
 	"fmt"
 	
-	"github.com/goravel/framework/database/orm"
 	"gorm.io/gorm"
 )
 
 // Role represents a user role with hierarchical structure
 type Role struct {
-	orm.Model
+	BaseAuditableModel
+	
 	Name        string `gorm:"uniqueIndex;not null" json:"name"`
 	Slug        string `gorm:"uniqueIndex;not null" json:"slug"`
 	Description string `gorm:"type:text" json:"description"`
@@ -24,8 +24,6 @@ type Role struct {
 	// Relationships
 	Users       []User       `gorm:"many2many:user_roles" json:"users,omitempty"`
 	Permissions []Permission `gorm:"many2many:role_permissions" json:"permissions,omitempty"`
-	
-	orm.SoftDeletes
 }
 
 // TableName returns the table name for Role model

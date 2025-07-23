@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { Shield, CheckCircle, XCircle, Save, ArrowLeft } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, Save, ArrowLeft, Settings2, Eye, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import Admin from '@/layouts/Admin';
+import { PermissionScopeSelector, PermissionScope, scopeConfig } from '@/components/Permissions/PermissionScopeSelector';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Service {
   id: string;
@@ -37,85 +44,176 @@ interface RolePermissionsProps {
   allPermissions: any[];
   services: Service[];
   actions: Action[];
+  currentPermissions: Record<string, boolean>;
 }
 
 export default function RolePermissions({ 
   role, 
   allPermissions = [], 
   services = [], 
-  actions = [] 
+  actions = [],
+  currentPermissions = {}
 }: RolePermissionsProps) {
-  const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(
-    new Set(role.permissions || [])
-  );
+  // Store permissions as a map of service_action -> scope
+  const [permissions, setPermissions] = useState<Record<string, PermissionScope>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [bulkService, setBulkService] = useState<string>('all');
+  const [bulkAction, setBulkAction] = useState<string>('all');
+  const [bulkScope, setBulkScope] = useState<PermissionScope>('none');
 
-  console.log('RolePermissions component props:', {
-    roleId: role.id,
-    roleName: role.name,
-    rolePermissions: role.permissions,
-    servicesCount: services.length,
-    actionsCount: actions.length,
-    services: services,
-    actions: actions
-  });
-
-  // Sync selected permissions when role prop changes
-  // Using role.id as dependency to ensure we reset when switching between roles
+  // Initialize permissions from role data
   useEffect(() => {
-    console.log('Setting permissions from role data:', role.permissions);
-    setSelectedPermissions(new Set(role.permissions || []));
+    const perms: Record<string, PermissionScope> = {};
+    
+    // Process each service/action combination
+    services.forEach(service => {
+      Object.keys(service.actions).forEach(actionSlug => {
+        const key = `${service.slug}_${actionSlug}`;
+        
+        // Check which scope the role has
+        const byAllPerm = `${service.slug}_${actionSlug}_by_all`;
+        const byRolePerm = `${service.slug}_${actionSlug}_by_my_role`;
+        const byMePerm = `${service.slug}_${actionSlug}_by_me`;
+        
+        if (currentPermissions[byAllPerm]) {
+          perms[key] = 'by_all';
+        } else if (currentPermissions[byRolePerm]) {
+          perms[key] = 'by_my_role';
+        } else if (currentPermissions[byMePerm]) {
+          perms[key] = 'by_me';
+        } else if (currentPermissions[key]) {
+          // Handle old-style permissions (treat as by_all)
+          perms[key] = 'by_all';
+        } else {
+          perms[key] = 'none';
+        }
+      });
+    });
+    
+    setPermissions(perms);
     setHasChanges(false);
-  }, [role.id, role.permissions]);
+  }, [role.id, currentPermissions, services]);
 
+  // Check for changes
   useEffect(() => {
-    const originalPermissions = new Set(role.permissions || []);
-    const currentPermissions = selectedPermissions;
+    let changed = false;
     
-    // Check if there are any changes
-    const hasChanges = originalPermissions.size !== currentPermissions.size ||
-      [...originalPermissions].some(perm => !currentPermissions.has(perm)) ||
-      [...currentPermissions].some(perm => !originalPermissions.has(perm));
+    Object.entries(permissions).forEach(([key, scope]) => {
+      const [service, action] = key.split('_');
+      
+      // Check if current state differs from original
+      const hasAny = ['by_all', 'by_my_role', 'by_me'].some(s => 
+        currentPermissions[`${service}_${action}_${s}`] ||
+        (s === 'by_all' && currentPermissions[`${service}_${action}`])
+      );
+      
+      if (scope === 'none' && hasAny) {
+        changed = true;
+      } else if (scope !== 'none') {
+        const expectedPerm = scope === 'by_all' ? 
+          [`${service}_${action}_by_all`, `${service}_${action}`] : 
+          [`${service}_${action}_${scope}`];
+        
+        const hasExpected = expectedPerm.some(p => currentPermissions[p]);
+        if (!hasExpected) {
+          changed = true;
+        }
+      }
+    });
     
-    setHasChanges(hasChanges);
-  }, [selectedPermissions, role.permissions]);
+    setHasChanges(changed);
+  }, [permissions, currentPermissions]);
 
-  const handlePermissionToggle = (serviceSlug: string, actionSlug: string) => {
-    const permissionSlug = `${serviceSlug}_${actionSlug}`;
-    const newPermissions = new Set(selectedPermissions);
-    
-    if (newPermissions.has(permissionSlug)) {
-      newPermissions.delete(permissionSlug);
-    } else {
-      newPermissions.add(permissionSlug);
-    }
-    
-    setSelectedPermissions(newPermissions);
+  const handlePermissionChange = (serviceSlug: string, actionSlug: string, scope: PermissionScope) => {
+    const key = `${serviceSlug}_${actionSlug}`;
+    setPermissions(prev => ({
+      ...prev,
+      [key]: scope
+    }));
   };
 
-  const handleSelectAllForService = (serviceSlug: string, serviceActions: Record<string, boolean>) => {
-    const newPermissions = new Set(selectedPermissions);
-    const servicePermissions = Object.keys(serviceActions).map(action => `${serviceSlug}_${action}`);
+  const handleSelectAllForService = (serviceSlug: string, serviceActions: Record<string, boolean>, scope: PermissionScope) => {
+    const updates: Record<string, PermissionScope> = {};
     
-    // Check if all permissions for this service are already selected
-    const allSelected = servicePermissions.every(perm => newPermissions.has(perm));
+    Object.keys(serviceActions).forEach(actionSlug => {
+      updates[`${serviceSlug}_${actionSlug}`] = scope;
+    });
     
-    if (allSelected) {
-      // Remove all permissions for this service
-      servicePermissions.forEach(perm => newPermissions.delete(perm));
-    } else {
-      // Add all permissions for this service
-      servicePermissions.forEach(perm => newPermissions.add(perm));
-    }
+    setPermissions(prev => ({
+      ...prev,
+      ...updates
+    }));
+  };
+
+  const applyBulkAction = () => {
+    const updates: Record<string, PermissionScope> = {};
     
-    setSelectedPermissions(newPermissions);
+    services.forEach(service => {
+      if (bulkService !== 'all' && service.slug !== bulkService) return;
+      
+      Object.keys(service.actions).forEach(actionSlug => {
+        if (bulkAction !== 'all' && actionSlug !== bulkAction) return;
+        
+        updates[`${service.slug}_${actionSlug}`] = bulkScope;
+      });
+    });
+    
+    setPermissions(prev => ({
+      ...prev,
+      ...updates
+    }));
+    
+    toast.success('Bulk permissions applied');
+  };
+
+  const applyPreset = (preset: 'admin' | 'editor' | 'viewer') => {
+    const updates: Record<string, PermissionScope> = {};
+    
+    services.forEach(service => {
+      Object.keys(service.actions).forEach(actionSlug => {
+        const key = `${service.slug}_${actionSlug}`;
+        
+        switch (preset) {
+          case 'admin':
+            updates[key] = 'by_all';
+            break;
+          case 'editor':
+            if (actionSlug === 'read') {
+              updates[key] = 'by_all';
+            } else if (actionSlug === 'create' || actionSlug === 'update') {
+              updates[key] = 'by_my_role';
+            } else if (actionSlug === 'delete') {
+              updates[key] = 'by_me';
+            } else {
+              updates[key] = 'none';
+            }
+            break;
+          case 'viewer':
+            updates[key] = actionSlug === 'read' ? 'by_all' : 'none';
+            break;
+        }
+      });
+    });
+    
+    setPermissions(updates);
+    toast.success(`${preset.charAt(0).toUpperCase() + preset.slice(1)} preset applied`);
   };
 
   const handleSave = async () => {
     setIsLoading(true);
     
     try {
+      // Convert permissions to the format expected by the API
+      const permissionsToSave: string[] = [];
+      
+      Object.entries(permissions).forEach(([key, scope]) => {
+        if (scope !== 'none') {
+          const [service, action] = key.split('_');
+          permissionsToSave.push(`${service}_${action}_${scope}`);
+        }
+      });
+      
       const response = await fetch(`/api/roles/${role.id}/permissions`, {
         method: 'PUT',
         headers: {
@@ -124,7 +222,7 @@ export default function RolePermissions({
           'X-Requested-With': 'XMLHttpRequest',
         },
         body: JSON.stringify({
-          permissions: Array.from(selectedPermissions),
+          permissions: permissionsToSave,
         }),
       });
 
@@ -133,8 +231,6 @@ export default function RolePermissions({
         toast.success('Permissions updated successfully');
         setHasChanges(false);
         
-        // Use Inertia's reload to refresh the page data from the server
-        // This will get the updated permissions from the backend
         router.reload({ 
           only: ['role', 'allPermissions', 'services', 'actions'],
           onSuccess: () => {
@@ -154,17 +250,27 @@ export default function RolePermissions({
   };
 
   const getPermissionCount = (serviceSlug: string, serviceActions: Record<string, boolean>) => {
-    const servicePermissions = Object.keys(serviceActions);
-    const selectedCount = servicePermissions.filter(action => 
-      selectedPermissions.has(`${serviceSlug}_${action}`)
-    ).length;
-    return { selected: selectedCount, total: servicePermissions.length };
+    const counts = { by_all: 0, by_my_role: 0, by_me: 0, none: 0, total: 0 };
+    
+    Object.keys(serviceActions).forEach(actionSlug => {
+      const scope = permissions[`${serviceSlug}_${actionSlug}`] || 'none';
+      counts[scope]++;
+      counts.total++;
+    });
+    
+    return counts;
   };
 
   const totalPermissions = services.reduce((total, service) => 
     total + Object.keys(service.actions).length, 0
   );
-  const selectedCount = selectedPermissions.size;
+  const permissionCounts = { by_all: 0, by_my_role: 0, by_me: 0, none: 0 };
+  
+  Object.values(permissions).forEach(scope => {
+    permissionCounts[scope]++;
+  });
+  
+  const activePermissions = totalPermissions - permissionCounts.none;
 
   return (
     <Admin title={`${role.name} - Permissions`}>
@@ -195,8 +301,19 @@ export default function RolePermissions({
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <p className="text-sm font-medium text-foreground">
-                  {selectedCount} of {totalPermissions} permissions
+                  {activePermissions} of {totalPermissions} permissions
                 </p>
+                <div className="flex gap-1 text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-xs px-1 py-0">
+                    🌍 {permissionCounts.by_all}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs px-1 py-0">
+                    👥 {permissionCounts.by_my_role}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs px-1 py-0">
+                    👤 {permissionCounts.by_me}
+                  </Badge>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {hasChanges ? 'You have unsaved changes' : 'All changes saved'}
                 </p>
@@ -236,13 +353,106 @@ export default function RolePermissions({
           </Card>
         </div>
 
+        {/* Presets and Bulk Actions */}
+        <div className="px-4 lg:px-6">
+          <Card className="bg-muted/30">
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                {/* Quick Presets */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Settings2 className="h-4 w-4" />
+                    Quick Presets
+                  </h4>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => applyPreset('admin')}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin Preset
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => applyPreset('editor')}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Editor Preset
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => applyPreset('viewer')}>
+                      <Eye className="w-4 h-4 mr-2" />
+                      Viewer Preset
+                    </Button>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                {/* Bulk Actions */}
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Bulk Actions</h4>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <label className="text-xs text-muted-foreground">Service</label>
+                      <Select value={bulkService} onValueChange={setBulkService}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Services</SelectItem>
+                          {services.map(service => (
+                            <SelectItem key={service.slug} value={service.slug}>
+                              {service.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-muted-foreground">Action</label>
+                      <Select value={bulkAction} onValueChange={setBulkAction}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Actions</SelectItem>
+                          {actions.map(action => (
+                            <SelectItem key={action.slug} value={action.slug}>
+                              {action.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-muted-foreground">Scope</label>
+                      <Select value={bulkScope} onValueChange={(value) => setBulkScope(value as PermissionScope)}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(scopeConfig).map(([scope, config]) => (
+                            <SelectItem key={scope} value={scope}>
+                              <div className="flex items-center gap-2">
+                                <span className={config.color}>{config.icon}</span>
+                                <span>{config.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={applyBulkAction} size="sm">
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Permissions Matrix */}
         <div className="px-4 lg:px-6">
           <div className="space-y-4">
             {services.map((service) => {
-              const permCount = getPermissionCount(service.slug, service.actions);
-              const allSelected = permCount.selected === permCount.total;
-              const someSelected = permCount.selected > 0 && permCount.selected < permCount.total;
+              const counts = getPermissionCount(service.slug, service.actions);
+              const hasAnyPermissions = counts.by_all + counts.by_my_role + counts.by_me > 0;
+              const allMaxScope = counts.by_all === counts.total;
 
               return (
                 <Card key={service.id} className="overflow-hidden">
@@ -250,76 +460,94 @@ export default function RolePermissions({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <CardTitle className="text-lg">{service.name}</CardTitle>
-                        <Badge variant="outline">
-                          {permCount.selected}/{permCount.total}
-                        </Badge>
+                        <div className="flex gap-1">
+                          {counts.by_all > 0 && (
+                            <Badge variant="outline" className="text-xs px-2 py-1 text-green-600">
+                              🌍 {counts.by_all}
+                            </Badge>
+                          )}
+                          {counts.by_my_role > 0 && (
+                            <Badge variant="outline" className="text-xs px-2 py-1 text-blue-600">
+                              👥 {counts.by_my_role}
+                            </Badge>
+                          )}
+                          {counts.by_me > 0 && (
+                            <Badge variant="outline" className="text-xs px-2 py-1 text-orange-600">
+                              👤 {counts.by_me}
+                            </Badge>
+                          )}
+                          {counts.none === counts.total && (
+                            <Badge variant="outline" className="text-xs px-2 py-1 text-gray-500">
+                              No access
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
-                          {allSelected ? 'All selected' : someSelected ? 'Partial' : 'None selected'}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSelectAllForService(service.slug, service.actions)}
-                          className={`${allSelected ? 'bg-teal-50 border-teal-200 text-teal-700 dark:bg-teal-900/20' : ''}`}
-                        >
-                          {allSelected ? (
-                            <>
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Deselect All
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Select All
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSelectAllForService(service.slug, service.actions, 'by_all')}
+                            className="text-xs"
+                          >
+                            All Access
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSelectAllForService(service.slug, service.actions, 'by_my_role')}
+                            className="text-xs"
+                          >
+                            Role Access
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSelectAllForService(service.slug, service.actions, 'none')}
+                            className="text-xs"
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Clear
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
                   <Separator />
                   <CardContent className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {Object.keys(service.actions).map((actionSlug) => {
-                        const permissionSlug = `${service.slug}_${actionSlug}`;
-                        const isSelected = selectedPermissions.has(permissionSlug);
+                        const key = `${service.slug}_${actionSlug}`;
+                        const currentScope = permissions[key] || 'none';
                         const actionName = actions.find(a => a.slug === actionSlug)?.name || actionSlug;
-                        
-                        console.log(`Permission check: ${permissionSlug} - Selected: ${isSelected}`, {
-                          serviceSlug: service.slug,
-                          actionSlug: actionSlug,
-                          permissionSlug: permissionSlug,
-                          isSelected: isSelected,
-                          selectedPermissions: Array.from(selectedPermissions)
-                        });
+                        const scopeColor = scopeConfig[currentScope].color;
 
                         return (
                           <div
                             key={actionSlug}
                             className={`
                               flex items-center justify-between p-3 rounded-lg border transition-colors
-                              ${isSelected 
-                                ? 'bg-teal-50 border-teal-200 dark:bg-teal-900/20 dark:border-teal-800' 
+                              ${currentScope !== 'none' 
+                                ? 'bg-primary/5 border-primary/20 dark:bg-primary/10' 
                                 : 'bg-muted/30 border-border hover:bg-muted/50'
                               }
                             `}
                           >
-                            <div className="flex items-center gap-2">
-                              <div className={`
-                                w-2 h-2 rounded-full 
-                                ${isSelected ? 'bg-teal-500' : 'bg-gray-300'}
-                              `} />
-                              <span className="text-sm font-medium">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${scopeColor.replace('text-', 'bg-')}`} />
+                              <span className="text-sm font-medium truncate">
                                 {actionName}
                               </span>
                             </div>
-                            <Switch
-                              checked={isSelected}
-                              onCheckedChange={() => handlePermissionToggle(service.slug, actionSlug)}
-                              size="sm"
-                            />
+                            <div className="ml-2">
+                              <PermissionScopeSelector
+                                service={service.slug}
+                                action={actionSlug}
+                                currentScope={currentScope}
+                                onChange={(scope) => handlePermissionChange(service.slug, actionSlug, scope)}
+                              />
+                            </div>
                           </div>
                         );
                       })}
@@ -339,7 +567,7 @@ export default function RolePermissions({
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                   <p className="text-sm text-amber-800 dark:text-amber-200">
-                    You have unsaved changes. Don't forget to save your permission updates.
+                    You have unsaved scoped permission changes. Don't forget to save your updates.
                   </p>
                 </div>
               </CardContent>

@@ -134,32 +134,56 @@ func (s *PermissionService) AssignRole(user *models.User, roleSlug string, assig
 		return fmt.Errorf("role not found: %w", err)
 	}
 	
-	// Check if user already has this role
-	if user.HasRole(roleSlug) {
+	// Check if user already has this role (active or inactive)
+	var existingRole models.UserRole
+	err = facades.Orm().Query().
+		Where("user_id = ? AND role_id = ?", user.ID, role.ID).
+		First(&existingRole)
+	
+	if err == nil && existingRole.IsActive {
 		return fmt.Errorf("user already has role: %s", roleSlug)
 	}
 	
 	// Check role hierarchy (can't assign higher role than your own)
-	if assignedBy != nil {
+	if assignedBy != nil && !assignedBy.IsSuperAdminUser() {
 		assignerHighest := assignedBy.GetHighestRole()
 		if assignerHighest == nil || !assignerHighest.IsHigherThan(role) {
 			return fmt.Errorf("cannot assign role higher than your own")
 		}
 	}
 	
-	// Create user-role assignment
-	userRole := models.UserRole{
-		UserID:      user.ID,
-		RoleID:      role.ID,
-		AssignedAt:  time.Now(),
-		IsActive:    true,
+	// Deactivate all existing active roles for this user
+	_, err = facades.Orm().Query().Model(&models.UserRole{}).
+		Where("user_id = ? AND is_active = ?", user.ID, true).
+		Update("is_active", false)
+	if err != nil {
+		return fmt.Errorf("failed to deactivate existing roles: %w", err)
 	}
 	
-	if assignedBy != nil {
-		userRole.AssignedByID = &assignedBy.ID
+	// Create or reactivate user-role assignment
+	if existingRole.ID != 0 {
+		// Reactivate existing role
+		existingRole.IsActive = true
+		existingRole.AssignedAt = time.Now()
+		if assignedBy != nil {
+			existingRole.AssignedByID = &assignedBy.ID
+		}
+		err = facades.Orm().Query().Save(&existingRole)
+	} else {
+		// Create new user-role assignment
+		userRole := models.UserRole{
+			UserID:      user.ID,
+			RoleID:      role.ID,
+			AssignedAt:  time.Now(),
+			IsActive:    true,
+		}
+		
+		if assignedBy != nil {
+			userRole.AssignedByID = &assignedBy.ID
+		}
+		
+		err = facades.Orm().Query().Create(&userRole)
 	}
-	
-	err = facades.Orm().Query().Create(&userRole)
 	if err != nil {
 		return fmt.Errorf("failed to assign role: %w", err)
 	}
@@ -325,34 +349,32 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 			continue
 		}
 		
-		// Load permissions through the pivot table to respect is_active status
+		// Load permissions through the pivot table to respect is_active status and scope
 		var rolePermissions []models.RolePermission
 		err := facades.Orm().Query().
 			Where("role_id = ? AND is_active = ?", role.ID, true).
+			With("Permission").
 			Find(&rolePermissions)
 		
 		if err != nil {
 			continue
 		}
 		
-		// Now load the actual permissions
-		if len(rolePermissions) > 0 {
-			permissionIDs := make([]uint, 0)
-			for _, rp := range rolePermissions {
-				permissionIDs = append(permissionIDs, rp.PermissionID)
-			}
-			
-			var perms []models.Permission
-			err = facades.Orm().Query().
-				Where("id IN ? AND is_active = ?", permissionIDs, true).
-				Find(&perms)
-			
-			if err != nil {
-				continue
-			}
-			
-			for _, permission := range perms {
-				permissionMap[permission.Slug] = true
+		// Build permission slugs with scopes
+		for _, rp := range rolePermissions {
+			if rp.Permission.IsActive {
+				// Build the permission slug with scope
+				permSlug := rp.Permission.Slug
+				if rp.Scope != "" && rp.Scope != "by_all" {
+					// Include scope in the permission slug
+					permSlug = fmt.Sprintf("%s_%s", permSlug, rp.Scope)
+				} else if rp.Scope == "by_all" || rp.Scope == "" {
+					// For by_all scope, include both the base permission and the explicit scoped version
+					permissionMap[permSlug] = true
+					permissionMap[fmt.Sprintf("%s_by_all", permSlug)] = true
+					continue
+				}
+				permissionMap[permSlug] = true
 			}
 		}
 	}

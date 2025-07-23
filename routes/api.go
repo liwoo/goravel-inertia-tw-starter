@@ -5,6 +5,9 @@ import (
 	"github.com/goravel/framework/contracts/route"
 	"players/app/http/controllers"
 	"players/app/http/controllers/auth"
+	"players/app/http/controllers/auth/perimissions"
+	"players/app/http/controllers/auth/roles"
+	"players/app/http/controllers/auth/users"
 	"players/app/http/controllers/books"
 	"players/app/http/controllers/messages"
 
@@ -22,12 +25,12 @@ func Api(router route.Router) {
 		})
 	})
 
-	userController := auth.NewUserController()
+	userController := users.NewUserController()
 
 	bookController := books.NewBookController()
 	authController := auth.NewAuthController()
-	rolesController := &auth.RolesController{}
-	permissionsController := &auth.PermissionsController{}
+	rolesController := &roles.RolesController{}
+	permissionsController := &perimissions.PermissionsController{}
 	searchController := controllers.NewSearchController()
 	messageController := messages.NewMessageController()
 	notificationController := messages.NewNotificationController()

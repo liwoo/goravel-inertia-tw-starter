@@ -5,6 +5,7 @@ import (
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
+	"players/app/auth"
 	"players/app/contracts"
 	"players/app/models"
 )
@@ -25,6 +26,7 @@ func NewBookService() *BookService {
 		SetSearchFields("title", "author", "isbn", "description").
 		SetSortFields("id", "title", "author", "price", "status", "published_at", "created_at", "updated_at").
 		SetFilterFields("status", "author", "isbn", "is_available").
+		EnableScopeFiltering(auth.ServiceBooks, "created_by"). // Enable scope filtering on created_by field
 		SetValidationRules(map[string]interface{}{
 			"title":        "required|string|max:255",
 			"author":       "required|string|max:255",
@@ -37,13 +39,18 @@ func NewBookService() *BookService {
 		SetBeforeCreate(func(data map[string]interface{}) error {
 			// Remove tags field as it's not a database column (has gorm:"-" tag)
 			delete(data, "tags")
-			
+
 			// Set default status if not provided
 			if _, exists := data["status"]; !exists {
 				data["status"] = "AVAILABLE"
 			}
 			if _, exists := data["is_available"]; !exists {
 				data["is_available"] = true
+			}
+
+			// Set created_by if provided (from context)
+			if createdBy, exists := data["created_by"]; exists && createdBy != nil {
+				data["created_by"] = createdBy
 			}
 
 			// Check ISBN uniqueness
@@ -63,7 +70,7 @@ func NewBookService() *BookService {
 		SetBeforeUpdate(func(id uint, data map[string]interface{}) error {
 			// Remove tags field as it's not a database column (has gorm:"-" tag)
 			delete(data, "tags")
-			
+
 			// Check ISBN uniqueness if being changed
 			if isbn, ok := data["isbn"].(string); ok {
 				var count int64
@@ -89,7 +96,6 @@ func NewBookService() *BookService {
 			for field, value := range filters {
 				switch field {
 				case "status":
-					fmt.Printf("DEBUG BookService.CustomFilters: Applying status filter with value='%v' (type=%T)\n", value, value)
 					query = query.Where("status = ?", value)
 				case "author":
 					query = query.Where("author = ?", value)

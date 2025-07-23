@@ -141,6 +141,24 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 		}
 	}
 	
+	// Helper function to check permission with scoped variants
+	hasPermissionWithScope := func(basePermission string) bool {
+		// Check base permission and all scoped variants
+		scopedPermissions := []string{
+			basePermission,
+			basePermission + "_by_all",
+			basePermission + "_by_my_role",
+			basePermission + "_by_me",
+		}
+		
+		for _, perm := range scopedPermissions {
+			if h.permissionService.HasPermission(user, perm) {
+				return true
+			}
+		}
+		return false
+	}
+	
 	// Use the new service_action format
 	viewSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionView)
 	readSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionRead)
@@ -150,19 +168,19 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 	
 	perms := map[string]bool{
 		// Use 'view' permission for listing/viewing, 'read' for accessing individual items
-		"canView":   h.permissionService.HasPermission(user, viewSlug) || h.permissionService.HasPermission(user, readSlug),
-		"canCreate": h.permissionService.HasPermission(user, createSlug),
-		"canEdit":   h.permissionService.HasPermission(user, updateSlug),
-		"canDelete": h.permissionService.HasPermission(user, deleteSlug),
-		"canManage": h.permissionService.HasPermission(user, BuildPermissionSlug(ServiceRegistry(resourceType), PermissionManage)),
+		"canView":   hasPermissionWithScope(viewSlug) || hasPermissionWithScope(readSlug),
+		"canCreate": hasPermissionWithScope(createSlug),
+		"canEdit":   hasPermissionWithScope(updateSlug),
+		"canDelete": hasPermissionWithScope(deleteSlug),
+		"canManage": hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionManage)),
 		
 		// Additional permissions
-		"canExport":     h.permissionService.HasPermission(user, BuildPermissionSlug(ServiceRegistry(resourceType), PermissionExport)),
-		"canBulkUpdate": h.permissionService.HasPermission(user, BuildPermissionSlug(ServiceRegistry(resourceType), PermissionBulkUpdate)),
-		"canBulkDelete": h.permissionService.HasPermission(user, BuildPermissionSlug(ServiceRegistry(resourceType), PermissionBulkDelete)),
+		"canExport":     hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionExport)),
+		"canBulkUpdate": hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionBulkUpdate)),
+		"canBulkDelete": hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionBulkDelete)),
 		
 		// Special report permissions
-		"canViewReports": h.permissionService.HasPermission(user, BuildPermissionSlug(ServiceReports, PermissionView)),
+		"canViewReports": hasPermissionWithScope(BuildPermissionSlug(ServiceReports, PermissionView)),
 		
 		// Admin permissions (legacy)
 		"isAdmin":      user.IsAdmin(),
@@ -190,9 +208,25 @@ func (h *PermissionHelper) RequireServicePermission(ctx http.Context, service Se
 		return nil, err
 	}
 	
-	permissionSlug := BuildPermissionSlug(service, action)
-	if !h.permissionService.HasPermission(user, permissionSlug) {
-		return nil, fmt.Errorf("insufficient permissions: %s required", permissionSlug)
+	// Check for any scoped variant of the permission
+	basePermission := BuildPermissionSlug(service, action)
+	scopedPermissions := []string{
+		basePermission,
+		basePermission + "_by_all",
+		basePermission + "_by_my_role", 
+		basePermission + "_by_me",
+	}
+	
+	hasPermission := false
+	for _, perm := range scopedPermissions {
+		if h.permissionService.HasPermission(user, perm) {
+			hasPermission = true
+			break
+		}
+	}
+	
+	if !hasPermission {
+		return nil, fmt.Errorf("insufficient permissions: %s required", basePermission)
 	}
 	
 	return user, nil

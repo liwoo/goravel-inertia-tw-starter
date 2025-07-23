@@ -51,6 +51,9 @@ type RolePermission struct {
 	RoleID       uint `gorm:"not null;index" json:"role_id"`
 	PermissionID uint `gorm:"not null;index" json:"permission_id"`
 	
+	// Scope for this specific role-permission assignment
+	Scope        string    `gorm:"type:varchar(20);default:'by_all';index" json:"scope"`
+	
 	// Additional metadata
 	GrantedByID *uint     `gorm:"index" json:"granted_by_id,omitempty"`
 	GrantedBy   *User     `gorm:"foreignKey:GrantedByID" json:"granted_by,omitempty"`

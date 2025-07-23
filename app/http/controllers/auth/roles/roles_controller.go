@@ -1,4 +1,4 @@
-package auth
+package roles
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"players/app/auth"
+	"players/app/helpers"
 	"players/app/models"
 )
 
@@ -62,19 +63,19 @@ func (c *RolesController) Store(ctx http.Context) http.Response {
 			"error": "Invalid request data",
 		})
 	}
-	
+
 	// Log the request for debugging
 	facades.Log().Debug("RolesController.Store called", map[string]interface{}{
-		"method": ctx.Request().Method(),
-		"path": ctx.Request().Path(),
-		"url": ctx.Request().Url(),
-		"referer": ctx.Request().Header("Referer"),
-		"user_agent": ctx.Request().Header("User-Agent"),
-		"x_inertia": ctx.Request().Header("X-Inertia"),
+		"method":            ctx.Request().Method(),
+		"path":              ctx.Request().Path(),
+		"url":               ctx.Request().Url(),
+		"referer":           ctx.Request().Header("Referer"),
+		"user_agent":        ctx.Request().Header("User-Agent"),
+		"x_inertia":         ctx.Request().Header("X-Inertia"),
 		"x_inertia_version": ctx.Request().Header("X-Inertia-Version"),
-		"content_type": ctx.Request().Header("Content-Type"),
-		"data": requestData,
-		"query_params": ctx.Request().Queries(),
+		"content_type":      ctx.Request().Header("Content-Type"),
+		"data":              requestData,
+		"query_params":      ctx.Request().Queries(),
 	})
 
 	// Check if request data is empty or contains only empty values
@@ -91,8 +92,8 @@ func (c *RolesController) Store(ctx http.Context) http.Response {
 	name, nameOk := requestData["name"].(string)
 	if !nameOk || strings.TrimSpace(name) == "" {
 		facades.Log().Error("RolesController.Store: Name validation failed", map[string]interface{}{
-			"name_ok": nameOk,
-			"name": name,
+			"name_ok":    nameOk,
+			"name":       name,
 			"request_id": ctx.Request().Header("X-Request-ID"),
 		})
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
@@ -110,10 +111,10 @@ func (c *RolesController) Store(ctx http.Context) http.Response {
 	// Remove all non-alphanumeric characters except spaces and hyphens
 	cleanName := strings.TrimSpace(name)
 	slug := strings.ToLower(cleanName)
-	
+
 	// Replace spaces with hyphens and remove consecutive hyphens
 	slug = strings.ReplaceAll(slug, " ", "-")
-	
+
 	// Remove any character that's not alphanumeric or hyphen
 	var slugBuilder strings.Builder
 	for _, r := range slug {
@@ -122,10 +123,10 @@ func (c *RolesController) Store(ctx http.Context) http.Response {
 		}
 	}
 	slug = slugBuilder.String()
-	
+
 	// Remove leading/trailing hyphens and collapse multiple hyphens
 	slug = strings.Trim(slug, "-")
-	
+
 	// Validate slug is not empty after cleaning
 	if slug == "" || cleanName == "" {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
@@ -148,9 +149,26 @@ func (c *RolesController) Store(ctx http.Context) http.Response {
 			"error": "Role name and slug cannot be empty",
 		})
 	}
-	
-	// Create new role
+
+	// Get authenticated user and audit info
+	user := permHelper.GetAuthenticatedUser(ctx)
+	auditHelper := helpers.GetAuditHelper()
+
+	var createdBy *uint
+	if user != nil {
+		createdBy = &user.ID
+	}
+
+	// Get request metadata
+	ipAddr, userAgent := auditHelper.GetRequestMetadata(ctx)
+
+	// Create new role with full audit information
 	role := models.Role{
+		BaseAuditableModel: models.BaseAuditableModel{
+			CreatedBy: createdBy,
+			IPAddress: ipAddr,
+			UserAgent: userAgent,
+		},
 		Name:        name,
 		Slug:        slug,
 		Description: description,
@@ -276,7 +294,7 @@ func (c *RolesController) Update(ctx http.Context) http.Response {
 			// Create slug with same robust handling as in Store
 			slug := strings.ToLower(cleanName)
 			slug = strings.ReplaceAll(slug, " ", "-")
-			
+
 			// Remove any character that's not alphanumeric or hyphen
 			var slugBuilder strings.Builder
 			for _, r := range slug {
@@ -286,14 +304,14 @@ func (c *RolesController) Update(ctx http.Context) http.Response {
 			}
 			slug = slugBuilder.String()
 			slug = strings.Trim(slug, "-")
-			
+
 			// Validate slug is not empty after cleaning
 			if slug == "" {
 				return ctx.Response().Json(http.StatusBadRequest, map[string]string{
 					"error": "Role name must contain at least one alphanumeric character",
 				})
 			}
-			
+
 			// Check if another role already has this slug
 			var existingRole models.Role
 			err := facades.Orm().Query().
@@ -304,7 +322,7 @@ func (c *RolesController) Update(ctx http.Context) http.Response {
 					"error": "A role with this name already exists",
 				})
 			}
-			
+
 			role.Name = cleanName
 			role.Slug = slug
 		}
@@ -451,8 +469,8 @@ func (c *RolesController) Destroy(ctx http.Context) http.Response {
 	if err != nil {
 		facades.Log().Error("Failed to soft delete role", map[string]interface{}{
 			"role_id": roleID,
-			"error": err.Error(),
-			"stack": string(debug.Stack()),
+			"error":   err.Error(),
+			"stack":   string(debug.Stack()),
 		})
 		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to delete role: " + err.Error(),
@@ -460,7 +478,7 @@ func (c *RolesController) Destroy(ctx http.Context) http.Response {
 	}
 
 	facades.Log().Info("Role soft deleted successfully", map[string]interface{}{
-		"role_id": roleID,
+		"role_id":   roleID,
 		"role_name": role.Name,
 	})
 
@@ -509,14 +527,14 @@ func (c *RolesController) UpdatePermissions(ctx http.Context) http.Response {
 	err = facades.Orm().Query().
 		Where("id = ? AND is_active = ?", roleID, true).
 		First(&role)
-	
+
 	// Load ALL role_permissions for this role, not just active ones
 	var rolePermissions []models.RolePermission
 	facades.Orm().Query().
 		Where("role_id = ?", roleID).
 		With("Permission").
 		Find(&rolePermissions)
-	
+
 	fmt.Printf("DEBUG: Found %d role_permissions records for role %d\n", len(rolePermissions), roleID)
 	for _, rp := range rolePermissions {
 		fmt.Printf("DEBUG: RolePermission ID=%d, PermissionID=%d, IsActive=%v\n", rp.ID, rp.PermissionID, rp.IsActive)
@@ -547,76 +565,127 @@ func (c *RolesController) UpdatePermissions(ctx http.Context) http.Response {
 	fmt.Printf("DEBUG: UpdatePermissions - Role ID: %d, Role Name: %s\n", roleID, role.Name)
 	fmt.Printf("DEBUG: UpdatePermissions - Received permissions: %v\n", permissions)
 
-	// Convert to string array
-	permissionSlugs := make([]string, 0)
+	// Parse scoped permissions (e.g., "books_read_by_all" -> permission: "books_read", scope: "by_all")
+	type scopedPermission struct {
+		slug  string
+		scope string
+	}
+
+	scopedPerms := make([]scopedPermission, 0)
 	for _, p := range permissions {
-		if slug, ok := p.(string); ok && strings.TrimSpace(slug) != "" {
-			permissionSlugs = append(permissionSlugs, strings.TrimSpace(slug))
+		if permSlug, ok := p.(string); ok && strings.TrimSpace(permSlug) != "" {
+			permSlug = strings.TrimSpace(permSlug)
+
+			// Check if this is a scoped permission
+			if strings.Contains(permSlug, "_by_") {
+				// Find the last occurrence of "_by_"
+				lastIndex := strings.LastIndex(permSlug, "_by_")
+				if lastIndex > 0 {
+					baseSlug := permSlug[:lastIndex]
+					scopePart := permSlug[lastIndex+1:] // includes "by_"
+					scopedPerms = append(scopedPerms, scopedPermission{
+						slug:  baseSlug,
+						scope: scopePart,
+					})
+					fmt.Printf("DEBUG: Parsed scoped permission: %s -> base: %s, scope: %s\n", permSlug, baseSlug, scopePart)
+				} else {
+					// Fallback to non-scoped
+					scopedPerms = append(scopedPerms, scopedPermission{
+						slug:  permSlug,
+						scope: "by_all",
+					})
+				}
+			} else {
+				// Non-scoped permission
+				scopedPerms = append(scopedPerms, scopedPermission{
+					slug:  permSlug,
+					scope: "by_all",
+				})
+			}
 		}
 	}
-	
-	fmt.Printf("DEBUG: UpdatePermissions - Permission slugs: %v\n", permissionSlugs)
 
-	// Get current active permissions from role_permissions table
-	currentPermissionSlugs := make([]string, 0)
+	fmt.Printf("DEBUG: UpdatePermissions - Parsed %d scoped permissions\n", len(scopedPerms))
+
+	// Get current active permissions from role_permissions table with scopes
+	type currentPermData struct {
+		permissionID uint
+		slug         string
+		scope        string
+		compositeKey string // slug + "_" + scope for comparison
+	}
+
+	currentPerms := make(map[string]currentPermData) // map[compositeKey]data
 	for _, rp := range rolePermissions {
 		if rp.IsActive && rp.Permission.ID > 0 {
-			currentPermissionSlugs = append(currentPermissionSlugs, rp.Permission.Slug)
-			fmt.Printf("DEBUG: Active permission: %s\n", rp.Permission.Slug)
+			compositeKey := rp.Permission.Slug + "_" + rp.Scope
+			currentPerms[compositeKey] = currentPermData{
+				permissionID: rp.Permission.ID,
+				slug:         rp.Permission.Slug,
+				scope:        rp.Scope,
+				compositeKey: compositeKey,
+			}
+			fmt.Printf("DEBUG: Current active permission: %s (scope: %s)\n", rp.Permission.Slug, rp.Scope)
 		}
 	}
-	fmt.Printf("DEBUG: Current active permission slugs: %v\n", currentPermissionSlugs)
 
-	// Create maps for efficient lookup
-	currentPermMap := make(map[string]bool)
-	for _, slug := range currentPermissionSlugs {
-		currentPermMap[slug] = true
+	// Create map of new permissions with scopes
+	newPerms := make(map[string]scopedPermission) // map[compositeKey]data
+	for _, sp := range scopedPerms {
+		compositeKey := sp.slug + "_" + sp.scope
+		newPerms[compositeKey] = sp
 	}
 
-	newPermMap := make(map[string]bool)
-	for _, slug := range permissionSlugs {
-		newPermMap[slug] = true
+	// Find permissions to add and remove based on composite keys
+	type permToAdd struct {
+		slug  string
+		scope string
+	}
+	type permToRemove struct {
+		permissionID uint
+		slug         string
+		scope        string
 	}
 
-	// Find permissions to add and remove
-	var toAdd []string
-	var toRemove []string
+	var toAdd []permToAdd
+	var toRemove []permToRemove
 
 	// Find permissions to add
-	for slug := range newPermMap {
-		if !currentPermMap[slug] {
-			toAdd = append(toAdd, slug)
+	for compositeKey, sp := range newPerms {
+		if _, exists := currentPerms[compositeKey]; !exists {
+			toAdd = append(toAdd, permToAdd{
+				slug:  sp.slug,
+				scope: sp.scope,
+			})
+			fmt.Printf("DEBUG: Will add permission: %s (scope: %s)\n", sp.slug, sp.scope)
 		}
 	}
 
 	// Find permissions to remove
-	for slug := range currentPermMap {
-		if !newPermMap[slug] {
-			toRemove = append(toRemove, slug)
+	for compositeKey, cp := range currentPerms {
+		if _, exists := newPerms[compositeKey]; !exists {
+			toRemove = append(toRemove, permToRemove{
+				permissionID: cp.permissionID,
+				slug:         cp.slug,
+				scope:        cp.scope,
+			})
+			fmt.Printf("DEBUG: Will remove permission: %s (scope: %s)\n", cp.slug, cp.scope)
 		}
 	}
 
 	// Remove old permission assignments
 	if len(toRemove) > 0 {
-		// Get permission IDs to remove
-		var permsToRemove []models.Permission
-		facades.Orm().Query().
-			Where("slug IN ? AND is_active = ?", toRemove, true).
-			Find(&permsToRemove)
+		for _, ptr := range toRemove {
+			// Update role_permission records to inactive based on permission_id AND scope
+			_, updateErr := facades.Orm().Query().
+				Model(&models.RolePermission{}).
+				Where("role_id = ? AND permission_id = ? AND scope = ?", roleID, ptr.permissionID, ptr.scope).
+				Update("is_active", false)
 
-		if len(permsToRemove) > 0 {
-			for _, perm := range permsToRemove {
-				// Update role_permission records to inactive instead of deleting
-				_, updateErr := facades.Orm().Query().
-					Model(&models.RolePermission{}).
-					Where("role_id = ? AND permission_id = ?", roleID, perm.ID).
-					Update("is_active", false)
-				
-				if updateErr != nil {
-					fmt.Printf("DEBUG: Failed to remove permission %s for role %d: %v\n", perm.Slug, roleID, updateErr)
-				} else {
-					fmt.Printf("DEBUG: Removed permission %s for role %d\n", perm.Slug, roleID)
-				}
+			if updateErr != nil {
+				fmt.Printf("DEBUG: Failed to remove permission %s (scope: %s) for role %d: %v\n", ptr.slug, ptr.scope, roleID, updateErr)
+			} else {
+				fmt.Printf("DEBUG: Removed permission %s (scope: %s) for role %d\n", ptr.slug, ptr.scope, roleID)
 			}
 		}
 	}
@@ -624,82 +693,78 @@ func (c *RolesController) UpdatePermissions(ctx http.Context) http.Response {
 	// Add new permission assignments
 	if len(toAdd) > 0 {
 		fmt.Printf("DEBUG: UpdatePermissions - Permissions to add: %v\n", toAdd)
-		
-		// Debug what we currently have
-		fmt.Printf("DEBUG: Current permission slugs from role: %v\n", currentPermissionSlugs)
-		fmt.Printf("DEBUG: New permission slugs requested: %v\n", permissionSlugs)
-		
-		// Get permission records to add
-		var permsToAdd []models.Permission
-		
-		// Debug: First check what permissions exist in DB
-		var allPerms []models.Permission
-		facades.Orm().Query().Find(&allPerms)
-		fmt.Printf("DEBUG: Total permissions in DB: %d\n", len(allPerms))
-		
-		// List all permission slugs in DB
-		dbPermSlugs := make([]string, 0)
-		for _, p := range allPerms {
-			dbPermSlugs = append(dbPermSlugs, p.Slug)
-			if contains(toAdd, p.Slug) {
-				fmt.Printf("DEBUG: Permission to add found in DB: %s (ID: %d, IsActive: %v)\n", p.Slug, p.ID, p.IsActive)
-			}
-		}
-		fmt.Printf("DEBUG: All permission slugs in DB: %v\n", dbPermSlugs)
-		
-		err := facades.Orm().Query().
-			Where("slug IN ? AND is_active = ?", toAdd, true).
-			Find(&permsToAdd)
-		
-		if err != nil {
-			fmt.Printf("DEBUG: UpdatePermissions - Error finding permissions to add: %v\n", err)
-		}
-		
-		fmt.Printf("DEBUG: UpdatePermissions - Found %d permissions in database for %d slugs\n", len(permsToAdd), len(toAdd))
-		fmt.Printf("DEBUG: UpdatePermissions - Looking for slugs: %v\n", toAdd)
-		for _, perm := range permsToAdd {
-			fmt.Printf("DEBUG: UpdatePermissions - Found permission: ID=%d, Slug=%s, IsActive=%v\n", perm.ID, perm.Slug, perm.IsActive)
+
+		// Extract unique slugs to fetch from database
+		uniqueSlugs := make(map[string]bool)
+		for _, pta := range toAdd {
+			uniqueSlugs[pta.slug] = true
 		}
 
-		if len(permsToAdd) > 0 {
-			for _, perm := range permsToAdd {
-				// Check if role_permission record already exists (maybe inactive)
-				var existingRP models.RolePermission
-				err := facades.Orm().Query().
-					Where("role_id = ? AND permission_id = ?", roleID, perm.ID).
-					First(&existingRP)
-				
-				if err == nil && existingRP.ID > 0 {
-					// Record exists, update it to active
-					fmt.Printf("DEBUG: Found existing RolePermission record ID=%d for permission %s (IsActive=%v)\n", existingRP.ID, perm.Slug, existingRP.IsActive)
-					
-					// Use direct update instead of Save
-					updateResult, updateErr := facades.Orm().Query().
-						Model(&models.RolePermission{}).
-						Where("id = ?", existingRP.ID).
-						Update("is_active", true)
-					
-					if updateErr != nil {
-						fmt.Printf("DEBUG: Failed to update permission %s to active for role %d: %v\n", perm.Slug, roleID, updateErr)
-					} else {
-						// Verify the update
-						var verifyRP models.RolePermission
-						facades.Orm().Query().Where("id = ?", existingRP.ID).First(&verifyRP)
-						fmt.Printf("DEBUG: Updated permission %s to active for role %d (ID: %d, IsActive after save: %v, rows affected: %d)\n", perm.Slug, roleID, existingRP.ID, verifyRP.IsActive, updateResult.RowsAffected)
-					}
+		var slugsToFetch []string
+		for slug := range uniqueSlugs {
+			slugsToFetch = append(slugsToFetch, slug)
+		}
+
+		// Get permission records from database
+		var permsFromDB []models.Permission
+		err := facades.Orm().Query().
+			Where("slug IN ? AND is_active = ?", slugsToFetch, true).
+			Find(&permsFromDB)
+
+		if err != nil {
+			fmt.Printf("DEBUG: UpdatePermissions - Error finding permissions: %v\n", err)
+		}
+
+		// Create a map for quick lookup
+		permMap := make(map[string]models.Permission)
+		for _, perm := range permsFromDB {
+			permMap[perm.Slug] = perm
+		}
+
+		fmt.Printf("DEBUG: UpdatePermissions - Found %d permissions in database for %d unique slugs\n", len(permsFromDB), len(slugsToFetch))
+
+		// Process each permission to add
+		for _, pta := range toAdd {
+			perm, exists := permMap[pta.slug]
+			if !exists {
+				fmt.Printf("DEBUG: Permission not found in database: %s\n", pta.slug)
+				continue
+			}
+
+			// Check if role_permission record already exists (maybe inactive)
+			var existingRP models.RolePermission
+			err := facades.Orm().Query().
+				Where("role_id = ? AND permission_id = ? AND scope = ?", roleID, perm.ID, pta.scope).
+				First(&existingRP)
+
+			if err == nil && existingRP.ID > 0 {
+				// Record exists, update it to active
+				fmt.Printf("DEBUG: Found existing RolePermission record ID=%d for permission %s (scope: %s, IsActive=%v)\n", existingRP.ID, perm.Slug, pta.scope, existingRP.IsActive)
+
+				// Use direct update to set is_active = true
+				updateResult, updateErr := facades.Orm().Query().
+					Model(&models.RolePermission{}).
+					Where("id = ?", existingRP.ID).
+					Update("is_active", true)
+
+				if updateErr != nil {
+					fmt.Printf("DEBUG: Failed to update permission %s (scope: %s) to active for role %d: %v\n", perm.Slug, pta.scope, roleID, updateErr)
 				} else {
-					// Create new role_permission record
-					rolePermission := models.RolePermission{
-						RoleID:       uint(roleID),
-						PermissionID: perm.ID,
-						IsActive:     true,
-					}
-					createErr := facades.Orm().Query().Create(&rolePermission)
-					if createErr != nil {
-						fmt.Printf("DEBUG: Failed to create permission %s for role %d: %v\n", perm.Slug, roleID, createErr)
-					} else {
-						fmt.Printf("DEBUG: Created permission %s for role %d\n", perm.Slug, roleID)
-					}
+					fmt.Printf("DEBUG: Updated permission %s (scope: %s) to active for role %d (rows affected: %d)\n", perm.Slug, pta.scope, roleID, updateResult.RowsAffected)
+				}
+			} else {
+				// Create new role_permission record with scope
+				rolePermission := models.RolePermission{
+					RoleID:       uint(roleID),
+					PermissionID: perm.ID,
+					Scope:        pta.scope,
+					IsActive:     true,
+				}
+				createErr := facades.Orm().Query().Create(&rolePermission)
+				if createErr != nil {
+					fmt.Printf("DEBUG: Failed to create permission %s (scope: %s) for role %d: %v\n", perm.Slug, pta.scope, roleID, createErr)
+				} else {
+					fmt.Printf("DEBUG: Created permission %s (scope: %s) for role %d\n", perm.Slug, pta.scope, roleID)
 				}
 			}
 		}

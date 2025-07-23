@@ -1,5 +1,9 @@
 package contracts
 
+import (
+	"github.com/goravel/framework/contracts/http"
+)
+
 // ListRequest for pagination, sorting, and filtering
 type ListRequest struct {
 	Page      int                    `form:"page" json:"page"`
@@ -8,6 +12,7 @@ type ListRequest struct {
 	Direction string                 `form:"direction" json:"direction"`
 	Search    string                 `form:"search" json:"search"`
 	Filters   map[string]interface{} `form:"filters" json:"filters"`
+	Context   http.Context           `form:"-" json:"-"` // HTTP context for permission checks
 }
 
 // ListResponse for paginated results

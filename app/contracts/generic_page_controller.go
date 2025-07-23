@@ -30,6 +30,9 @@ type GenericPageController struct {
 	
 	// Additional data providers
 	extraDataProviders map[string]func(ctx http.Context) (interface{}, error)
+	
+	// Current request context for statistics
+	currentContext http.Context
 }
 
 // GenericPageConfig holds configuration for creating a generic page controller
@@ -63,6 +66,9 @@ func NewGenericPageController(config GenericPageConfig) *GenericPageController {
 
 // Index provides a complete implementation of the page index method
 func (c *GenericPageController) Index(ctx http.Context) http.Response {
+	// Store context for use in statistics
+	c.currentContext = ctx
+	
 	// 1. Permission/Access Check
 	if err := c.performPermissionCheck(ctx); err != nil {
 		return c.renderForbidden(ctx, err)
@@ -71,7 +77,7 @@ func (c *GenericPageController) Index(ctx http.Context) http.Response {
 	// 2. Validate Request
 	req, err := c.ValidatePageRequest(ctx)
 	if err != nil {
-		req = &ListRequest{Page: 1, PageSize: c.defaultPageSize}
+		req = &ListRequest{Page: 1, PageSize: c.defaultPageSize, Context: ctx}
 		req.SetDefaults()
 	}
 	
@@ -84,10 +90,20 @@ func (c *GenericPageController) Index(ctx http.Context) http.Response {
 		result = c.emptyResult(req)
 	}
 	
-	// 5. Get Statistics (if enabled and permitted)
+	// 5. Get Statistics (always get basic counts for filters, full stats if permitted)
 	var stats map[string]interface{}
-	if c.statsEnabled && (permissions["canViewReports"] || permissions["canManage"]) {
-		stats = c.getStatistics()
+	if c.statsEnabled {
+		// Always get basic statistics for filter counts
+		stats = c.getBasicStatistics()
+		
+		// Add advanced statistics if user has permission
+		if permissions["canViewReports"] || permissions["canManage"] {
+			advancedStats := c.getStatistics()
+			// Merge advanced stats into basic stats
+			for k, v := range advancedStats {
+				stats[k] = v
+			}
+		}
 	}
 	
 	// 6. Build Typed Permissions
@@ -122,7 +138,7 @@ func (c *GenericPageController) performPermissionCheck(ctx http.Context) error {
 	// Service-based permission check
 	if c.serviceIdentifier != "" {
 		permHelper := auth.GetPermissionHelper()
-		_, err := permHelper.RequireServicePermission(ctx, c.serviceIdentifier, auth.PermissionView)
+		_, err := permHelper.RequireServicePermission(ctx, c.serviceIdentifier, auth.PermissionRead)
 		return err
 	}
 	
@@ -142,17 +158,30 @@ func (c *GenericPageController) checkSuperAdmin(ctx http.Context) error {
 
 // renderForbidden renders a forbidden response
 func (c *GenericPageController) renderForbidden(ctx http.Context, err error) http.Response {
+	// Determine the error message
+	message := "You don't have permission to access this page"
+	if err != nil {
+		message = err.Error()
+	}
+	
 	// Try Inertia error page first
 	if c.requireSuperAdmin {
+		message = "Access denied: Super admin privileges required"
+	}
+	
+	// For Inertia requests, render error page
+	if ctx.Request().Header("X-Inertia") != "" {
 		return inertia.Render(ctx, "Errors/403", map[string]interface{}{
-			"message": "Access denied: Super admin privileges required",
+			"message": message,
+			"resource": c.resourceType,
 		})
 	}
 	
 	// Default JSON response
 	return ctx.Response().Status(403).Json(map[string]interface{}{
 		"error":   "Forbidden",
-		"message": "You don't have permission to access this page",
+		"message": message,
+		"resource": c.resourceType,
 	})
 }
 
@@ -173,6 +202,26 @@ func (c *GenericPageController) getStatistics() map[string]interface{} {
 		return c.statsBuilder(c)
 	}
 	return make(map[string]interface{})
+}
+
+// getBasicStatistics gets basic counts needed for filters
+// This is always available regardless of permissions
+func (c *GenericPageController) getBasicStatistics() map[string]interface{} {
+	// Return empty map if no service
+	if c.service == nil {
+		return make(map[string]interface{})
+	}
+	
+	// If we have a stats builder, use it to get full stats
+	// These basic stats are needed for filter badges
+	if c.statsBuilder != nil {
+		return c.statsBuilder(c)
+	}
+	
+	// Otherwise just return total count
+	stats := make(map[string]interface{})
+	stats["total"] = c.GetTotalCount()
+	return stats
 }
 
 // addExtraData adds any registered extra data providers to the props
@@ -206,7 +255,13 @@ func (c *GenericPageController) GetCountByFilter(filters map[string]interface{})
 		Filters:  filters,
 	}
 	
-	result, err := c.service.GetListAdvanced(req, filters)
+	// Add context if available
+	if c.currentContext != nil {
+		req.Context = c.currentContext
+	}
+	
+	// Use GetList instead of GetListAdvanced to ensure scope filtering is applied
+	result, err := c.service.GetList(req)
 	if err != nil {
 		return 0
 	}
@@ -221,6 +276,18 @@ func (c *GenericPageController) GetCountByStatus(status string) int {
 
 // GetTotalCount returns the total count of all records
 func (c *GenericPageController) GetTotalCount() int {
+	// Try to get context from the controller's stored context
+	// This should be set when Index is called
+	if c.currentContext != nil {
+		req := ListRequest{PageSize: 1, Context: c.currentContext}
+		result, err := c.service.GetList(req)
+		if err != nil {
+			return 0
+		}
+		return int(result.Total)
+	}
+	
+	// Fallback without context
 	req := ListRequest{PageSize: 1}
 	result, err := c.service.GetList(req)
 	if err != nil {

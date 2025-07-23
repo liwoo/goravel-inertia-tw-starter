@@ -24,6 +24,12 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.CreateMessagesTable{},
 		&migrations.CreateMessageMentionsTable{},
 		&migrations.CreateNotificationsTable{},
+		&migrations.M20250722065931AddConstraintsToRolesTable{},
+		&migrations.M20250722073118AddScopeToPermissionsTable{},
+		&migrations.M20250722073324AddCreatedByToResources{},
+		&migrations.M20250722104500AddAuditFieldsToAllTables{},
+		&migrations.M20250723000000AddScopeToRolePermissionsTable{},
+		// &migrations.EnsureSingleActiveRolePerUser20250723100000{}, // Already applied
 	}
 }
 

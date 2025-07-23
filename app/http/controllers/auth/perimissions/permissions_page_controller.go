@@ -1,6 +1,8 @@
-package auth
+package perimissions
 
 import (
+	"time"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"players/app/auth"
@@ -24,7 +26,7 @@ func (c *PermissionsPageController) GetServiceIdentifier() auth.ServiceRegistry 
 // NewPermissionsPageController creates a new permissions page controller
 func NewPermissionsPageController() *PermissionsPageController {
 	roleService := services.NewRoleService()
-	
+
 	return &PermissionsPageController{
 		GenericPageController: contracts.NewGenericPageController(contracts.GenericPageConfig{
 			ResourceType:      "roles",
@@ -33,7 +35,7 @@ func NewPermissionsPageController() *PermissionsPageController {
 			ServiceIdentifier: auth.ServicePermissions,
 			RequireSuperAdmin: true,
 			StatsEnabled:      true,
-			StatsBuilder:      func(controller *contracts.GenericPageController) map[string]interface{} {
+			StatsBuilder: func(controller *contracts.GenericPageController) map[string]interface{} {
 				stats, _ := buildRoleStatistics()
 				return stats
 			},
@@ -68,19 +70,27 @@ func (c *PermissionsPageController) Index(ctx http.Context) http.Response {
 
 // RolePermissions GET /admin/roles/:id/permissions - Role permissions page
 func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Response {
+	// Debug logging
+	roleID := ctx.Request().Route("id")
+	facades.Log().Info("=== ROLE PERMISSIONS PAGE LOADED ===", map[string]interface{}{
+		"role_id": roleID,
+		"url":     ctx.Request().Url(),
+		"method":  ctx.Request().Method(),
+		"time":    time.Now().Format("15:04:05"),
+	})
+
 	// Super-admin only check
 	permHelper := auth.GetPermissionHelper()
 	user, err := permHelper.RequireAuthentication(ctx)
 	if err != nil {
 		return ctx.Response().Redirect(302, "/login")
 	}
-	
+
 	if !user.IsSuperAdminUser() {
 		return ctx.Response().Redirect(302, "/")
 	}
 
-	// Get role ID from URL
-	roleID := ctx.Request().Route("id")
+	// Get role ID from URL (already declared above)
 	if roleID == "" {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
 			"error": "Role ID is required",
@@ -135,16 +145,55 @@ func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Respo
 		})
 	}
 
-	// Build the current permissions map
+	// Build the current permissions map with scopes
+	// First, we need to load role_permissions with scope information
+	var rolePermissions []models.RolePermission
+	facades.Orm().Query().
+		Where("role_id = ? AND is_active = ?", role.ID, true).
+		With("Permission").
+		Find(&rolePermissions)
+
+	facades.Log().Info("LOADING PERMISSIONS FOR ROLE", map[string]interface{}{
+		"role_id":          role.ID,
+		"role_name":        role.Name,
+		"permission_count": len(rolePermissions),
+		"time":             time.Now().Format("15:04:05"),
+	})
+
 	currentPermissions := make(map[string]bool)
-	for _, perm := range role.Permissions {
-		if perm.IsActive {
-			currentPermissions[perm.Slug] = true
+	for _, rp := range rolePermissions {
+		if rp.Permission.ID > 0 && rp.Permission.IsActive {
+			// Create the composite key with scope
+			// Default to "by_all" if scope is empty
+			scope := rp.Scope
+			if scope == "" {
+				scope = "by_all"
+			}
+			permissionKey := rp.Permission.Slug + "_" + scope
+			currentPermissions[permissionKey] = true
+			facades.Log().Debug("Loaded permission for UI", map[string]interface{}{
+				"permission": rp.Permission.Slug,
+				"scope":      scope,
+				"key":        permissionKey,
+			})
 		}
 	}
 
 	// Get user's permissions
 	permissions := c.BuildPermissionsMap(ctx, "roles")
+
+	// Debug the current permissions being sent to frontend
+	var permissionKeys []string
+	for key := range currentPermissions {
+		permissionKeys = append(permissionKeys, key)
+	}
+
+	facades.Log().Debug("=== Sending permissions to frontend ===", map[string]interface{}{
+		"role_id":        role.ID,
+		"role_name":      role.Name,
+		"totalCount":     len(currentPermissions),
+		"permissionKeys": permissionKeys,
+	})
 
 	return inertia.Render(ctx, "Permissions/RolePermissions", map[string]interface{}{
 		"role":               role,

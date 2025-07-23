@@ -1,4 +1,4 @@
-package auth
+package users
 
 import (
 	"github.com/goravel/framework/contracts/http"
@@ -17,7 +17,7 @@ type UserPageController struct {
 // NewUserPageController creates a new user page controller with minimal boilerplate
 func NewUserPageController() *UserPageController {
 	userService := services.NewUserService()
-	
+
 	controller := &UserPageController{
 		GenericPageController: contracts.NewGenericPageController(contracts.GenericPageConfig{
 			ResourceType:      "user",
@@ -30,10 +30,10 @@ func NewUserPageController() *UserPageController {
 		}),
 		userService: userService,
 	}
-	
+
 	// Set the auth helper
 	controller.SetAuthHelper(helpers.NewAuthHelper())
-	
+
 	// Add extra data provider for roles
 	controller.AddExtraDataProvider("roles", func(ctx http.Context) (interface{}, error) {
 		return controller.userService.GetAllRoles()
@@ -68,5 +68,5 @@ func buildUserStatistics(controller *contracts.GenericPageController) map[string
 // - Statistics gathering
 // - Extra data providers (roles)
 // - All contract implementations (CheckPermission, GetCurrentUser, etc.)
-// 
+//
 // This reduces the controller from 198 lines to just 54 lines - a 73% reduction!

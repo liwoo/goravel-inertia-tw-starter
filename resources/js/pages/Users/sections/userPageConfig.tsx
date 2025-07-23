@@ -109,7 +109,7 @@ export const getUserPageActions = (
 ];
 
 
-/**
+/*
  * User action handlers using the generic resource handler
  */
 export const userActionHandlers = {
