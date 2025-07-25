@@ -14,6 +14,7 @@ import (
 // RoleService implements role-specific business logic using the builder pattern
 type RoleService struct {
 	contracts.CrudServiceContract
+	baseService contracts.CrudServiceContract
 }
 
 // NewRoleService creates a new role service using the builder pattern
@@ -61,7 +62,44 @@ func NewRoleService() *RoleService {
 			return nil
 		}).
 		WithCustomFilters(func(query orm.Query, filters map[string]interface{}) orm.Query {  // Optional
-			// Handle special role filters
+			facades.Log().Debug("RoleService CustomFilters called", map[string]interface{}{
+				"filters": filters,
+			})
+			
+			// First, apply standard filters for fields in filterFields
+			standardFilters := []string{"slug", "is_active", "level", "name", "parent_id"}
+			for key, value := range filters {
+				// Check if it's a standard filter field
+				isStandardFilter := false
+				for _, field := range standardFilters {
+					if field == key {
+						isStandardFilter = true
+						break
+					}
+				}
+				
+				if isStandardFilter {
+					// Convert string boolean values to actual booleans for boolean fields
+					if key == "is_active" {
+						if strVal, ok := value.(string); ok {
+							if strVal == "true" {
+								value = true
+							} else if strVal == "false" {
+								value = false
+							}
+						}
+					}
+					
+					facades.Log().Debug("Applying standard filter", map[string]interface{}{
+						"field": key,
+						"value": value,
+						"valueType": fmt.Sprintf("%T", value),
+					})
+					query = query.Where(key + " = ?", value)
+				}
+			}
+			
+			// Then handle special role filters
 			for key, value := range filters {
 				switch key {
 				case "level_min":
@@ -84,15 +122,37 @@ func NewRoleService() *RoleService {
 							query = query.Where("parent_id IS NULL")
 						}
 					}
+				case "type":
+					// Handle type filter as an alias for slug
+					if typeStr, ok := value.(string); ok && typeStr != "" {
+						facades.Log().Debug("Converting type filter to slug filter", map[string]interface{}{
+							"type": typeStr,
+						})
+						query = query.Where("slug = ?", typeStr)
+					}
 				}
 			}
 			return query
 		}).
 		Build()  // Returns a fully configured CrudServiceContract
 	
-	return &RoleService{
+	roleServiceInstance := &RoleService{
 		CrudServiceContract: service,
+		baseService:         service,
 	}
+
+	// Set the actual service reference for proper method resolution
+	if setter, ok := service.(interface {
+		SetActualService(interface{})
+	}); ok {
+		setter.SetActualService(roleServiceInstance)
+	} else {
+		facades.Log().Error("RoleService: Failed to cast service to SetActualService interface", map[string]interface{}{
+			"serviceType": fmt.Sprintf("%T", service),
+		})
+	}
+
+	return roleServiceInstance
 }
 
 // Role-specific methods beyond basic CRUD
@@ -318,4 +378,52 @@ func isSystemRole(slug string) bool {
 		}
 	}
 	return false
+}
+
+// Sortable interface implementation
+
+// MapSortField maps frontend field names to database column names
+func (s *RoleService) MapSortField(frontendField string) (string, bool) {
+	facades.Log().Debug("RoleService.MapSortField called", map[string]interface{}{
+		"frontendField": frontendField,
+		"sortableFields": s.baseService.GetSortableFields(),
+	})
+	
+	// Check if the field is sortable
+	sortableFields := s.baseService.GetSortableFields()
+	for _, field := range sortableFields {
+		if field == frontendField {
+			facades.Log().Debug("RoleService.MapSortField found match", map[string]interface{}{
+				"field": field,
+			})
+			return frontendField, true
+		}
+	}
+	
+	facades.Log().Debug("RoleService.MapSortField no match found", map[string]interface{}{
+		"frontendField": frontendField,
+	})
+	return "", false
+}
+
+// ValidateSortField validates if a field can be sorted
+func (s *RoleService) ValidateSortField(field string) bool {
+	sortableFields := s.baseService.GetSortableFields()
+	for _, sortableField := range sortableFields {
+		if sortableField == field {
+			return true
+		}
+	}
+	return false
+}
+
+// ValidateSortDirection validates sort direction
+func (s *RoleService) ValidateSortDirection(direction string) bool {
+	upper := strings.ToUpper(direction)
+	return upper == "ASC" || upper == "DESC"
+}
+
+// GetDefaultSort returns the default sort configuration
+func (s *RoleService) GetDefaultSort() (string, string) {
+	return "name", "ASC"
 }

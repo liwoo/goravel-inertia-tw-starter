@@ -69,6 +69,17 @@ func NewGenericCrudService[T any](resourceName string, primaryKey string) *Gener
 
 // GetList retrieves paginated list of resources
 func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, error) {
+	facades.Log().Debug("GenericCrudService.GetList called", map[string]interface{}{
+		"service": s.tableName,
+		"page": req.Page,
+		"pageSize": req.PageSize,
+		"sort": req.Sort,
+		"direction": req.Direction,
+		"filters": req.Filters,
+		"actualService": s.actualService != nil,
+		"actualServiceType": fmt.Sprintf("%T", s.actualService),
+	})
+	
 	// Validate and sanitize request
 	if err := s.ValidateListRequest(&req); err != nil {
 		return nil, err
@@ -285,7 +296,12 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 		"service": s.tableName,
 		"offset":  offset,
 		"limit":   req.PageSize,
+		"sort": req.Sort,
+		"direction": req.Direction,
 	})
+	
+	// Note: SQL query will be logged by GORM if logging is enabled
+	
 	if err := query.Find(&items); err != nil {
 		facades.Log().Error("Query Find failed", map[string]interface{}{
 			"service": s.tableName,
@@ -463,7 +479,12 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 		"service": s.tableName,
 		"offset":  offset,
 		"limit":   req.PageSize,
+		"sort": req.Sort,
+		"direction": req.Direction,
 	})
+	
+	// Note: SQL query will be logged by GORM if logging is enabled
+	
 	if err := query.Find(&items); err != nil {
 		facades.Log().Error("Query Find failed", map[string]interface{}{
 			"service": s.tableName,

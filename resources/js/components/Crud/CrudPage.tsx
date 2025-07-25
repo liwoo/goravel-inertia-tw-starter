@@ -127,12 +127,41 @@ export function CrudPage<T extends { id: number }>({
     // Check both direct filters and nested filters.filters
     const actualFilters = filters.filters || filters;
     
+    console.log('getActiveSimpleFilter debug:', {
+      filters,
+      actualFilters,
+      simpleFilters: simpleFilters.map(f => ({ 
+        key: f.key, 
+        value: f.value, 
+        filterParams: f.filterParams 
+      }))
+    });
+    
     // Check each simple filter to see if its conditions match the current URL state
     for (const simpleFilter of simpleFilters) {
       if (simpleFilter.filterParams) {
         // Check if all filterParams match current filters
         const allParamsMatch = Object.entries(simpleFilter.filterParams).every(([key, value]) => {
-          return actualFilters[key] === value || filters[key] === value;
+          const currentValue = actualFilters[key] !== undefined ? actualFilters[key] : filters[key];
+          
+          // Handle boolean comparisons (string "true"/"false" vs boolean true/false)
+          if (typeof value === 'boolean' && typeof currentValue === 'string') {
+            return currentValue === value.toString();
+          }
+          if (typeof value === 'string' && typeof currentValue === 'boolean') {
+            return value === currentValue.toString();
+          }
+          
+          // Handle numeric comparisons
+          if (typeof value === 'number' && typeof currentValue === 'string') {
+            return currentValue === value.toString();
+          }
+          if (typeof value === 'string' && typeof currentValue === 'number') {
+            return value === currentValue.toString();
+          }
+          
+          // Default strict comparison
+          return currentValue === value;
         });
         
         if (allParamsMatch) {

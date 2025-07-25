@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/goravel/framework/facades"
 	"players/app/auth"
@@ -12,6 +13,7 @@ import (
 // UserService implements user-specific business logic using the builder pattern
 type UserService struct {
 	contracts.CrudServiceContract // Embedded interface - inherits all methods
+	baseService contracts.CrudServiceContract
 }
 
 // NewUserService creates a new user service using the builder pattern
@@ -155,6 +157,19 @@ func NewUserService() *UserService {
 		Build() // Returns a fully configured CrudServiceContract
 
 	userService.CrudServiceContract = service
+	userService.baseService = service
+
+	// Set the actual service reference for proper method resolution
+	if setter, ok := service.(interface {
+		SetActualService(interface{})
+	}); ok {
+		setter.SetActualService(userService)
+	} else {
+		facades.Log().Error("UserService: Failed to cast service to SetActualService interface", map[string]interface{}{
+			"serviceType": fmt.Sprintf("%T", service),
+		})
+	}
+
 	return userService
 }
 
@@ -344,4 +359,40 @@ func (s *UserService) GetUserStatistics() (map[string]interface{}, error) {
 		"inactiveUsers": stats.InactiveUsers,
 		"superAdmins":   stats.AdminUsers, // Actually counting super admins
 	}, nil
+}
+
+// Sortable interface implementation
+
+// MapSortField maps frontend field names to database column names
+func (s *UserService) MapSortField(frontendField string) (string, bool) {
+	// Check if the field is sortable
+	sortableFields := s.baseService.GetSortableFields()
+	for _, field := range sortableFields {
+		if field == frontendField {
+			return frontendField, true
+		}
+	}
+	return "", false
+}
+
+// ValidateSortField validates if a field can be sorted
+func (s *UserService) ValidateSortField(field string) bool {
+	sortableFields := s.baseService.GetSortableFields()
+	for _, sortableField := range sortableFields {
+		if sortableField == field {
+			return true
+		}
+	}
+	return false
+}
+
+// ValidateSortDirection validates sort direction
+func (s *UserService) ValidateSortDirection(direction string) bool {
+	upper := strings.ToUpper(direction)
+	return upper == "ASC" || upper == "DESC"
+}
+
+// GetDefaultSort returns the default sort configuration
+func (s *UserService) GetDefaultSort() (string, string) {
+	return "created_at", "DESC"
 }
