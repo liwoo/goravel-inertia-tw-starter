@@ -22,6 +22,11 @@ const BOOK_STATUS_CONFIG = {
     icon: <Wrench className="h-3 w-3" />,
     color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
   },
+  RESERVED: { 
+    label: 'Reserved', 
+    icon: <BookOpen className="h-3 w-3" />,
+    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+  },
 };
 
 /**
@@ -59,6 +64,9 @@ export const bookColumns: CrudColumn<Book>[] = [
     className: 'w-32',
     render: (book) => {
       const config = BOOK_STATUS_CONFIG[book.status as keyof typeof BOOK_STATUS_CONFIG];
+      if (!config) {
+        return <Badge variant="outline">Unknown</Badge>;
+      }
       return (
         <Badge className={`${config.color} flex items-center gap-1`}>
           {config.icon}
@@ -91,10 +99,10 @@ export const bookColumns: CrudColumn<Book>[] = [
     className: 'w-32',
     render: (book) => (
       <div className="text-sm">
-        {book.publishedAt ? (
+        {(book.publishedAt || book.published_at) ? (
           <div className="flex items-center text-muted-foreground">
             <Calendar className="w-3 h-3 mr-1" />
-            {new Date(book.publishedAt).toLocaleDateString('en-US', {
+            {new Date(book.publishedAt || book.published_at).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
               year: 'numeric'
@@ -140,15 +148,51 @@ export const bookColumns: CrudColumn<Book>[] = [
     label: 'Added',
     sortable: true,
     className: 'w-28',
-    render: (book) => (
-      <div className="text-sm text-muted-foreground">
-        {new Date(book.createdAt).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric'
-        })}
-      </div>
-    ),
+    render: (book) => {
+      // Try multiple possible date field locations
+      const dateValue = book.createdAt || 
+                       (book as any).created_at || 
+                       (book as any).CreatedAt ||
+                       (book as any).Created_at;
+      
+      if (!dateValue) {
+        // If no date field found, show a dash
+        return <div className="text-sm text-muted-foreground">-</div>;
+      }
+      
+      // Parse the date - handle various formats
+      let date: Date;
+      
+      // If it's already a valid date object
+      if (dateValue instanceof Date) {
+        date = dateValue;
+      } 
+      // If it's a timestamp object with StdTime
+      else if (dateValue && typeof dateValue === 'object' && dateValue.StdTime) {
+        date = new Date(dateValue.StdTime);
+      }
+      // If it's a string or number
+      else {
+        date = new Date(dateValue);
+      }
+      
+      const isValidDate = !isNaN(date.getTime());
+      
+      // Remove debug log for production
+      if (!isValidDate && process.env.NODE_ENV === 'development') {
+        console.warn('Invalid date format for book:', book.id, 'Date value:', dateValue);
+      }
+      
+      return (
+        <div className="text-sm text-muted-foreground">
+          {isValidDate ? date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          }) : '-'}
+        </div>
+      );
+    },
   },
 ];
 
@@ -175,6 +219,9 @@ export const bookColumnsMobile: CrudColumn<Book>[] = [
           <div>
             {(() => {
               const config = BOOK_STATUS_CONFIG[book.status as keyof typeof BOOK_STATUS_CONFIG];
+              if (!config) {
+                return <Badge variant="outline" className="text-xs">Unknown</Badge>;
+              }
               return (
                 <Badge className={`${config.color} flex items-center gap-1 text-xs`}>
                   {config.icon}

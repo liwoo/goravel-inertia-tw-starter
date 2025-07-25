@@ -249,6 +249,15 @@ export const userFilters = [
       { label: 'Unverified', value: 'false' },
     ],
   },
+  {
+    key: 'role',
+    label: 'Role',
+    type: 'select' as const,
+    options: [
+      { label: 'All Roles', value: '' },
+      // Options will be populated dynamically
+    ],
+  },
 ];
 
 // Quick filter buttons with improved icons
@@ -263,24 +272,24 @@ export const userQuickFilters = [
     key: 'active',
     label: 'Active',
     icon: <CheckCircle className="h-4 w-4" />,
-    filters: { is_active: true },
+    filters: { is_active: 'true' },
   },
   {
     key: 'inactive',
     label: 'Inactive',
     icon: <XCircle className="h-4 w-4" />,
-    filters: { is_active: false },
+    filters: { is_active: 'false' },
   },
   {
     key: 'super_admins',
     label: 'Super Admins',
     icon: <Shield className="h-4 w-4" />,
-    filters: { is_super_admin: true },
+    filters: { is_super_admin: 'true' },
   },
   {
     key: 'verified',
     label: 'Verified',
     icon: <CheckCircle className="h-4 w-4" />,
-    filters: { email_verified: true },
+    filters: { email_verified: 'true' },
   },
 ];

@@ -13,18 +13,14 @@ import (
 type PermissionsController struct {
 }
 
+// NewPermissionsController creates a new permissions controller
+func NewPermissionsController() *PermissionsController {
+	return &PermissionsController{}
+}
+
 // Assign POST /api/permissions/assign - Assign a permission to a role
 func (c *PermissionsController) Assign(ctx http.Context) http.Response {
-	// Check permissions
-	permHelper := auth.GetPermissionHelper()
-	_, err := permHelper.RequireServicePermission(ctx, auth.ServicePermissions, auth.PermissionUpdate)
-	if err != nil {
-		return ctx.Response().Json(http.StatusForbidden, map[string]string{
-			"error": "Insufficient permissions",
-		})
-	}
-
-	// Parse request data
+	// Parse request data first to get the role
 	var requestData map[string]interface{}
 	if err := ctx.Request().Bind(&requestData); err != nil {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
@@ -32,28 +28,43 @@ func (c *PermissionsController) Assign(ctx http.Context) http.Response {
 		})
 	}
 
-	// Extract role_id, service, and action
+	// Extract role_id
 	roleIDFloat, roleOk := requestData["role_id"].(float64)
-	service, serviceOk := requestData["service"].(string)
-	action, actionOk := requestData["action"].(string)
-
-	if !roleOk || !serviceOk || !actionOk {
+	if !roleOk {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
-			"error": "role_id, service, and action are required",
+			"error": "role_id is required",
 		})
 	}
-
 	roleID := uint(roleIDFloat)
 
-	// Find the role
+	// Find the role to check scoped permissions
 	var role models.Role
-	err = facades.Orm().Query().
+	err := facades.Orm().Query().
 		Where("id = ? AND is_active = ?", roleID, true).
 		First(&role)
-
+	
 	if err != nil {
 		return ctx.Response().Json(http.StatusNotFound, map[string]string{
 			"error": "Role not found",
+		})
+	}
+
+	// Check scoped permissions - user needs permission to update this specific role
+	scopedHelper := auth.GetScopedPermissionHelper()
+	_, err = scopedHelper.RequireScopedPermission(ctx, auth.ServiceRoles, auth.PermissionUpdate, &role)
+	if err != nil {
+		return ctx.Response().Json(http.StatusForbidden, map[string]string{
+			"error": "Insufficient permissions to manage this role",
+		})
+	}
+
+	// Extract service and action
+	service, serviceOk := requestData["service"].(string)
+	action, actionOk := requestData["action"].(string)
+
+	if !serviceOk || !actionOk {
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+			"error": "service and action are required",
 		})
 	}
 
@@ -105,15 +116,6 @@ func (c *PermissionsController) Assign(ctx http.Context) http.Response {
 
 // Revoke DELETE /api/permissions/revoke - Revoke a permission from a role
 func (c *PermissionsController) Revoke(ctx http.Context) http.Response {
-	// Check permissions
-	permHelper := auth.GetPermissionHelper()
-	_, err := permHelper.RequireServicePermission(ctx, auth.ServicePermissions, auth.PermissionUpdate)
-	if err != nil {
-		return ctx.Response().Json(http.StatusForbidden, map[string]string{
-			"error": "Insufficient permissions",
-		})
-	}
-
 	// Parse request data
 	var requestData map[string]interface{}
 	if err := ctx.Request().Bind(&requestData); err != nil {
@@ -122,28 +124,43 @@ func (c *PermissionsController) Revoke(ctx http.Context) http.Response {
 		})
 	}
 
-	// Extract role_id, service, and action
+	// Extract role_id
 	roleIDFloat, roleOk := requestData["role_id"].(float64)
-	service, serviceOk := requestData["service"].(string)
-	action, actionOk := requestData["action"].(string)
-
-	if !roleOk || !serviceOk || !actionOk {
+	if !roleOk {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
-			"error": "role_id, service, and action are required",
+			"error": "role_id is required",
 		})
 	}
-
 	roleID := uint(roleIDFloat)
 
 	// Find the role
 	var role models.Role
-	err = facades.Orm().Query().
+	err := facades.Orm().Query().
 		Where("id = ? AND is_active = ?", roleID, true).
 		First(&role)
 
 	if err != nil {
 		return ctx.Response().Json(http.StatusNotFound, map[string]string{
 			"error": "Role not found",
+		})
+	}
+
+	// Check scoped permissions - user needs permission to update this specific role
+	scopedHelper := auth.GetScopedPermissionHelper()
+	_, err = scopedHelper.RequireScopedPermission(ctx, auth.ServiceRoles, auth.PermissionUpdate, &role)
+	if err != nil {
+		return ctx.Response().Json(http.StatusForbidden, map[string]string{
+			"error": "Insufficient permissions to manage this role",
+		})
+	}
+
+	// Extract service and action
+	service, serviceOk := requestData["service"].(string)
+	action, actionOk := requestData["action"].(string)
+
+	if !serviceOk || !actionOk {
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+			"error": "service and action are required",
 		})
 	}
 

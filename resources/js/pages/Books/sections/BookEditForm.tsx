@@ -61,12 +61,7 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
     setIsSaving?.(true);
     
     try {
-      // Transform camelCase to snake_case for backend
-      const transformedData = {
-        ...formData,
-        published_at: formData.publishedAt,
-      };
-      delete transformedData.publishedAt;
+      // Send data as is - backend will handle field name transformation
       
       const response = await fetch(`/api/books/${book.id}`, {
         method: 'PUT',
@@ -75,7 +70,7 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
         },
-        body: JSON.stringify(transformedData),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
@@ -233,10 +228,9 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="AVAILABLE">Available</SelectItem>
-              <SelectItem value="CHECKED_OUT">Checked Out</SelectItem>
+              <SelectItem value="BORROWED">Borrowed</SelectItem>
+              <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
               <SelectItem value="RESERVED">Reserved</SelectItem>
-              <SelectItem value="LOST">Lost</SelectItem>
-              <SelectItem value="DAMAGED">Damaged</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -293,13 +287,13 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
           <div>
             <p className="text-gray-500">Created</p>
             <p className="font-medium">
-              {new Date(book.createdAt).toLocaleDateString()}
+              {(book.createdAt || book.created_at) ? new Date(book.createdAt || book.created_at).toLocaleDateString() : '-'}
             </p>
           </div>
           <div>
             <p className="text-gray-500">Last Updated</p>
             <p className="font-medium">
-              {new Date(book.updatedAt).toLocaleDateString()}
+              {(book.updatedAt || book.updated_at) ? new Date(book.updatedAt || book.updated_at).toLocaleDateString() : '-'}
             </p>
           </div>
         </div>

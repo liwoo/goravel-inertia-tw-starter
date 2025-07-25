@@ -24,8 +24,10 @@ export interface ListRequest {
 
 export interface BaseModel {
   id: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CrudColumn<T = any> {

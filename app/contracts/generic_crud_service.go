@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
@@ -14,55 +15,55 @@ import (
 // GenericCrudService provides a complete CRUD service implementation with minimal code
 type GenericCrudService[T any] struct {
 	*BaseCrudService
-	modelType      reflect.Type
-	tableName      string
-	searchFields   []string
-	sortFields     []string
-	filterFields   []string
-	relations      []string
+	modelType       reflect.Type
+	tableName       string
+	searchFields    []string
+	sortFields      []string
+	filterFields    []string
+	relations       []string
 	validationRules map[string]interface{}
-	
+
 	// Reference to the actual service (e.g., BookService) for method resolution
-	actualService  interface{}
-	
+	actualService interface{}
+
 	// Permission scope configuration
 	enableScopeFiltering bool
-	scopeUserField      string // Field that contains the user ID (e.g., "created_by", "user_id", "owner_id")
-	serviceRegistry     auth.ServiceRegistry
-	
+	scopeUserField       string // Field that contains the user ID (e.g., "created_by", "user_id", "owner_id")
+	serviceRegistry      auth.ServiceRegistry
+
 	// Customizable hooks
-	beforeCreate   func(data map[string]interface{}) error
-	afterCreate    func(model *T) error
-	beforeUpdate   func(id uint, data map[string]interface{}) error
-	afterUpdate    func(model *T) error
-	beforeDelete   func(id uint) error
-	afterDelete    func(id uint) error
-	
+	beforeCreate func(data map[string]interface{}) error
+	afterCreate  func(model *T) error
+	beforeUpdate func(id uint, data map[string]interface{}) error
+	afterUpdate  func(model *T) error
+	beforeDelete func(id uint) error
+	afterDelete  func(id uint) error
+
 	// Custom query builders
-	customQuery    func(query orm.Query) orm.Query
-	customSearch   func(query orm.Query, search string) orm.Query
-	customFilters  func(query orm.Query, filters map[string]interface{}) orm.Query
+	customQuery   func(query orm.Query) orm.Query
+	customSearch  func(query orm.Query, search string) orm.Query
+	customFilters func(query orm.Query, filters map[string]interface{}) orm.Query
 }
 
 // NewGenericCrudService creates a new generic CRUD service
 func NewGenericCrudService[T any](resourceName string, primaryKey string) *GenericCrudService[T] {
 	var model T
 	modelType := reflect.TypeOf(model)
-	
+
 	// Extract table name from model type
 	tableName := strings.ToLower(modelType.Name()) + "s"
-	
+
 	return &GenericCrudService[T]{
-		BaseCrudService: NewBaseCrudService(resourceName, primaryKey),
-		modelType:       modelType,
-		tableName:       tableName,
-		searchFields:    []string{},
-		sortFields:      []string{"id", "created_at", "updated_at"},
-		filterFields:    []string{},
-		relations:       []string{},
-		validationRules: make(map[string]interface{}),
+		BaseCrudService:      NewBaseCrudService(resourceName, primaryKey),
+		modelType:            modelType,
+		tableName:            tableName,
+		searchFields:         []string{},
+		sortFields:           []string{"id", "created_at", "updated_at"},
+		filterFields:         []string{},
+		relations:            []string{},
+		validationRules:      make(map[string]interface{}),
 		enableScopeFiltering: false,
-		scopeUserField:      "created_by", // Default to created_by
+		scopeUserField:       "created_by", // Default to created_by
 	}
 }
 
@@ -73,33 +74,40 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 		return nil, err
 	}
 	s.SanitizeListRequest(&req)
-	
+
 	// Build base query
 	var model T
 	query := facades.Orm().Query().Model(&model)
-	
+
 	// Load relations if configured
 	for _, relation := range s.relations {
 		query = query.With(relation)
 	}
-	
+
 	// Apply custom query if set
 	if s.customQuery != nil {
 		query = s.customQuery(query)
 	}
-	
+
 	// Apply permission-based scope filtering if enabled and context is available
+	facades.Log().Info("Checking scope filtering", map[string]interface{}{
+		"enableScopeFiltering": s.enableScopeFiltering,
+		"hasContext":           req.Context != nil,
+		"service":              s.tableName,
+		"serviceRegistry":      s.serviceRegistry,
+	})
 	if s.enableScopeFiltering && req.Context != nil {
 		facades.Log().Info("Applying scope filter", map[string]interface{}{
-			"service": s.tableName,
-			"userField": s.scopeUserField,
-			"hasContext": req.Context != nil,
+			"service":         s.tableName,
+			"userField":       s.scopeUserField,
+			"hasContext":      req.Context != nil,
+			"serviceRegistry": s.serviceRegistry,
 		})
 		var err error
 		query, err = s.applyScopeFilter(req.Context, query, auth.PermissionRead)
 		if err != nil {
 			facades.Log().Warning("Failed to apply scope filter", map[string]interface{}{
-				"error": err.Error(),
+				"error":   err.Error(),
 				"service": s.tableName,
 			})
 			// Continue without scope filtering rather than failing the request
@@ -107,11 +115,12 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 	} else {
 		facades.Log().Info("Scope filtering not applied", map[string]interface{}{
 			"enableScopeFiltering": s.enableScopeFiltering,
-			"hasContext": req.Context != nil,
-			"service": s.tableName,
+			"hasContext":           req.Context != nil,
+			"service":              s.tableName,
+			"serviceRegistry":      s.serviceRegistry,
 		})
 	}
-	
+
 	// Apply search
 	if req.Search != "" {
 		if s.customSearch != nil {
@@ -124,48 +133,90 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 			}
 		}
 	}
-	
+
 	// Apply filters from request
 	if len(req.Filters) > 0 {
+		// Apply field mapping to filters
+		mappedFilters := s.applyFieldMapping(req.Filters)
+		
+		facades.Log().Info("Applying filters", map[string]interface{}{
+			"service":          s.tableName,
+			"originalFilters":  req.Filters,
+			"mappedFilters":    mappedFilters,
+			"filterableFields": s.filterFields,
+		})
 		if s.customFilters != nil {
-			query = s.customFilters(query, req.Filters)
+			query = s.customFilters(query, mappedFilters)
 		} else {
 			// Default filter implementation
-			for field, value := range req.Filters {
+			for field, value := range mappedFilters {
 				if s.ValidateFilterField(field) {
+					// Convert string boolean values to actual booleans for boolean fields
+					if strVal, ok := value.(string); ok {
+						if strVal == "true" || strVal == "false" {
+							// Check if this is a boolean field (common boolean field names)
+							if strings.HasPrefix(field, "is_") || strings.HasPrefix(field, "has_") || field == "active" || field == "verified" || strings.HasSuffix(field, "_verified") {
+								value = strVal == "true"
+							}
+						}
+					}
+
+					facades.Log().Info("Applying filter", map[string]interface{}{
+						"field": field,
+						"value": value,
+						"type":  fmt.Sprintf("%T", value),
+					})
 					query = query.Where(field+" = ?", value)
+				} else {
+					facades.Log().Warning("Invalid filter field", map[string]interface{}{
+						"field":            field,
+						"filterableFields": s.filterFields,
+					})
 				}
 			}
 		}
 	}
-	
+
 	// Apply sorting - use actualService if available, otherwise use self
 	serviceToUse := interface{}(s)
 	if s.actualService != nil {
 		serviceToUse = s.actualService
 	}
+	facades.Log().Debug("GenericCrudService applying sort", map[string]interface{}{
+		"service":       s.tableName,
+		"sort":          req.Sort,
+		"direction":     req.Direction,
+		"actualService": s.actualService != nil,
+		"serviceToUse":  fmt.Sprintf("%T", serviceToUse),
+	})
 	query, err := s.ApplySort(query, req.Sort, req.Direction, serviceToUse)
 	if err != nil {
+		facades.Log().Error("GenericCrudService sort error", map[string]interface{}{
+			"service":   s.tableName,
+			"sort":      req.Sort,
+			"direction": req.Direction,
+			"error":     err.Error(),
+		})
 		return nil, err
 	}
-	
+
 	// Get total count before pagination
 	var total int64
 	// Create a new query instance for counting to avoid modifying the original
 	var countModel T
 	countQuery := facades.Orm().Query().Model(&countModel)
-	
+
 	// Re-apply the same conditions for counting
 	// Load relations if configured
 	for _, relation := range s.relations {
 		countQuery = countQuery.With(relation)
 	}
-	
+
 	// Apply custom query if set
 	if s.customQuery != nil {
 		countQuery = s.customQuery(countQuery)
 	}
-	
+
 	// Apply permission-based scope filtering if enabled
 	if s.enableScopeFiltering && req.Context != nil {
 		var err error
@@ -173,12 +224,12 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 		if err != nil {
 			// Log but continue without scope filtering
 			facades.Log().Warning("Failed to apply scope filter to count query", map[string]interface{}{
-				"error": err.Error(),
+				"error":   err.Error(),
 				"service": s.tableName,
 			})
 		}
 	}
-	
+
 	// Apply search if present
 	if req.Search != "" {
 		if s.customSearch != nil {
@@ -187,44 +238,76 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 			countQuery, _ = s.ApplySearch(countQuery, req.Search, s)
 		}
 	}
-	
+
 	// Apply filters if present
 	if len(req.Filters) > 0 {
+		// Apply field mapping to filters for count query
+		mappedCountFilters := s.applyFieldMapping(req.Filters)
 		if s.customFilters != nil {
-			countQuery = s.customFilters(countQuery, req.Filters)
+			countQuery = s.customFilters(countQuery, mappedCountFilters)
 		} else {
-			for field, value := range req.Filters {
+			for field, value := range mappedCountFilters {
 				if s.ValidateFilterField(field) {
+					// Convert string boolean values to actual booleans for boolean fields
+					if strVal, ok := value.(string); ok {
+						if strVal == "true" || strVal == "false" {
+							// Check if this is a boolean field (common boolean field names)
+							if strings.HasPrefix(field, "is_") || strings.HasPrefix(field, "has_") || field == "active" || field == "verified" || strings.HasSuffix(field, "_verified") {
+								value = strVal == "true"
+							}
+						}
+					}
 					countQuery = countQuery.Where(field+" = ?", value)
 				}
 			}
 		}
 	}
-	
+
 	if err := countQuery.Count(&total); err != nil {
+		facades.Log().Error("Count query failed", map[string]interface{}{
+			"service": s.tableName,
+			"error":   err.Error(),
+		})
 		return nil, err
 	}
-	
+	facades.Log().Info("Count query completed", map[string]interface{}{
+		"service": s.tableName,
+		"total":   total,
+	})
+
 	// Apply pagination at database level
 	offset := (req.Page - 1) * req.PageSize
 	query = query.Offset(offset).Limit(req.PageSize)
-	
+
 	// Get paginated items
 	var items []T
+	facades.Log().Info("About to execute query Find", map[string]interface{}{
+		"service": s.tableName,
+		"offset":  offset,
+		"limit":   req.PageSize,
+	})
 	if err := query.Find(&items); err != nil {
+		facades.Log().Error("Query Find failed", map[string]interface{}{
+			"service": s.tableName,
+			"error":   err.Error(),
+		})
 		return nil, err
 	}
-	
+	facades.Log().Info("Query Find completed", map[string]interface{}{
+		"service":    s.tableName,
+		"itemsCount": len(items),
+	})
+
 	// Convert items to interface slice
 	data := make([]interface{}, len(items))
 	for i, item := range items {
 		data[i] = item
 	}
-	
+
 	// Build pagination metadata
 	pb := s.GetPaginationBuilder()
 	lastPage := pb.CalculateLastPage(total, int64(req.PageSize))
-	
+
 	result := &PaginatedResult{
 		Data:        data,
 		Total:       total,
@@ -236,7 +319,7 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 		HasNext:     pb.HasNextPage(req.Page, lastPage),
 		HasPrev:     pb.HasPrevPage(req.Page),
 	}
-	
+
 	return result, nil
 }
 
@@ -247,21 +330,21 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 		return nil, err
 	}
 	s.SanitizeListRequest(&req)
-	
+
 	// Build base query
 	var model T
 	query := facades.Orm().Query().Model(&model)
-	
+
 	// Load relations if configured
 	for _, relation := range s.relations {
 		query = query.With(relation)
 	}
-	
+
 	// Apply custom query if set
 	if s.customQuery != nil {
 		query = s.customQuery(query)
 	}
-	
+
 	// Apply filters
 	if s.customFilters != nil {
 		query = s.customFilters(query, filters)
@@ -269,11 +352,20 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 		// Default filter implementation
 		for field, value := range filters {
 			if s.ValidateFilterField(field) {
+				// Convert string boolean values to actual booleans for boolean fields
+				if strVal, ok := value.(string); ok {
+					if strVal == "true" || strVal == "false" {
+						// Check if this is a boolean field (common boolean field names)
+						if strings.HasPrefix(field, "is_") || strings.HasPrefix(field, "has_") || field == "active" || field == "verified" || strings.HasSuffix(field, "_verified") {
+							value = strVal == "true"
+						}
+					}
+				}
 				query = query.Where(field+" = ?", value)
 			}
 		}
 	}
-	
+
 	// Apply search
 	if req.Search != "" {
 		if s.customSearch != nil {
@@ -286,23 +378,36 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 			}
 		}
 	}
-	
+
 	// Apply sorting - use actualService if available, otherwise use self
 	serviceToUse := interface{}(s)
 	if s.actualService != nil {
 		serviceToUse = s.actualService
 	}
+	facades.Log().Debug("GenericCrudService applying sort", map[string]interface{}{
+		"service":       s.tableName,
+		"sort":          req.Sort,
+		"direction":     req.Direction,
+		"actualService": s.actualService != nil,
+		"serviceToUse":  fmt.Sprintf("%T", serviceToUse),
+	})
 	query, err := s.ApplySort(query, req.Sort, req.Direction, serviceToUse)
 	if err != nil {
+		facades.Log().Error("GenericCrudService sort error", map[string]interface{}{
+			"service":   s.tableName,
+			"sort":      req.Sort,
+			"direction": req.Direction,
+			"error":     err.Error(),
+		})
 		return nil, err
 	}
-	
+
 	// Get total count before pagination
 	var total int64
 	// Create count query with same filters
 	var countModel T
 	countQuery := facades.Orm().Query().Model(&countModel)
-	
+
 	// Re-apply all conditions for counting
 	for _, relation := range s.relations {
 		countQuery = countQuery.With(relation)
@@ -315,6 +420,15 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 	} else {
 		for field, value := range filters {
 			if s.ValidateFilterField(field) {
+				// Convert string boolean values to actual booleans for boolean fields
+				if strVal, ok := value.(string); ok {
+					if strVal == "true" || strVal == "false" {
+						// Check if this is a boolean field (common boolean field names)
+						if strings.HasPrefix(field, "is_") || strings.HasPrefix(field, "has_") || field == "active" || field == "verified" || strings.HasSuffix(field, "_verified") {
+							value = strVal == "true"
+						}
+					}
+				}
 				countQuery = countQuery.Where(field+" = ?", value)
 			}
 		}
@@ -326,31 +440,52 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 			countQuery, _ = s.ApplySearch(countQuery, req.Search, s)
 		}
 	}
-	
+
 	if err := countQuery.Count(&total); err != nil {
+		facades.Log().Error("Count query failed", map[string]interface{}{
+			"service": s.tableName,
+			"error":   err.Error(),
+		})
 		return nil, err
 	}
-	
+	facades.Log().Info("Count query completed", map[string]interface{}{
+		"service": s.tableName,
+		"total":   total,
+	})
+
 	// Apply pagination at database level
 	offset := (req.Page - 1) * req.PageSize
 	query = query.Offset(offset).Limit(req.PageSize)
-	
+
 	// Get paginated items
 	var items []T
+	facades.Log().Info("About to execute query Find", map[string]interface{}{
+		"service": s.tableName,
+		"offset":  offset,
+		"limit":   req.PageSize,
+	})
 	if err := query.Find(&items); err != nil {
+		facades.Log().Error("Query Find failed", map[string]interface{}{
+			"service": s.tableName,
+			"error":   err.Error(),
+		})
 		return nil, err
 	}
-	
+	facades.Log().Info("Query Find completed", map[string]interface{}{
+		"service":    s.tableName,
+		"itemsCount": len(items),
+	})
+
 	// Convert items to interface slice
 	data := make([]interface{}, len(items))
 	for i, item := range items {
 		data[i] = item
 	}
-	
+
 	// Build result
 	pb := s.GetPaginationBuilder()
 	lastPage := pb.CalculateLastPage(total, int64(req.PageSize))
-	
+
 	result := &PaginatedResult{
 		Data:        data,
 		Total:       total,
@@ -362,7 +497,7 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 		HasNext:     pb.HasNextPage(req.Page, lastPage),
 		HasPrev:     pb.HasPrevPage(req.Page),
 	}
-	
+
 	return result, nil
 }
 
@@ -371,25 +506,25 @@ func (s *GenericCrudService[T]) GetByID(id uint) (interface{}, error) {
 	if id == 0 {
 		return nil, fmt.Errorf("invalid ID: %d", id)
 	}
-	
+
 	var model T
 	query := facades.Orm().Query().Model(&model)
-	
+
 	// Load relations if configured
 	for _, relation := range s.relations {
 		query = query.With(relation)
 	}
-	
+
 	// Apply custom query if set
 	if s.customQuery != nil {
 		query = s.customQuery(query)
 	}
-	
+
 	if err := query.Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
 		return nil, fmt.Errorf("%s not found: %w", s.BaseCrudService.tableName, err)
 	}
-	
-	return model, nil
+
+	return &model, nil
 }
 
 // GetByIDWithContext retrieves a single resource by ID with permission scope check
@@ -397,20 +532,20 @@ func (s *GenericCrudService[T]) GetByIDWithContext(ctx http.Context, id uint) (i
 	if id == 0 {
 		return nil, fmt.Errorf("invalid ID: %d", id)
 	}
-	
+
 	var model T
 	query := facades.Orm().Query().Model(&model)
-	
+
 	// Load relations if configured
 	for _, relation := range s.relations {
 		query = query.With(relation)
 	}
-	
+
 	// Apply custom query if set
 	if s.customQuery != nil {
 		query = s.customQuery(query)
 	}
-	
+
 	// Apply scope filtering if enabled
 	if s.enableScopeFiltering && ctx != nil {
 		var err error
@@ -419,43 +554,46 @@ func (s *GenericCrudService[T]) GetByIDWithContext(ctx http.Context, id uint) (i
 			return nil, fmt.Errorf("failed to apply scope filter: %w", err)
 		}
 	}
-	
+
 	if err := query.Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
 		return nil, fmt.Errorf("%s not found: %w", s.BaseCrudService.tableName, err)
 	}
-	
-	return model, nil
+
+	return &model, nil
 }
 
 // Create creates a new resource
 func (s *GenericCrudService[T]) Create(data map[string]interface{}) (interface{}, error) {
-	// Validate using validation rules
-	if err := s.validateWithRules(data, false); err != nil {
+	// Apply field mapping first (frontend -> database)
+	mappedData := s.applyFieldMapping(data)
+	
+	// Validate using validation rules on mapped data
+	if err := s.validateWithRules(mappedData, false); err != nil {
 		return nil, err
 	}
-	
-	// Run before hook if set
+
+	// Run before hook if set (with mapped data)
 	if s.beforeCreate != nil {
-		if err := s.beforeCreate(data); err != nil {
+		if err := s.beforeCreate(mappedData); err != nil {
 			return nil, err
 		}
 	}
-	
+
 	// Create model instance
 	model := new(T)
-	
+
 	// Use reflection to set fields
 	modelValue := reflect.ValueOf(model).Elem()
 	modelType := modelValue.Type()
-	
+
 	for i := 0; i < modelType.NumField(); i++ {
 		field := modelType.Field(i)
 		fieldName := field.Tag.Get("json")
 		if fieldName == "" {
 			fieldName = strings.ToLower(field.Name)
 		}
-		
-		if value, exists := data[fieldName]; exists {
+
+		if value, exists := mappedData[fieldName]; exists {
 			fieldValue := modelValue.Field(i)
 			if fieldValue.CanSet() {
 				setValue := reflect.ValueOf(value)
@@ -465,12 +603,12 @@ func (s *GenericCrudService[T]) Create(data map[string]interface{}) (interface{}
 			}
 		}
 	}
-	
+
 	// Create using GORM
 	if err := facades.Orm().Query().Create(model); err != nil {
 		return nil, fmt.Errorf("failed to create %s: %w", s.BaseCrudService.tableName, err)
 	}
-	
+
 	// Run after hook if set
 	if s.afterCreate != nil {
 		if err := s.afterCreate(model); err != nil {
@@ -481,7 +619,7 @@ func (s *GenericCrudService[T]) Create(data map[string]interface{}) (interface{}
 			})
 		}
 	}
-	
+
 	// Reload with relations
 	return s.GetByID(s.getIDFromModel(model))
 }
@@ -491,37 +629,40 @@ func (s *GenericCrudService[T]) Update(id uint, data map[string]interface{}) (in
 	if id == 0 {
 		return nil, fmt.Errorf("invalid ID: %d", id)
 	}
-	
+
 	// Check if exists
 	_, err := s.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
-	
-	// Validate using validation rules
-	if err := s.validateWithRules(data, true); err != nil {
+
+	// Apply field mapping first (frontend -> database)
+	mappedData := s.applyFieldMapping(data)
+
+	// Validate using validation rules on mapped data
+	if err := s.validateWithRules(mappedData, true); err != nil {
 		return nil, err
 	}
-	
-	// Run before hook if set
+
+	// Run before hook if set (with mapped data)
 	if s.beforeUpdate != nil {
-		if err := s.beforeUpdate(id, data); err != nil {
+		if err := s.beforeUpdate(id, mappedData); err != nil {
 			return nil, err
 		}
 	}
-	
+
 	// Update using GORM
 	var model T
-	if _, err := facades.Orm().Query().Model(&model).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).Update(data); err != nil {
+	if _, err := facades.Orm().Query().Model(&model).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).Update(mappedData); err != nil {
 		return nil, fmt.Errorf("failed to update %s: %w", s.BaseCrudService.tableName, err)
 	}
-	
+
 	// Get updated model
 	updated, err := s.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Run after hook if set
 	if s.afterUpdate != nil {
 		if updatedModel, ok := updated.(*T); ok {
@@ -535,7 +676,7 @@ func (s *GenericCrudService[T]) Update(id uint, data map[string]interface{}) (in
 			}
 		}
 	}
-	
+
 	return updated, nil
 }
 
@@ -544,26 +685,26 @@ func (s *GenericCrudService[T]) Delete(id uint) error {
 	if id == 0 {
 		return fmt.Errorf("invalid ID: %d", id)
 	}
-	
+
 	// Check if exists
 	_, err := s.GetByID(id)
 	if err != nil {
 		return err
 	}
-	
+
 	// Run before hook if set
 	if s.beforeDelete != nil {
 		if err := s.beforeDelete(id); err != nil {
 			return err
 		}
 	}
-	
+
 	// Delete using GORM (soft delete)
 	var model T
 	if _, err := facades.Orm().Query().Model(&model).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).Delete(&model); err != nil {
 		return fmt.Errorf("failed to delete %s: %w", s.BaseCrudService.tableName, err)
 	}
-	
+
 	// Run after hook if set
 	if s.afterDelete != nil {
 		if err := s.afterDelete(id); err != nil {
@@ -575,7 +716,7 @@ func (s *GenericCrudService[T]) Delete(id uint) error {
 			})
 		}
 	}
-	
+
 	return nil
 }
 
@@ -584,7 +725,7 @@ func (s *GenericCrudService[T]) Search(query string, req ListRequest) (*Paginate
 	if err := s.ValidateSearchQuery(query); err != nil {
 		return nil, err
 	}
-	
+
 	req.Search = query
 	return s.GetList(req)
 }
@@ -758,7 +899,7 @@ func (s *GenericCrudService[T]) BulkCreate(data []map[string]interface{}) ([]int
 	if err := s.ValidateBulkOperation([]uint{uint(len(data))}); err != nil {
 		return nil, err
 	}
-	
+
 	results := make([]interface{}, 0, len(data))
 	for _, item := range data {
 		result, err := s.Create(item)
@@ -767,7 +908,7 @@ func (s *GenericCrudService[T]) BulkCreate(data []map[string]interface{}) ([]int
 		}
 		results = append(results, result)
 	}
-	
+
 	return results, nil
 }
 
@@ -776,14 +917,14 @@ func (s *GenericCrudService[T]) BulkUpdate(ids []uint, data map[string]interface
 	if err := s.ValidateBulkOperation(ids); err != nil {
 		return err
 	}
-	
+
 	for _, id := range ids {
 		_, err := s.Update(id, data)
 		if err != nil {
 			return fmt.Errorf("bulk update failed for ID %d: %w", id, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -792,13 +933,13 @@ func (s *GenericCrudService[T]) BulkDelete(ids []uint) error {
 	if err := s.ValidateBulkOperation(ids); err != nil {
 		return err
 	}
-	
+
 	for _, id := range ids {
 		if err := s.Delete(id); err != nil {
 			return fmt.Errorf("bulk delete failed for ID %d: %w", id, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -846,7 +987,7 @@ func (s *GenericCrudService[T]) applyScopeFilter(ctx http.Context, query orm.Que
 	if !s.enableScopeFiltering || s.serviceRegistry == "" {
 		return query, nil
 	}
-	
+
 	scopeHelper := auth.GetScopeHelper()
 	return scopeHelper.ApplyScopeToQuery(ctx, query, s.serviceRegistry, action, s.scopeUserField)
 }
@@ -857,29 +998,35 @@ func (s *GenericCrudService[T]) BuildFilterQuery(query interface{}, filters map[
 	if !ok {
 		return query
 	}
-	
+
 	// Apply custom filters if set
 	if s.customFilters != nil {
 		return s.customFilters(q, filters)
 	}
-	
+
 	// Apply default filters
 	for field, value := range filters {
 		// Skip empty values
 		if value == nil || value == "" {
 			continue
 		}
-		
+
 		// Validate filter field
 		if !s.ValidateFilterField(field) {
 			continue
 		}
-		
+
 		// Apply filter based on type
 		switch v := value.(type) {
 		case string:
 			if v != "" {
-				q = q.Where(field+" = ?", v)
+				// Convert string boolean values to actual booleans for boolean fields
+				if (v == "true" || v == "false") && (strings.HasPrefix(field, "is_") || strings.HasPrefix(field, "has_") || field == "active" || field == "verified" || strings.HasSuffix(field, "_verified")) {
+					boolValue := v == "true"
+					q = q.Where(field+" = ?", boolValue)
+				} else {
+					q = q.Where(field+" = ?", v)
+				}
 			}
 		case int, int64, uint, uint64:
 			q = q.Where(field+" = ?", v)
@@ -893,7 +1040,7 @@ func (s *GenericCrudService[T]) BuildFilterQuery(query interface{}, filters map[
 			q = q.Where(field+" = ?", v)
 		}
 	}
-	
+
 	return q
 }
 
@@ -970,3 +1117,68 @@ func (s *GenericCrudService[T]) ValidateSearchQuery(query string) error {
 	return nil
 }
 
+// applyFieldMapping applies frontend->database field mapping to data
+func (s *GenericCrudService[T]) applyFieldMapping(data map[string]interface{}) map[string]interface{} {
+	// Get the mapping from the actual service if available
+	var mapping map[string]string
+	if s.actualService != nil {
+		if mappingProvider, ok := s.actualService.(interface {
+			GetColumnMapping() map[string]string
+		}); ok {
+			mapping = mappingProvider.GetColumnMapping()
+		}
+	}
+	
+	// If no mapping available, return data as-is
+	if mapping == nil || len(mapping) == 0 {
+		return data
+	}
+	
+	facades.Log().Debug("GenericCrudService applyFieldMapping", map[string]interface{}{
+		"service": s.tableName,
+		"mapping": mapping,
+		"originalData": data,
+	})
+	
+	// Apply mapping
+	result := make(map[string]interface{})
+	for key, value := range data {
+		// Check if this field has a mapping
+		if mappedKey, exists := mapping[key]; exists {
+			// Special handling for date fields that end with _at
+			if strings.HasSuffix(mappedKey, "_at") && value != nil && value != "" {
+				if dateStr, ok := value.(string); ok {
+					// Try parsing as YYYY-MM-DD format first
+					if parsedTime, err := time.Parse("2006-01-02", dateStr); err == nil {
+						result[mappedKey] = parsedTime
+					} else if parsedTime, err := time.Parse(time.RFC3339, dateStr); err == nil {
+						// Try parsing as RFC3339 format
+						result[mappedKey] = parsedTime
+					} else {
+						// If parsing fails, set to nil
+						result[mappedKey] = nil
+					}
+				} else {
+					result[mappedKey] = value
+				}
+			} else {
+				result[mappedKey] = value
+			}
+			facades.Log().Debug("Field mapped", map[string]interface{}{
+				"from": key,
+				"to": mappedKey,
+				"value": value,
+			})
+		} else {
+			// Keep unmapped fields as-is
+			result[key] = value
+		}
+	}
+	
+	facades.Log().Debug("GenericCrudService applyFieldMapping result", map[string]interface{}{
+		"service": s.tableName,
+		"mappedData": result,
+	})
+	
+	return result
+}

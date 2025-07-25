@@ -29,8 +29,8 @@ func Api(router route.Router) {
 
 	bookController := books.NewBookController()
 	authController := auth.NewAuthController()
-	rolesController := &roles.RolesController{}
-	permissionsController := &perimissions.PermissionsController{}
+	rolesController := roles.NewRolesController()
+	permissionsController := perimissions.NewPermissionsController()
 	searchController := controllers.NewSearchController()
 	messageController := messages.NewMessageController()
 	notificationController := messages.NewNotificationController()
@@ -40,10 +40,11 @@ func Api(router route.Router) {
 	router.Get("/books", bookController.Index)
 	router.Get("/books/search", bookController.Search) // Search endpoint (must be before {id})
 	router.Get("/books/{id}", bookController.Show)
-	router.Get("/books/isbn/{isbn}", bookController.GetByISBN)
-	router.Get("/books/author/{author}", bookController.GetByAuthor)
-	router.Get("/books/available", bookController.GetAvailable)
-	router.Get("/books/advanced", bookController.Advanced)
+	// Custom book routes - TODO: implement these in the controller
+	// router.Get("/books/isbn/{isbn}", bookController.GetByISBN)
+	// router.Get("/books/author/{author}", bookController.GetByAuthor)
+	router.Get("/books/available", bookController.Available)
+	// router.Get("/books/advanced", bookController.Advanced)
 
 	// Protected routes (require authentication)
 	router.Middleware(jwtAuth).Group(func(protectedRouter route.Router) {
@@ -54,6 +55,7 @@ func Api(router route.Router) {
 		protectedRouter.Post("/books", bookController.Store)
 		protectedRouter.Put("/books/{id}", bookController.Update)
 		protectedRouter.Delete("/books/{id}", bookController.Delete)
+		//Custom endpoints
 		protectedRouter.Post("/books/{id}/borrow", bookController.Borrow)
 		protectedRouter.Post("/books/{id}/return", bookController.Return)
 
@@ -62,7 +64,7 @@ func Api(router route.Router) {
 		protectedRouter.Post("/roles", rolesController.Store)
 		protectedRouter.Get("/roles/{id}", rolesController.Show)
 		protectedRouter.Put("/roles/{id}", rolesController.Update)
-		protectedRouter.Delete("/roles/{id}", rolesController.Destroy)
+		protectedRouter.Delete("/roles/{id}", rolesController.Delete)
 		protectedRouter.Put("/roles/{id}/permissions", rolesController.UpdatePermissions)
 
 		// Permission assignment routes
@@ -75,7 +77,7 @@ func Api(router route.Router) {
 		protectedRouter.Post("/users", userController.Store)
 		protectedRouter.Put("/users/{id}", userController.Update)
 		protectedRouter.Delete("/users/{id}", userController.Delete)
-		protectedRouter.Get("/users/roles", userController.GetRoles)
+		// protectedRouter.Get("/users/roles", userController.GetRoles) // TODO: implement
 
 		// Messaging routes
 		protectedRouter.Prefix("messages").Group(func(messageRouter route.Router) {

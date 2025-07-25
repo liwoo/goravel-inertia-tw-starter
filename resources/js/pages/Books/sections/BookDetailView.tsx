@@ -45,6 +45,7 @@ export function BookDetailView({
       'AVAILABLE': { color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', icon: <CheckCircle className="h-3 w-3" /> },
       'BORROWED': { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400', icon: <Clock className="h-3 w-3" /> },
       'MAINTENANCE': { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', icon: <XCircle className="h-3 w-3" /> },
+      'RESERVED': { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400', icon: <BookOpen className="h-3 w-3" /> },
     };
 
     const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400', icon: null };
@@ -167,11 +168,11 @@ export function BookDetailView({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Created</p>
-              <p className="font-medium text-sm text-foreground">{formatDate(book.createdAt)}</p>
+              <p className="font-medium text-sm text-foreground">{formatDate(book.createdAt || book.created_at)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Last Updated</p>
-              <p className="font-medium text-sm text-foreground">{formatDate(book.updatedAt)}</p>
+              <p className="font-medium text-sm text-foreground">{formatDate(book.updatedAt || book.updated_at)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Book ID</p>

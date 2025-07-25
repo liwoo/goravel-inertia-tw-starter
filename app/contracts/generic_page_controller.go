@@ -87,8 +87,10 @@ func (c *GenericPageController) Index(ctx http.Context) http.Response {
 	// 4. Fetch Data
 	result, err := c.service.GetList(*req)
 	if err != nil {
+		fmt.Printf("DEBUG GenericPageController: GetList error: %v\n", err)
 		result = c.emptyResult(req)
 	}
+	fmt.Printf("DEBUG GenericPageController: GetList result - Total: %d, Data count: %d\n", result.Total, len(result.Data))
 	
 	// 5. Get Statistics (always get basic counts for filters, full stats if permitted)
 	var stats map[string]interface{}

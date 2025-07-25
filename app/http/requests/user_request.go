@@ -2,7 +2,6 @@ package requests
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/validation"
 )
 
 // UserCreateRequest handles validation for creating users
@@ -61,13 +60,10 @@ func (r *UserCreateRequest) Attributes(ctx http.Context) map[string]string {
 }
 
 // PrepareForValidation allows you to modify the data before validation
-func (r *UserCreateRequest) PrepareForValidation(ctx http.Context, data validation.Data) error {
+func (r *UserCreateRequest) PrepareForValidation(ctx http.Context) error {
 	// Set default values if not provided
-	if _, exists := data.Get("is_active"); !exists {
-		data.Set("is_active", true)
-	}
-	if _, exists := data.Get("is_super_admin"); !exists {
-		data.Set("is_super_admin", false)
+	if !r.IsActive {
+		r.IsActive = true
 	}
 	return nil
 }
@@ -143,7 +139,7 @@ func (r *UserUpdateRequest) Attributes(ctx http.Context) map[string]string {
 }
 
 // PrepareForValidation allows you to modify the data before validation
-func (r *UserUpdateRequest) PrepareForValidation(ctx http.Context, data validation.Data) error {
+func (r *UserUpdateRequest) PrepareForValidation(ctx http.Context) error {
 	// Nothing to prepare for updates
 	return nil
 }
@@ -170,4 +166,18 @@ func (r *UserUpdateRequest) ToUpdateData() map[string]interface{} {
 	}
 	
 	return data
+}
+// PassedValidation is called after validation passes
+func (r *UserCreateRequest) PassedValidation(ctx http.Context) error {
+	return nil
+}
+
+// PassedValidation is called after validation passes
+func (r *UserUpdateRequest) PassedValidation(ctx http.Context) error {
+	return nil
+}
+
+// GetResourceID returns the resource ID for update
+func (r *UserUpdateRequest) GetResourceID() interface{} {
+	return r.ID
 }

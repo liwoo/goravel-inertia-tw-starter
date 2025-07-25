@@ -1,273 +1,321 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"strings"
-	
+
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
 	"players/app/contracts"
 	"players/app/models"
 )
 
-// RoleService provides business logic for roles
+// RoleService implements role-specific business logic using the builder pattern
 type RoleService struct {
-	*contracts.GenericCrudService[models.Role]
+	contracts.CrudServiceContract
 }
 
-// NewRoleService creates a new instance of RoleService
+// NewRoleService creates a new role service using the builder pattern
 func NewRoleService() *RoleService {
-	// Create the generic service
-	genericService := contracts.NewGenericCrudService[models.Role]("roles", "id")
-
-	// Configure the service
-	genericService.
-		SetSearchFields("name", "description", "slug").
-		SetSortFields("id", "name", "slug", "level", "is_active", "created_at", "updated_at").
-		SetFilterFields("is_active", "type", "level").
-		SetCustomFilters(func(query orm.Query, filters map[string]interface{}) orm.Query {
-			for key, value := range filters {
-				switch key {
-				case "is_active":
-					// Handle boolean conversion for is_active
-					switch v := value.(type) {
-					case bool:
-						query = query.Where("is_active = ?", v)
-					case string:
-						if v == "true" {
-							query = query.Where("is_active = ?", true)
-						} else if v == "false" {
-							query = query.Where("is_active = ?", false)
-						}
-					}
-				case "type":
-					// Handle role type filtering
-					switch value {
-					case "super_admin":
-						query = query.Where("slug = ?", "super-admin")
-					case "admin":
-						query = query.Where("slug = ?", "admin")
-					case "user":
-						// Filter for user-type roles (not admin or super-admin)
-						query = query.Where("slug NOT IN ?", []string{"super-admin", "admin"})
-					}
-				case "level":
-					query = query.Where("level = ?", value)
-				}
-			}
-			return query
+	// Build the service with all required configurations
+	service := contracts.NewServiceBuilder[models.Role]("role", "id").
+		WithSearchFields("name", "slug", "description").  // REQUIRED
+		WithSortFields("id", "name", "slug", "created_at", "updated_at").  // REQUIRED
+		WithFilterFields("slug", "is_active", "level", "name", "parent_id").  // REQUIRED
+		WithValidationRules(map[string]interface{}{   // REQUIRED
+			"name":        "required|string|max:255",
+			"slug":        "required|string|max:100|unique:roles,slug",
+			"description": "string|max:500",
+			"is_active":   "boolean",
 		}).
-		SetBeforeCreate(func(data map[string]interface{}) error {
-			// Validate required fields before creation
-			name, nameOk := data["name"].(string)
-			if !nameOk || strings.TrimSpace(name) == "" {
-				return fmt.Errorf("role name is required and cannot be empty")
-			}
-			
-			slug, slugOk := data["slug"].(string) 
-			if !slugOk || strings.TrimSpace(slug) == "" {
-				// Auto-generate slug from name if not provided
-				slug = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(name), " ", "-"))
-				if slug == "" {
-					return fmt.Errorf("role slug is required and cannot be empty")
+		WithRelations("Permissions", "Creator", "Updater").  // Optional
+		WithDefaultSort("name", "ASC").  // Optional
+		WithSoftDeletes().  // Optional
+		WithScopeFiltering("roles", "created_by").  // Optional
+		WithBeforeCreate(func(data map[string]interface{}) error {  // Optional
+			// Generate slug from name if not provided
+			if _, exists := data["slug"]; !exists {
+				if name, ok := data["name"].(string); ok {
+					data["slug"] = strings.ToLower(strings.ReplaceAll(name, " ", "_"))
 				}
-				data["slug"] = slug
 			}
 			
-			// Set default status if not provided
+			// Set default is_active status
 			if _, exists := data["is_active"]; !exists {
 				data["is_active"] = true
 			}
 			
-			// Set created_by if provided (from context)
-			if createdBy, exists := data["created_by"]; exists && createdBy != nil {
-				data["created_by"] = createdBy
+			return nil
+		}).
+		WithBeforeUpdate(func(id uint, data map[string]interface{}) error {  // Optional
+			// Don't allow changing slug for system roles
+			// Get the role directly from database to check if it's a system role
+			var role models.Role
+			err := facades.Orm().Query().Model(&models.Role{}).Where("id = ?", id).First(&role)
+			if err == nil && isSystemRole(role.Slug) {
+				delete(data, "slug")
+				delete(data, "is_active") // System roles should always be active
 			}
 			
 			return nil
-		})
-
-	service := &RoleService{
-		GenericCrudService: genericService,
-	}
-
-	// Set the actual service reference for method resolution
-	genericService.SetActualService(service)
+		}).
+		WithCustomFilters(func(query orm.Query, filters map[string]interface{}) orm.Query {  // Optional
+			// Handle special role filters
+			for key, value := range filters {
+				switch key {
+				case "level_min":
+					if level, ok := value.(float64); ok {
+						query = query.Where("level >= ?", int(level))
+					} else if levelStr, ok := value.(string); ok && levelStr != "" {
+						query = query.Where("level >= ?", levelStr)
+					}
+				case "level_max":
+					if level, ok := value.(float64); ok {
+						query = query.Where("level <= ?", int(level))
+					} else if levelStr, ok := value.(string); ok && levelStr != "" {
+						query = query.Where("level <= ?", levelStr)
+					}
+				case "has_parent":
+					if hasParent, ok := value.(string); ok {
+						if hasParent == "true" {
+							query = query.Where("parent_id IS NOT NULL")
+						} else if hasParent == "false" {
+							query = query.Where("parent_id IS NULL")
+						}
+					}
+				}
+			}
+			return query
+		}).
+		Build()  // Returns a fully configured CrudServiceContract
 	
-	// Set a custom query to show all roles (including inactive ones) by default
-	// This prevents the issue where deleted roles "disappear" from the list
-	genericService.SetCustomQuery(func(query orm.Query) orm.Query {
-		// Don't filter by is_active by default - let the frontend handle this
-		return query
-	})
-
-	return service
+	return &RoleService{
+		CrudServiceContract: service,
+	}
 }
 
-// List returns paginated roles
-func (s *RoleService) List(page, pageSize int, sort, direction, search string, filters map[string]interface{}) (*contracts.PaginatedResult, error) {
-	// Build list request
-	req := contracts.ListRequest{
-		Page:      page,
-		PageSize:  pageSize,
-		Sort:      sort,
-		Direction: direction,
-		Search:    search,
-		Filters:   filters,
-	}
+// Role-specific methods beyond basic CRUD
 
-	// Use the generic service's GetList method
-	result, err := s.GenericCrudService.GetList(req)
+// GetBySlug retrieves a role by slug
+func (s *RoleService) GetBySlug(slug string) (*models.Role, error) {
+	var role models.Role
+	err := facades.Orm().Query().
+		Model(&models.Role{}).
+		Where("slug = ?", slug).
+		With("Permissions").
+		With("CreatedBy").
+		With("UpdatedBy").
+		First(&role)
+	
 	if err != nil {
 		return nil, err
 	}
 	
-	// Process each item to add computed fields
-	processedData := make([]interface{}, len(result.Data))
-	for i, item := range result.Data {
-		processedData[i] = s.ProcessListItem(item)
-	}
-	result.Data = processedData
-	
-	return result, nil
+	return &role, nil
 }
 
-// MapSortField maps frontend field names to database column names
-func (s *RoleService) MapSortField(frontendField string) (string, bool) {
-	// Map camelCase to snake_case
-	fieldMap := map[string]string{
-		"createdAt": "created_at",
-		"updatedAt": "updated_at",
-		"isActive":  "is_active",
+// GetActiveRoles retrieves all active roles
+func (s *RoleService) GetActiveRoles(req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	// Add is_active filter to the request
+	if req.Filters == nil {
+		req.Filters = make(map[string]interface{})
 	}
-
-	if dbField, exists := fieldMap[frontendField]; exists {
-		return dbField, true
-	}
-
-	// For other fields, check if they're valid
-	validFields := []string{"id", "name", "slug", "description", "level", "is_active", "created_at", "updated_at"}
-	for _, field := range validFields {
-		if field == frontendField {
-			return frontendField, true
-		}
-	}
-
-	return "", false
+	req.Filters["is_active"] = true
+	
+	return s.GetList(req)
 }
 
-// ProcessListItem processes each role item for the list view
-func (s *RoleService) ProcessListItem(item interface{}) interface{} {
-	role := item.(*models.Role)
-
-	// Count users with this role
-	var userCount int64
-	facades.Orm().Query().Model(&models.UserRole{}).
-		Where("role_id = ? AND is_active = ?", role.ID, true).
-		Count(&userCount)
-
-	// Return role with additional computed fields
-	return map[string]interface{}{
-		"id":          role.ID,
-		"name":        role.Name,
-		"slug":        role.Slug,
-		"description": role.Description,
-		"level":       role.Level,
-		"is_active":   role.IsActive,
-		"users_count": userCount,
-		"created_at":  role.CreatedAt,
-		"updated_at":  role.UpdatedAt,
-	}
-}
-
-// ValidateCreate validates role creation
-func (s *RoleService) ValidateCreate(data map[string]interface{}) error {
-	// Validate name
-	name, ok := data["name"].(string)
-	if !ok || strings.TrimSpace(name) == "" {
-		return fmt.Errorf("role name is required")
+// AssignPermissions assigns permissions to a role
+func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint, scopes map[uint]string) error {
+	// Get the role
+	roleInterface, err := s.GetByID(roleID)
+	if err != nil {
+		return fmt.Errorf("role not found: %v", err)
 	}
 	
-	// Validate slug
-	slug, ok := data["slug"].(string)
-	if !ok || strings.TrimSpace(slug) == "" {
-		return fmt.Errorf("role slug is required")
+	role, ok := roleInterface.(*models.Role)
+	if !ok {
+		return errors.New("invalid role type")
 	}
 	
-	// Check if role with this slug already exists
-	var existingRole models.Role
-	err := facades.Orm().Query().Where("slug = ?", slug).First(&existingRole)
-	if err == nil && existingRole.ID > 0 {
-		return fmt.Errorf("a role with this slug already exists")
+	// Check if it's a system role
+	if isSystemRole(role.Slug) {
+		return errors.New("cannot modify permissions for system roles")
 	}
 	
-	// Validate level if provided
-	if level, ok := data["level"]; ok {
-		switch v := level.(type) {
-		case float64:
-			if v < 0 || v > 100 {
-				return fmt.Errorf("level must be between 0 and 100")
-			}
-		case int:
-			if v < 0 || v > 100 {
-				return fmt.Errorf("level must be between 0 and 100")
-			}
-		}
+	// Begin transaction
+	tx, err := facades.Orm().Query().Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %v", err)
 	}
 	
-	return nil
-}
-
-// ValidateUpdate validates role updates  
-func (s *RoleService) ValidateUpdate(id uint, data map[string]interface{}) error {
-	// If name is being updated, validate it
-	if name, ok := data["name"]; ok {
-		nameStr, ok := name.(string)
-		if !ok || strings.TrimSpace(nameStr) == "" {
-			return fmt.Errorf("role name cannot be empty")
-		}
+	// Remove existing permissions
+	_, err = tx.Table("role_permissions").
+		Where("role_id = ?", roleID).
+		Delete(&models.RolePermission{})
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to remove existing permissions: %v", err)
 	}
 	
-	// If slug is being updated, validate it
-	if slug, ok := data["slug"]; ok {
-		slugStr, ok := slug.(string)
-		if !ok || strings.TrimSpace(slugStr) == "" {
-			return fmt.Errorf("role slug cannot be empty")
+	// Add new permissions
+	for _, permID := range permissionIDs {
+		scope := "by_all" // Default scope
+		if s, exists := scopes[permID]; exists {
+			scope = s
 		}
 		
-		// Check if another role already has this slug
-		var existingRole models.Role
-		err := facades.Orm().Query().
-			Where("slug = ? AND id != ?", slugStr, id).
-			First(&existingRole)
-		if err == nil && existingRole.ID > 0 {
-			return fmt.Errorf("a role with this slug already exists")
+		rolePermission := models.RolePermission{
+			RoleID:       roleID,
+			PermissionID: permID,
+			Scope:        scope,
+		}
+		
+		if err := tx.Create(&rolePermission); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to assign permission: %v", err)
 		}
 	}
 	
-	// Validate level if provided
-	if level, ok := data["level"]; ok {
-		switch v := level.(type) {
-		case float64:
-			if v < 0 || v > 100 {
-				return fmt.Errorf("level must be between 0 and 100")
-			}
-		case int:
-			if v < 0 || v > 100 {
-				return fmt.Errorf("level must be between 0 and 100")
-			}
-		}
-	}
+	// Commit transaction
+	tx.Commit()
 	
 	return nil
 }
 
-// GetSearchableFields returns the fields that can be searched
-func (s *RoleService) GetSearchableFields() []string {
-	return []string{"name", "description", "slug"}
+// GetPermissionsMatrix returns all permissions organized by service and action
+func (s *RoleService) GetPermissionsMatrix() (map[string]interface{}, error) {
+	var permissions []models.Permission
+	err := facades.Orm().Query().
+		Model(&models.Permission{}).
+		With("CreatedBy").
+		Find(&permissions)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	// Organize permissions by service and action
+	matrix := make(map[string]map[string]*models.Permission)
+	services := make(map[string]bool)
+	actions := make(map[string]bool)
+	
+	for i := range permissions {
+		perm := &permissions[i]
+		
+		// Parse the slug to get service and action
+		parts := strings.Split(perm.Slug, "_")
+		if len(parts) >= 2 {
+			service := parts[0]
+			action := strings.Join(parts[1:], "_")
+			
+			if matrix[service] == nil {
+				matrix[service] = make(map[string]*models.Permission)
+			}
+			
+			matrix[service][action] = perm
+			services[service] = true
+			actions[action] = true
+		}
+	}
+	
+	// Convert to arrays for frontend
+	serviceList := make([]string, 0, len(services))
+	for service := range services {
+		serviceList = append(serviceList, service)
+	}
+	
+	actionList := make([]string, 0, len(actions))
+	for action := range actions {
+		actionList = append(actionList, action)
+	}
+	
+	return map[string]interface{}{
+		"matrix":      matrix,
+		"services":    serviceList,
+		"actions":     actionList,
+		"permissions": permissions,
+	}, nil
 }
 
-// GetSortableFields returns the fields that can be sorted
-func (s *RoleService) GetSortableFields() []string {
-	return []string{"id", "name", "slug", "level", "is_active", "created_at", "updated_at"}
+// GetRolePermissions gets permissions for a specific role
+func (s *RoleService) GetRolePermissions(roleID uint) ([]models.RolePermission, error) {
+	var rolePermissions []models.RolePermission
+	err := facades.Orm().Query().
+		Model(&models.RolePermission{}).
+		Where("role_id = ?", roleID).
+		With("Permission").
+		Find(&rolePermissions)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	return rolePermissions, nil
+}
+
+// CloneRole creates a copy of an existing role with a new name
+func (s *RoleService) CloneRole(sourceRoleID uint, newName string, newSlug string) (*models.Role, error) {
+	// Get source role
+	sourceInterface, err := s.GetByID(sourceRoleID)
+	if err != nil {
+		return nil, fmt.Errorf("source role not found: %v", err)
+	}
+	
+	sourceRole, ok := sourceInterface.(*models.Role)
+	if !ok {
+		return nil, errors.New("invalid role type")
+	}
+	
+	// Create new role
+	newRoleData := map[string]interface{}{
+		"name":        newName,
+		"slug":        newSlug,
+		"description": fmt.Sprintf("Cloned from %s", sourceRole.Name),
+		"is_active":   true,
+	}
+	
+	newRoleInterface, err := s.Create(newRoleData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new role: %v", err)
+	}
+	
+	newRole, ok := newRoleInterface.(*models.Role)
+	if !ok {
+		return nil, errors.New("invalid new role type")
+	}
+	
+	// Copy permissions
+	sourcePermissions, err := s.GetRolePermissions(sourceRoleID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get source permissions: %v", err)
+	}
+	
+	permissionIDs := make([]uint, len(sourcePermissions))
+	scopes := make(map[uint]string)
+	
+	for i, perm := range sourcePermissions {
+		permissionIDs[i] = perm.PermissionID
+		scopes[perm.PermissionID] = perm.Scope
+	}
+	
+	if err := s.AssignPermissions(newRole.ID, permissionIDs, scopes); err != nil {
+		// Rollback by deleting the new role
+		s.Delete(newRole.ID)
+		return nil, fmt.Errorf("failed to copy permissions: %v", err)
+	}
+	
+	return newRole, nil
+}
+
+// isSystemRole checks if a role is a system role that shouldn't be modified
+func isSystemRole(slug string) bool {
+	systemRoles := []string{"super_admin", "admin", "member"}
+	for _, sysRole := range systemRoles {
+		if slug == sysRole {
+			return true
+		}
+	}
+	return false
 }

@@ -10,6 +10,7 @@ export interface Book extends BaseModel {
   price: number;
   status: BookStatus;
   publishedAt?: string;
+  published_at?: string; // Backend might send snake_case
   tags?: string[];
   // Additional computed fields that might come from the backend
   isAvailable?: boolean;
@@ -19,7 +20,7 @@ export interface Book extends BaseModel {
 }
 
 // Book status enum matching backend validation
-export type BookStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE';
+export type BookStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'RESERVED';
 
 // Book creation data (matches BookCreateRequest)
 export interface BookCreateData {
@@ -338,7 +339,7 @@ export const BOOK_VALIDATION_RULES: BookValidationRules = {
     type: 'number',
   },
   status: {
-    values: ['AVAILABLE', 'BORROWED', 'MAINTENANCE'],
+    values: ['AVAILABLE', 'BORROWED', 'MAINTENANCE', 'RESERVED'],
   },
   description: {
     maxLength: 1000,
@@ -368,5 +369,11 @@ export const BOOK_STATUS_CONFIG = {
     color: 'orange',
     icon: '🔧',
     description: 'Book is under maintenance',
+  },
+  RESERVED: {
+    label: 'Reserved',
+    color: 'purple',
+    icon: '🔒',
+    description: 'Book is reserved',
   },
 } as const;

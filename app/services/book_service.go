@@ -1,244 +1,329 @@
 package services
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
 	"players/app/contracts"
 	"players/app/models"
 )
 
-// BookService - Simplified version using generic CRUD service
-// From ~600 lines to ~150 lines!
+// BookService implements book-specific business logic using the builder pattern
 type BookService struct {
-	*contracts.GenericCrudService[models.Book]
+	contracts.CrudServiceContract
+	baseService contracts.CrudServiceContract
 }
 
-// NewBookService creates a new simplified book service
+// NewBookService creates a new book service using the builder pattern
 func NewBookService() *BookService {
-	// Create the generic service
-	genericService := contracts.NewGenericCrudService[models.Book]("book", "id")
-
-	// Configure the service
-	genericService.
-		SetSearchFields("title", "author", "isbn", "description").
-		SetSortFields("id", "title", "author", "price", "status", "published_at", "created_at", "updated_at").
-		SetFilterFields("status", "author", "isbn", "is_available").
-		EnableScopeFiltering(auth.ServiceBooks, "created_by"). // Enable scope filtering on created_by field
-		SetValidationRules(map[string]interface{}{
-			"title":        "required|string|max:255",
-			"author":       "required|string|max:255",
-			"isbn":         "required|string|max:20",
-			"description":  "string|max:1000",
-			"price":        "numeric|min:0",
-			"status":       "string|in:AVAILABLE,BORROWED,MAINTENANCE",
-			"published_at": "date",
+	// Build the service with all required configurations
+	service := contracts.NewServiceBuilder[models.Book]("book", "id").
+		WithSearchFields("title", "author", "isbn", "description", "tags").                           // REQUIRED
+		WithSortFields("id", "title", "author", "price", "created_at", "updated_at", "published_at"). // REQUIRED
+		WithFilterFields("status", "author", "tags").                                                 // REQUIRED
+		WithValidationRules(map[string]interface{}{                                                   // REQUIRED
+			"title":       "required|string|max:255",
+			"author":      "required|string|max:100",
+			"isbn":        "required|string|max:20",
+			"status":      "required|string|in:AVAILABLE,BORROWED,MAINTENANCE,RESERVED",
+			"price":       "numeric|min:0",
+			"publishedAt": "date",
+			"description": "string|max:1000",
+			"tags":        "array",
+			"tags.*":      "string|max:50",
 		}).
-		SetBeforeCreate(func(data map[string]interface{}) error {
-			// Remove tags field as it's not a database column (has gorm:"-" tag)
-			delete(data, "tags")
-
-			// Set default status if not provided
-			if _, exists := data["status"]; !exists {
-				data["status"] = "AVAILABLE"
-			}
-			if _, exists := data["is_available"]; !exists {
-				data["is_available"] = true
-			}
-
-			// Set created_by if provided (from context)
-			if createdBy, exists := data["created_by"]; exists && createdBy != nil {
-				data["created_by"] = createdBy
-			}
-
-			// Check ISBN uniqueness
-			var count int64
-			err := facades.Orm().Query().Model(&models.Book{}).
-				Where("isbn = ?", data["isbn"]).
-				Count(&count)
-			if err != nil {
-				return fmt.Errorf("failed to check ISBN uniqueness: %w", err)
-			}
-			if count > 0 {
-				return fmt.Errorf("ISBN already exists")
+		WithRelations("Creator", "Updater").                       // Optional
+		WithDefaultSort("created_at", "DESC").                     // Optional
+		WithSoftDeletes().                                         // Optional
+		WithScopeFiltering("books", "created_by").                 // Optional
+		WithBeforeCreate(func(data map[string]interface{}) error { // Optional
+			// Handle tags array to JSON conversion
+			if tags, exists := data["tags"]; exists && tags != nil {
+				if tagsArray, ok := tags.([]interface{}); ok && len(tagsArray) > 0 {
+					// Convert []interface{} to []string
+					stringTags := make([]string, len(tagsArray))
+					for i, tag := range tagsArray {
+						stringTags[i] = fmt.Sprintf("%v", tag)
+					}
+					tagsJSON, _ := json.Marshal(stringTags)
+					data["tags"] = string(tagsJSON)
+				} else if tagsArray, ok := tags.([]string); ok && len(tagsArray) > 0 {
+					tagsJSON, _ := json.Marshal(tagsArray)
+					data["tags"] = string(tagsJSON)
+				} else {
+					data["tags"] = "[]"
+				}
+			} else {
+				data["tags"] = "[]"
 			}
 
 			return nil
 		}).
-		SetBeforeUpdate(func(id uint, data map[string]interface{}) error {
-			// Remove tags field as it's not a database column (has gorm:"-" tag)
-			delete(data, "tags")
-
-			// Check ISBN uniqueness if being changed
-			if isbn, ok := data["isbn"].(string); ok {
-				var count int64
-				err := facades.Orm().Query().Model(&models.Book{}).
-					Where("isbn = ? AND id != ?", isbn, id).
-					Count(&count)
-				if err != nil {
-					return fmt.Errorf("failed to check ISBN uniqueness: %w", err)
-				}
-				if count > 0 {
-					return fmt.Errorf("ISBN already exists")
+		WithBeforeUpdate(func(id uint, data map[string]interface{}) error { // Optional
+			// Handle tags array to JSON conversion
+			if tags, exists := data["tags"]; exists && tags != nil {
+				if tagsArray, ok := tags.([]interface{}); ok && len(tagsArray) > 0 {
+					// Convert []interface{} to []string
+					stringTags := make([]string, len(tagsArray))
+					for i, tag := range tagsArray {
+						stringTags[i] = fmt.Sprintf("%v", tag)
+					}
+					tagsJSON, _ := json.Marshal(stringTags)
+					data["tags"] = string(tagsJSON)
+				} else if tagsArray, ok := tags.([]string); ok && len(tagsArray) > 0 {
+					tagsJSON, _ := json.Marshal(tagsArray)
+					data["tags"] = string(tagsJSON)
+				} else {
+					data["tags"] = "[]"
 				}
 			}
+
 			return nil
 		}).
-		SetCustomSearch(func(query orm.Query, search string) orm.Query {
-			searchValue := "%" + search + "%"
-			return query.Where("title LIKE ? OR author LIKE ? OR isbn LIKE ? OR description LIKE ?",
-				searchValue, searchValue, searchValue, searchValue)
-		}).
-		SetCustomFilters(func(query orm.Query, filters map[string]interface{}) orm.Query {
-			fmt.Printf("DEBUG BookService.CustomFilters: Received filters=%+v\n", filters)
-			for field, value := range filters {
-				switch field {
-				case "status":
-					query = query.Where("status = ?", value)
-				case "author":
-					query = query.Where("author = ?", value)
-				case "minPrice":
-					if price, ok := value.(float64); ok {
-						query = query.Where("price >= ?", price)
-					}
-				case "maxPrice":
-					if price, ok := value.(float64); ok {
-						query = query.Where("price <= ?", price)
-					}
-				case "is_available":
-					query = query.Where("is_available = ?", value)
-				}
-			}
-			return query
+		Build() // Returns a fully configured CrudServiceContract
+
+	bookServiceInstance := &BookService{
+		CrudServiceContract: service,
+		baseService:         service,
+	}
+
+	if setter, ok := service.(interface {
+		SetActualService(interface{})
+	}); ok {
+		setter.SetActualService(bookServiceInstance)
+	} else {
+		facades.Log().Error("BookService: Failed to cast service to SetActualService interface", map[string]interface{}{
+			"serviceType": fmt.Sprintf("%T", service),
 		})
-
-	service := &BookService{
-		GenericCrudService: genericService,
 	}
 
-	// Set the actual service reference so method resolution works correctly
-	genericService.SetActualService(service)
-
-	// Register service
-	contracts.MustRegisterCrudService("books", service)
-
-	return service
+	return bookServiceInstance
 }
 
-// MapSortField maps frontend field names to database field names
-// This handles camelCase to snake_case conversion
+// Override GetColumnMapping to include book-specific mappings
+func (s *BookService) GetColumnMapping() map[string]string {
+	mapping := s.baseService.GetColumnMapping()
+	// Add book-specific mappings
+	mapping["publishedAt"] = "published_at"
+	mapping["createdAt"] = "created_at"
+	mapping["updatedAt"] = "updated_at"
+	mapping["title"] = "title"
+	mapping["author"] = "author"
+	mapping["price"] = "price"
+	return mapping
+}
+
+// Override MapSortField to handle frontend field names
 func (s *BookService) MapSortField(frontendField string) (string, bool) {
-	fmt.Printf("DEBUG BookService.MapSortField: Input field='%s'\n", frontendField)
+	// Check if we have a mapping for this field
+	mapping := s.GetColumnMapping()
 
-	// Map camelCase fields to snake_case
-	fieldMap := map[string]string{
-		"publishedAt": "published_at",
-		"createdAt":   "created_at",
-		"updatedAt":   "updated_at",
-		"isAvailable": "is_available",
-	}
-
-	// Check if we have a mapping
-	if dbField, exists := fieldMap[frontendField]; exists {
-		// Validate the mapped field
-		if s.ValidateSortField(dbField) {
-			return dbField, true
+	if dbField, exists := mapping[frontendField]; exists {
+		// Check if the mapped field is sortable
+		sortableFields := s.baseService.GetSortableFields()
+		for _, field := range sortableFields {
+			if field == dbField {
+				return dbField, true
+			}
 		}
-		// If validation failed, return false
-		return "", false
 	}
-	// Otherwise delegate to the base implementation
-	return s.GenericCrudService.MapSortField(frontendField)
+
+	// If no mapping exists, check if the field itself is sortable
+	sortableFields := s.baseService.GetSortableFields()
+	for _, field := range sortableFields {
+		if field == frontendField {
+			return frontendField, true
+		}
+	}
+
+	// Field is not sortable
+	return "", false
 }
 
-// Custom methods beyond basic CRUD
+// ValidateSortField validates if a field can be sorted
+func (s *BookService) ValidateSortField(field string) bool {
+	// Check if the field is in our sortable fields list
+	sortableFields := s.baseService.GetSortableFields()
+	for _, sortableField := range sortableFields {
+		if sortableField == field {
+			return true
+		}
+	}
+	return false
+}
+
+// ValidateSortDirection validates sort direction
+func (s *BookService) ValidateSortDirection(direction string) bool {
+	// Standard validation for ASC/DESC (case insensitive)
+	upper := strings.ToUpper(direction)
+	return upper == "ASC" || upper == "DESC"
+}
+
+// GetDefaultSort returns the default sort configuration
+func (s *BookService) GetDefaultSort() (string, string) {
+	// Return default sort: created_at DESC
+	return "created_at", "DESC"
+}
+
+// Book-specific methods beyond basic CRUD
 
 // GetByISBN retrieves a book by ISBN
 func (s *BookService) GetByISBN(isbn string) (*models.Book, error) {
 	var book models.Book
-	if err := facades.Orm().Query().Where("isbn = ?", isbn).First(&book); err != nil {
-		return nil, fmt.Errorf("book not found with ISBN %s: %w", isbn, err)
+	err := facades.Orm().Query().
+		Model(&models.Book{}).
+		Where("isbn = ?", isbn).
+		With("Creator").
+		With("Updater").
+		First(&book)
+
+	if err != nil {
+		return nil, err
 	}
+
 	return &book, nil
 }
 
 // GetByAuthor retrieves books by author with pagination
 func (s *BookService) GetByAuthor(author string, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	// Add author filter
-	filters := map[string]interface{}{
-		"author": author,
+	// Add author filter to the request
+	if req.Filters == nil {
+		req.Filters = make(map[string]interface{})
 	}
-	return s.GetListAdvanced(req, filters)
+	req.Filters["author"] = author
+
+	return s.GetList(req)
 }
 
-// GetAvailable retrieves available books with pagination
+// GetAvailable retrieves all available books
 func (s *BookService) GetAvailable(req contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	// Add availability filter
-	filters := map[string]interface{}{
-		"is_available": true,
-		"status":       "available",
+	// Add status filter to the request
+	if req.Filters == nil {
+		req.Filters = make(map[string]interface{})
 	}
-	return s.GetListAdvanced(req, filters)
+	req.Filters["status"] = "AVAILABLE"
+
+	return s.GetList(req)
 }
 
-// BorrowBook marks a book as borrowed
+// BorrowBook updates book status to borrowed
 func (s *BookService) BorrowBook(id uint) error {
-	book, err := s.GetByID(id)
+	// Get the book first to check if it's available
+	bookInterface, err := s.GetByID(id)
 	if err != nil {
 		return err
 	}
 
-	bookModel := book.(*models.Book)
-	if bookModel.Status != "available" {
-		return fmt.Errorf("book is not available for borrowing")
+	book, ok := bookInterface.(*models.Book)
+	if !ok {
+		return errors.New("invalid book type")
 	}
 
-	// Update book status
+	if book.Status != "AVAILABLE" {
+		return errors.New("book is not available for borrowing")
+	}
+
+	// Update the status
 	updateData := map[string]interface{}{
-		"status":       "borrowed",
-		"is_available": false,
+		"status": "BORROWED",
 	}
 
 	_, err = s.Update(id, updateData)
 	return err
 }
 
-// ReturnBook marks a book as returned
+// ReturnBook updates book status back to available
 func (s *BookService) ReturnBook(id uint) error {
-	book, err := s.GetByID(id)
+	// Get the book first to check if it's borrowed
+	bookInterface, err := s.GetByID(id)
 	if err != nil {
 		return err
 	}
 
-	bookModel := book.(*models.Book)
-	if bookModel.Status != "borrowed" {
-		return fmt.Errorf("book is not currently borrowed")
+	book, ok := bookInterface.(*models.Book)
+	if !ok {
+		return errors.New("invalid book type")
 	}
 
-	// Update book status
+	if book.Status != "BORROWED" {
+		return errors.New("book is not currently borrowed")
+	}
+
+	// Update the status
 	updateData := map[string]interface{}{
-		"status":       "available",
-		"is_available": true,
+		"status": "AVAILABLE",
 	}
 
 	_, err = s.Update(id, updateData)
 	return err
 }
 
-// Contract method implementations
-func (s *BookService) GetColumnMapping() map[string]string {
-	return map[string]string{
-		"id":          "id",
-		"title":       "title",
-		"author":      "author",
-		"isbn":        "isbn",
-		"price":       "price",
-		"publishedAt": "published_at",
-		"createdAt":   "created_at",
-		"updatedAt":   "updated_at",
-		"isAvailable": "is_available",
-		"status":      "status",
+// GetBookStatistics returns statistics about books
+func (s *BookService) GetBookStatistics() (map[string]interface{}, error) {
+	var stats struct {
+		TotalBooks       int64
+		AvailableBooks   int64
+		BorrowedBooks    int64
+		MaintenanceBooks int64
+		TotalValue       float64
+		AveragePrice     float64
 	}
+
+	// Get total books
+	facades.Orm().Query().Model(&models.Book{}).Count(&stats.TotalBooks)
+
+	// Get available books
+	facades.Orm().Query().Model(&models.Book{}).Where("status = ?", "AVAILABLE").Count(&stats.AvailableBooks)
+
+	// Get borrowed books
+	facades.Orm().Query().Model(&models.Book{}).Where("status = ?", "BORROWED").Count(&stats.BorrowedBooks)
+
+	// Get maintenance books
+	facades.Orm().Query().Model(&models.Book{}).Where("status = ?", "MAINTENANCE").Count(&stats.MaintenanceBooks)
+
+	// Get total value
+	facades.Orm().Query().Model(&models.Book{}).
+		Select("SUM(price) as total").
+		Pluck("total", &stats.TotalValue)
+
+	// Calculate average price
+	if stats.TotalBooks > 0 {
+		stats.AveragePrice = stats.TotalValue / float64(stats.TotalBooks)
+	}
+
+	return map[string]interface{}{
+		"totalBooks":       stats.TotalBooks,
+		"availableBooks":   stats.AvailableBooks,
+		"borrowedBooks":    stats.BorrowedBooks,
+		"maintenanceBooks": stats.MaintenanceBooks,
+		"totalValue":       fmt.Sprintf("$%.2f", stats.TotalValue),
+		"averagePrice":     stats.AveragePrice,
+	}, nil
+}
+
+// Custom filter for book status
+func (s *BookService) ApplyCustomFilters(query orm.Query, filters map[string]interface{}) orm.Query {
+	// Handle special book filters
+	for key, value := range filters {
+		switch key {
+		case "minPrice":
+			if price, ok := value.(float64); ok {
+				query = query.Where("price >= ?", price)
+			}
+		case "maxPrice":
+			if price, ok := value.(float64); ok {
+				query = query.Where("price <= ?", price)
+			}
+		case "publishedYear":
+			if year, ok := value.(string); ok {
+				query = query.Where("YEAR(published_at) = ?", year)
+			}
+		}
+	}
+
+	return query
 }

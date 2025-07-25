@@ -2,385 +2,346 @@ package services
 
 import (
 	"fmt"
-	"time"
 
-	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
+	"players/app/auth"
 	"players/app/contracts"
 	"players/app/models"
 )
 
-// UserService - Simplified version using generic CRUD service
-// From ~600 lines to ~150 lines!
+// UserService implements user-specific business logic using the builder pattern
 type UserService struct {
-	*contracts.GenericCrudService[models.User]
+	contracts.CrudServiceContract // Embedded interface - inherits all methods
 }
 
-// NewUserService creates a new simplified user service
+// NewUserService creates a new user service using the builder pattern
 func NewUserService() *UserService {
-	// Create the generic service
-	genericService := contracts.NewGenericCrudService[models.User]("user", "id")
+	// Create service instance first
+	userService := &UserService{}
 
-	// Configure the service
-	genericService.
-		SetSearchFields("name", "email").
-		SetSortFields("id", "name", "email", "is_active", "is_super_admin", "created_at", "updated_at").
-		SetFilterFields("is_active", "is_super_admin", "role").
-		SetValidationRules(map[string]interface{}{
-			"name":           "required|string|max:255",
-			"email":          "required|email|max:255",
-			"password":       "string|min:8",
-			"is_active":      "boolean",
-			"is_super_admin": "boolean",
-			"role_id":        "numeric",
+	// Temporary storage for role assignments between hooks
+	var pendingRoleID *uint
+
+	// Build the service with all required configurations
+	service := contracts.NewServiceBuilder[models.User]("user", "id").
+		WithSearchFields("name", "email").                                                  // REQUIRED
+		WithSortFields("id", "name", "email", "created_at", "updated_at").                  // REQUIRED
+		WithFilterFields("email", "is_active", "role", "is_super_admin", "email_verified"). // REQUIRED
+		WithValidationRules(map[string]interface{}{                                         // REQUIRED
+			"name":     "required|string|max:255",
+			"email":    "required|email|unique:users,email",
+			"password": "required|string|min:8",
+			"role_id":  "exists:roles,id",
 		}).
-		SetBeforeCreate(func(data map[string]interface{}) error {
-			// Set defaults
+		WithRelations("Roles", "Creator", "Updater"). // Optional
+		WithDefaultSort("created_at", "DESC").        // Optional
+		WithSoftDeletes().                            // Optional
+		WithScopeFiltering("users", "id").            // Optional
+		WithBeforeCreate(func(data map[string]interface{}) error {
+			// Hash password if provided
+			if password, exists := data["password"]; exists && password != "" {
+				if passwordStr, ok := password.(string); ok {
+					hashedPassword, err := facades.Hash().Make(passwordStr)
+					if err != nil {
+						return fmt.Errorf("failed to hash password: %v", err)
+					}
+					data["password"] = hashedPassword
+				}
+			}
+
+			// Set default is_active status
 			if _, exists := data["is_active"]; !exists {
 				data["is_active"] = true
 			}
-			if _, exists := data["is_super_admin"]; !exists {
-				data["is_super_admin"] = false
-			}
-			
-			// Set created_by if provided (from context)
-			if createdBy, exists := data["created_by"]; exists && createdBy != nil {
-				data["created_by"] = createdBy
-			}
 
-			// Check email uniqueness
-			var count int64
-			err := facades.Orm().Query().Model(&models.User{}).
-				Where("email = ?", data["email"]).
-				Count(&count)
-			if err != nil {
-				return fmt.Errorf("failed to check email uniqueness: %w", err)
-			}
-			if count > 0 {
-				return fmt.Errorf("email already exists")
-			}
-
-			// Hash password if provided
-			if password, ok := data["password"].(string); ok && password != "" {
-				hashedPassword, err := facades.Hash().Make(password)
-				if err != nil {
-					return fmt.Errorf("failed to hash password: %w", err)
+			// Extract and store role_id
+			if rid, exists := data["role_id"]; exists && rid != nil {
+				switch v := rid.(type) {
+				case float64:
+					roleID := uint(v)
+					pendingRoleID = &roleID
+				case int:
+					roleID := uint(v)
+					pendingRoleID = &roleID
+				case uint:
+					pendingRoleID = &v
 				}
-				data["password"] = hashedPassword
+				delete(data, "role_id") // Remove as it's not a user field
 			}
 
 			return nil
 		}).
-		SetAfterCreate(func(user *models.User) error {
-			// Assign role if provided in the original data
-			// Note: We'd need to pass role_id through context or handle separately
+		WithAfterCreate(func(model *models.User) error {
+			// Assign role if one was provided
+			if pendingRoleID != nil {
+				facades.Log().Info("Assigning role to new user", map[string]interface{}{
+					"user_id": model.ID,
+					"role_id": *pendingRoleID,
+				})
+
+				if err := userService.AssignRole(model.ID, *pendingRoleID); err != nil {
+					facades.Log().Error("Failed to assign role to new user", map[string]interface{}{
+						"user_id": model.ID,
+						"role_id": *pendingRoleID,
+						"error":   err.Error(),
+					})
+				}
+				pendingRoleID = nil // Clear after use
+			}
+
 			return nil
 		}).
-		SetBeforeUpdate(func(id uint, data map[string]interface{}) error {
-			// Get existing user
-			var existingUser models.User
-			err := facades.Orm().Query().Model(&models.User{}).
-				Where("id = ?", id).
-				First(&existingUser)
-			if err != nil {
-				return err
-			}
-
-			// Check email uniqueness if being changed
-			if email, ok := data["email"].(string); ok && email != existingUser.Email {
-				var count int64
-				err := facades.Orm().Query().Model(&models.User{}).
-					Where("email = ? AND id != ?", email, id).
-					Count(&count)
-				if err != nil {
-					return fmt.Errorf("failed to check email uniqueness: %w", err)
+		WithBeforeUpdate(func(id uint, data map[string]interface{}) error {
+			// Hash password if being updated
+			if password, exists := data["password"]; exists && password != "" {
+				if passwordStr, ok := password.(string); ok {
+					hashedPassword, err := facades.Hash().Make(passwordStr)
+					if err != nil {
+						return fmt.Errorf("failed to hash password: %v", err)
+					}
+					data["password"] = hashedPassword
 				}
-				if count > 0 {
-					return fmt.Errorf("email already exists")
-				}
-			}
-
-			// Hash password if provided
-			if password, ok := data["password"].(string); ok && password != "" {
-				hashedPassword, err := facades.Hash().Make(password)
-				if err != nil {
-					return fmt.Errorf("failed to hash password: %w", err)
-				}
-				data["password"] = hashedPassword
 			} else {
-				// Remove password from update if empty
+				// Remove password field if empty to avoid updating it
 				delete(data, "password")
 			}
 
+			// Extract and store role_id
+			if rid, exists := data["role_id"]; exists && rid != nil {
+				switch v := rid.(type) {
+				case float64:
+					roleID := uint(v)
+					pendingRoleID = &roleID
+				case int:
+					roleID := uint(v)
+					pendingRoleID = &roleID
+				case uint:
+					pendingRoleID = &v
+				}
+				delete(data, "role_id") // Remove as it's not a user field
+			}
+
 			return nil
 		}).
-		SetCustomSearch(func(query orm.Query, search string) orm.Query {
-			searchValue := "%" + search + "%"
-			return query.Where("name LIKE ? OR email LIKE ?", searchValue, searchValue)
-		}).
-		SetCustomFilters(func(query orm.Query, filters map[string]interface{}) orm.Query {
-			fmt.Printf("DEBUG UserService.CustomFilters: Received filters=%+v\n", filters)
-			for field, value := range filters {
-				switch field {
-				case "is_active":
-					// Convert string to boolean
-					fmt.Printf("DEBUG UserService.CustomFilters: Processing is_active with value='%v' (type=%T)\n", value, value)
-					switch v := value.(type) {
-					case string:
-						if v == "true" {
-							query = query.Where("is_active = ?", true)
-						} else if v == "false" {
-							query = query.Where("is_active = ?", false)
-						}
-					case bool:
-						query = query.Where("is_active = ?", v)
-					}
-				case "is_super_admin":
-					// Convert string to boolean
-					switch v := value.(type) {
-					case string:
-						if v == "true" {
-							query = query.Where("is_super_admin = ?", true)
-						} else if v == "false" {
-							query = query.Where("is_super_admin = ?", false)
-						}
-					case bool:
-						query = query.Where("is_super_admin = ?", v)
-					}
-				case "role":
-					// Filter by role slug
-					query = query.Where("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = users.id AND r.slug = ?)", value)
-				case "level_min":
-					// For super admin filtering - check if user is super admin
-					if level, ok := value.(string); ok {
-						if level == "90" {
-							// Filter for super admins
-							query = query.Where("is_super_admin = ?", true)
-						}
-					}
-				case "level_max":
-					// For role level filtering - not implemented for now
-					// Would need a different approach without joins
+		WithAfterUpdate(func(model *models.User) error {
+			// Update role if one was provided
+			if pendingRoleID != nil {
+				facades.Log().Info("Updating user role", map[string]interface{}{
+					"user_id": model.ID,
+					"role_id": *pendingRoleID,
+				})
+
+				// Clear existing roles
+				if err := facades.Orm().Query().Model(model).Association("Roles").Clear(); err != nil {
+					facades.Log().Error("Failed to clear existing roles", map[string]interface{}{
+						"user_id": model.ID,
+						"error":   err.Error(),
+					})
 				}
+
+				// Assign new role
+				if err := userService.AssignRole(model.ID, *pendingRoleID); err != nil {
+					facades.Log().Error("Failed to update user role", map[string]interface{}{
+						"user_id": model.ID,
+						"role_id": *pendingRoleID,
+						"error":   err.Error(),
+					})
+				}
+				pendingRoleID = nil // Clear after use
 			}
-			return query
+
+			return nil
+		}).
+		Build() // Returns a fully configured CrudServiceContract
+
+	userService.CrudServiceContract = service
+	return userService
+}
+
+// User-specific methods beyond basic CRUD
+
+// GetByEmail retrieves a user by email
+func (s *UserService) GetByEmail(email string) (*models.User, error) {
+	var user models.User
+	err := facades.Orm().Query().
+		Model(&models.User{}).
+		Where("email = ?", email).
+		With("Role").
+		With("CreatedBy").
+		With("UpdatedBy").
+		First(&user)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// GetActiveUsers retrieves all active users
+func (s *UserService) GetActiveUsers(req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	// Add is_active filter to the request
+	if req.Filters == nil {
+		req.Filters = make(map[string]interface{})
+	}
+	req.Filters["is_active"] = true
+
+	return s.GetList(req)
+}
+
+// DeactivateUser deactivates a user account
+func (s *UserService) DeactivateUser(id uint) error {
+	updateData := map[string]interface{}{
+		"is_active": false,
+	}
+
+	_, err := s.Update(id, updateData)
+	return err
+}
+
+// ActivateUser activates a user account
+func (s *UserService) ActivateUser(id uint) error {
+	updateData := map[string]interface{}{
+		"is_active": true,
+	}
+
+	_, err := s.Update(id, updateData)
+	return err
+}
+
+// AssignRole assigns a role to a user
+func (s *UserService) AssignRole(userID uint, roleID uint) error {
+	// Get the permission service to handle role assignment
+	permService := auth.GetPermissionService()
+
+	// Get user
+	userInterface, err := s.CrudServiceContract.GetByID(userID)
+	if err != nil {
+		facades.Log().Error("AssignRole: user not found", map[string]interface{}{
+			"user_id": userID,
+			"error":   err.Error(),
 		})
-
-	service := &UserService{
-		GenericCrudService: genericService,
+		return fmt.Errorf("user not found: %v", err)
 	}
 
-	// Set the actual service reference so method resolution works correctly
-	genericService.SetActualService(service)
-
-	// Register service
-	contracts.MustRegisterCrudService("users", service)
-
-	return service
-}
-
-// Override Create to handle role assignment
-func (s *UserService) Create(data map[string]interface{}) (interface{}, error) {
-	// Extract role_id before creating user
-	var roleID *uint
-	if rid, ok := data["role_id"].(float64); ok && rid > 0 {
-		roleIDVal := uint(rid)
-		roleID = &roleIDVal
-		// Don't save role_id to user table
-		delete(data, "role_id")
+	user, ok := userInterface.(*models.User)
+	if !ok {
+		facades.Log().Error("AssignRole: invalid user type", map[string]interface{}{
+			"user_id": userID,
+			"type":    fmt.Sprintf("%T", userInterface),
+		})
+		return fmt.Errorf("invalid user type")
 	}
 
-	// Create user using generic implementation
-	result, err := s.GenericCrudService.Create(data)
+	// Get the role by ID to get its slug
+	var role models.Role
+	err = facades.Orm().Query().Where("id = ?", roleID).First(&role)
 	if err != nil {
-		return nil, err
+		facades.Log().Error("AssignRole: failed to find role", map[string]interface{}{
+			"role_id": roleID,
+			"error":   err.Error(),
+		})
+		return fmt.Errorf("failed to find role: %v", err)
 	}
 
-	// Assign role if provided
-	if roleID != nil {
-		user := result.(models.User)
-		userRole := models.UserRole{
-			UserID:     user.ID,
-			RoleID:     *roleID,
-			AssignedAt: time.Now(),
-			IsActive:   true,
-		}
-		if err := facades.Orm().Query().Create(&userRole); err != nil {
-			// Log error but don't fail user creation
-			facades.Log().Error("Failed to assign role to user", map[string]interface{}{
-				"user_id": user.ID,
-				"role_id": *roleID,
-				"error":   err.Error(),
-			})
-		}
-	}
-
-	// Reload with roles
-	return s.GetByID(result.(models.User).ID)
-}
-
-// Override Update to handle role changes
-func (s *UserService) Update(id uint, data map[string]interface{}) (interface{}, error) {
-	// Extract role_id before updating user
-	var roleID *uint
-	if rid, ok := data["role_id"].(float64); ok {
-		roleIDVal := uint(rid)
-		roleID = &roleIDVal
-		// Don't save role_id to user table
-		delete(data, "role_id")
-	}
-
-	// Update user using generic implementation
-	_, err := s.GenericCrudService.Update(id, data)
+	err = permService.AssignRole(user, role.Slug, nil)
 	if err != nil {
-		return nil, err
+		facades.Log().Error("AssignRole: permService.AssignRole failed", map[string]interface{}{
+			"user_id":   userID,
+			"role_id":   roleID,
+			"role_slug": role.Slug,
+			"error":     err.Error(),
+		})
+		return fmt.Errorf("failed to assign role: %v", err)
 	}
 
-	// Update role if provided
-	if roleID != nil {
-		// Remove existing roles
-		facades.Orm().Query().Where("user_id = ?", id).Delete(&models.UserRole{})
-
-		// Assign new role
-		userRole := models.UserRole{
-			UserID:     id,
-			RoleID:     *roleID,
-			AssignedAt: time.Now(),
-			IsActive:   true,
-		}
-		if err := facades.Orm().Query().Create(&userRole); err != nil {
-			// Log error but don't fail user update
-			facades.Log().Error("Failed to update user role", map[string]interface{}{
-				"user_id": id,
-				"role_id": *roleID,
-				"error":   err.Error(),
-			})
-		}
-	}
-
-	// Reload with roles
-	return s.GetByID(id)
+	return nil
 }
 
-// GetAllRoles returns all available roles for assignment
+// GetAllRoles retrieves all available roles
 func (s *UserService) GetAllRoles() ([]models.Role, error) {
+	facades.Log().Info("GetAllRoles called")
+
 	var roles []models.Role
-	if err := facades.Orm().Query().Find(&roles); err != nil {
-		return nil, fmt.Errorf("failed to get roles: %w", err)
+	err := facades.Orm().Query().
+		Model(&models.Role{}).
+		With("Permissions").
+		Find(&roles)
+
+	if err != nil {
+		facades.Log().Error("GetAllRoles failed", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return nil, err
 	}
+
+	facades.Log().Info("GetAllRoles success", map[string]interface{}{
+		"count": len(roles),
+	})
+
 	return roles, nil
 }
 
-
-// Override GetByID to load active roles through user_roles pivot table
-func (s *UserService) GetByID(id uint) (interface{}, error) {
+// GetUserWithPermissions retrieves a user with their permissions loaded
+func (s *UserService) GetUserWithPermissions(id uint) (*models.User, error) {
 	var user models.User
-	
-	// First load the user without roles
 	err := facades.Orm().Query().
+		Model(&models.User{}).
 		Where("id = ?", id).
+		With("Role.Permissions").
 		First(&user)
-	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
-	}
-	
-	// Load active roles through the pivot table
-	var userRoles []models.UserRole
-	err = facades.Orm().Query().
-		Where("user_id = ? AND is_active = ?", user.ID, true).
-		With("Role").
-		Find(&userRoles)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load user roles: %w", err)
-	}
-	
-	// Extract the roles from userRoles
-	user.Roles = make([]models.Role, 0)
-	for _, ur := range userRoles {
-		if ur.Role.IsActive { // Also check if the role itself is active
-			user.Roles = append(user.Roles, ur.Role)
-		}
-	}
-	
-	return user, nil
-}
 
-// Override GetList to load active roles for all users
-func (s *UserService) GetList(req contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	// Get list using generic implementation (without roles)
-	result, err := s.GenericCrudService.GetList(req)
 	if err != nil {
 		return nil, err
 	}
-	
-	// Load active roles for each user
-	users := make([]models.User, 0)
-	for _, item := range result.Data {
-		if user, ok := item.(models.User); ok {
-			// Load active roles for this user
-			var userRoles []models.UserRole
-			err = facades.Orm().Query().
-				Where("user_id = ? AND is_active = ?", user.ID, true).
-				With("Role").
-				Find(&userRoles)
-			if err == nil {
-				user.Roles = make([]models.Role, 0)
-				for _, ur := range userRoles {
-					if ur.Role.IsActive {
-						user.Roles = append(user.Roles, ur.Role)
-					}
-				}
-			}
-			users = append(users, user)
-		}
-	}
-	
-	// Convert back to interface{} slice
-	data := make([]interface{}, len(users))
-	for i, user := range users {
-		data[i] = user
-	}
-	result.Data = data
-	
-	return result, nil
+
+	return &user, nil
 }
 
-// GetColumnMapping returns database column mappings
-func (s *UserService) GetColumnMapping() map[string]string {
-	return map[string]string{
-		"id":             "id",
-		"name":           "name",
-		"email":          "email",
-		"isActive":       "is_active",
-		"isSuperAdmin":   "is_super_admin",
-		"createdAt":      "created_at",
-		"updatedAt":      "updated_at",
-		"created_at":     "created_at",
-		"updated_at":     "updated_at",
-		"is_active":      "is_active",
-		"is_super_admin": "is_super_admin",
+// UpdatePassword updates a user's password
+func (s *UserService) UpdatePassword(userID uint, newPassword string) error {
+	hashedPassword, err := facades.Hash().Make(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
 	}
+
+	updateData := map[string]interface{}{
+		"password": hashedPassword,
+	}
+
+	_, err = s.Update(userID, updateData)
+	return err
 }
 
-// MapSortField maps frontend field names to database field names
-// This handles camelCase to snake_case conversion
-func (s *UserService) MapSortField(frontendField string) (string, bool) {
-	// Map camelCase fields to snake_case
-	fieldMap := map[string]string{
-		"isActive":     "is_active",
-		"isSuperAdmin": "is_super_admin",
-		"createdAt":    "created_at",
-		"updatedAt":    "updated_at",
+// GetUserStatistics returns statistics about users
+func (s *UserService) GetUserStatistics() (map[string]interface{}, error) {
+	var stats struct {
+		TotalUsers    int64
+		ActiveUsers   int64
+		InactiveUsers int64
+		AdminUsers    int64
 	}
 
-	// Check if we have a mapping
-	if dbField, exists := fieldMap[frontendField]; exists {
-		// Validate the mapped field
-		if s.ValidateSortField(dbField) {
-			return dbField, true
-		}
-	}
+	// Get total users
+	facades.Orm().Query().Model(&models.User{}).Count(&stats.TotalUsers)
 
-	// Otherwise delegate to the base implementation
-	return s.GenericCrudService.MapSortField(frontendField)
+	// Get active users
+	facades.Orm().Query().Model(&models.User{}).Where("is_active = ?", true).Count(&stats.ActiveUsers)
+
+	// Get inactive users
+	stats.InactiveUsers = stats.TotalUsers - stats.ActiveUsers
+
+	// Get admin users (assuming there's an admin role)
+	// Note: Count the super admins instead since user_roles doesn't have is_active field
+	facades.Orm().Query().
+		Model(&models.User{}).
+		Where("is_super_admin = ?", true).
+		Count(&stats.AdminUsers)
+
+	return map[string]interface{}{
+		"totalUsers":    stats.TotalUsers,
+		"activeUsers":   stats.ActiveUsers,
+		"inactiveUsers": stats.InactiveUsers,
+		"superAdmins":   stats.AdminUsers, // Actually counting super admins
+	}, nil
 }

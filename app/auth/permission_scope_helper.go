@@ -32,6 +32,8 @@ func (sh *ScopeHelper) GetUserScope(ctx http.Context, service ServiceRegistry, a
 	}
 
 	// Super admins always have full scope
+	fmt.Printf("DEBUG ScopeHelper: User ID=%d, Email=%s, IsSuperAdmin=%v\n", user.ID, user.Email, user.IsSuperAdmin)
+	fmt.Printf("DEBUG ScopeHelper: Checking IsSuperAdminUser() = %v\n", user.IsSuperAdminUser())
 	if user.IsSuperAdminUser() {
 		fmt.Printf("DEBUG ScopeHelper: User is super admin, returning ScopeByAll\n")
 		return ScopeByAll
@@ -39,7 +41,7 @@ func (sh *ScopeHelper) GetUserScope(ctx http.Context, service ServiceRegistry, a
 
 	// Build permission strings to check
 	basePermission := fmt.Sprintf("%s_%s", service, action)
-	fmt.Printf("DEBUG ScopeHelper: Checking permission scope for user %s, base permission: %s\n", user.Email, basePermission)
+	fmt.Printf("DEBUG ScopeHelper: Checking permission scope for user %s (ID=%d), base permission: %s\n", user.Email, user.ID, basePermission)
 	
 	// Check user's permissions from most to least restrictive
 	userPermissions := sh.permissionHelper.GetUserPermissions(ctx)

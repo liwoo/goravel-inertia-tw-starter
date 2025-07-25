@@ -3,6 +3,7 @@ package seeders
 import (
 	"github.com/goravel/framework/facades"
 	"players/app/models"
+	"time"
 )
 
 type BookSeeder struct {
@@ -11,6 +12,18 @@ type BookSeeder struct {
 // Signature The name and signature of the seeder.
 func (s *BookSeeder) Signature() string {
 	return "BookSeeder"
+}
+
+// parseDate is a helper function to parse date strings
+func parseDate(dateStr string) *time.Time {
+	if dateStr == "" {
+		return nil
+	}
+	t, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return nil
+	}
+	return &t
 }
 
 // Run executes the seeder logic.
@@ -24,7 +37,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A gripping, heart-wrenching, and wholly remarkable tale of coming-of-age in a South poisoned by virulent prejudice.",
 			Price:       14.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1960-07-11",
+			PublishedAt: parseDate("1960-07-11"),
 		},
 		{
 			Title:       "1984",
@@ -33,7 +46,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A dystopian social science fiction novel and cautionary tale about the dangers of totalitarianism.",
 			Price:       13.99,
 			Status:      "BORROWED",
-			PublishedAt: "1949-06-08",
+			PublishedAt: parseDate("1949-06-08"),
 		},
 		{
 			Title:       "Pride and Prejudice",
@@ -42,7 +55,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A romantic novel of manners written by Jane Austen. It follows the character development of Elizabeth Bennet.",
 			Price:       12.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1813-01-28",
+			PublishedAt: parseDate("1813-01-28"),
 		},
 		{
 			Title:       "The Great Gatsby",
@@ -51,7 +64,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A 1925 novel written by American author F. Scott Fitzgerald that follows a cast of characters living in West Egg.",
 			Price:       15.99,
 			Status:      "MAINTENANCE",
-			PublishedAt: "1925-04-10",
+			PublishedAt: parseDate("1925-04-10"),
 		},
 		{
 			Title:       "Jane Eyre",
@@ -60,7 +73,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A bildungsroman which follows the experiences of its eponymous heroine.",
 			Price:       11.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1847-10-16",
+			PublishedAt: parseDate("1847-10-16"),
 		},
 
 		// Science Fiction
@@ -71,7 +84,7 @@ func (s *BookSeeder) Run() error {
 			Description: "Set in the distant future amidst a feudal interstellar society in which various noble houses control planetary fiefs.",
 			Price:       16.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1965-08-01",
+			PublishedAt: parseDate("1965-08-01"),
 		},
 		{
 			Title:       "Foundation",
@@ -80,7 +93,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A cycle of five interrelated short stories, first published as a single book in 1951.",
 			Price:       14.99,
 			Status:      "BORROWED",
-			PublishedAt: "1951-05-01",
+			PublishedAt: parseDate("1951-05-01"),
 		},
 		{
 			Title:       "Neuromancer",
@@ -89,7 +102,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A 1984 science fiction novel. It is one of the best-known works in the cyberpunk genre.",
 			Price:       13.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1984-07-01",
+			PublishedAt: parseDate("1984-07-01"),
 		},
 		{
 			Title:       "The Hitchhiker's Guide to the Galaxy",
@@ -98,7 +111,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A comedy science fiction series created by Douglas Adams.",
 			Price:       12.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1979-10-12",
+			PublishedAt: parseDate("1979-10-12"),
 		},
 		{
 			Title:       "Ender's Game",
@@ -107,7 +120,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A 1985 military science fiction novel. Set at an unspecified date in Earth's future.",
 			Price:       15.99,
 			Status:      "BORROWED",
-			PublishedAt: "1985-01-15",
+			PublishedAt: parseDate("1985-01-15"),
 		},
 
 		// Fantasy
@@ -118,7 +131,7 @@ func (s *BookSeeder) Run() error {
 			Description: "The first volume in The Lord of the Rings. It is preceded by The Hobbit.",
 			Price:       18.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1954-07-29",
+			PublishedAt: parseDate("1954-07-29"),
 		},
 		{
 			Title:       "Harry Potter and the Philosopher's Stone",
@@ -127,7 +140,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A fantasy novel written by British author J. K. Rowling. The first novel in the Harry Potter series.",
 			Price:       17.99,
 			Status:      "BORROWED",
-			PublishedAt: "1997-06-26",
+			PublishedAt: parseDate("1997-06-26"),
 		},
 		{
 			Title:       "A Game of Thrones",
@@ -136,7 +149,7 @@ func (s *BookSeeder) Run() error {
 			Description: "The first novel in A Song of Ice and Fire, a series of fantasy novels by American author George R. R. Martin.",
 			Price:       19.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1996-08-01",
+			PublishedAt: parseDate("1996-08-01"),
 		},
 		{
 			Title:       "The Name of the Wind",
@@ -145,7 +158,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A heroic fantasy novel written by American author Patrick Rothfuss. It is the first book in the ongoing trilogy The Kingkiller Chronicle.",
 			Price:       16.99,
 			Status:      "MAINTENANCE",
-			PublishedAt: "2007-03-27",
+			PublishedAt: parseDate("2007-03-27"),
 		},
 		{
 			Title:       "The Way of Kings",
@@ -154,7 +167,7 @@ func (s *BookSeeder) Run() error {
 			Description: "An epic fantasy novel written by American author Brandon Sanderson and the first book in The Stormlight Archive series.",
 			Price:       21.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2010-08-31",
+			PublishedAt: parseDate("2010-08-31"),
 		},
 
 		// Mystery/Thriller
@@ -165,7 +178,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A psychological thriller novel. It is the first book of the Millennium series.",
 			Price:       15.99,
 			Status:      "BORROWED",
-			PublishedAt: "2005-08-01",
+			PublishedAt: parseDate("2005-08-01"),
 		},
 		{
 			Title:       "Gone Girl",
@@ -174,7 +187,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A thriller novel. The story is told from the point of view of husband Nick Dunne and his wife Amy Dunne.",
 			Price:       16.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2012-06-05",
+			PublishedAt: parseDate("2012-06-05"),
 		},
 		{
 			Title:       "The Da Vinci Code",
@@ -183,7 +196,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A mystery thriller novel. It is the second novel to include the character Robert Langdon.",
 			Price:       14.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2003-03-18",
+			PublishedAt: parseDate("2003-03-18"),
 		},
 		{
 			Title:       "And Then There Were None",
@@ -192,7 +205,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A mystery novel. It was first published in the United Kingdom by the Collins Crime Club.",
 			Price:       13.99,
 			Status:      "BORROWED",
-			PublishedAt: "1939-11-06",
+			PublishedAt: parseDate("1939-11-06"),
 		},
 		{
 			Title:       "The Big Sleep",
@@ -201,7 +214,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A hardboiled crime novel. It has been adapted for film twice, in 1946 and again in 1978.",
 			Price:       12.99,
 			Status:      "MAINTENANCE",
-			PublishedAt: "1939-01-01",
+			PublishedAt: parseDate("1939-01-01"),
 		},
 
 		// Non-Fiction
@@ -212,7 +225,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A book by Yuval Noah Harari, first published in Hebrew in Israel in 2011.",
 			Price:       18.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2011-01-01",
+			PublishedAt: parseDate("2011-01-01"),
 		},
 		{
 			Title:       "Educated",
@@ -221,7 +234,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A memoir by American historian and author Tara Westover.",
 			Price:       17.99,
 			Status:      "BORROWED",
-			PublishedAt: "2018-02-20",
+			PublishedAt: parseDate("2018-02-20"),
 		},
 		{
 			Title:       "The Immortal Life of Henrietta Lacks",
@@ -230,7 +243,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A non-fiction book by American author Rebecca Skloot.",
 			Price:       16.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2010-02-02",
+			PublishedAt: parseDate("2010-02-02"),
 		},
 		{
 			Title:       "Thinking, Fast and Slow",
@@ -239,7 +252,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A 2011 book by psychologist Daniel Kahneman.",
 			Price:       19.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2011-10-25",
+			PublishedAt: parseDate("2011-10-25"),
 		},
 		{
 			Title:       "The Power of Habit",
@@ -248,7 +261,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A book by Charles Duhigg, a New York Times reporter, published in February 2012.",
 			Price:       15.99,
 			Status:      "MAINTENANCE",
-			PublishedAt: "2012-02-28",
+			PublishedAt: parseDate("2012-02-28"),
 		},
 
 		// Contemporary Fiction
@@ -259,7 +272,7 @@ func (s *BookSeeder) Run() error {
 			Description: "The debut novel by Afghan-American author Khaled Hosseini.",
 			Price:       14.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2003-05-29",
+			PublishedAt: parseDate("2003-05-29"),
 		},
 		{
 			Title:       "Life of Pi",
@@ -268,7 +281,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A Canadian philosophical novel by Yann Martel published in 2001.",
 			Price:       13.99,
 			Status:      "BORROWED",
-			PublishedAt: "2001-09-11",
+			PublishedAt: parseDate("2001-09-11"),
 		},
 		{
 			Title:       "The Book Thief",
@@ -277,7 +290,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A 2005 historical novel by Australian author Markus Zusak.",
 			Price:       15.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2005-03-14",
+			PublishedAt: parseDate("2005-03-14"),
 		},
 		{
 			Title:       "Where the Crawdads Sing",
@@ -286,7 +299,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A 2018 novel by American zoologist Delia Owens.",
 			Price:       16.99,
 			Status:      "BORROWED",
-			PublishedAt: "2018-08-14",
+			PublishedAt: parseDate("2018-08-14"),
 		},
 		{
 			Title:       "The Seven Husbands of Evelyn Hugo",
@@ -295,7 +308,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A novel by American author Taylor Jenkins Reid and published in 2017.",
 			Price:       14.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2017-06-13",
+			PublishedAt: parseDate("2017-06-13"),
 		},
 
 		// Horror
@@ -306,7 +319,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A horror novel by American author Stephen King.",
 			Price:       15.99,
 			Status:      "MAINTENANCE",
-			PublishedAt: "1977-01-28",
+			PublishedAt: parseDate("1977-01-28"),
 		},
 		{
 			Title:       "Dracula",
@@ -315,7 +328,7 @@ func (s *BookSeeder) Run() error {
 			Description: "An 1897 Gothic horror novel by Irish author Bram Stoker.",
 			Price:       11.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1897-05-26",
+			PublishedAt: parseDate("1897-05-26"),
 		},
 		{
 			Title:       "Frankenstein",
@@ -324,7 +337,7 @@ func (s *BookSeeder) Run() error {
 			Description: "An 1818 novel written by English author Mary Shelley.",
 			Price:       10.99,
 			Status:      "BORROWED",
-			PublishedAt: "1818-01-01",
+			PublishedAt: parseDate("1818-01-01"),
 		},
 
 		// Romance
@@ -335,7 +348,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A 1996 romantic novel by American novelist Nicholas Sparks.",
 			Price:       13.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1996-10-01",
+			PublishedAt: parseDate("1996-10-01"),
 		},
 		{
 			Title:       "Me Before You",
@@ -344,7 +357,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A romance novel written by Jojo Moyes.",
 			Price:       14.99,
 			Status:      "BORROWED",
-			PublishedAt: "2012-01-05",
+			PublishedAt: parseDate("2012-01-05"),
 		},
 
 		// Young Adult
@@ -355,7 +368,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A 2008 dystopian novel by American writer Suzanne Collins.",
 			Price:       12.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2008-09-14",
+			PublishedAt: parseDate("2008-09-14"),
 		},
 		{
 			Title:       "The Fault in Our Stars",
@@ -364,7 +377,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A novel by John Green. It is his fourth solo novel, and sixth novel overall.",
 			Price:       13.99,
 			Status:      "BORROWED",
-			PublishedAt: "2012-01-10",
+			PublishedAt: parseDate("2012-01-10"),
 		},
 		{
 			Title:       "Divergent",
@@ -373,7 +386,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A novel in the Divergent trilogy by Veronica Roth.",
 			Price:       14.99,
 			Status:      "MAINTENANCE",
-			PublishedAt: "2011-04-25",
+			PublishedAt: parseDate("2011-04-25"),
 		},
 
 		// Historical Fiction
@@ -384,7 +397,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A novel by Erich Maria Remarque, a German veteran of World War I.",
 			Price:       12.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "1929-01-29",
+			PublishedAt: parseDate("1929-01-29"),
 		},
 		{
 			Title:       "The Pillars of the Earth",
@@ -393,7 +406,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A historical novel by Welsh author Ken Follett published in 1989.",
 			Price:       17.99,
 			Status:      "BORROWED",
-			PublishedAt: "1989-01-01",
+			PublishedAt: parseDate("1989-01-01"),
 		},
 		{
 			Title:       "The Help",
@@ -402,7 +415,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A 2009 novel by American author Kathryn Stockett.",
 			Price:       15.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2009-02-10",
+			PublishedAt: parseDate("2009-02-10"),
 		},
 
 		// Biography
@@ -413,7 +426,7 @@ func (s *BookSeeder) Run() error {
 			Description: "An authorized biography of Steve Jobs, the co-founder and longtime chief executive officer of Apple Inc.",
 			Price:       19.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2011-10-24",
+			PublishedAt: parseDate("2011-10-24"),
 		},
 		{
 			Title:       "Long Walk to Freedom",
@@ -422,7 +435,7 @@ func (s *BookSeeder) Run() error {
 			Description: "An autobiographical work written by South African President Nelson Mandela.",
 			Price:       18.99,
 			Status:      "MAINTENANCE",
-			PublishedAt: "1994-10-01",
+			PublishedAt: parseDate("1994-10-01"),
 		},
 
 		// Philosophy
@@ -433,7 +446,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A series of personal writings by Marcus Aurelius, Roman Emperor from 161 to 180 AD.",
 			Price:       9.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "0171-01-01",
+			PublishedAt: parseDate("0171-01-01"),
 		},
 		{
 			Title:       "The Art of War",
@@ -442,7 +455,7 @@ func (s *BookSeeder) Run() error {
 			Description: "An ancient Chinese military treatise dating from the Late Spring and Autumn Period.",
 			Price:       8.99,
 			Status:      "BORROWED",
-			PublishedAt: "0500-01-01",
+			PublishedAt: parseDate("0500-01-01"),
 		},
 
 		// Business
@@ -453,7 +466,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A management book by Jim C. Collins that describes how companies transition from being good companies to great companies.",
 			Price:       17.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2001-10-16",
+			PublishedAt: parseDate("2001-10-16"),
 		},
 		{
 			Title:       "The Lean Startup",
@@ -462,7 +475,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A book by Eric Ries describing his proposed lean startup strategy for startup companies.",
 			Price:       16.99,
 			Status:      "BORROWED",
-			PublishedAt: "2011-09-13",
+			PublishedAt: parseDate("2011-09-13"),
 		},
 
 		// Technology
@@ -473,7 +486,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A handbook of agile software craftsmanship by Robert C. Martin.",
 			Price:       24.99,
 			Status:      "AVAILABLE",
-			PublishedAt: "2008-08-01",
+			PublishedAt: parseDate("2008-08-01"),
 		},
 		{
 			Title:       "The Pragmatic Programmer",
@@ -482,7 +495,7 @@ func (s *BookSeeder) Run() error {
 			Description: "A book about computer programming and software engineering, written by David Thomas and Andrew Hunt.",
 			Price:       23.99,
 			Status:      "MAINTENANCE",
-			PublishedAt: "1999-10-30",
+			PublishedAt: parseDate("1999-10-30"),
 		},
 	}
 

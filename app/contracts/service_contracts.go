@@ -1,8 +1,9 @@
 package contracts
 
-// CrudServiceContract defines the mandatory interface for all CRUD services
+// ExtendedCrudServiceContract defines the mandatory interface for all CRUD services
 // This contract FORCES implementation of pagination, sorting, and filtering
-type CrudServiceContract interface {
+// (This is kept for backward compatibility - use CrudServiceContract from interfaces.go instead)
+type ExtendedCrudServiceContract interface {
 	// Core CRUD operations - ALL must be implemented
 	GetList(req ListRequest) (*PaginatedResult, error)
 	GetListAdvanced(req ListRequest, filters map[string]interface{}) (*PaginatedResult, error)
@@ -97,8 +98,7 @@ type CrudServiceConfiguration interface {
 // CompleteCrudService combines all contracts into one interface
 // Any service implementing this interface MUST implement ALL CRUD features
 type CompleteCrudService interface {
-	CrudServiceContract
-	SearchableServiceContract
+	ExtendedCrudServiceContract
 	BulkOperationsContract
 	CrudServiceConfiguration
 }
