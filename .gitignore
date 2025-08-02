@@ -17,6 +17,7 @@ storage/logs/*.log
 
 # Go binaries
 players
+goravel
 *.out
 
 # Test binary, built with `go test -c`
@@ -28,6 +29,10 @@ players
 
 # Dependency directories
 vendor/
+
+# Node/Yarn logs
+yarn-error.log
+npm-debug.log
 
 # Go workspace file
 go.work
@@ -45,3 +50,15 @@ database/database.sqlite
 tests/integration/storage/
 tests/unit/storage/
 tests/feature/storage/
+
+# Development scripts and config
+.air.toml
+start_ssh_agent.sh
+run_tests.sh
+clean_test_db.sh
+
+# Test databases
+database/test.sqlite
+database/test.db
+*.test.sqlite
+*.test.db
