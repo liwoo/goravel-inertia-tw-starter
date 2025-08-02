@@ -41,13 +41,11 @@ func Api(router route.Router) {
 	router.Middleware(optionalAuth).Group(func(optionalAuthRouter route.Router) {
 		optionalAuthRouter.Get("/books", bookController.Index)
 		optionalAuthRouter.Get("/books/search", bookController.Search) // Search endpoint (must be before {id})
-		optionalAuthRouter.Get("/books/{id}", bookController.Show)
+		optionalAuthRouter.Get("/books/available", bookController.Available)
+		optionalAuthRouter.Get("/books/isbn/{isbn}", bookController.GetByISBN)
+		optionalAuthRouter.Get("/books/author/{author}", bookController.GetByAuthor)
+		optionalAuthRouter.Get("/books/{id}", bookController.Show) // Must be last to avoid conflicts
 	})
-	// Custom book routes - TODO: implement these in the controller
-	// router.Get("/books/isbn/{isbn}", bookController.GetByISBN)
-	// router.Get("/books/author/{author}", bookController.GetByAuthor)
-	router.Get("/books/available", bookController.Available)
-	// router.Get("/books/advanced", bookController.Advanced)
 
 	// Protected routes (require authentication)
 	router.Middleware(jwtAuth).Group(func(protectedRouter route.Router) {
@@ -58,9 +56,10 @@ func Api(router route.Router) {
 		protectedRouter.Post("/books", bookController.Store)
 		protectedRouter.Put("/books/{id}", bookController.Update)
 		protectedRouter.Delete("/books/{id}", bookController.Delete)
-		//Custom endpoints
+		// Custom endpoints
 		protectedRouter.Post("/books/{id}/borrow", bookController.Borrow)
 		protectedRouter.Post("/books/{id}/return", bookController.Return)
+		protectedRouter.Get("/books/statistics", bookController.Statistics)
 
 		// Role management routes
 		protectedRouter.Get("/roles", rolesController.Index)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin/render"
@@ -61,7 +62,10 @@ func init() {
 					parsedTmpl, err := tmpl.ParseGlob(pattern)
 					if err != nil {
 						// In test environment, we can skip template parsing errors
-						if facades.Config().GetString("app.env") == "testing" {
+						// Check both config and environment variable directly
+						isTestMode := facades.Config().GetString("app.env") == "testing" || 
+									  os.Getenv("APP_ENV") == "testing"
+						if isTestMode {
 							log.Printf("[config/http.go] Skipping template parsing error in test mode: %v", err)
 							// Return an empty template for tests
 							return &render.HTMLProduction{Template: tmpl}, nil

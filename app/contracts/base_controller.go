@@ -523,8 +523,8 @@ func (c *BaseCrudController) ResourceUpdatedResponse(ctx http.Context, resource 
 }
 
 func (c *BaseCrudController) ResourceDeletedResponse(ctx http.Context, resourceType string, id uint) http.Response {
-	message := fmt.Sprintf("%s with ID %d deleted successfully", strings.Title(resourceType), id)
-	return c.NoContentResponse(ctx, message)
+	message := fmt.Sprintf("%s deleted successfully", strings.Title(resourceType))
+	return c.SuccessResponse(ctx, nil, message)
 }
 
 // CONFIGURATION

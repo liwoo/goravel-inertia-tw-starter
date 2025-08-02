@@ -128,8 +128,32 @@ func (c *EnforcedCrudController[T, C, U]) Store(ctx http.Context) http.Response 
 	var createReq C
 	if err := ctx.Request().Bind(&createReq); err != nil {
 		return c.ValidationErrorResponse(ctx, map[string]interface{}{
+			"binding_error": err.Error(),
+		})
+	}
+	
+	// Manual validation using the request's Rules method
+	rules := createReq.Rules(ctx)
+	
+	// Convert the bound request to validation data
+	requestData := createReq.ToCreateData()
+	
+	// Validate using facades
+	validator, err := facades.Validation().Make(
+		requestData, 
+		rules,
+	)
+	if err != nil {
+		return c.ValidationErrorResponse(ctx, map[string]interface{}{
 			"validation_error": err.Error(),
 		})
+	}
+	if validator.Fails() {
+		errors := make(map[string]interface{})
+		for field, messages := range validator.Errors().All() {
+			errors[field] = messages
+		}
+		return c.ValidationErrorResponse(ctx, errors)
 	}
 	
 	// Authorization check on the request
@@ -207,8 +231,32 @@ func (c *EnforcedCrudController[T, C, U]) Update(ctx http.Context) http.Response
 	var updateReq U
 	if err := ctx.Request().Bind(&updateReq); err != nil {
 		return c.ValidationErrorResponse(ctx, map[string]interface{}{
+			"binding_error": err.Error(),
+		})
+	}
+	
+	// Manual validation using the request's Rules method
+	rules := updateReq.Rules(ctx)
+	
+	// Convert the bound request to validation data
+	requestData := updateReq.ToUpdateData()
+	
+	// Validate using facades
+	validator, err := facades.Validation().Make(
+		requestData, 
+		rules,
+	)
+	if err != nil {
+		return c.ValidationErrorResponse(ctx, map[string]interface{}{
 			"validation_error": err.Error(),
 		})
+	}
+	if validator.Fails() {
+		errors := make(map[string]interface{})
+		for field, messages := range validator.Errors().All() {
+			errors[field] = messages
+		}
+		return c.ValidationErrorResponse(ctx, errors)
 	}
 	
 	// Authorization check on the request
@@ -291,10 +339,12 @@ func (c *EnforcedCrudController[T, C, U]) Delete(ctx http.Context) http.Response
 	}
 	
 	// Delete the resource
+	fmt.Printf("DEBUG: EnforcedCrudController calling service.Delete - resource: %s, id: %d\n", c.resourceName, id)
 	err = c.service.Delete(id)
 	if err != nil {
 		return c.InternalErrorResponse(ctx, "Failed to delete "+c.resourceName+": "+err.Error())
 	}
+	fmt.Printf("DEBUG: EnforcedCrudController delete completed - resource: %s, id: %d\n", c.resourceName, id)
 	
 	return c.ResourceDeletedResponse(ctx, c.resourceName, id)
 }

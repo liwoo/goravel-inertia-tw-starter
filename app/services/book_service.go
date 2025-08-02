@@ -21,7 +21,7 @@ type BookService struct {
 // NewBookService creates a new book service using the builder pattern
 func NewBookService() *BookService {
 	// Build the service with all required configurations
-	service := contracts.NewServiceBuilder[models.Book]("book", "id").
+	service := contracts.NewServiceBuilder[models.Book]("books", "id").
 		WithSearchFields("title", "author", "isbn", "description").                                   // REQUIRED
 		WithSortFields("id", "title", "author", "price", "created_at", "updated_at", "published_at"). // REQUIRED
 		WithFilterFields("status", "author").                                                         // REQUIRED

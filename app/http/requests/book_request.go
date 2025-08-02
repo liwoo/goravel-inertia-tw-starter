@@ -23,15 +23,11 @@ type BookCreateRequest struct {
 // Rules defines validation rules for book creation
 func (r *BookCreateRequest) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
-		"title":       fmt.Sprintf("%s|%s", contracts.Required, fmt.Sprintf(contracts.MaxLength, 255)),
-		"author":      fmt.Sprintf("%s|%s", contracts.Required, fmt.Sprintf(contracts.MaxLength, 100)),
-		"isbn":        fmt.Sprintf("%s|%s", contracts.Required, fmt.Sprintf(contracts.Regex, "^[0-9-]{10,17}$")),
-		"description": fmt.Sprintf(contracts.MaxLength, 1000),
-		"price":       fmt.Sprintf("%s|%s|%s", contracts.Required, contracts.Numeric, fmt.Sprintf(contracts.MinValue, 0)),
-		"status":      fmt.Sprintf("in:%s", "AVAILABLE,BORROWED,MAINTENANCE"),
-		"publishedAt": contracts.Date,
-		"tags":        fmt.Sprintf("%s|%s", contracts.Array, fmt.Sprintf(contracts.ArrayMax, 10)),
-		"tags.*":      fmt.Sprintf(contracts.MaxLength, 50),
+		"title":       "required",
+		"author":      "required", 
+		"isbn":        "required",
+		"price":       fmt.Sprintf("required|%s", fmt.Sprintf(contracts.MinValue, 0)),
+		"status":      "in:AVAILABLE,BORROWED,MAINTENANCE,RESERVED",
 	}
 	
 	return rules
@@ -137,35 +133,21 @@ type BookUpdateRequest struct {
 func (r *BookUpdateRequest) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{}
 
-	// Get the book ID from the route parameter for unique validation
-	bookID := ctx.Request().Route("id")
-
-	// Only validate fields that are provided
+	// Only validate fields that are provided (simplified rules)
 	if r.Title != nil {
-		rules["title"] = fmt.Sprintf(contracts.MaxLength, 255)
+		rules["title"] = "required"
 	}
 	if r.Author != nil {
-		rules["author"] = fmt.Sprintf(contracts.MaxLength, 100)
+		rules["author"] = "required"
 	}
 	if r.ISBN != nil {
-		// Fix unique validation to exclude current record
-		rules["isbn"] = fmt.Sprintf("%s|unique:books,isbn,%s", fmt.Sprintf(contracts.Regex, "^[0-9]{10,13}$"), bookID)
-	}
-	if r.Description != nil {
-		rules["description"] = fmt.Sprintf(contracts.MaxLength, 1000)
+		rules["isbn"] = "required"
 	}
 	if r.Price != nil {
-		rules["price"] = fmt.Sprintf("%s|%s", contracts.Numeric, fmt.Sprintf(contracts.MinValue, 0))
+		rules["price"] = fmt.Sprintf("required|%s", fmt.Sprintf(contracts.MinValue, 0))
 	}
 	if r.Status != nil {
-		rules["status"] = "in:AVAILABLE,BORROWED,MAINTENANCE"
-	}
-	if r.PublishedAt != nil {
-		rules["publishedAt"] = fmt.Sprintf("%s|%s", contracts.Date, fmt.Sprintf(contracts.Before, "today"))
-	}
-	if r.Tags != nil {
-		rules["tags"] = fmt.Sprintf("%s|%s", contracts.Array, fmt.Sprintf(contracts.ArrayMax, 10))
-		rules["tags.*"] = fmt.Sprintf(contracts.MaxLength, 50)
+		rules["status"] = "in:AVAILABLE,BORROWED,MAINTENANCE,RESERVED"
 	}
 
 	// If no rules were added, add a dummy rule to prevent empty rules error

@@ -169,3 +169,55 @@ func (c *BookController) Statistics(ctx http.Context) http.Response {
 
 	return c.SuccessResponse(ctx, stats, "Statistics retrieved successfully")
 }
+
+// GetByISBN GET /api/books/isbn/{isbn} - Get a book by ISBN
+func (c *BookController) GetByISBN(ctx http.Context) http.Response {
+	// Check permissions
+	if err := c.CheckAuth(ctx, "view", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Get ISBN from URL
+	isbn := ctx.Request().Route("isbn")
+	if isbn == "" {
+		return c.BadRequestResponse(ctx, "ISBN is required", nil)
+	}
+
+	// Get the book
+	book, err := c.bookService.GetByISBN(isbn)
+	if err != nil {
+		return c.NotFoundResponse(ctx, "Book not found")
+	}
+
+	return c.SuccessResponse(ctx, book, "Book retrieved successfully")
+}
+
+// GetByAuthor GET /api/books/author/{author} - Get books by author
+func (c *BookController) GetByAuthor(ctx http.Context) http.Response {
+	// Check permissions
+	if err := c.CheckAuth(ctx, "viewAny", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Get author from URL
+	author := ctx.Request().Route("author")
+	if author == "" {
+		return c.BadRequestResponse(ctx, "Author is required", nil)
+	}
+
+	// Validate pagination request
+	req, err := c.ValidatePaginationRequest(ctx)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid pagination parameters", nil)
+	}
+
+	// Get books by author
+	result, err := c.bookService.GetByAuthor(author, *req)
+	if err != nil {
+		return c.InternalErrorResponse(ctx, "Failed to retrieve books")
+	}
+
+	// Build response
+	response := c.BuildPaginatedResponse(result, req)
+	return c.SuccessResponse(ctx, response, "Books retrieved successfully")
+}

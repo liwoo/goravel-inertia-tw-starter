@@ -40,3 +40,8 @@ database/database.sqlite
 *.sqlite
 *.sqlite3
 *.db
+
+# Test storage directories
+tests/integration/storage/
+tests/unit/storage/
+tests/feature/storage/

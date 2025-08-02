@@ -524,13 +524,15 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 
 // GetByID retrieves a single resource by ID
 func (s *GenericCrudService[T]) GetByID(id uint) (interface{}, error) {
+	fmt.Printf("DEBUG: GetByID called with ID: %d, table: %s\n", id, s.BaseCrudService.tableName)
 	if id == 0 {
 		return nil, fmt.Errorf("invalid ID: %d", id)
 	}
 
 	var model T
-	query := facades.Orm().Query().Model(&model)
-
+	// Create a new instance for the query
+	query := facades.Orm().Query()
+	
 	// Load relations if configured
 	for _, relation := range s.relations {
 		query = query.With(relation)
@@ -541,10 +543,28 @@ func (s *GenericCrudService[T]) GetByID(id uint) (interface{}, error) {
 		query = s.customQuery(query)
 	}
 
+	// Use First with the model pointer to ensure GORM handles soft deletes
 	if err := query.Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
+		fmt.Printf("DEBUG: GetByID - Failed to find model with ID %d: %v\n", id, err)
 		return nil, fmt.Errorf("%s not found: %w", s.BaseCrudService.tableName, err)
 	}
 
+	// Check if we got a valid model by checking if it has the expected ID
+	// This is needed because GORM sometimes returns zero models instead of errors for soft-deleted records
+	modelInterface := interface{}(&model)
+	if idField := reflect.ValueOf(modelInterface).Elem().FieldByName("ID"); idField.IsValid() {
+		if idField.Uint() == 0 {
+			fmt.Printf("DEBUG: GetByID - Found zero model for ID %d (likely soft deleted)\n", id)
+			return nil, fmt.Errorf("%s not found", s.BaseCrudService.tableName)
+		}
+		if idField.Uint() != uint64(id) {
+			fmt.Printf("DEBUG: GetByID - ID mismatch: expected %d, got %d\n", id, idField.Uint())
+			return nil, fmt.Errorf("%s not found", s.BaseCrudService.tableName)
+		}
+	}
+
+	fmt.Printf("DEBUG: GetByID - Found valid model with ID %d\n", id)
+	
 	return &model, nil
 }
 
@@ -704,10 +724,18 @@ func (s *GenericCrudService[T]) Delete(id uint) error {
 	}
 
 	// Delete using GORM (soft delete)
+	// First find the record, then delete it to ensure soft delete works properly
 	var model T
-	if _, err := facades.Orm().Query().Model(&model).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).Delete(&model); err != nil {
+	if err := facades.Orm().Query().Table(s.BaseCrudService.tableName).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
+		return fmt.Errorf("failed to find %s for deletion: %w", s.BaseCrudService.tableName, err)
+	}
+	
+	// Now delete the found record (this should trigger soft delete)
+	fmt.Printf("DEBUG: About to soft delete model: %+v\n", model)
+	if _, err := facades.Orm().Query().Delete(&model); err != nil {
 		return fmt.Errorf("failed to delete %s: %w", s.BaseCrudService.tableName, err)
 	}
+	fmt.Printf("DEBUG: Soft delete completed for ID: %d\n", id)
 
 	// Run after hook if set
 	if s.afterDelete != nil {
