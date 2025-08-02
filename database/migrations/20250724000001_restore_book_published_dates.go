@@ -21,6 +21,12 @@ func (receiver *RestoreBookPublishedDates) Description() string {
 
 // Up Run the migrations.
 func (receiver *RestoreBookPublishedDates) Up() error {
+	// In test environment with SQLite in-memory, skip this migration
+	if facades.Config().GetString("database.default") == "sqlite" && 
+	   facades.Config().GetString("database.connections.sqlite.database") == ":memory:" {
+		return nil
+	}
+	
 	// Map of ISBN to published date
 	bookDates := map[string]string{
 		// Classic Literature

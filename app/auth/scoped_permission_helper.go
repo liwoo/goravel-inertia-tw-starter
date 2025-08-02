@@ -33,13 +33,33 @@ func (h *ScopedPermissionChecker) CheckScopedPermission(
 	// Check all three scopes from most to least restrictive
 	scopes := []PermissionScope{ScopeByAll, ScopeByMyRole, ScopeByMe}
 	
+	// Debug logging
+	facades.Log().Debug("CheckScopedPermission", map[string]interface{}{
+		"user_id": user.ID,
+		"email": user.Email,
+		"service": service,
+		"action": action,
+	})
+	
 	for _, scope := range scopes {
 		permissionSlug := GetPermissionSlug(service, action, scope)
 		
 		// Check if user has this scoped permission
-		if h.permissionService.HasPermission(user, permissionSlug) {
+		hasPermission := h.permissionService.HasPermission(user, permissionSlug)
+		facades.Log().Debug("Checking permission", map[string]interface{}{
+			"permission": permissionSlug,
+			"has_permission": hasPermission,
+			"scope": scope,
+		})
+		
+		if hasPermission {
 			// Now verify the scope requirements
-			if h.validateScope(user, scope, resource) {
+			validated := h.validateScope(user, scope, resource)
+			facades.Log().Debug("Scope validation", map[string]interface{}{
+				"scope": scope,
+				"validated": validated,
+			})
+			if validated {
 				return true
 			}
 		}
@@ -59,6 +79,12 @@ func (h *ScopedPermissionChecker) CheckScopedPermission(
 
 // validateScope checks if the user meets the requirements for a specific scope
 func (h *ScopedPermissionChecker) validateScope(user *models.User, scope PermissionScope, resource interface{}) bool {
+	// If no specific resource is provided (e.g., listing resources),
+	// the scope is valid - actual filtering will be done at the service level
+	if resource == nil {
+		return true
+	}
+	
 	switch scope {
 	case ScopeByAll:
 		// No additional validation needed - user can access all resources

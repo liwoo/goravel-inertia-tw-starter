@@ -2,6 +2,7 @@ package books
 
 import (
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
 	"players/app/auth"
 	"players/app/contracts"
 	"players/app/http/requests"
@@ -65,7 +66,11 @@ func NewBookController() *BookController {
 
 	// Set custom hooks
 	controller.SetBeforeStore(func(ctx http.Context, data map[string]interface{}) error {
-		// Any custom logic before creating a book
+		// Set created_by from authenticated user
+		var user models.User
+		if err := facades.Auth(ctx).User(&user); err == nil && user.ID > 0 {
+			data["created_by"] = user.ID
+		}
 		return nil
 	})
 

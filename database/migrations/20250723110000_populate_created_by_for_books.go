@@ -13,6 +13,12 @@ func (r *PopulateCreatedByForBooks20250723110000) Signature() string {
 
 // Up Run the migrations.
 func (r *PopulateCreatedByForBooks20250723110000) Up() error {
+	// In test environment with SQLite in-memory, skip this migration
+	if facades.Config().GetString("database.default") == "sqlite" && 
+	   facades.Config().GetString("database.connections.sqlite.database") == ":memory:" {
+		return nil
+	}
+	
 	// Get the first admin/super admin user
 	var adminUserID uint
 	err := facades.Orm().Query().Raw(`

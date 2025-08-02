@@ -11,6 +11,7 @@ require (
 	github.com/petaki/inertia-go v1.10.0
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/grpc v1.70.0
+	gorm.io/gorm v1.25.12
 )
 
 require (
@@ -184,7 +185,6 @@ require (
 	gorm.io/driver/mysql v1.5.7 // indirect
 	gorm.io/driver/postgres v1.5.11 // indirect
 	gorm.io/driver/sqlserver v1.5.4 // indirect
-	gorm.io/gorm v1.25.12 // indirect
 	gorm.io/plugin/dbresolver v1.5.3 // indirect
 	modernc.org/libc v1.61.7 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

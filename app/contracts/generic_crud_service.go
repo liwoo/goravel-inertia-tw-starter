@@ -603,26 +603,9 @@ func (s *GenericCrudService[T]) Create(data map[string]interface{}) (interface{}
 	// Create model instance
 	model := new(T)
 
-	// Use reflection to set fields
-	modelValue := reflect.ValueOf(model).Elem()
-	modelType := modelValue.Type()
-
-	for i := 0; i < modelType.NumField(); i++ {
-		field := modelType.Field(i)
-		fieldName := field.Tag.Get("json")
-		if fieldName == "" {
-			fieldName = strings.ToLower(field.Name)
-		}
-
-		if value, exists := mappedData[fieldName]; exists {
-			fieldValue := modelValue.Field(i)
-			if fieldValue.CanSet() {
-				setValue := reflect.ValueOf(value)
-				if setValue.Type().ConvertibleTo(fieldValue.Type()) {
-					fieldValue.Set(setValue.Convert(fieldValue.Type()))
-				}
-			}
-		}
+	// Use reflection to set fields (including embedded structs)
+	if err := s.setFieldsRecursively(model, mappedData); err != nil {
+		return nil, fmt.Errorf("failed to set fields: %w", err)
 	}
 
 	// Create using GORM
@@ -1135,6 +1118,103 @@ func (s *GenericCrudService[T]) ValidateSearchQuery(query string) error {
 	if len(query) > 100 {
 		return fmt.Errorf("search query must not exceed 100 characters")
 	}
+	return nil
+}
+
+// setFieldsRecursively sets fields on a struct using reflection, including embedded structs
+func (s *GenericCrudService[T]) setFieldsRecursively(model interface{}, data map[string]interface{}) error {
+	modelValue := reflect.ValueOf(model).Elem()
+	return s.setFieldsRecursivelyHelper(modelValue, data)
+}
+
+// setFieldsRecursivelyHelper is the recursive helper for setting fields
+func (s *GenericCrudService[T]) setFieldsRecursivelyHelper(modelValue reflect.Value, data map[string]interface{}) error {
+	modelType := modelValue.Type()
+
+	for i := 0; i < modelType.NumField(); i++ {
+		field := modelType.Field(i)
+		fieldValue := modelValue.Field(i)
+
+		// Handle embedded structs
+		if field.Anonymous && fieldValue.Kind() == reflect.Struct {
+			// Log embedded struct processing
+			facades.Log().Debug("Processing embedded struct", map[string]interface{}{
+				"structType": field.Type.String(),
+				"structName": field.Name,
+			})
+			
+			// Recursively set fields in embedded struct
+			if err := s.setFieldsRecursivelyHelper(fieldValue, data); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// Get the field name from json tag or use lowercase field name
+		fieldName := field.Tag.Get("json")
+		if fieldName == "" || fieldName == "-" {
+			fieldName = strings.ToLower(field.Name)
+		} else {
+			// Handle json tags with options (e.g., "field,omitempty")
+			if idx := strings.Index(fieldName, ","); idx != -1 {
+				fieldName = fieldName[:idx]
+			}
+		}
+
+		// Skip if json tag is "-"
+		if fieldName == "-" {
+			continue
+		}
+
+		// Check if we have data for this field
+		if value, exists := data[fieldName]; exists && fieldValue.CanSet() {
+			// Log field setting for debugging
+			facades.Log().Debug("Setting field via reflection", map[string]interface{}{
+				"fieldName": fieldName,
+				"fieldType": fieldValue.Type().String(),
+				"valueType": fmt.Sprintf("%T", value),
+				"value": value,
+			})
+			
+			// Handle different types of values
+			if value == nil {
+				// Set zero value for nil
+				fieldValue.Set(reflect.Zero(fieldValue.Type()))
+				continue
+			}
+
+			setValue := reflect.ValueOf(value)
+			
+			// Handle pointer fields
+			if fieldValue.Kind() == reflect.Ptr {
+				if setValue.Kind() == reflect.Ptr {
+					fieldValue.Set(setValue)
+				} else {
+					// Create a new pointer and set the value
+					newPtr := reflect.New(fieldValue.Type().Elem())
+					if setValue.Type().ConvertibleTo(fieldValue.Type().Elem()) {
+						newPtr.Elem().Set(setValue.Convert(fieldValue.Type().Elem()))
+						fieldValue.Set(newPtr)
+					}
+				}
+			} else if setValue.Type().ConvertibleTo(fieldValue.Type()) {
+				fieldValue.Set(setValue.Convert(fieldValue.Type()))
+			} else {
+				// Try to handle special cases like converting float64 to uint
+				switch fieldValue.Kind() {
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					if floatVal, ok := value.(float64); ok {
+						fieldValue.SetUint(uint64(floatVal))
+					}
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					if floatVal, ok := value.(float64); ok {
+						fieldValue.SetInt(int64(floatVal))
+					}
+				}
+			}
+		}
+	}
+
 	return nil
 }
 

@@ -160,15 +160,7 @@ func NewUserService() *UserService {
 	userService.baseService = service
 
 	// Set the actual service reference for proper method resolution
-	if setter, ok := service.(interface {
-		SetActualService(interface{})
-	}); ok {
-		setter.SetActualService(userService)
-	} else {
-		facades.Log().Error("UserService: Failed to cast service to SetActualService interface", map[string]interface{}{
-			"serviceType": fmt.Sprintf("%T", service),
-		})
-	}
+	contracts.SetActualServiceHelper(service, userService, "UserService")
 
 	return userService
 }
@@ -361,11 +353,31 @@ func (s *UserService) GetUserStatistics() (map[string]interface{}, error) {
 	}, nil
 }
 
+// GetColumnMapping returns the column mapping for UserService
+func (s *UserService) GetColumnMapping() map[string]string {
+	mapping := make(map[string]string)
+	mapping["createdAt"] = "created_at"
+	mapping["updatedAt"] = "updated_at"
+	return mapping
+}
+
 // Sortable interface implementation
 
 // MapSortField maps frontend field names to database column names
 func (s *UserService) MapSortField(frontendField string) (string, bool) {
-	// Check if the field is sortable
+	// First check column mapping
+	mapping := s.GetColumnMapping()
+	if mappedField, ok := mapping[frontendField]; ok {
+		// Verify the mapped field is sortable
+		sortableFields := s.baseService.GetSortableFields()
+		for _, field := range sortableFields {
+			if field == mappedField {
+				return mappedField, true
+			}
+		}
+	}
+	
+	// Check if the field is directly sortable
 	sortableFields := s.baseService.GetSortableFields()
 	for _, field := range sortableFields {
 		if field == frontendField {

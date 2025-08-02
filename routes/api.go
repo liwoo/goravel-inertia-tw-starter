@@ -28,18 +28,21 @@ func Api(router route.Router) {
 	userController := users.NewUserController()
 
 	bookController := books.NewBookController()
-	authController := auth.NewAuthController()
+	apiAuthController := auth.NewAPIAuthController()
 	rolesController := roles.NewRolesController()
 	permissionsController := perimissions.NewPermissionsController()
 	searchController := controllers.NewSearchController()
 	messageController := messages.NewMessageController()
 	notificationController := messages.NewNotificationController()
 	jwtAuth := middleware.JwtAuth()
+	optionalAuth := middleware.OptionalJwtAuth()
 
-	// Book resource routes
-	router.Get("/books", bookController.Index)
-	router.Get("/books/search", bookController.Search) // Search endpoint (must be before {id})
-	router.Get("/books/{id}", bookController.Show)
+	// Book resource routes (with optional auth for scoped permissions)
+	router.Middleware(optionalAuth).Group(func(optionalAuthRouter route.Router) {
+		optionalAuthRouter.Get("/books", bookController.Index)
+		optionalAuthRouter.Get("/books/search", bookController.Search) // Search endpoint (must be before {id})
+		optionalAuthRouter.Get("/books/{id}", bookController.Show)
+	})
 	// Custom book routes - TODO: implement these in the controller
 	// router.Get("/books/isbn/{isbn}", bookController.GetByISBN)
 	// router.Get("/books/author/{author}", bookController.GetByAuthor)
@@ -124,7 +127,8 @@ func Api(router route.Router) {
 	// This Prefix("auth") group will also be relative to the router passed in.
 	// If called from RouteServiceProvider's /api group, this becomes /api/auth
 	router.Prefix("auth").Group(func(authRouter route.Router) {
-		authRouter.Post("/login", authController.Login)
-		authRouter.Middleware(jwtAuth).Post("/logout", authController.Logout)
+		authRouter.Post("/login", apiAuthController.Login)
+		authRouter.Middleware(jwtAuth).Post("/logout", apiAuthController.Logout)
+		authRouter.Middleware(jwtAuth).Get("/me", apiAuthController.Me)
 	})
 }

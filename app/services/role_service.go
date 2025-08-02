@@ -142,15 +142,7 @@ func NewRoleService() *RoleService {
 	}
 
 	// Set the actual service reference for proper method resolution
-	if setter, ok := service.(interface {
-		SetActualService(interface{})
-	}); ok {
-		setter.SetActualService(roleServiceInstance)
-	} else {
-		facades.Log().Error("RoleService: Failed to cast service to SetActualService interface", map[string]interface{}{
-			"serviceType": fmt.Sprintf("%T", service),
-		})
-	}
+	contracts.SetActualServiceHelper(service, roleServiceInstance, "RoleService")
 
 	return roleServiceInstance
 }
@@ -384,25 +376,14 @@ func isSystemRole(slug string) bool {
 
 // MapSortField maps frontend field names to database column names
 func (s *RoleService) MapSortField(frontendField string) (string, bool) {
-	facades.Log().Debug("RoleService.MapSortField called", map[string]interface{}{
-		"frontendField": frontendField,
-		"sortableFields": s.baseService.GetSortableFields(),
-	})
-	
 	// Check if the field is sortable
 	sortableFields := s.baseService.GetSortableFields()
 	for _, field := range sortableFields {
 		if field == frontendField {
-			facades.Log().Debug("RoleService.MapSortField found match", map[string]interface{}{
-				"field": field,
-			})
 			return frontendField, true
 		}
 	}
 	
-	facades.Log().Debug("RoleService.MapSortField no match found", map[string]interface{}{
-		"frontendField": frontendField,
-	})
 	return "", false
 }
 

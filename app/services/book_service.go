@@ -22,9 +22,9 @@ type BookService struct {
 func NewBookService() *BookService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.Book]("book", "id").
-		WithSearchFields("title", "author", "isbn", "description", "tags").                           // REQUIRED
+		WithSearchFields("title", "author", "isbn", "description").                                   // REQUIRED
 		WithSortFields("id", "title", "author", "price", "created_at", "updated_at", "published_at"). // REQUIRED
-		WithFilterFields("status", "author", "tags").                                                 // REQUIRED
+		WithFilterFields("status", "author").                                                         // REQUIRED
 		WithValidationRules(map[string]interface{}{                                                   // REQUIRED
 			"title":       "required|string|max:255",
 			"author":      "required|string|max:100",
@@ -41,6 +41,25 @@ func NewBookService() *BookService {
 		WithSoftDeletes().                                         // Optional
 		WithScopeFiltering("books", "created_by").                 // Optional
 		WithBeforeCreate(func(data map[string]interface{}) error { // Optional
+			// The created_by field should already be set by the controller
+			// Just ensure it's properly formatted if present
+			if createdBy, exists := data["created_by"]; exists && createdBy != nil {
+				// Ensure it's a valid uint
+				switch v := createdBy.(type) {
+				case float64:
+					data["created_by"] = uint(v)
+				case int:
+					data["created_by"] = uint(v)
+				case uint:
+					// Already correct type
+				default:
+					// Try to convert
+					if fmt.Sprintf("%v", v) != "" {
+						// Keep the value as is, let GORM handle the conversion
+					}
+				}
+			}
+
 			// Handle tags array to JSON conversion
 			if tags, exists := data["tags"]; exists && tags != nil {
 				if tagsArray, ok := tags.([]interface{}); ok && len(tagsArray) > 0 {
@@ -91,15 +110,8 @@ func NewBookService() *BookService {
 		baseService:         service,
 	}
 
-	if setter, ok := service.(interface {
-		SetActualService(interface{})
-	}); ok {
-		setter.SetActualService(bookServiceInstance)
-	} else {
-		facades.Log().Error("BookService: Failed to cast service to SetActualService interface", map[string]interface{}{
-			"serviceType": fmt.Sprintf("%T", service),
-		})
-	}
+	// Set the actual service instance for proper method resolution
+	contracts.SetActualServiceHelper(service, bookServiceInstance, "BookService")
 
 	return bookServiceInstance
 }

@@ -48,6 +48,14 @@ func (s *PermissionService) HasPermission(user *models.User, permission string) 
 	// Always load fresh permissions
 	permissions := s.loadUserPermissions(user)
 	
+	// Debug log permissions
+	facades.Log().Debug("HasPermission check", map[string]interface{}{
+		"user_id": user.ID,
+		"email": user.Email,
+		"checking_permission": permission,
+		"user_permissions": permissions,
+	})
+	
 	// Check direct permission match
 	for _, perm := range permissions {
 		if perm == permission {

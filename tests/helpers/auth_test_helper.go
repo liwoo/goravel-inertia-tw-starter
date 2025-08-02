@@ -1,10 +1,13 @@
 package helpers
 
 import (
+	"errors"
+	
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
-	mockhttp "github.com/goravel/framework/mocks/http"
 	mockauth "github.com/goravel/framework/mocks/auth"
+	mockhttp "github.com/goravel/framework/mocks/http"
+	"github.com/stretchr/testify/mock"
+	
 	"players/app/models"
 )
 
@@ -17,7 +20,8 @@ func CreateAuthenticatedContext(user *models.User) http.Context {
 	mockAuth := &mockauth.Auth{}
 	
 	// Setup auth to return the user
-	mockAuth.On("User", &models.User{}).Return(nil).Run(func(args mock.Arguments) {
+	// Use mock.Anything instead of &models.User{} to match any argument
+	mockAuth.On("User", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		arg := args.Get(0).(*models.User)
 		*arg = *user
 	})
@@ -25,13 +29,12 @@ func CreateAuthenticatedContext(user *models.User) http.Context {
 	// Setup auth to return user ID
 	mockAuth.On("ID").Return(user.ID)
 	
-	// Make facades.Auth return our mock
-	facades.Auth = func(ctx ...http.Context) auth.Auth {
-		return mockAuth
-	}
+	// Setup context to return our mock auth
+	// The framework calls ctx.Value("GoravelAuth") to get the auth instance
+	mockContext.On("Value", "GoravelAuth").Return(mockAuth)
 	
 	// Setup request methods
-	mockRequest := &mockhttp.Request{}
+	mockRequest := &mockhttp.ContextRequest{}
 	mockContext.On("Request").Return(mockRequest)
 	
 	return mockContext
@@ -46,11 +49,10 @@ func CreateUnauthenticatedContext() http.Context {
 	mockAuth.On("User", &models.User{}).Return(errors.New("unauthenticated"))
 	mockAuth.On("ID").Return(uint(0))
 	
-	facades.Auth = func(ctx ...http.Context) auth.Auth {
-		return mockAuth
-	}
+	// Setup context to return our mock auth
+	mockContext.On("Auth").Return(mockAuth)
 	
-	mockRequest := &mockhttp.Request{}
+	mockRequest := &mockhttp.ContextRequest{}
 	mockContext.On("Request").Return(mockRequest)
 	
 	return mockContext

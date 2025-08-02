@@ -45,4 +45,35 @@ This is a **Goravel-based blog application** with a React frontend. Here's the s
 - **Database**: `go run . artisan migrate`
 - **Admin User**: `go run . artisan user:create`
 
+## Testing
+
+### HTTP Scoped Permissions Tests
+The application includes comprehensive tests for the scoped permission system:
+
+```bash
+# Quick setup and run
+mkdir -p resources/views && touch resources/views/dummy.tmpl
+APP_ENV=testing go test -v ./tests/feature -run TestHTTPScopedPermissionsTestSuite
+```
+
+**Key Testing Notes:**
+- Tests use SQLite in-memory database (auto-configured)
+- Always use `SetupJWTUser()` helper for creating test users
+- API responses use nested structure for paginated data
+- Minimum 2 characters for search queries
+- Use `direction` parameter for sorting (not `order`)
+
+For detailed testing documentation, see:
+- `/tests/feature/HTTP_SCOPED_PERMISSIONS_TEST_GUIDE.md` - Complete guide
+- `/tests/feature/HTTP_SCOPED_PERMISSIONS_QUICK_REFERENCE.md` - Quick reference
+
+### Running All Tests
+```bash
+# Run all feature tests
+APP_ENV=testing go test -v ./tests/feature/...
+
+# Run with coverage
+APP_ENV=testing go test -v -cover ./tests/feature/...
+```
+
 The codebase follows modern web development patterns with strong separation of concerns and defensive security practices.
