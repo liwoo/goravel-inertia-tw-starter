@@ -1,6 +1,8 @@
 package migrations
 
 import (
+	"os"
+	
 	"github.com/goravel/framework/contracts/database/schema"
 	"github.com/goravel/framework/facades"
 )
@@ -20,9 +22,9 @@ func (receiver *UpdateBooksPublishedAtToDatetime) Description() string {
 
 // Up Run the migrations.
 func (receiver *UpdateBooksPublishedAtToDatetime) Up() error {
-	// In test environment with SQLite in-memory, skip this migration
-	if facades.Config().GetString("database.default") == "sqlite" && 
-	   facades.Config().GetString("database.connections.sqlite.database") == ":memory:" {
+	// In test environment with SQLite, skip this migration
+	// Check environment variables first to avoid config dependency issues
+	if os.Getenv("DB_CONNECTION") == "sqlite" || os.Getenv("APP_ENV") == "testing" {
 		return nil
 	}
 	
@@ -36,9 +38,9 @@ func (receiver *UpdateBooksPublishedAtToDatetime) Up() error {
 
 // Down Reverse the migrations.
 func (receiver *UpdateBooksPublishedAtToDatetime) Down() error {
-	// In test environment with SQLite in-memory, skip this migration
-	if facades.Config().GetString("database.default") == "sqlite" && 
-	   facades.Config().GetString("database.connections.sqlite.database") == ":memory:" {
+	// In test environment with SQLite, skip this migration
+	// Check environment variables first to avoid config dependency issues
+	if os.Getenv("DB_CONNECTION") == "sqlite" || os.Getenv("APP_ENV") == "testing" {
 		return nil
 	}
 	

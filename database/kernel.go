@@ -29,7 +29,6 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250722073324AddCreatedByToResources{},
 		&migrations.M20250722104500AddAuditFieldsToAllTables{},
 		&migrations.M20250723000000AddScopeToRolePermissionsTable{},
-		&migrations.AddTagsColumnToBooksTable20250802235000{},
 		&migrations.UpdateBooksPublishedAtToDatetime{},
 		&migrations.RestoreBookPublishedDates{},
 		// &migrations.EnsureSingleActiveRolePerUser20250723100000{}, // Already applied
