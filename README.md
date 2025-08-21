@@ -31,6 +31,25 @@ npm run dev
 
 Visit `http://localhost:3500` and login with your admin credentials.
 
+## 🧪 Testing
+
+Run all tests with a single command:
+
+```bash
+./run_tests.sh
+```
+
+For specific test categories:
+
+```bash
+./run_tests.sh unit        # Unit tests (all passing)
+./run_tests.sh integration # Integration tests
+./run_tests.sh feature     # Feature tests
+./run_tests.sh coverage    # With coverage report
+```
+
+See [TESTING.md](TESTING.md) for detailed testing guide and [TEST_STATUS.md](TEST_STATUS.md) for current test status.
+
 ## 📋 Prerequisites
 
 - Go 1.18 or higher

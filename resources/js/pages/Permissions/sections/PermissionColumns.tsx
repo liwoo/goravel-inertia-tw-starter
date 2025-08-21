@@ -179,7 +179,7 @@ export const permissionFilters: CrudFilter[] = [
     label: 'Category',
     type: 'select',
     options: [
-      { value: '', label: 'All Categories' },
+      { value: '__all__', label: 'All Categories' },
       { value: 'books', label: 'Books' },
       { value: 'users', label: 'Users' },
       { value: 'roles', label: 'Roles' },
@@ -192,7 +192,7 @@ export const permissionFilters: CrudFilter[] = [
     label: 'Action',
     type: 'select',
     options: [
-      { value: '', label: 'All Actions' },
+      { value: '__all__', label: 'All Actions' },
       { value: 'create', label: 'Create' },
       { value: 'read', label: 'Read' },
       { value: 'update', label: 'Update' },
@@ -208,7 +208,7 @@ export const permissionFilters: CrudFilter[] = [
     label: 'Status',
     type: 'select',
     options: [
-      { value: '', label: 'All Status' },
+      { value: '__all__', label: 'All Status' },
       { value: 'true', label: 'Active' },
       { value: 'false', label: 'Inactive' },
     ],
@@ -218,7 +218,7 @@ export const permissionFilters: CrudFilter[] = [
     label: 'Requires Ownership',
     type: 'select',
     options: [
-      { value: '', label: 'All' },
+      { value: '__all__', label: 'All' },
       { value: 'true', label: 'Yes' },
       { value: 'false', label: 'No' },
     ],
@@ -228,7 +228,7 @@ export const permissionFilters: CrudFilter[] = [
     label: 'Can Delegate',
     type: 'select',
     options: [
-      { value: '', label: 'All' },
+      { value: '__all__', label: 'All' },
       { value: 'true', label: 'Yes' },
       { value: 'false', label: 'No' },
     ],

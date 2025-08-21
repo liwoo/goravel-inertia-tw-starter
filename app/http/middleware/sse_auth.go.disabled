@@ -1,0 +1,76 @@
+package middleware
+
+import (
+	"strings"
+
+	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
+	"players/app/models"
+)
+
+func SSEAuth() http.Middleware {
+	return func(ctx http.Context) {
+		// Try to get token from query parameter (for SSE connections)
+		token := ctx.Request().Query("token", "")
+		
+		if token == "" {
+			// Try to get from Authorization header as fallback
+			authHeader := ctx.Request().Header("Authorization", "")
+			if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+				token = strings.TrimPrefix(authHeader, "Bearer ")
+			}
+		}
+
+		if token == "" {
+			// Try to get from cookie
+			tokenCookie := ctx.Request().Cookie("jwt_token", "")
+			if tokenCookie != "" {
+				token = tokenCookie
+			}
+		}
+
+		if token == "" {
+			ctx.Response().Json(http.StatusUnauthorized, http.Json{
+				"error": "No authentication token provided",
+			})
+			ctx.Request().AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// Validate the token
+		payload, err := facades.Auth().Parse(token)
+		if err != nil {
+			ctx.Response().Json(http.StatusUnauthorized, http.Json{
+				"error": "Invalid token",
+			})
+			ctx.Request().AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// Get user ID from token
+		userID := payload.GetKey("id")
+		if userID == nil {
+			ctx.Response().Json(http.StatusUnauthorized, http.Json{
+				"error": "Invalid token payload",
+			})
+			ctx.Request().AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// Check if user exists
+		var user models.User
+		if err := facades.Orm().Query().Find(&user, userID); err != nil {
+			ctx.Response().Json(http.StatusUnauthorized, http.Json{
+				"error": "User not found",
+			})
+			ctx.Request().AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// Store user information in context
+		ctx.WithValue("user_id", user.ID)
+		ctx.WithValue("user", &user)
+
+		ctx.Request().Next()
+	}
+}

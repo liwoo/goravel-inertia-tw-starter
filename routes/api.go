@@ -41,6 +41,7 @@ func Api(router route.Router) {
 	router.Middleware(optionalAuth).Group(func(optionalAuthRouter route.Router) {
 		optionalAuthRouter.Get("/books", bookController.Index)
 		optionalAuthRouter.Get("/books/search", bookController.Search) // Search endpoint (must be before {id})
+		optionalAuthRouter.Get("/books/filters", bookController.FilterMetadata) // Filter metadata endpoint
 		optionalAuthRouter.Get("/books/available", bookController.Available)
 		optionalAuthRouter.Get("/books/isbn/{isbn}", bookController.GetByISBN)
 		optionalAuthRouter.Get("/books/author/{author}", bookController.GetByAuthor)
@@ -75,6 +76,7 @@ func Api(router route.Router) {
 
 		// User management routes (super admin only)
 		protectedRouter.Get("/users", userController.Index)
+		protectedRouter.Get("/users/filters", userController.GetFilters)
 		protectedRouter.Get("/users/{id}", userController.Show)
 		protectedRouter.Post("/users", userController.Store)
 		protectedRouter.Put("/users/{id}", userController.Update)
@@ -85,10 +87,10 @@ func Api(router route.Router) {
 		protectedRouter.Prefix("messages").Group(func(messageRouter route.Router) {
 			// Send and manage messages
 			messageRouter.Post("/", messageController.SendMessage)
-			// messageRouter.Get("/conversations", messageController.GetConversations) // TODO: implement
+			messageRouter.Get("/conversations", messageController.GetConversations) // List all conversations
 			messageRouter.Get("/conversation/{userId}", messageController.GetConversation)
 			messageRouter.Put("/{id}/read", messageController.MarkAsRead)
-			// messageRouter.Get("/users", messageController.GetMessagableUsers) // TODO: implement
+			messageRouter.Get("/users", messageController.GetMessagableUsers) // Now implemented
 			// messageRouter.Get("/search-users", messageController.SearchUsers) // TODO: implement
 			// messageRouter.Get("/unread-count", messageController.GetUnreadCount) // TODO: implement as endpoint
 
@@ -121,6 +123,7 @@ func Api(router route.Router) {
 			notificationRouter.Post("/system", notificationController.CreateSystemNotification)
 			notificationRouter.Post("/cleanup", notificationController.CleanupExpired)
 		})
+
 	})
 
 	// This Prefix("auth") group will also be relative to the router passed in.

@@ -2,6 +2,7 @@ package feature
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/goravel/framework/facades"
@@ -60,9 +61,10 @@ func (s *ScopedPermissionsTestSuite) setupTestUsers() {
 	}
 	facades.Orm().Query().Create(s.editor1)
 	facades.Orm().Query().Create(&models.UserRole{
-		UserID: s.editor1.ID,
-		RoleID: s.editorRole.ID,
-		IsActive: true,
+		UserID:     s.editor1.ID,
+		RoleID:     s.editorRole.ID,
+		AssignedAt: time.Now(),
+		IsActive:   true,
 	})
 	
 	s.editor2 = &models.User{
@@ -72,9 +74,10 @@ func (s *ScopedPermissionsTestSuite) setupTestUsers() {
 	}
 	facades.Orm().Query().Create(s.editor2)
 	facades.Orm().Query().Create(&models.UserRole{
-		UserID: s.editor2.ID,
-		RoleID: s.editorRole.ID,
-		IsActive: true,
+		UserID:     s.editor2.ID,
+		RoleID:     s.editorRole.ID,
+		AssignedAt: time.Now(),
+		IsActive:   true,
 	})
 	
 	// Create regular user

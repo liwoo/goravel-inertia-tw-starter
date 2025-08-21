@@ -23,7 +23,7 @@ func NewBookService() *BookService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.Book]("books", "id").
 		WithSearchFields("title", "author", "isbn", "description").                                   // REQUIRED
-		WithSortFields("id", "title", "author", "price", "created_at", "updated_at", "published_at"). // REQUIRED
+		WithSortFields("id", "title", "author", "price", "status", "created_at", "updated_at", "published_at"). // REQUIRED
 		WithFilterFields("status", "author").                                                         // REQUIRED
 		WithValidationRules(map[string]interface{}{                                                   // REQUIRED
 			"title":       "required|string|max:255",
@@ -196,6 +196,11 @@ func (s *BookService) GetByISBN(isbn string) (*models.Book, error) {
 	if err != nil {
 		return nil, err
 	}
+	
+	// Check if book was actually found (not just an empty struct)
+	if book.ID == 0 {
+		return nil, fmt.Errorf("book not found")
+	}
 
 	return &book, nil
 }
@@ -274,6 +279,129 @@ func (s *BookService) ReturnBook(id uint) error {
 	return err
 }
 
+// GetFilterDefinitions returns filter definitions for the books resource
+func (s *BookService) GetFilterDefinitions() []contracts.FilterDefinition {
+	return []contracts.FilterDefinition{
+		// Title filter
+		contracts.NewFilterDefinition(
+			"title",
+			"Title",
+			contracts.FilterTypeString,
+			[]contracts.FilterOperator{
+				contracts.OperatorContains,
+				contracts.OperatorNotContains,
+				contracts.OperatorStartsWith,
+				contracts.OperatorEndsWith,
+				contracts.OperatorEquals,
+				contracts.OperatorNotEquals,
+			},
+		),
+		// Author filter
+		contracts.NewFilterDefinition(
+			"author",
+			"Author",
+			contracts.FilterTypeString,
+			[]contracts.FilterOperator{
+				contracts.OperatorContains,
+				contracts.OperatorNotContains,
+				contracts.OperatorEquals,
+				contracts.OperatorNotEquals,
+			},
+		),
+		// ISBN filter
+		contracts.NewFilterDefinition(
+			"isbn",
+			"ISBN",
+			contracts.FilterTypeString,
+			[]contracts.FilterOperator{
+				contracts.OperatorEquals,
+				contracts.OperatorNotEquals,
+				contracts.OperatorContains,
+			},
+		),
+		// Status filter
+		{
+			Field: "status",
+			Label: "Status",
+			Type:  contracts.FilterTypeEnum,
+			Operators: []contracts.FilterOperator{
+				contracts.OperatorEquals,
+				contracts.OperatorNotEquals,
+				contracts.OperatorIn,
+				contracts.OperatorNotIn,
+			},
+			EnumValues: []string{
+				"AVAILABLE",
+				"BORROWED",
+				"MAINTENANCE",
+				"RESERVED",
+			},
+		},
+		// Price filter
+		contracts.NewFilterDefinition(
+			"price",
+			"Price",
+			contracts.FilterTypeNumber,
+			[]contracts.FilterOperator{
+				contracts.OperatorEquals,
+				contracts.OperatorNotEquals,
+				contracts.OperatorGreaterThan,
+				contracts.OperatorLessThan,
+				contracts.OperatorGreaterThanOrEqual,
+				contracts.OperatorLessThanOrEqual,
+				contracts.OperatorBetween,
+				contracts.OperatorNotBetween,
+			},
+		),
+		// Published date filter
+		contracts.NewFilterDefinition(
+			"published_at",
+			"Published Date",
+			contracts.FilterTypeDate,
+			[]contracts.FilterOperator{
+				contracts.OperatorBefore,
+				contracts.OperatorAfter,
+				contracts.OperatorBetween,
+				contracts.OperatorNotBetween,
+				contracts.OperatorIsToday,
+				contracts.OperatorIsYesterday,
+				contracts.OperatorIsThisWeek,
+				contracts.OperatorIsThisMonth,
+				contracts.OperatorIsThisYear,
+				contracts.OperatorLastNDays,
+			},
+		),
+		// Created date filter
+		contracts.NewFilterDefinition(
+			"created_at",
+			"Date Added",
+			contracts.FilterTypeDateTime,
+			[]contracts.FilterOperator{
+				contracts.OperatorBefore,
+				contracts.OperatorAfter,
+				contracts.OperatorBetween,
+				contracts.OperatorNotBetween,
+				contracts.OperatorIsToday,
+				contracts.OperatorIsThisWeek,
+				contracts.OperatorIsThisMonth,
+				contracts.OperatorLastNDays,
+			},
+		),
+		// Tags filter (for array/JSON field)
+		contracts.NewFilterDefinition(
+			"tags",
+			"Tags",
+			contracts.FilterTypeArray,
+			[]contracts.FilterOperator{
+				contracts.OperatorContains,
+				contracts.OperatorNotContains,
+				contracts.OperatorIsEmpty,
+				contracts.OperatorIsNotEmpty,
+			},
+		),
+	}
+}
+
 // GetBookStatistics returns statistics about books
 func (s *BookService) GetBookStatistics() (map[string]interface{}, error) {
 	var stats struct {
@@ -285,21 +413,22 @@ func (s *BookService) GetBookStatistics() (map[string]interface{}, error) {
 		AveragePrice     float64
 	}
 
-	// Get total books
-	facades.Orm().Query().Model(&models.Book{}).Count(&stats.TotalBooks)
+	// Get total books (excluding soft deleted)
+	facades.Orm().Query().Model(&models.Book{}).Where("deleted_at IS NULL").Count(&stats.TotalBooks)
 
 	// Get available books
-	facades.Orm().Query().Model(&models.Book{}).Where("status = ?", "AVAILABLE").Count(&stats.AvailableBooks)
+	facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "AVAILABLE").Count(&stats.AvailableBooks)
 
 	// Get borrowed books
-	facades.Orm().Query().Model(&models.Book{}).Where("status = ?", "BORROWED").Count(&stats.BorrowedBooks)
+	facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "BORROWED").Count(&stats.BorrowedBooks)
 
 	// Get maintenance books
-	facades.Orm().Query().Model(&models.Book{}).Where("status = ?", "MAINTENANCE").Count(&stats.MaintenanceBooks)
+	facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "MAINTENANCE").Count(&stats.MaintenanceBooks)
 
 	// Get total value
 	facades.Orm().Query().Model(&models.Book{}).
-		Select("SUM(price) as total").
+		Where("deleted_at IS NULL").
+		Select("COALESCE(SUM(price), 0) as total").
 		Pluck("total", &stats.TotalValue)
 
 	// Calculate average price

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
 	"players/app/auth"
 	"players/app/contracts"
 	"players/app/models"
@@ -141,6 +142,56 @@ func (c *MessageController) SendBroadcast(ctx http.Context) http.Response {
 		"sent_count": len(messages),
 		"messages":   messages,
 	}, fmt.Sprintf("Broadcast sent to %d recipients", len(messages)))
+}
+
+// GetConversations handles GET /api/messages/conversations
+func (c *MessageController) GetConversations(ctx http.Context) http.Response {
+	// Get authenticated user
+	permHelper := auth.GetPermissionHelper()
+	user := permHelper.GetAuthenticatedUser(ctx)
+	if user == nil {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Get pagination parameters
+	page := ctx.Request().QueryInt("page", 1)
+	pageSize := ctx.Request().QueryInt("pageSize", 20)
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	// Get conversations from message service
+	conversations, err := c.messageService.GetConversations(user.ID)
+	if err != nil {
+		return c.InternalErrorResponse(ctx, "Failed to retrieve conversations: "+err.Error())
+	}
+
+	// Paginate the results
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if end > len(conversations) {
+		end = len(conversations)
+	}
+	
+	paginatedConversations := conversations
+	if start < len(conversations) {
+		paginatedConversations = conversations[start:end]
+	} else {
+		paginatedConversations = []interface{}{}
+	}
+
+	// Build paginated response
+	paginatedResult := map[string]interface{}{
+		"data":         paginatedConversations,
+		"total":        len(conversations),
+		"current_page": page,
+		"per_page":     pageSize,
+		"last_page":    (len(conversations) + pageSize - 1) / pageSize,
+		"from":         start + 1,
+		"to":           end,
+	}
+
+	return c.SuccessResponse(ctx, paginatedResult, "Conversations retrieved successfully")
 }
 
 // GetInbox handles GET /api/messages/inbox
@@ -321,6 +372,76 @@ func (c *MessageController) GetConversation(ctx http.Context) http.Response {
 
 	response := c.BuildPaginatedResponse(result, req)
 	return c.SuccessResponse(ctx, response, "Conversation retrieved successfully")
+}
+
+// GetMessagableUsers handles GET /api/messages/users
+func (c *MessageController) GetMessagableUsers(ctx http.Context) http.Response {
+	// Get authenticated user
+	permHelper := auth.GetPermissionHelper()
+	user := permHelper.GetAuthenticatedUser(ctx)
+	if user == nil {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Get users based on role-based discovery rules:
+	// - Super admins can message anyone
+	// - Regular users can discover people in their roles or below
+	var users []models.User
+	
+	if user.IsSuperAdmin {
+		// Super admins can see all active users except themselves
+		facades.Log().Info("Super admin getting all users", map[string]interface{}{
+			"current_user_id": user.ID,
+		})
+		if err := facades.Orm().Query().Model(&models.User{}).
+			Where("is_active = ?", true).
+			Where("id != ?", user.ID).
+			Order("name ASC").
+			Find(&users); err != nil {
+			return c.InternalErrorResponse(ctx, "Failed to retrieve users: "+err.Error())
+		}
+		facades.Log().Info("Super admin found users", map[string]interface{}{
+			"users_count": len(users),
+		})
+	} else {
+		// Regular users can only discover users in their roles or below
+		// For now, implement a simplified version - they can see other regular users
+		// TODO: Implement proper role hierarchy checking
+		if err := facades.Orm().Query().Model(&models.User{}).
+			Where("is_active = ?", true).
+			Where("id != ?", user.ID).
+			Where("is_super_admin = ?", false). // Regular users can see other regular users
+			Order("name ASC").
+			Find(&users); err != nil {
+			return c.InternalErrorResponse(ctx, "Failed to retrieve users: "+err.Error())
+		}
+	}
+
+	// Build messagable users list
+	messagableUsers := []interface{}{}
+	for _, u := range users {
+		messagableUsers = append(messagableUsers, map[string]interface{}{
+			"id":             u.ID,
+			"name":           u.Name,
+			"email":          u.Email,
+			"is_super_admin": u.IsSuperAdmin,
+			"is_active":      u.IsActive,
+		})
+	}
+
+	// Return in the expected format
+	// The frontend expects response.data.data to be the paginated structure
+	paginatedResult := map[string]interface{}{
+		"data": messagableUsers,
+		"total": len(messagableUsers),
+		"current_page": 1,
+		"per_page": 100,
+		"last_page": 1,
+		"from": 1,
+		"to": len(messagableUsers),
+	}
+	
+	return c.SuccessResponse(ctx, paginatedResult, "Messagable users retrieved successfully")
 }
 
 // Override Delete to use custom delete logic

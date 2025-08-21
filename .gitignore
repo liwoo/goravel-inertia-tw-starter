@@ -46,16 +46,38 @@ database/database.sqlite
 *.sqlite3
 *.db
 
-# Test storage directories
+# Test storage directories and session files
 tests/integration/storage/
 tests/unit/storage/
 tests/feature/storage/
+tests/*/storage/
+tests/*/*/storage/
+tests/*/*/*/storage/
+**/sessions/
+**/sessions/*
+
+# Test artifacts
+tests/feature/**/storage/
+tests/integration/**/storage/
+tests/unit/**/storage/
 
 # Development scripts and config
 .air.toml
 start_ssh_agent.sh
 run_tests.sh
 clean_test_db.sh
+
+# Temporary test scripts
+analyze_test_failures.sh
+fix_tests.sh
+run_tests_*.sh
+*_test_analysis.sh
+
+# Test reports and summaries
+TEST_*.md
+VALIDATION_*.md
+*_TEST_REPORT.md
+*_TEST_SUMMARY.md
 
 # Test databases
 database/test.sqlite

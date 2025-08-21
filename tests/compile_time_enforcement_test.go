@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"testing"
 	"players/app/contracts"
 	"players/app/http/requests"
 	"players/app/models"
@@ -11,7 +12,7 @@ import (
 // This file demonstrates compile-time enforcement
 // Uncomment any of the error examples to see compile errors in your editor
 
-func TestCompileTimeEnforcement() {
+func TestCompileTimeEnforcement(t *testing.T) {
 	bookService := services.NewBookService()
 	
 	// ✅ CORRECT: This compiles

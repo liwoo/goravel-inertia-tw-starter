@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -224,9 +225,18 @@ func (c *BaseCrudController) ValidatePaginationRequest(ctx http.Context) (*ListR
 		"search":    true,
 		"sort":      true,
 		"direction": true,
+		"filters":   true, // Special parameter for custom filters JSON
 	}
 	
-	// Add all other query parameters as filters
+	// Check for custom filters JSON parameter
+	if filtersJSON := ctx.Request().Query("filters", ""); filtersJSON != "" {
+		// Parse custom filters from JSON
+		if customFilters, err := c.ParseCustomFilters(filtersJSON); err == nil {
+			req.Filters["__custom_filters"] = customFilters
+		}
+	}
+	
+	// Add all other query parameters as simple filters
 	for key := range queries {
 		if !knownParams[key] {
 			// Get the value as a string
@@ -523,8 +533,8 @@ func (c *BaseCrudController) ResourceUpdatedResponse(ctx http.Context, resource 
 }
 
 func (c *BaseCrudController) ResourceDeletedResponse(ctx http.Context, resourceType string, id uint) http.Response {
-	message := fmt.Sprintf("%s deleted successfully", strings.Title(resourceType))
-	return c.SuccessResponse(ctx, nil, message)
+	// Return 204 No Content for successful delete operations
+	return ctx.Response().NoContent()
 }
 
 // CONFIGURATION
@@ -866,4 +876,32 @@ func ValidateControllerImplementation(controller interface{}) ControllerValidati
 	}
 	
 	return result
+}
+
+// ParseCustomFilters parses custom filter JSON string into filter conditions
+func (c *BaseCrudController) ParseCustomFilters(filtersJSON string) (interface{}, error) {
+	var filterData map[string]interface{}
+	if err := json.Unmarshal([]byte(filtersJSON), &filterData); err != nil {
+		return nil, fmt.Errorf("invalid filter JSON: %v", err)
+	}
+	
+	// Check if it's a compound filter
+	if _, hasLogic := filterData["logic"]; hasLogic {
+		return ParseCompoundFilter(filterData)
+	}
+	
+	// Otherwise, it's a simple filter
+	return ParseFilterQuery(filterData)
+}
+
+// GetFilterDefinitions returns filter definitions for the resource
+// This should be overridden by specific controllers
+func (c *BaseCrudController) GetFilterDefinitions() []FilterDefinition {
+	return []FilterDefinition{}
+}
+
+// GetFilterMetadata returns filter metadata for UI consumption
+func (c *BaseCrudController) GetFilterMetadata() map[string]interface{} {
+	definitions := c.GetFilterDefinitions()
+	return GenerateFilterMetadata(definitions)
 }

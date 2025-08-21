@@ -280,11 +280,9 @@ func (s *BookCRUDTestSuite) TestDeleteBook() {
 	book.CreatedBy = &s.testUser.ID
 	s.Nil(facades.Orm().Query().Create(book))
 	
-	resp, result := s.makeRequest("DELETE", fmt.Sprintf("/api/books/%d", book.ID), nil)
+	resp, _ := s.makeRequest("DELETE", fmt.Sprintf("/api/books/%d", book.ID), nil)
 	
-	s.Equal(http.StatusOK, resp.StatusCode)
-	s.True(result["success"].(bool))
-	s.Equal("Book deleted successfully", result["message"])
+	s.Equal(http.StatusNoContent, resp.StatusCode)
 	
 	// Verify soft delete
 	var deletedBook models.Book
@@ -664,12 +662,9 @@ func (s *BookCRUDTestSuite) TestSoftDelete() {
 	
 	// Delete the book
 	fmt.Printf("DEBUG: About to delete book ID: %d\n", bookID)
-	resp, deleteResult := s.makeRequest("DELETE", fmt.Sprintf("/api/books/%d", bookID), nil)
-	fmt.Printf("DEBUG: DELETE response status: %d\n", resp.StatusCode)
-	if deleteResult != nil {
-		fmt.Printf("DEBUG: DELETE response: %+v\n", deleteResult)
-	}
-	s.Equal(http.StatusOK, resp.StatusCode)
+	deleteResp, _ := s.makeRequest("DELETE", fmt.Sprintf("/api/books/%d", bookID), nil)
+	fmt.Printf("DEBUG: DELETE response status: %d\n", deleteResp.StatusCode)
+	s.Equal(http.StatusNoContent, deleteResp.StatusCode)
 	
 	// Try to get the deleted book - should fail
 	resp, result = s.makeRequest("GET", fmt.Sprintf("/api/books/%d", bookID), nil)

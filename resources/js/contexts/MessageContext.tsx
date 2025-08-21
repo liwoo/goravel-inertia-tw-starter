@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import axios from '@/lib/axios';
+import { useSSE, useSSEEvent } from '@/hooks/useSSE';
+import sseManager from '@/services/sseManager';
 
 interface User {
   id: number;
@@ -97,6 +99,59 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // SSE Event Handlers
+  useSSE('message:unread_count', (event) => {
+    setUnreadCount(event.data.count || 0);
+  });
+
+  useSSE('message:new', (event) => {
+    const newMessage = event.data.message as Message;
+    
+    // Update messages if it's in the current conversation
+    if (selectedConversation && 
+        (selectedConversation.user.id === newMessage.sender_id || 
+         selectedConversation.user.id === newMessage.recipient_id)) {
+      setMessages(prev => [newMessage, ...prev]);
+    }
+    
+    // Refresh conversations to update latest message
+    loadConversations({ page: 1, pageSize: 20 });
+  });
+
+  useSSE('message:read', (event) => {
+    const messageId = event.data.message_id;
+    
+    // Update message read status
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, status: 'read', read_at: new Date().toISOString() } 
+          : msg
+      )
+    );
+  });
+
+  useSSE('message:updated', (event) => {
+    const updatedMessage = event.data as Message;
+    
+    // Update message in current conversation
+    setMessages(prev => 
+      prev.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
+    );
+  });
+
+  useSSE('message:deleted', (event) => {
+    const messageId = event.data.message_id;
+    
+    // Remove message from current conversation
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    
+    // Refresh conversations if needed
+    if (messages.some(msg => msg.id === messageId)) {
+      loadConversations({ page: 1, pageSize: 20 });
+    }
+  });
 
   // Load conversations
   const loadConversations = useCallback(async (request: ListRequest) => {
@@ -372,15 +427,14 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     setError(null);
   }, []);
 
-  // Load initial data
+  // Load initial data and connect SSE
   useEffect(() => {
     refreshUnreadCount();
-  }, [refreshUnreadCount]);
-
-  // Refresh unread count periodically
-  useEffect(() => {
-    const interval = setInterval(refreshUnreadCount, 30000); // Every 30 seconds
-    return () => clearInterval(interval);
+    
+    // Ensure SSE is connected
+    if (!sseManager.isConnected()) {
+      sseManager.connect();
+    }
   }, [refreshUnreadCount]);
 
   const value: MessageContextType = {

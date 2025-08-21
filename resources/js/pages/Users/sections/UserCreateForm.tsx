@@ -183,7 +183,7 @@ export const UserCreateForm = forwardRef<any, UserCreateFormProps>(({
               <div className="flex-1 space-y-2">
                 <Label htmlFor="role">Role</Label>
                 <Select
-                  value={formData.role_id?.toString() || ''}
+                  value={formData.role_id?.toString()}
                   onValueChange={(value) => setFormData({ ...formData, role_id: value ? parseInt(value) : undefined })}
                 >
                   <SelectTrigger>

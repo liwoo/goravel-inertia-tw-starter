@@ -69,6 +69,10 @@ func (c *GenericPageController) Index(ctx http.Context) http.Response {
 	// Store context for use in statistics
 	c.currentContext = ctx
 	
+	// Debug: Log incoming request with filters parameter
+	filtersParam := ctx.Request().Query("filters", "")
+	fmt.Printf("DEBUG: GenericPageController.Index called with filters param: '%s'\n", filtersParam)
+	
 	// 1. Permission/Access Check
 	if err := c.performPermissionCheck(ctx); err != nil {
 		return c.renderForbidden(ctx, err)

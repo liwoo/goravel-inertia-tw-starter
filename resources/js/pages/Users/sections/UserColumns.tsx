@@ -224,7 +224,7 @@ export const userFilters = [
     label: 'Status',
     type: 'select' as const,
     options: [
-      { label: 'All Status', value: '' },
+      { label: 'All Status', value: '__all__' },
       { label: 'Active', value: 'true' },
       { label: 'Inactive', value: 'false' },
     ],
@@ -234,7 +234,7 @@ export const userFilters = [
     label: 'Admin Type',
     type: 'select' as const,
     options: [
-      { label: 'All Types', value: '' },
+      { label: 'All Types', value: '__all__' },
       { label: 'Super Admin', value: 'true' },
       { label: 'Regular User', value: 'false' },
     ],
@@ -244,7 +244,7 @@ export const userFilters = [
     label: 'Email Status',
     type: 'select' as const,
     options: [
-      { label: 'All', value: '' },
+      { label: 'All', value: '__all__' },
       { label: 'Verified', value: 'true' },
       { label: 'Unverified', value: 'false' },
     ],
@@ -254,7 +254,7 @@ export const userFilters = [
     label: 'Role',
     type: 'select' as const,
     options: [
-      { label: 'All Roles', value: '' },
+      { label: 'All Roles', value: '__all__' },
       // Options will be populated dynamically
     ],
   },

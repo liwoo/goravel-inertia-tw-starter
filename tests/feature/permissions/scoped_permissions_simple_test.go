@@ -2,6 +2,7 @@ package feature
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 	"github.com/goravel/framework/facades"
@@ -60,9 +61,10 @@ func (s *ScopedPermissionsSimpleTestSuite) TestPermissionHelperRecognizesScopes(
 	
 	// Assign user to role
 	userRole := &models.UserRole{
-		UserID:   user.ID,
-		RoleID:   role.ID,
-		IsActive: true,
+		UserID:     user.ID,
+		RoleID:     role.ID,
+		AssignedAt: time.Now(),
+		IsActive:   true,
 	}
 	err = facades.Orm().Query().Create(userRole)
 	s.NoError(err)
@@ -87,11 +89,12 @@ func (s *ScopedPermissionsSimpleTestSuite) TestPermissionHelperRecognizesScopes(
 	err = facades.Orm().Query().Where("id", user.ID).With("Roles").First(user)
 	s.NoError(err)
 	
-	// Test that HasPermission works with base permission slugs
-	s.True(permService.HasPermission(user, "books_read"), "User should have books_read permission")
-	s.True(permService.HasPermission(user, "books_create"), "User should have books_create permission")
-	s.True(permService.HasPermission(user, "books_update"), "User should have books_update permission")
-	s.True(permService.HasPermission(user, "books_delete"), "User should have books_delete permission")
+	// Test that HasPermission does NOT automatically grant base permissions for scoped versions
+	// This ensures proper scope validation happens in CheckScopedPermission
+	s.True(permService.HasPermission(user, "books_read"), "User should have books_read permission (by_all grants base)")
+	s.True(permService.HasPermission(user, "books_create"), "User should have books_create permission (by_all grants base)")
+	s.False(permService.HasPermission(user, "books_update"), "User should NOT have books_update permission (only has by_me)")
+	s.False(permService.HasPermission(user, "books_delete"), "User should NOT have books_delete permission (only has by_my_role)")
 	
 	// Test that GetUserPermissions returns scoped versions
 	userPerms := permService.GetUserPermissions(user)
@@ -136,9 +139,10 @@ func (s *ScopedPermissionsSimpleTestSuite) TestBuildPermissionsMapWithScopes() {
 	
 	// Assign role to user
 	userRole := &models.UserRole{
-		UserID:   user.ID,
-		RoleID:   role.ID,
-		IsActive: true,
+		UserID:     user.ID,
+		RoleID:     role.ID,
+		AssignedAt: time.Now(),
+		IsActive:   true,
 	}
 	err = facades.Orm().Query().Create(userRole)
 	s.NoError(err)
@@ -164,11 +168,12 @@ func (s *ScopedPermissionsSimpleTestSuite) TestBuildPermissionsMapWithScopes() {
 	err = facades.Orm().Query().Where("id", user.ID).With("Roles").First(user)
 	s.NoError(err)
 	
-	// The BuildPermissionsMap should recognize scoped permissions
-	s.True(permService.HasPermission(user, "books_read"), "Should have read permission")
-	s.True(permService.HasPermission(user, "books_create"), "Should have create permission")
-	s.True(permService.HasPermission(user, "books_update"), "Should have update permission")
-	s.False(permService.HasPermission(user, "books_delete"), "Should not have delete permission")
+	// Test that HasPermission correctly handles scoped permissions
+	// by_all scope grants base permission, by_me and by_my_role do not
+	s.True(permService.HasPermission(user, "books_read"), "Should have read permission (by_all grants base)")
+	s.False(permService.HasPermission(user, "books_create"), "Should NOT have create permission (only has by_me)")
+	s.False(permService.HasPermission(user, "books_update"), "Should NOT have update permission (only has by_me)")
+	s.False(permService.HasPermission(user, "books_delete"), "Should not have delete permission (not assigned)")
 }
 
 // Test different scope combinations
@@ -201,9 +206,9 @@ func (s *ScopedPermissionsSimpleTestSuite) TestMultipleScopeScenarios() {
 	s.NoError(err)
 	
 	// Assign roles
-	facades.Orm().Query().Create(&models.UserRole{UserID: admin.ID, RoleID: adminRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: editor.ID, RoleID: editorRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: member.ID, RoleID: memberRole.ID, IsActive: true})
+	facades.Orm().Query().Create(&models.UserRole{UserID: admin.ID, RoleID: adminRole.ID, AssignedAt: time.Now(), IsActive: true})
+	facades.Orm().Query().Create(&models.UserRole{UserID: editor.ID, RoleID: editorRole.ID, AssignedAt: time.Now(), IsActive: true})
+	facades.Orm().Query().Create(&models.UserRole{UserID: member.ID, RoleID: memberRole.ID, AssignedAt: time.Now(), IsActive: true})
 	
 	// Create permissions
 	readPerm := &models.Permission{Slug: "books_read", Name: "Read Books", IsActive: true}
@@ -249,15 +254,15 @@ func (s *ScopedPermissionsSimpleTestSuite) TestMultipleScopeScenarios() {
 	s.True(permService.HasPermission(admin, "books_delete"), "Admin should have delete")
 	
 	// Test editor permissions
-	s.True(permService.HasPermission(editor, "books_read"), "Editor should have read")
-	s.True(permService.HasPermission(editor, "books_create"), "Editor should have create")
-	s.True(permService.HasPermission(editor, "books_update"), "Editor should have update")
-	s.True(permService.HasPermission(editor, "books_delete"), "Editor should have delete")
+	s.True(permService.HasPermission(editor, "books_read"), "Editor should have read (by_all)")
+	s.True(permService.HasPermission(editor, "books_create"), "Editor should have create (by_all)")
+	s.False(permService.HasPermission(editor, "books_update"), "Editor should NOT have update (only by_me)")
+	s.False(permService.HasPermission(editor, "books_delete"), "Editor should NOT have delete (only by_my_role)")
 	
 	// Test member permissions
-	s.True(permService.HasPermission(member, "books_read"), "Member should have read")
-	s.True(permService.HasPermission(member, "books_create"), "Member should have create")
-	s.True(permService.HasPermission(member, "books_update"), "Member should have update")
+	s.True(permService.HasPermission(member, "books_read"), "Member should have read (by_all)")
+	s.False(permService.HasPermission(member, "books_create"), "Member should NOT have create (only by_me)")
+	s.False(permService.HasPermission(member, "books_update"), "Member should NOT have update (only by_me)")
 	s.False(permService.HasPermission(member, "books_delete"), "Member should NOT have delete")
 	
 	// Verify scoped permissions are loaded correctly

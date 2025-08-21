@@ -265,7 +265,7 @@ export const bookFilters: CrudFilter[] = [
     label: 'Status',
     type: 'select',
     options: [
-      { value: '', label: 'All Status' },
+      { value: '__all__', label: 'All Status' },
       { value: 'AVAILABLE', label: 'Available' },
       { value: 'BORROWED', label: 'Borrowed' },
       { value: 'MAINTENANCE', label: 'Maintenance' },

@@ -2,6 +2,7 @@ package feature
 
 import (
 	"testing"
+	"time"
 
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
@@ -107,11 +108,11 @@ func (s *PermissionScopeTestSuite) setupUsers() {
 	facades.Orm().Query().Create(s.member2)
 	
 	// Assign roles
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.admin.ID, RoleID: s.adminRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.editor1.ID, RoleID: s.editorRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.editor2.ID, RoleID: s.editorRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.member1.ID, RoleID: s.memberRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.member2.ID, RoleID: s.memberRole.ID, IsActive: true})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.admin.ID, RoleID: s.adminRole.ID, IsActive: true, AssignedAt: time.Now()})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.editor1.ID, RoleID: s.editorRole.ID, IsActive: true, AssignedAt: time.Now()})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.editor2.ID, RoleID: s.editorRole.ID, IsActive: true, AssignedAt: time.Now()})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.member1.ID, RoleID: s.memberRole.ID, IsActive: true, AssignedAt: time.Now()})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.member2.ID, RoleID: s.memberRole.ID, IsActive: true, AssignedAt: time.Now()})
 }
 
 func (s *PermissionScopeTestSuite) setupBooks() {

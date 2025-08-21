@@ -63,6 +63,10 @@ func (s *PermissionService) HasPermission(user *models.User, permission string) 
 		}
 	}
 	
+	// NOTE: We do NOT automatically grant base permissions when user has scoped versions
+	// This ensures proper scope validation happens in CheckScopedPermission
+	// For example, having "books_delete_by_me" does NOT grant "books_delete"
+	
 	// Check wildcard permissions
 	return s.hasWildcardPermission(permissions, permission)
 }

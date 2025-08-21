@@ -15,6 +15,20 @@ type StaticEnforcedController[T any, C CreateRequestContract, U UpdateRequestCon
 	_ requiredAuthChecker
 }
 
+// GetFilters returns filter metadata for the resource
+func (c *StaticEnforcedController[T, C, U]) GetFilters(ctx http.Context) http.Response {
+	// Return empty metadata by default
+	// Concrete controllers should override this method to provide actual filter definitions
+	metadata := map[string]interface{}{
+		"filters": []interface{}{},
+	}
+	
+	return ctx.Response().Json(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"data":    metadata,
+	})
+}
+
 // Marker types that can only be created by the builder
 type requiredCreateRequest[C CreateRequestContract] struct{}
 type requiredUpdateRequest[U UpdateRequestContract] struct{}

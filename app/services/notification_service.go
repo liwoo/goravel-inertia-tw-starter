@@ -11,11 +11,13 @@ import (
 
 type NotificationService struct {
 	*contracts.BaseCrudService
+	sseService *SSEService
 }
 
 func NewNotificationService() *NotificationService {
 	return &NotificationService{
 		BaseCrudService: contracts.NewBaseCrudService("notification", "id"),
+		sseService:      NewSSEService(),
 	}
 }
 
@@ -151,6 +153,14 @@ func (s *NotificationService) CreateNotification(
 	// Load relations for response
 	facades.Orm().Query().Model(&models.Notification{}).With("TriggerUser").Where("id = ?", notification.ID).First(notification)
 
+	// Emit SSE event for new notification
+	s.sseService.NotifyNewNotification(userID, notification)
+	
+	// Update notification counts
+	if counts, err := s.GetNotificationCounts(userID); err == nil {
+		s.sseService.UpdateNotificationCounts(userID, counts)
+	}
+
 	return notification, nil
 }
 
@@ -166,7 +176,19 @@ func (s *NotificationService) MarkAsRead(notificationID, userID uint) error {
 	}
 
 	notification.MarkAsRead()
-	return facades.Orm().Query().Save(&notification)
+	err := facades.Orm().Query().Save(&notification)
+	
+	if err == nil {
+		// Emit SSE event
+		s.sseService.NotifyNotificationRead(userID, notificationID)
+		
+		// Update notification counts
+		if counts, err := s.GetNotificationCounts(userID); err == nil {
+			s.sseService.UpdateNotificationCounts(userID, counts)
+		}
+	}
+	
+	return err
 }
 
 // MarkAllAsRead marks all notifications as read for a user
@@ -179,6 +201,14 @@ func (s *NotificationService) MarkAllAsRead(userID uint) error {
 			"is_read": true,
 			"read_at": now,
 		})
+	
+	if err == nil {
+		// Update notification counts
+		if counts, err := s.GetNotificationCounts(userID); err == nil {
+			s.sseService.UpdateNotificationCounts(userID, counts)
+		}
+	}
+	
 	return err
 }
 
@@ -190,7 +220,19 @@ func (s *NotificationService) DismissNotification(notificationID, userID uint) e
 	}
 
 	notification.Dismiss()
-	return facades.Orm().Query().Save(&notification)
+	err := facades.Orm().Query().Save(&notification)
+	
+	if err == nil {
+		// Emit SSE event
+		s.sseService.NotifyNotificationDismissed(userID, notificationID)
+		
+		// Update notification counts
+		if counts, err := s.GetNotificationCounts(userID); err == nil {
+			s.sseService.UpdateNotificationCounts(userID, counts)
+		}
+	}
+	
+	return err
 }
 
 // DismissAllNotifications dismisses all notifications for a user
@@ -304,6 +346,9 @@ func (s *NotificationService) CreateSystemNotification(
 
 		if err := facades.Orm().Query().Create(notification); err != nil {
 			facades.Log().Warning("Failed to create system notification for user %d: %v", user.ID, err)
+		} else {
+			// Emit SSE event for system notification
+			s.sseService.NotifyNewNotification(user.ID, notification)
 		}
 	}
 

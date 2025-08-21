@@ -22,6 +22,22 @@ func NewPermissionHelper() *PermissionHelper {
 
 // GetAuthenticatedUser gets the current authenticated user with roles
 func (h *PermissionHelper) GetAuthenticatedUser(ctx http.Context) *models.User {
+	// Check if we have a test user context (for integration tests)
+	if ctx != nil {
+		if testUser, ok := ctx.Value("test_user").(*models.User); ok && testUser != nil {
+			// Load user with roles for consistency
+			var userWithRoles models.User
+			err := facades.Orm().Query().
+				Where("id = ?", testUser.ID).
+				With("Roles").
+				First(&userWithRoles)
+			if err == nil {
+				return &userWithRoles
+			}
+			return testUser
+		}
+	}
+	
 	var user models.User
 	err := facades.Auth(ctx).User(&user)
 	if err != nil || user.ID == 0 {

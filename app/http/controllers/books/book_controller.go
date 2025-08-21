@@ -154,6 +154,67 @@ func (c *BookController) Available(ctx http.Context) http.Response {
 	return c.SuccessResponse(ctx, response, "Available books retrieved successfully")
 }
 
+// GetFilters returns filter metadata for books
+func (c *BookController) GetFilters(ctx http.Context) http.Response {
+	metadata := map[string]interface{}{
+		"filters": []map[string]interface{}{
+			{
+				"field":     "title",
+				"label":     "Title",
+				"type":      "string",
+				"operators": []string{"contains", "not_contains", "starts_with", "ends_with", "equals", "not_equals"},
+			},
+			{
+				"field":     "author",
+				"label":     "Author",
+				"type":      "string",
+				"operators": []string{"contains", "not_contains", "equals", "not_equals"},
+			},
+			{
+				"field":       "status",
+				"label":       "Status",
+				"type":        "enum",
+				"operators":   []string{"equals", "not_equals", "in", "not_in"},
+				"enum_values": []string{"AVAILABLE", "BORROWED", "MAINTENANCE", "RESERVED"},
+			},
+			{
+				"field":     "price",
+				"label":     "Price",
+				"type":      "number",
+				"operators": []string{"equals", "not_equals", "greater_than", "less_than", "greater_than_or_equal", "less_than_or_equal", "between", "not_between"},
+			},
+			{
+				"field":     "tags",
+				"label":     "Tags",
+				"type":      "array",
+				"operators": []string{"contains", "not_contains", "is_empty", "is_not_empty"},
+			},
+			{
+				"field":     "published_at",
+				"label":     "Published Date",
+				"type":      "date",
+				"operators": []string{"before", "after", "between", "not_between", "is_today", "is_yesterday", "is_this_week", "is_this_month", "is_this_year", "last_n_days"},
+			},
+			{
+				"field":     "created_at",
+				"label":     "Date Added",
+				"type":      "datetime",
+				"operators": []string{"before", "after", "between", "not_between", "is_today", "is_this_week", "is_this_month", "last_n_days"},
+			},
+		},
+		"logic_operators":     []string{"AND", "OR"},
+		"resource":            "book",
+		"filterable_fields":   []string{"status", "author"},
+		"searchable_fields":   []string{"title", "author", "isbn", "description"},
+		"sortable_fields":     []string{"id", "title", "author", "price", "created_at", "updated_at", "published_at"},
+	}
+	
+	return ctx.Response().Json(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"data":    metadata,
+	})
+}
+
 // Statistics GET /api/books/statistics - Get book statistics
 func (c *BookController) Statistics(ctx http.Context) http.Response {
 	// Check permissions
@@ -220,4 +281,74 @@ func (c *BookController) GetByAuthor(ctx http.Context) http.Response {
 	// Build response
 	response := c.BuildPaginatedResponse(result, req)
 	return c.SuccessResponse(ctx, response, "Books retrieved successfully")
+}
+
+// GetFilterDefinitions returns custom filter definitions for books
+func (c *BookController) GetFilterDefinitions() []contracts.FilterDefinition {
+	return []contracts.FilterDefinition{
+		// Price filter
+		contracts.NewFilterDefinition(
+			"price",
+			"Price",
+			contracts.FilterTypeNumber,
+			[]contracts.FilterOperator{
+				contracts.OperatorEquals,
+				contracts.OperatorGreaterThan,
+				contracts.OperatorLessThan,
+				contracts.OperatorGreaterThanOrEqual,
+				contracts.OperatorLessThanOrEqual,
+				contracts.OperatorBetween,
+			},
+		),
+		// Status filter
+		{
+			Field: "status",
+			Label: "Status",
+			Type:  contracts.FilterTypeEnum,
+			Operators: []contracts.FilterOperator{
+				contracts.OperatorEquals,
+				contracts.OperatorNotEquals,
+				contracts.OperatorIn,
+				contracts.OperatorNotIn,
+			},
+			EnumValues: []string{"AVAILABLE", "BORROWED", "MAINTENANCE", "RESERVED", "LOST"},
+		},
+		// Published date filter
+		contracts.NewFilterDefinition(
+			"published_at",
+			"Published Date",
+			contracts.FilterTypeDate,
+			[]contracts.FilterOperator{
+				contracts.OperatorBefore,
+				contracts.OperatorAfter,
+				contracts.OperatorBetween,
+				contracts.OperatorIsToday,
+				contracts.OperatorIsThisMonth,
+				contracts.OperatorIsThisYear,
+				contracts.OperatorLastNDays,
+			},
+		),
+		// Author filter
+		contracts.NewFilterDefinition(
+			"author",
+			"Author",
+			contracts.FilterTypeString,
+			[]contracts.FilterOperator{
+				contracts.OperatorEquals,
+				contracts.OperatorContains,
+				contracts.OperatorStartsWith,
+				contracts.OperatorEndsWith,
+			},
+		),
+		// Is Verified filter
+		contracts.NewFilterDefinition(
+			"is_verified",
+			"Verified",
+			contracts.FilterTypeBoolean,
+			[]contracts.FilterOperator{
+				contracts.OperatorIsTrue,
+				contracts.OperatorIsFalse,
+			},
+		),
+	}
 }

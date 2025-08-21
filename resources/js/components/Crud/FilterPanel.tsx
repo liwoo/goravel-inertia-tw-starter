@@ -37,14 +37,13 @@ export function FilterPanel({
       case 'select':
         return (
           <Select
-            value={value || ''}
-            onValueChange={(newValue) => onChange(filter.key, newValue)}
+            value={value || '__all__'}
+            onValueChange={(newValue) => onChange(filter.key, newValue === '__all__' ? '' : newValue)}
           >
             <SelectTrigger>
               <SelectValue placeholder={filter.placeholder || 'Select option'} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
               {filter.options?.map((option) => (
                 <SelectItem key={option.value} value={String(option.value)}>
                   {option.label}

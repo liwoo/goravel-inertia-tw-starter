@@ -70,6 +70,13 @@ func Web() {
 
 		// User management pages (super admin only)
 		router.Get("/admin/users", userPageController.Index)
+
+		// SSE Test page (for development/testing)
+		router.Get("/test/sse", func(ctx http.Context) http.Response {
+			return inertiaHelper.Render(ctx, "test/SSETest", map[string]interface{}{
+				"version": support.Version,
+			})
+		})
 	})
 
 	// Add more routes as needed

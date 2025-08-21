@@ -146,8 +146,19 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 	}
 
 	// Apply filters from request
+	var preservedCustomFilters interface{} = nil
 	if len(req.Filters) > 0 {
-		// Apply field mapping to filters
+		// Check for custom filters first
+		if customFilters, hasCustom := req.Filters["__custom_filters"]; hasCustom {
+			// Preserve custom filters for count query
+			preservedCustomFilters = customFilters
+			// Apply custom filters
+			query = s.applyCustomFilters(query, customFilters)
+			// Remove custom filters from regular filters
+			delete(req.Filters, "__custom_filters")
+		}
+		
+		// Apply field mapping to remaining filters
 		mappedFilters := s.applyFieldMapping(req.Filters)
 		
 		facades.Log().Info("Applying filters", map[string]interface{}{
@@ -272,6 +283,15 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 				}
 			}
 		}
+	}
+
+	// Apply preserved custom filters to count query
+	if preservedCustomFilters != nil {
+		facades.Log().Debug("Applying custom filters to count query", map[string]interface{}{
+			"service": s.tableName,
+			"filters": preservedCustomFilters,
+		})
+		countQuery = s.applyCustomFilters(countQuery, preservedCustomFilters)
 	}
 
 	if err := countQuery.Count(&total); err != nil {
@@ -726,16 +746,14 @@ func (s *GenericCrudService[T]) Delete(id uint) error {
 	// Delete using GORM (soft delete)
 	// First find the record, then delete it to ensure soft delete works properly
 	var model T
-	if err := facades.Orm().Query().Table(s.BaseCrudService.tableName).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
-		return fmt.Errorf("failed to find %s for deletion: %w", s.BaseCrudService.tableName, err)
+	if err := facades.Orm().Query().Table(s.tableName).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
+		return fmt.Errorf("failed to find %s for deletion: %w", s.tableName, err)
 	}
 	
 	// Now delete the found record (this should trigger soft delete)
-	fmt.Printf("DEBUG: About to soft delete model: %+v\n", model)
 	if _, err := facades.Orm().Query().Delete(&model); err != nil {
-		return fmt.Errorf("failed to delete %s: %w", s.BaseCrudService.tableName, err)
+		return fmt.Errorf("failed to delete %s: %w", s.tableName, err)
 	}
-	fmt.Printf("DEBUG: Soft delete completed for ID: %d\n", id)
 
 	// Run after hook if set
 	if s.afterDelete != nil {
@@ -1244,6 +1262,45 @@ func (s *GenericCrudService[T]) setFieldsRecursivelyHelper(modelValue reflect.Va
 	}
 
 	return nil
+}
+
+// applyCustomFilters applies custom filter conditions to a query
+func (s *GenericCrudService[T]) applyCustomFilters(query orm.Query, customFilters interface{}) orm.Query {
+	facades.Log().Debug("Applying custom filters", map[string]interface{}{
+		"service": s.tableName,
+		"filterType": fmt.Sprintf("%T", customFilters),
+	})
+	
+	switch filter := customFilters.(type) {
+	case *FilterCondition:
+		sql, args := filter.ToSQL()
+		facades.Log().Debug("Applying FilterCondition", map[string]interface{}{
+			"sql": sql,
+			"args": args,
+		})
+		if sql != "" {
+			// Use Where with raw SQL instead of WhereRaw
+			query = query.Where(sql, args...)
+		}
+		
+	case *CompoundFilter:
+		sql, args := filter.ToSQL()
+		facades.Log().Debug("Applying CompoundFilter", map[string]interface{}{
+			"sql": sql,
+			"args": args,
+		})
+		if sql != "" {
+			// Use Where with raw SQL instead of WhereRaw
+			query = query.Where(sql, args...)
+		}
+		
+	default:
+		facades.Log().Warning("Unknown custom filter type", map[string]interface{}{
+			"type": fmt.Sprintf("%T", customFilters),
+		})
+	}
+	
+	return query
 }
 
 // applyFieldMapping applies frontend->database field mapping to data

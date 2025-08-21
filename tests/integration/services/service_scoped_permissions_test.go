@@ -2,6 +2,7 @@ package integration
 
 import (
 	"testing"
+	"time"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -14,6 +15,7 @@ import (
 	"players/app/models"
 	"players/app/services"
 	"players/tests"
+	"players/tests/helpers"
 )
 
 type ServiceScopedPermissionsTestSuite struct {
@@ -42,6 +44,8 @@ func TestServiceScopedPermissionsTestSuite(t *testing.T) {
 
 func (s *ServiceScopedPermissionsTestSuite) SetupTest() {
 	s.RefreshDatabase()
+	// Clean existing books to ensure test isolation
+	facades.Orm().Query().Exec("DELETE FROM books")
 	s.booksPerUser = 3
 	s.setupRolesAndPermissions()
 	s.setupUsers()
@@ -111,11 +115,11 @@ func (s *ServiceScopedPermissionsTestSuite) setupUsers() {
 	facades.Orm().Query().Create(s.member2)
 	
 	// Assign roles to users
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.admin.ID, RoleID: s.adminRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.editor1.ID, RoleID: s.editorRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.editor2.ID, RoleID: s.editorRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.member1.ID, RoleID: s.memberRole.ID, IsActive: true})
-	facades.Orm().Query().Create(&models.UserRole{UserID: s.member2.ID, RoleID: s.memberRole.ID, IsActive: true})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.admin.ID, RoleID: s.adminRole.ID, IsActive: true, AssignedAt: time.Now()})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.editor1.ID, RoleID: s.editorRole.ID, IsActive: true, AssignedAt: time.Now()})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.editor2.ID, RoleID: s.editorRole.ID, IsActive: true, AssignedAt: time.Now()})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.member1.ID, RoleID: s.memberRole.ID, IsActive: true, AssignedAt: time.Now()})
+	facades.Orm().Query().Create(&models.UserRole{UserID: s.member2.ID, RoleID: s.memberRole.ID, IsActive: true, AssignedAt: time.Now()})
 	
 	// Reload users with roles
 	s.reloadUsersWithRoles()
@@ -174,35 +178,79 @@ func (s *ServiceScopedPermissionsTestSuite) createAuthContext(user *models.User)
 	return mockContext
 }
 
-// Test without authentication (should return all books when no context)
+// Test without authentication (should return all books when no auth)
 func (s *ServiceScopedPermissionsTestSuite) TestNoAuthReturnsAllBooks() {
 	bookService := services.NewBookService()
 	
-	// Request without context
+	// Create unauthenticated context
+	ctx := helpers.NewUnauthenticatedTestContext()
+	
+	// Request with unauthenticated context
 	req := contracts.ListRequest{
 		Page:     1,
 		PageSize: 100,
+		Context:  ctx,
 	}
 	
+	// Services with scope filtering will log warning but continue without filtering
 	result, err := bookService.GetList(req)
-	s.NoError(err)
 	
-	totalBooks := len([]*models.User{s.admin, s.editor1, s.editor2, s.member1, s.member2}) * s.booksPerUser
-	s.Equal(int64(totalBooks), result.Total, "Without auth context, should return all books")
+	// Should not get error - service continues without filtering
+	s.NoError(err, "Should not get error - service continues without auth")
+	s.NotNil(result, "Result should not be nil")
+	s.Equal(int64(15), result.Total, "Should see all 15 books without authentication")
 }
 
 // Test that different permission scopes return correct book counts
 func (s *ServiceScopedPermissionsTestSuite) TestPermissionScopeFiltering() {
-	// This test demonstrates the expected behavior for each scope
+	bookService := services.NewBookService()
 	
-	// Admin with by_all: should see all books (5 users × 3 books = 15)
-	s.T().Log("Admin with by_all scope should see 15 books")
+	// Test 1: Admin with by_all scope should see all books
+	s.T().Log("Testing admin with by_all scope")
 	
-	// Editor with by_my_role: should see all editor books (2 editors × 3 books = 6)
-	s.T().Log("Editor with by_my_role scope should see 6 books")
+	// First reload admin with roles and permissions
+	var adminWithRoles models.User
+	err := facades.Orm().Query().Where("id = ?", s.admin.ID).With("Roles.Permissions").First(&adminWithRoles)
+	s.NoError(err)
 	
-	// Member with by_me: should see only their own books (1 user × 3 books = 3)
-	s.T().Log("Member with by_me scope should see 3 books")
+	ctx := helpers.NewTestContext(&adminWithRoles)
+	req := contracts.ListRequest{
+		Page:     1,
+		PageSize: 100,
+		Context:  ctx,
+	}
+	
+	result, err := bookService.GetList(req)
+	s.NoError(err)
+	s.Equal(int64(15), result.Total, "Admin with by_all should see all 15 books")
+	
+	// Test 2: Editor with by_my_role scope
+	s.T().Log("Testing editor with by_my_role scope")
+	
+	var editor1WithRoles models.User
+	err = facades.Orm().Query().Where("id = ?", s.editor1.ID).With("Roles.Permissions").First(&editor1WithRoles)
+	s.NoError(err)
+	
+	ctx = helpers.NewTestContext(&editor1WithRoles)
+	req.Context = ctx
+	
+	result, err = bookService.GetList(req)
+	s.NoError(err)
+	s.Equal(int64(6), result.Total, "Editor with by_my_role should see 6 editor books")
+	
+	// Test 3: Member with by_me scope
+	s.T().Log("Testing member with by_me scope")
+	
+	var member1WithRoles models.User
+	err = facades.Orm().Query().Where("id = ?", s.member1.ID).With("Roles.Permissions").First(&member1WithRoles)
+	s.NoError(err)
+	
+	ctx = helpers.NewTestContext(&member1WithRoles)
+	req.Context = ctx
+	
+	result, err = bookService.GetList(req)
+	s.NoError(err)
+	s.Equal(int64(3), result.Total, "Member with by_me should see only their 3 books")
 }
 
 // Test book statistics calculation

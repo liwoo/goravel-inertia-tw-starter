@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/goravel/framework/facades"
@@ -407,4 +408,97 @@ func (s *UserService) ValidateSortDirection(direction string) bool {
 // GetDefaultSort returns the default sort configuration
 func (s *UserService) GetDefaultSort() (string, string) {
 	return "created_at", "DESC"
+}
+
+// Create creates a new user with manual validation to work around Goravel's max/min bug
+func (s *UserService) Create(data map[string]interface{}) (interface{}, error) {
+	// Manual validation for string length (workaround for Goravel bug)
+	if err := s.validateUserData(data, true); err != nil {
+		return nil, err
+	}
+	
+	// Call the base Create method
+	return s.baseService.Create(data)
+}
+
+// Update updates a user with manual validation to work around Goravel's max/min bug
+func (s *UserService) Update(id uint, data map[string]interface{}) (interface{}, error) {
+	// Manual validation for string length (workaround for Goravel bug)
+	if err := s.validateUserData(data, false); err != nil {
+		return nil, err
+	}
+	
+	// Call the base Update method
+	return s.baseService.Update(id, data)
+}
+
+// validateUserData manually validates user data to work around Goravel's max/min validation bug
+func (s *UserService) validateUserData(data map[string]interface{}, isCreate bool) error {
+	// Validate name
+	if name, exists := data["name"]; exists {
+		nameStr, ok := name.(string)
+		if !ok {
+			return fmt.Errorf("name must be a string")
+		}
+		if isCreate && nameStr == "" {
+			return fmt.Errorf("name is required")
+		}
+		if len(nameStr) < 2 {
+			return fmt.Errorf("name min length is 2 characters")
+		}
+		if len(nameStr) > 255 {
+			return fmt.Errorf("name max length is 255 characters")
+		}
+	} else if isCreate {
+		return fmt.Errorf("name is required")
+	}
+	
+	// Validate email
+	if email, exists := data["email"]; exists {
+		emailStr, ok := email.(string)
+		if !ok {
+			return fmt.Errorf("email must be a string")
+		}
+		if isCreate && emailStr == "" {
+			return fmt.Errorf("email is required")
+		}
+		if emailStr != "" {
+			// Basic email validation
+			emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+			if !emailRegex.MatchString(emailStr) {
+				return fmt.Errorf("email format is invalid")
+			}
+			// Check for duplicate email on create
+			if isCreate {
+				var existingUser models.User
+				err := facades.Orm().Query().Where("email = ?", emailStr).First(&existingUser)
+				if err == nil && existingUser.ID > 0 {
+					return fmt.Errorf("email already exists")
+				}
+			}
+		}
+		if len(emailStr) > 255 {
+			return fmt.Errorf("email max length is 255 characters")
+		}
+	} else if isCreate {
+		return fmt.Errorf("email is required")
+	}
+	
+	// Validate password
+	if password, exists := data["password"]; exists {
+		passwordStr, ok := password.(string)
+		if !ok {
+			return fmt.Errorf("password must be a string")
+		}
+		if isCreate && passwordStr == "" {
+			return fmt.Errorf("password is required")
+		}
+		if passwordStr != "" && len(passwordStr) < 8 {
+			return fmt.Errorf("password min length is 8 characters")
+		}
+	} else if isCreate {
+		return fmt.Errorf("password is required")
+	}
+	
+	return nil
 }

@@ -3,9 +3,12 @@ package contracts
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/goravel/framework/contracts/http"
+	httpvalidate "github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/validation"
 )
 
 // EnforcedCrudController provides a complete CRUD implementation with compile-time enforcement
@@ -138,10 +141,24 @@ func (c *EnforcedCrudController[T, C, U]) Store(ctx http.Context) http.Response 
 	// Convert the bound request to validation data
 	requestData := createReq.ToCreateData()
 	
-	// Validate using facades
+	// Get custom messages and attributes from the request
+	messages := createReq.Messages(ctx)
+	attributes := createReq.Attributes(ctx)
+	
+	// Build validation options
+	options := []httpvalidate.Option{}
+	if len(messages) > 0 {
+		options = append(options, validation.Messages(messages))
+	}
+	if len(attributes) > 0 {
+		options = append(options, validation.Attributes(attributes))
+	}
+	
+	// Validate using facades with options
 	validator, err := facades.Validation().Make(
 		requestData, 
 		rules,
+		options...,
 	)
 	if err != nil {
 		return c.ValidationErrorResponse(ctx, map[string]interface{}{
@@ -241,10 +258,24 @@ func (c *EnforcedCrudController[T, C, U]) Update(ctx http.Context) http.Response
 	// Convert the bound request to validation data
 	requestData := updateReq.ToUpdateData()
 	
-	// Validate using facades
+	// Get custom messages and attributes from the request
+	messages := updateReq.Messages(ctx)
+	attributes := updateReq.Attributes(ctx)
+	
+	// Build validation options
+	options := []httpvalidate.Option{}
+	if len(messages) > 0 {
+		options = append(options, validation.Messages(messages))
+	}
+	if len(attributes) > 0 {
+		options = append(options, validation.Attributes(attributes))
+	}
+	
+	// Validate using facades with options
 	validator, err := facades.Validation().Make(
 		requestData, 
 		rules,
+		options...,
 	)
 	if err != nil {
 		return c.ValidationErrorResponse(ctx, map[string]interface{}{
@@ -371,6 +402,11 @@ func (c *EnforcedCrudController[T, C, U]) Search(ctx http.Context) http.Response
 		return c.BadRequestResponse(ctx, "Search query is required", nil)
 	}
 	
+	// Validate query length (minimum 2 characters)
+	if len(strings.TrimSpace(query)) < 2 {
+		return c.BadRequestResponse(ctx, "Search query must be at least 2 characters long", nil)
+	}
+	
 	// Validate pagination request
 	req, err := c.ValidatePaginationRequest(ctx)
 	if err != nil {
@@ -382,6 +418,10 @@ func (c *EnforcedCrudController[T, C, U]) Search(ctx http.Context) http.Response
 	// Perform search
 	result, err := c.service.Search(query, *req)
 	if err != nil {
+		// Check if it's a validation error
+		if strings.Contains(err.Error(), "must be at least") || strings.Contains(err.Error(), "validation") {
+			return c.BadRequestResponse(ctx, err.Error(), nil)
+		}
 		return c.InternalErrorResponse(ctx, "Search failed: "+err.Error())
 	}
 	
@@ -458,4 +498,40 @@ func (c *EnforcedCrudController[T, C, U]) GetSearchableFields() []string {
 // GetValidationRules returns the validation rules from the service
 func (c *EnforcedCrudController[T, C, U]) GetValidationRules() map[string]interface{} {
 	return c.service.GetValidationRules()
+}
+
+// FilterMetadata GET /resources/filters
+func (c *EnforcedCrudController[T, C, U]) FilterMetadata(ctx http.Context) http.Response {
+	// Default authorization check
+	if c.CheckAuth != nil {
+		if err := c.CheckAuth(ctx, "viewAny", nil); err != nil {
+			return c.ForbiddenResponse(ctx, "Access denied: "+err.Error())
+		}
+	}
+	
+	// Get filter definitions from the service or controller
+	var filterDefs []FilterDefinition
+	
+	// Check if service provides filter definitions
+	if filterProvider, ok := c.service.(interface {
+		GetFilterDefinitions() []FilterDefinition
+	}); ok {
+		filterDefs = filterProvider.GetFilterDefinitions()
+	}
+	
+	// If no definitions from service, use controller's definitions
+	if len(filterDefs) == 0 {
+		filterDefs = c.GetFilterDefinitions()
+	}
+	
+	// Generate metadata
+	metadata := GenerateFilterMetadata(filterDefs)
+	
+	// Add additional metadata
+	metadata["resource"] = c.resourceName
+	metadata["searchable_fields"] = c.service.GetSearchableFields()
+	metadata["sortable_fields"] = c.service.GetSortableFields()
+	metadata["filterable_fields"] = c.service.GetFilterableFields()
+	
+	return c.SuccessResponse(ctx, metadata, "Filter metadata retrieved successfully")
 }

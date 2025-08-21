@@ -37,6 +37,8 @@ func TestScopedFilteringTestSuite(t *testing.T) {
 
 func (s *ScopedFilteringTestSuite) SetupTest() {
 	s.RefreshDatabase()
+	// Clean existing books to ensure test isolation
+	facades.Orm().Query().Exec("DELETE FROM books")
 	s.setupRolesAndPermissions()
 	s.setupUsers()
 	s.createTestBooks()

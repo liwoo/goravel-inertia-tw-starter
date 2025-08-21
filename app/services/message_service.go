@@ -14,6 +14,7 @@ import (
 // MessageService - Simplified version using generic CRUD service
 type MessageService struct {
 	*contracts.GenericCrudService[models.Message]
+	sseService *SSEService
 }
 
 // NewMessageService creates a new simplified message service
@@ -117,6 +118,7 @@ func NewMessageService() *MessageService {
 	
 	service := &MessageService{
 		GenericCrudService: genericService,
+		sseService:         NewSSEService(),
 	}
 	
 	// Register service
@@ -141,7 +143,17 @@ func (s *MessageService) SendMessage(senderID uint, recipientID uint, content st
 		return nil, err
 	}
 	
-	return result.(*models.Message), nil
+	message := result.(*models.Message)
+	
+	// Emit SSE events
+	s.sseService.NotifyNewMessage(senderID, recipientID, message)
+	
+	// Update unread count for recipient
+	if count, err := s.GetUnreadCount(recipientID); err == nil {
+		s.sseService.UpdateUnreadCount(recipientID, count)
+	}
+	
+	return message, nil
 }
 
 // SendBroadcast sends a broadcast message to multiple recipients
@@ -238,6 +250,16 @@ func (s *MessageService) MarkAsRead(messageID uint, userID uint) error {
 		"read_at": time.Now(),
 	})
 	
+	if err == nil {
+		// Emit SSE events
+		s.sseService.NotifyMessageRead(message.SenderID, messageID)
+		
+		// Update unread count for recipient
+		if count, err := s.GetUnreadCount(userID); err == nil {
+			s.sseService.UpdateUnreadCount(userID, count)
+		}
+	}
+	
 	return err
 }
 
@@ -274,7 +296,107 @@ func (s *MessageService) DeleteMessage(messageID uint, userID uint) error {
 	
 	// For now, we'll use the generic delete which soft deletes the entire message
 	// In a real app, you might want to track deletion per user
-	return s.Delete(messageID)
+	err = s.Delete(messageID)
+	
+	if err == nil {
+		// Emit SSE events to both sender and recipient
+		s.sseService.NotifyMessageDeleted(message.SenderID, messageID)
+		if message.RecipientID != nil {
+			s.sseService.NotifyMessageDeleted(*message.RecipientID, messageID)
+			
+			// Update unread count if message was unread
+			if message.ReadAt == nil {
+				if count, err := s.GetUnreadCount(*message.RecipientID); err == nil {
+					s.sseService.UpdateUnreadCount(*message.RecipientID, count)
+				}
+			}
+		}
+	}
+	
+	return err
+}
+
+// GetConversations retrieves a list of conversations for a user
+func (s *MessageService) GetConversations(userID uint) ([]interface{}, error) {
+	// First, get all unique users this user has exchanged messages with
+	var conversations []struct {
+		UserID       uint      `json:"user_id"`
+		LastActivity time.Time `json:"last_activity"`
+	}
+	
+	// Query to get unique conversation partners
+	query := `
+		SELECT DISTINCT 
+			CASE 
+				WHEN sender_id = ? THEN recipient_id 
+				ELSE sender_id 
+			END as user_id,
+			MAX(created_at) as last_activity
+		FROM messages 
+		WHERE (sender_id = ? OR recipient_id = ?) 
+			AND deleted_at IS NULL
+		GROUP BY user_id
+		ORDER BY last_activity DESC
+	`
+	
+	if err := facades.Orm().Query().Raw(query, userID, userID, userID).Scan(&conversations); err != nil {
+		return nil, err
+	}
+	
+	// Now build the conversation objects
+	result := make([]interface{}, 0, len(conversations))
+	
+	for _, conv := range conversations {
+		// Get the user details
+		var user models.User
+		if err := facades.Orm().Query().Model(&models.User{}).
+			With("Roles").
+			Where("id = ?", conv.UserID).
+			First(&user); err != nil {
+			continue // Skip if user not found
+		}
+		
+		// Get the latest message between the two users
+		var latestMessage models.Message
+		if err := facades.Orm().Query().Model(&models.Message{}).
+			Where("(sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)",
+				userID, conv.UserID, conv.UserID, userID).
+			Order("created_at DESC").
+			First(&latestMessage); err != nil {
+			continue // Skip if no messages found
+		}
+		
+		// Get unread count
+		var unreadCount int64
+		facades.Orm().Query().Model(&models.Message{}).
+			Where("sender_id = ? AND recipient_id = ? AND status = ? AND deleted_at IS NULL",
+				conv.UserID, userID, models.MessageStatusSent).
+			Count(&unreadCount)
+		
+		// Build conversation object
+		conversation := map[string]interface{}{
+			"user": map[string]interface{}{
+				"id":        user.ID,
+				"name":      user.Name,
+				"email":     user.Email,
+				"is_active": user.IsActive,
+				"roles":     user.Roles,
+			},
+			"latest_message": map[string]interface{}{
+				"id":         latestMessage.ID,
+				"content":    latestMessage.Content,
+				"created_at": latestMessage.CreatedAt,
+				"sender_id":  latestMessage.SenderID,
+				"is_edited":  latestMessage.IsEdited,
+			},
+			"unread_count":  unreadCount,
+			"last_activity": conv.LastActivity,
+		}
+		
+		result = append(result, conversation)
+	}
+	
+	return result, nil
 }
 
 // GetConversation retrieves messages between two users

@@ -1,13 +1,14 @@
 package tests
 
 import (
+	"testing"
 	"players/app/contracts"
 	"players/app/http/requests"
 	"players/app/models"
 	"players/app/services"
 )
 
-func StaticControllerCompileTest() {
+func TestStaticControllerCompile(t *testing.T) {
 	service := services.NewBookService()
 	
 	// TEST 1: This should NOT compile - missing all methods

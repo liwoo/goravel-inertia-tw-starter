@@ -25,7 +25,7 @@ func (r *M20250628091858AddIsSuperAdminToUsersTable) Up() error {
 // Down Reverse the migrations.
 func (r *M20250628091858AddIsSuperAdminToUsersTable) Down() error {
 	return facades.Schema().Table("users", func(table schema.Blueprint) {
-		table.DropIndex("users_is_super_admin_index")
+		table.DropIndex("is_super_admin")
 		table.DropColumn("is_super_admin")
 	})
 }

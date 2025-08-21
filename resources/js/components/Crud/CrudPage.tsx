@@ -43,13 +43,17 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CrudDataTable } from './CrudDataTable';
 import { SearchBar } from './SearchBar';
 import { FilterPanel } from './FilterPanel';
+import { DynamicFilterBuilder } from '@/components/Filters/DynamicFilterBuilder';
+import { ActiveFilterBadges } from './ActiveFilterBadges';
 import { CrudPagination } from './CrudPagination';
 import { CrudDrawer } from './CrudDrawer';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useCrudSelection } from '@/hooks/useCrudSelection';
 import { usePageSize } from '@/hooks/usePageSize';
+import { useFilterMetadata } from '@/hooks/useFilterMetadata';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { PermissionGate } from '@/components/Permissions/PermissionGate';
+import { FilterCondition, CompoundFilter } from '@/types/filters';
 import { toast } from 'sonner';
 
 export function CrudPage<T extends { id: number }>({
@@ -114,12 +118,93 @@ export function CrudPage<T extends { id: number }>({
   const editFormRef = React.useRef<any>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Search and filters
+  // Parse dynamic filters from URL and backend response
+  const parsedDynamicFilter = React.useMemo(() => {
+    console.log('🔍 Parsing dynamic filters, filters prop:', filters);
+    console.log('🌐 Current URL:', window.location.href);
+    
+    // First, always check URL parameters for direct filter application
+    const urlParams = new URLSearchParams(window.location.search);
+    const filtersParam = urlParams.get('filters');
+    console.log('📄 URL filters param (raw):', filtersParam);
+    if (filtersParam) {
+      try {
+        const parsed = JSON.parse(filtersParam);
+        console.log('✅ Successfully parsed URL filters param:', parsed);
+        console.log('🎯 Returning parsed filter from URL');
+        return parsed;
+      } catch (e) {
+        console.error('❌ Failed to parse filters from URL:', e);
+      }
+    } else {
+      console.log('📭 No filters parameter found in URL');
+    }
+    
+    // Fallback: Check if filters contains a 'filters' key with custom filters from backend response
+    if (filters?.filters) {
+      console.log('Found filters.filters:', filters.filters, 'type:', typeof filters.filters);
+      
+      // Check for __custom_filters key (backend stores parsed JSON here)
+      if (filters.filters.__custom_filters) {
+        console.log('Found __custom_filters:', filters.filters.__custom_filters);
+        return filters.filters.__custom_filters;
+      }
+      
+      if (typeof filters.filters === 'string') {
+        try {
+          const parsed = JSON.parse(filters.filters);
+          console.log('Parsed filters.filters string:', parsed);
+          return parsed;
+        } catch (e) {
+          console.error('Failed to parse filters:', e);
+          return null;
+        }
+      } else if (typeof filters.filters === 'object') {
+        // Check if this is a dynamic filter object (has field or logic properties)
+        // vs a custom filters object (arbitrary key-value pairs)
+        if (filters.filters.field || filters.filters.logic) {
+          console.log('Found dynamic filter object:', filters.filters);
+          return filters.filters;
+        }
+        // Otherwise it's custom filters, not dynamic filters
+        console.log('Found custom filters object, not dynamic filter:', filters.filters);
+        return null;
+      }
+    }
+    
+    console.log('No dynamic filters found');
+    return null;
+  }, [filters]);
+  
+  // Search and filters state
   const [searchTerm, setSearchTerm] = React.useState(filters?.search || '');
-  const [activeFilters, setActiveFilters] = React.useState(filters?.filters || {});
+  const [activeFilters, setActiveFilters] = React.useState(() => {
+    if (!filters?.filters) return {};
+    // Exclude the __custom_filters key from activeFilters (that's for dynamic filters)
+    const { __custom_filters, ...customFilters } = filters.filters;
+    return customFilters;
+  });
   const [showFilters, setShowFilters] = React.useState(false);
   const [isSearching, setIsSearching] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [appliedDynamicFilter, setAppliedDynamicFilter] = React.useState<any>(parsedDynamicFilter);
+  
+  // Update applied dynamic filter when URL changes
+  React.useEffect(() => {
+    setAppliedDynamicFilter(parsedDynamicFilter);
+  }, [parsedDynamicFilter]);
+  
+  // Update active filters when filters prop changes (after navigation)
+  React.useEffect(() => {
+    if (!filters?.filters) {
+      setActiveFilters({});
+      return;
+    }
+    // Exclude the __custom_filters key from activeFilters (that's for dynamic filters)
+    const { __custom_filters, ...customFilters } = filters.filters;
+    setActiveFilters(customFilters);
+  }, [filters]);
+  
   // Determine active simple filter based on current filters
   const getActiveSimpleFilter = React.useCallback(() => {
     if (!filters || !simpleFilters) return undefined;
@@ -209,6 +294,9 @@ export function CrudPage<T extends { id: number }>({
 
   // Page size management with localStorage persistence
   const { pageSize, setPageSize, allowedSizes } = usePageSize(paginationConfig);
+  
+  // Fetch filter metadata for dynamic filters
+  const { metadata: filterMetadata, loading: filterMetadataLoading } = useFilterMetadata(resourceName);
 
   // Generic error handler
   const handleError = React.useCallback((error: any, operation: string) => {
@@ -226,33 +314,46 @@ export function CrudPage<T extends { id: number }>({
     toast.error(`${operation} failed: ${errorMessage}`);
   }, []);
 
+  // Helper function to build navigation parameters that preserve both custom and dynamic filters
+  const buildNavigationParams = React.useCallback((overrides: Record<string, any> = {}) => {
+    const params: Record<string, any> = {
+      page: 1,
+      pageSize: pageSize,
+      ...overrides, // Apply overrides first so they can be overridden below if needed
+    };
+    
+    // Preserve core navigation parameters from current filters
+    if (filters?.sort && !overrides.hasOwnProperty('sort')) params.sort = filters.sort;
+    if (filters?.direction && !overrides.hasOwnProperty('direction')) params.direction = filters.direction;
+    if (filters?.search && !overrides.hasOwnProperty('search')) params.search = filters.search;
+    
+    // Preserve dynamic filters if they exist
+    if (appliedDynamicFilter && !overrides.hasOwnProperty('filters')) {
+      params.filters = JSON.stringify(appliedDynamicFilter);
+    }
+    
+    // Preserve custom filters (but not __custom_filters which is for dynamic filters)
+    Object.keys(activeFilters).forEach(key => {
+      if (key !== '__custom_filters' && activeFilters[key] !== undefined && activeFilters[key] !== '' && !overrides.hasOwnProperty(key)) {
+        params[key] = activeFilters[key];
+      }
+    });
+    
+    console.log('🔧 Built navigation params:', params);
+    return params;
+  }, [filters, pageSize, appliedDynamicFilter, activeFilters]);
+
   // Re-enable search functionality
   React.useEffect(() => {
     if (debouncedSearchTerm !== (filters?.search || '')) {
       setIsSearching(true);
       
-      // Build clean parameters preserving current filters but avoiding nesting
-      const params: Record<string, any> = {
+      const params = buildNavigationParams({
         search: debouncedSearchTerm || undefined,
         page: 1,
-        pageSize: pageSize,
-      };
+      });
       
-      // Preserve all current parameters except nested filters and search
-      if (filters) {
-        Object.keys(filters).forEach(key => {
-          if (key !== 'filters' && key !== 'page' && key !== 'search' && key !== 'pageSize') {
-            params[key] = filters[key];
-          }
-        });
-        
-        // If there's a nested filters object, spread its contents
-        if (filters.filters && typeof filters.filters === 'object') {
-          Object.assign(params, filters.filters);
-        }
-      }
-      
-      console.log('Search params:', params);
+      console.log('🔍 Search params:', params);
       
       router.get(baseRoute, params, {
         preserveState: true,
@@ -272,7 +373,7 @@ export function CrudPage<T extends { id: number }>({
         },
       });
     }
-  }, [debouncedSearchTerm, resourceName, filters]);
+  }, [debouncedSearchTerm, buildNavigationParams, baseRoute, filters?.search]);
 
   // Handlers
   const handleRefresh = React.useCallback(() => {
@@ -286,95 +387,43 @@ export function CrudPage<T extends { id: number }>({
     const newDirection = direction || 
       (filters?.sort === field && filters?.direction === 'asc' ? 'desc' : 'asc');
     
-    // Build clean parameters preserving current filters but avoiding nesting
-    const params: Record<string, any> = {
+    const params = buildNavigationParams({
       page: 1,
       sort: field,
       direction: newDirection,
-      pageSize: pageSize,
-    };
-    
-    // Preserve all current parameters except nested filters, sort, and direction
-    if (filters) {
-      Object.keys(filters).forEach(key => {
-        // Skip nested filter objects and params we're explicitly setting
-        if (key !== 'filters' && key !== 'page' && key !== 'sort' && key !== 'direction' && key !== 'pageSize') {
-          params[key] = filters[key];
-        }
-      });
-      
-      // If there's a nested filters object, spread its contents
-      if (filters.filters && typeof filters.filters === 'object') {
-        Object.assign(params, filters.filters);
-      }
-    }
+    });
     
     router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [baseRoute, filters, pageSize]);
+  }, [baseRoute, buildNavigationParams, filters?.sort, filters?.direction]);
 
   const handlePageChange = React.useCallback((page: number) => {
-    // Build clean parameters preserving current filters but avoiding nesting
-    const params: Record<string, any> = {
-      page,
-      ...(pageSize && { pageSize: pageSize }),
-    };
-    
-    // Preserve all current parameters except nested filters and pagination
-    if (filters) {
-      Object.keys(filters).forEach(key => {
-        // Skip nested filter objects and page-related params
-        if (key !== 'filters' && key !== 'page' && key !== 'pageSize') {
-          params[key] = filters[key];
-        }
-      });
-      
-      // If there's a nested filters object, spread its contents
-      if (filters.filters && typeof filters.filters === 'object') {
-        Object.assign(params, filters.filters);
-      }
-    }
+    const params = buildNavigationParams({ page });
     
     router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [baseRoute, filters, pageSize]);
+  }, [baseRoute, buildNavigationParams]);
 
   const handlePageSizeChange = React.useCallback((newPageSize: number) => {
     setPageSize(newPageSize);
     
-    // Build clean parameters preserving current filters but avoiding nesting
-    const params: Record<string, any> = {
+    const params = buildNavigationParams({ 
       page: 1, // Reset to first page when changing page size
-      pageSize: newPageSize,
-    };
-    
-    // Preserve all current parameters except nested filters and pagination
-    if (filters) {
-      Object.keys(filters).forEach(key => {
-        // Skip nested filter objects and page-related params
-        if (key !== 'filters' && key !== 'page' && key !== 'pageSize') {
-          params[key] = filters[key];
-        }
-      });
-      
-      // If there's a nested filters object, spread its contents
-      if (filters.filters && typeof filters.filters === 'object') {
-        Object.assign(params, filters.filters);
-      }
-    }
+      pageSize: newPageSize 
+    });
     
     router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [baseRoute, filters, setPageSize]);
+  }, [baseRoute, buildNavigationParams, setPageSize]);
 
   const handleFilterChange = React.useCallback((filterKey: string, value: any) => {
     const newFilters = { ...activeFilters };
@@ -386,57 +435,32 @@ export function CrudPage<T extends { id: number }>({
     
     setActiveFilters(newFilters);
     
-    // Build clean parameters with only non-filter values from current filters
-    const params: Record<string, any> = {
+    // Use helper but override custom filters with the new filters
+    const params = buildNavigationParams({
       page: 1,
-      ...(pageSize && { pageSize: pageSize }),
-    };
-    
-    // Preserve sort and search parameters
-    if (filters?.sort) params.sort = filters.sort;
-    if (filters?.direction) params.direction = filters.direction;
-    if (filters?.search) params.search = filters.search;
-    
-    // Add the new filters
-    Object.assign(params, newFilters);
+      ...newFilters, // Override any existing custom filters with the new ones
+    });
     
     router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [baseRoute, filters, activeFilters, pageSize]);
+  }, [baseRoute, buildNavigationParams, activeFilters]);
 
-  const handleSimpleFilterChange = React.useCallback((filterValue: string | undefined) => {
-    setActiveSimpleFilter(filterValue);
+  const handleDynamicFilterApply = React.useCallback((filter: FilterCondition | CompoundFilter | null) => {
+    // Store the applied filter to maintain state
+    setAppliedDynamicFilter(filter);
     
-    // Build clean parameters without nested filters
-    const params: Record<string, any> = {
+    // Build parameters with the new filter
+    const params = buildNavigationParams({
       page: 1,
-      ...(pageSize && { pageSize: pageSize }),
-    };
+      filters: filter ? JSON.stringify(filter) : undefined,
+    });
     
-    // Preserve sort and search parameters
-    if (filters?.sort) params.sort = filters.sort;
-    if (filters?.direction) params.direction = filters.direction;
-    if (filters?.search) params.search = filters.search;
-    
-    if (filterValue === undefined) {
-      // "All" was selected - don't apply any filters
-      // The parent component should handle clearing any resource-specific filters
-    } else {
-      // Find the selected filter
-      const selectedFilter = simpleFilters.find(f => f.value.toString() === filterValue);
-      if (selectedFilter) {
-        // Apply the filter's parameters
-        if (selectedFilter.filterParams) {
-          // Use the explicitly defined filter parameters
-          Object.assign(params, selectedFilter.filterParams);
-        } else {
-          // Default behavior: use the filter's key and value
-          params[selectedFilter.key] = selectedFilter.value;
-        }
-      }
+    // Remove filters key if no filter (to clear dynamic filters)
+    if (!filter && params.filters) {
+      delete params.filters;
     }
     
     router.get(baseRoute, params, {
@@ -444,7 +468,80 @@ export function CrudPage<T extends { id: number }>({
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [baseRoute, filters, pageSize, simpleFilters]);
+  }, [baseRoute, buildNavigationParams]);
+
+  const handleRemoveDynamicFilter = React.useCallback((index?: number) => {
+    if (!appliedDynamicFilter) return;
+    
+    let newFilter: FilterCondition | CompoundFilter | null = null;
+    
+    if ('logic' in appliedDynamicFilter && index !== undefined) {
+      // Remove specific condition from compound filter
+      const newConditions = appliedDynamicFilter.conditions.filter((_, i) => i !== index);
+      if (newConditions.length > 1) {
+        newFilter = { ...appliedDynamicFilter, conditions: newConditions };
+      } else if (newConditions.length === 1) {
+        newFilter = newConditions[0] as FilterCondition;
+      }
+    }
+    
+    handleDynamicFilterApply(newFilter);
+  }, [appliedDynamicFilter, handleDynamicFilterApply]);
+
+  const handleClearAllFilters = React.useCallback(() => {
+    setAppliedDynamicFilter(null);
+    setActiveFilters({});
+    
+    // Build clean parameters with only core navigation (no filters)
+    const params: Record<string, any> = {
+      page: 1,
+      pageSize: pageSize,
+    };
+    
+    // Preserve only sort, direction, and search
+    if (filters?.sort) params.sort = filters.sort;
+    if (filters?.direction) params.direction = filters.direction;
+    if (filters?.search) params.search = filters.search;
+    
+    router.get(baseRoute, params, {
+      preserveState: true,
+      preserveScroll: true,
+      only: ['data', 'filters'],
+    });
+  }, [baseRoute, filters, pageSize]);
+
+  const handleSimpleFilterChange = React.useCallback((filterValue: string | undefined) => {
+    setActiveSimpleFilter(filterValue);
+    
+    // Start with base navigation params including dynamic filters
+    const overrides: Record<string, any> = { page: 1 };
+    
+    if (filterValue === undefined) {
+      // "All" was selected - clear simple filter-specific params but preserve everything else
+      // Don't add any specific filter parameters
+    } else {
+      // Find the selected filter
+      const selectedFilter = simpleFilters.find(f => f.value.toString() === filterValue);
+      if (selectedFilter) {
+        // Apply the filter's parameters
+        if (selectedFilter.filterParams) {
+          // Use the explicitly defined filter parameters
+          Object.assign(overrides, selectedFilter.filterParams);
+        } else {
+          // Default behavior: use the filter's key and value
+          overrides[selectedFilter.key] = selectedFilter.value;
+        }
+      }
+    }
+    
+    const params = buildNavigationParams(overrides);
+    
+    router.get(baseRoute, params, {
+      preserveState: true,
+      preserveScroll: true,
+      only: ['data', 'filters'],
+    });
+  }, [baseRoute, buildNavigationParams, simpleFilters]);
 
   const handleCreate = React.useCallback(() => {
     // Reset form refs before opening create drawer
@@ -659,9 +756,39 @@ export function CrudPage<T extends { id: number }>({
     return [...defaultActions, ...(actions || [])];
   }, [canView, canEdit, canDelete, DetailView, EditForm, handleView, handleEdit, handleDelete, resourceName, actions]);
 
-  const activeFilterCount = Object.keys(activeFilters).filter(key => 
-    activeFilters[key] !== undefined && activeFilters[key] !== '' && activeFilters[key] !== null
+  // Count active filters including both custom and dynamic filters
+  const customFilterCount = Object.keys(activeFilters).filter(key => 
+    activeFilters[key] !== undefined && activeFilters[key] !== '' && activeFilters[key] !== null && activeFilters[key] !== '__all__'
   ).length;
+  
+  // Count dynamic filter conditions
+  const dynamicFilterCount = (() => {
+    if (!appliedDynamicFilter) return 0;
+    if ('logic' in appliedDynamicFilter) {
+      // Compound filter - count all conditions
+      return appliedDynamicFilter.conditions.filter(c => !('logic' in c)).length;
+    }
+    // Single condition
+    return 1;
+  })();
+  
+  const activeFilterCount = customFilterCount + dynamicFilterCount;
+  
+  // Debug logging for filter state
+  React.useEffect(() => {
+    console.log('🔍 Filter state debug:', {
+      currentURL: window.location.href,
+      parsedDynamicFilter,
+      appliedDynamicFilter,
+      activeFilters,
+      customFilterCount,
+      dynamicFilterCount,
+      activeFilterCount,
+      filterMetadata,
+      filterMetadataLoading,
+      shouldShowBadges: !!(appliedDynamicFilter || Object.keys(activeFilters).some(key => activeFilters[key] !== undefined && activeFilters[key] !== '' && activeFilters[key] !== '__all__'))
+    });
+  }, [parsedDynamicFilter, appliedDynamicFilter, activeFilters, customFilterCount, dynamicFilterCount, activeFilterCount, filterMetadata, filterMetadataLoading]);
 
   // Keyboard shortcuts
   React.useEffect(() => {
@@ -707,8 +834,8 @@ export function CrudPage<T extends { id: number }>({
               <span className="hidden lg:inline ml-2 whitespace-nowrap">Refresh</span>
             </Button>
 
-            {/* Filters */}
-            {customFilters.length > 0 && (
+            {/* Filters - show if we have custom filters OR filter metadata for dynamic filters */}
+            {(customFilters.length > 0 || (filterMetadata && filterMetadata.filters.length > 0)) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -792,6 +919,18 @@ export function CrudPage<T extends { id: number }>({
             </div>
           </div>
 
+          {/* Active Filters Display */}
+          {(appliedDynamicFilter || Object.keys(activeFilters).some(key => activeFilters[key] !== undefined && activeFilters[key] !== '' && activeFilters[key] !== '__all__')) && (
+            <ActiveFilterBadges
+              dynamicFilter={appliedDynamicFilter}
+              customFilters={activeFilters}
+              filterMetadata={filterMetadata}
+              onRemoveDynamicFilter={handleRemoveDynamicFilter}
+              onRemoveCustomFilter={(key) => handleFilterChange(key, '')}
+              onClearAll={handleClearAllFilters}
+            />
+          )}
+
           {/* Simple Filters */}
           {simpleFilters.length > 0 && (
             <Tabs 
@@ -816,45 +955,56 @@ export function CrudPage<T extends { id: number }>({
             </Tabs>
           )}
 
-          {/* Filter Panel */}
-          {showFilters && customFilters.length > 0 && (
-            <div className="rounded-lg border bg-card p-4 min-w-0 overflow-hidden">
-              <div className="flex items-center justify-between mb-4 min-w-0">
-                <h3 className="text-sm font-medium">Filters</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowFilters(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <FilterPanel
-                filters={customFilters}
-                values={activeFilters}
-                onChange={handleFilterChange}
-                onClear={() => {
-                  setActiveFilters({});
-                  
-                  // Build a clean URL without any filter parameters
-                  const cleanParams: Record<string, any> = {
-                    page: 1,
-                    pageSize: pageSize,
-                  };
-                  
-                  // Only include non-filter parameters from current filters
-                  if (filters?.sort) cleanParams.sort = filters.sort;
-                  if (filters?.direction) cleanParams.direction = filters.direction;
-                  if (filters?.search) cleanParams.search = filters.search;
-                  
-                  router.get(baseRoute, cleanParams, {
-                    preserveState: true,
-                    preserveScroll: true,
-                    only: ['data', 'filters'],
-                  });
-                }}
-              />
-            </div>
+          {/* Filter Panel - Use Dynamic Filter Builder if metadata available, otherwise fall back to custom filters */}
+          {showFilters && (
+            <>
+              {filterMetadata && filterMetadata.filters.length > 0 ? (
+                <DynamicFilterBuilder
+                  metadata={filterMetadata}
+                  loading={filterMetadataLoading}
+                  onApply={handleDynamicFilterApply}
+                  initialFilter={appliedDynamicFilter}
+                />
+              ) : customFilters.length > 0 ? (
+                <div className="rounded-lg border bg-card p-4 min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-between mb-4 min-w-0">
+                    <h3 className="text-sm font-medium">Filters</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFilters(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <FilterPanel
+                    filters={customFilters}
+                    values={activeFilters}
+                    onChange={handleFilterChange}
+                    onClear={() => {
+                      setActiveFilters({});
+                      
+                      // Build a clean URL without any filter parameters
+                      const cleanParams: Record<string, any> = {
+                        page: 1,
+                        pageSize: pageSize,
+                      };
+                      
+                      // Only include non-filter parameters from current filters
+                      if (filters?.sort) cleanParams.sort = filters.sort;
+                      if (filters?.direction) cleanParams.direction = filters.direction;
+                      if (filters?.search) cleanParams.search = filters.search;
+                      
+                      router.get(baseRoute, cleanParams, {
+                        preserveState: true,
+                        preserveScroll: true,
+                        only: ['data', 'filters'],
+                      });
+                    }}
+                  />
+                </div>
+              ) : null}
+            </>
           )}
         </div>
 

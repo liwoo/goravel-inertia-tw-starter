@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import axios from '@/lib/axios';
+import { useSSE, useSSEEvent } from '@/hooks/useSSE';
+import sseManager from '@/services/sseManager';
 
 interface User {
   id: number;
@@ -102,6 +104,73 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [counts, setCounts] = useState<NotificationCounts | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // SSE Event Handlers
+  useSSE('notification:counts', (event) => {
+    const newCounts = event.data as NotificationCounts;
+    setCounts(newCounts);
+    setUnreadCount(newCounts.unread || 0);
+  });
+
+  useSSE('notification:new', (event) => {
+    const newNotification = event.data as Notification;
+    
+    // Add new notification to the top of the list
+    setNotifications(prev => [newNotification, ...prev]);
+    
+    // Increment unread count
+    setUnreadCount(prev => prev + 1);
+    
+    // Update counts if available
+    if (counts) {
+      setCounts({
+        ...counts,
+        unread: counts.unread + 1,
+        unread_high: newNotification.priority === 'high' ? counts.unread_high + 1 : counts.unread_high,
+        unread_messages: newNotification.type === 'message' ? counts.unread_messages + 1 : counts.unread_messages,
+        unread_mentions: newNotification.type === 'mention' ? counts.unread_mentions + 1 : counts.unread_mentions,
+        total: counts.total + 1
+      });
+    }
+  });
+
+  useSSE('notification:read', (event) => {
+    const notificationId = event.data.notification_id;
+    
+    // Update notification read status
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId 
+          ? { ...notif, is_read: true, read_at: new Date().toISOString() } 
+          : notif
+      )
+    );
+  });
+
+  useSSE('notification:dismissed', (event) => {
+    const notificationId = event.data.notification_id;
+    
+    // Remove dismissed notification
+    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+  });
+
+  useSSE('notification:system', (event) => {
+    const systemNotification = event.data as Notification;
+    
+    // Add system notification to the list
+    setNotifications(prev => [systemNotification, ...prev]);
+    
+    // Refresh counts
+    loadNotificationCounts();
+  });
+
+  useSSE('notification:initial', (event) => {
+    // Initial batch of notifications from SSE connection
+    const initialNotifications = event.data.data as Notification[];
+    if (initialNotifications && initialNotifications.length > 0) {
+      setNotifications(initialNotifications);
+    }
+  });
 
   // Load notifications
   const loadNotifications = useCallback(async (request: ListRequest) => {
@@ -400,15 +469,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setError(null);
   }, []);
 
-  // Load initial data
+  // Load initial data and connect SSE
   useEffect(() => {
     loadNotificationCounts();
-  }, [loadNotificationCounts]);
-
-  // Refresh counts periodically
-  useEffect(() => {
-    const interval = setInterval(loadNotificationCounts, 30000); // Every 30 seconds
-    return () => clearInterval(interval);
+    
+    // Ensure SSE is connected
+    if (!sseManager.isConnected()) {
+      sseManager.connect();
+    }
   }, [loadNotificationCounts]);
 
   const value: NotificationContextType = {

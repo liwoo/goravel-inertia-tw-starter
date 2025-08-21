@@ -176,7 +176,7 @@ export const roleFilters: CrudFilter[] = [
     label: 'Status',
     type: 'select',
     options: [
-      { value: '', label: 'All Status' },
+      { value: '__all__', label: 'All Status' },
       { value: 'true', label: 'Active' },
       { value: 'false', label: 'Inactive' },
     ],
@@ -198,7 +198,7 @@ export const roleFilters: CrudFilter[] = [
     label: 'Has Parent Role',
     type: 'select',
     options: [
-      { value: '', label: 'All' },
+      { value: '__all__', label: 'All' },
       { value: 'true', label: 'Yes' },
       { value: 'false', label: 'No' },
     ],

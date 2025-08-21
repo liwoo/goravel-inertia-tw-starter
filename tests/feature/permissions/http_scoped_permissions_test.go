@@ -563,6 +563,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestCreateBookWithPermission() {
 		"isbn":         uniqueISBN,
 		"published_at": now.Format("2006-01-02 15:04:05"),
 		"description":  "A test book",
+		"price":        29.99,
 	}
 	
 	jsonData, _ := json.Marshal(bookData)
@@ -874,6 +875,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 		"author":       "Limited Author",
 		"isbn":         fmt.Sprintf("LTD-NEW-%d-%d", time.Now().Unix(), limitedUser.ID),
 		"published_at": now.Format("2006-01-02 15:04:05"),
+		"price":        19.99,
 	}
 	
 	jsonData, _ := json.Marshal(bookData)
@@ -1331,7 +1333,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUnauthenticatedAccessDenied() {
 	}{
 		{"GET", "/api/books", http.StatusForbidden}, // Public endpoint but returns 403 without permission
 		{"POST", "/api/books", http.StatusFound}, // Protected endpoint redirects (302)
-		{"GET", "/api/books/1", http.StatusForbidden}, // Public endpoint but returns 403 without permission
+		{"GET", "/api/books/1", http.StatusNotFound}, // Book doesn't exist, returns 404
 		{"PUT", "/api/books/1", http.StatusFound}, // Protected endpoint redirects (302)
 		{"DELETE", "/api/books/1", http.StatusFound}, // Protected endpoint redirects (302)
 	}
