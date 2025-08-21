@@ -1,0 +1,72 @@
+# Git files
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# Development files
+.env.local
+.env.development
+.env.test
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build artifacts
+/tmp
+/main
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+tests/
+coverage.out
+*.test
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+storage/logs/
+
+# Temporary files
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/public/*
+!storage/framework/cache/.gitkeep
+!storage/framework/sessions/.gitkeep
+!storage/framework/views/.gitkeep
+
+# Database files
+*.sqlite
+*.db
+database/*.sqlite
+database/*.db
+
+# Helm charts
+helm/
+
+# GitHub Actions
+.github/
+
+# Docker files (prevent recursive copy)
+Dockerfile
+docker-compose.yml
+.dockerignore

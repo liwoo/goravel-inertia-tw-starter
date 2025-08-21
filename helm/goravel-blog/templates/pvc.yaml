@@ -1,0 +1,17 @@
+{{- if .Values.app.storage.persistence.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "goravel-blog.fullname" . }}-storage
+  labels:
+    {{- include "goravel-blog.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.app.storage.persistence.accessMode }}
+  {{- if .Values.app.storage.persistence.storageClass }}
+  storageClassName: {{ .Values.app.storage.persistence.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.app.storage.persistence.size }}
+{{- end }}

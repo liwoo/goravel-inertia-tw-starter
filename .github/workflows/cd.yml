@@ -1,0 +1,148 @@
+name: CD
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  HELM_VERSION: 'v3.13.0'
+  KUBECTL_VERSION: 'v1.28.0'
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set environment variables
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+            echo "NAMESPACE=production" >> $GITHUB_ENV
+            echo "VALUES_FILE=values.production.yaml" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+            echo "NAMESPACE=staging" >> $GITHUB_ENV
+            echo "VALUES_FILE=values.staging.yaml" >> $GITHUB_ENV
+          fi
+          
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+          
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ env.HELM_VERSION }}
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+          
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          
+      - name: Create image pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace=${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+            
+      - name: Get image tag
+        id: image
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.ref_name }}-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install goravel-blog ./helm/goravel-blog \
+            --namespace ${{ env.NAMESPACE }} \
+            --values ./helm/goravel-blog/values.yaml \
+            --values ./helm/goravel-blog/${{ env.VALUES_FILE }} \
+            --set image.repository=ghcr.io/${{ github.repository }} \
+            --set image.tag=${{ steps.image.outputs.tag }} \
+            --set imagePullSecrets[0].name=ghcr-secret \
+            --set app.database.password=${{ secrets.DB_PASSWORD }} \
+            --set app.jwt.secret=${{ secrets.JWT_SECRET }} \
+            --set app.key=${{ secrets.APP_KEY }} \
+            --wait \
+            --timeout 10m
+            
+      - name: Check deployment status
+        run: |
+          kubectl rollout status deployment/goravel-blog-goravel-blog -n ${{ env.NAMESPACE }}
+          
+      - name: Run database migrations
+        if: success()
+        run: |
+          POD_NAME=$(kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=goravel-blog -o jsonpath="{.items[0].metadata.name}")
+          kubectl exec -n ${{ env.NAMESPACE }} $POD_NAME -- ./main artisan migrate --force
+          
+      - name: Display deployment info
+        if: always()
+        run: |
+          echo "Deployment info:"
+          kubectl get all -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=goravel-blog
+          echo ""
+          echo "Ingress info:"
+          kubectl get ingress -n ${{ env.NAMESPACE }}
+
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+          
+      - name: Set namespace
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "NAMESPACE=production" >> $GITHUB_ENV
+          else
+            echo "NAMESPACE=staging" >> $GITHUB_ENV
+          fi
+          
+      - name: Rollback Helm release
+        run: |
+          helm rollback goravel-blog -n ${{ env.NAMESPACE }}

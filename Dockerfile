@@ -1,24 +1,97 @@
-FROM golang:alpine AS builder
+# Build stage for Go backend
+FROM golang:1.21-alpine AS go-builder
 
-ENV GO111MODULE=on \
-    CGO_ENABLED=0  \
-    GOARCH="amd64" \
-    GOOS=linux
+WORKDIR /app
 
-WORKDIR /build
-COPY . .
-RUN go mod tidy
-RUN go build --ldflags "-extldflags -static" -o main .
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
 
-FROM alpine:latest
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
 
-WORKDIR /www
+# Copy only necessary source files
+COPY main.go ./
+COPY bootstrap ./bootstrap
+COPY app ./app
+COPY config ./config
+COPY routes ./routes
+COPY database ./database
 
-COPY --from=builder /build/main /www/
-COPY --from=builder /build/database/ /www/database/
-COPY --from=builder /build/public/ /www/public/
-COPY --from=builder /build/storage/ /www/storage/
-COPY --from=builder /build/resources/ /www/resources/
-COPY --from=builder /build/.env /www/.env
+# Build with optimizations
+# -ldflags="-w -s" strips debug info and symbol table
+# -a forces rebuild of all packages
+# -trimpath removes file system paths from binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -a -trimpath \
+    -ldflags="-w -s -extldflags '-static'" \
+    -o goravel-app .
 
-ENTRYPOINT ["/www/main"]
+# Build stage for React frontend
+FROM node:18-alpine AS node-builder
+
+WORKDIR /app
+
+# Copy package files for better caching
+COPY package*.json ./
+COPY pnpm-lock.yaml* ./
+COPY yarn.lock* ./
+
+# Install dependencies based on available lock file
+RUN if [ -f pnpm-lock.yaml ]; then \
+        npm install -g pnpm && pnpm install --frozen-lockfile; \
+    elif [ -f yarn.lock ]; then \
+        yarn install --frozen-lockfile; \
+    else \
+        npm ci; \
+    fi
+
+# Copy frontend source files
+COPY tsconfig.json ./
+COPY vite.config.ts ./
+COPY postcss.config.js ./
+COPY tailwind.config.js ./
+COPY components.json ./
+COPY resources ./resources
+
+# Build frontend assets
+RUN if [ -f pnpm-lock.yaml ]; then \
+        pnpm run build; \
+    elif [ -f yarn.lock ]; then \
+        yarn build; \
+    else \
+        npm run build; \
+    fi
+
+# Final stage - using scratch for minimal size
+FROM alpine:3.19 AS runtime
+
+# Install only runtime dependencies
+RUN apk add --no-cache ca-certificates tzdata && \
+    adduser -D -u 1001 goravel
+
+WORKDIR /app
+
+# Copy the binary from go-builder
+COPY --from=go-builder --chown=goravel:goravel /app/goravel-app .
+
+# Copy built frontend assets
+COPY --from=node-builder --chown=goravel:goravel /app/public ./public
+COPY --from=node-builder --chown=goravel:goravel /app/resources/views ./resources/views
+
+# Copy necessary files and directories
+COPY --chown=goravel:goravel database/migrations ./database/migrations
+COPY --chown=goravel:goravel database/seeders ./database/seeders
+
+# Create necessary directories with proper permissions
+RUN mkdir -p storage/logs storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views && \
+    chown -R goravel:goravel storage && \
+    chmod -R 755 storage
+
+# Switch to non-root user
+USER goravel
+
+EXPOSE 3000
+
+# Use exec form for better signal handling
+ENTRYPOINT ["/app/goravel-app"]

@@ -1,0 +1,52 @@
+# Production environment values
+replicaCount: 3
+
+image:
+  pullPolicy: IfNotPresent
+
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: blog.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: blog-tls-secret
+      hosts:
+        - blog.example.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 75
+
+app:
+  env: "production"
+  debug: false
+  url: "https://blog.example.com"
+  
+  database:
+    host: "mysql-production.default.svc.cluster.local"
+    database: "goravel_blog_production"
+    
+  redis:
+    host: "redis-production.default.svc.cluster.local"
+    
+  storage:
+    persistence:
+      storageClass: "gp3"
+      size: 50Gi

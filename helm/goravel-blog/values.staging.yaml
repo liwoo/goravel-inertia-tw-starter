@@ -1,0 +1,35 @@
+# Staging environment values
+replicaCount: 1
+
+image:
+  pullPolicy: Always
+
+ingress:
+  hosts:
+    - host: staging-blog.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+
+app:
+  env: "staging"
+  debug: true
+  url: "https://staging-blog.example.com"
+  
+  database:
+    host: "mysql-staging.default.svc.cluster.local"
+    database: "goravel_blog_staging"
+    
+  redis:
+    host: "redis-staging.default.svc.cluster.local"

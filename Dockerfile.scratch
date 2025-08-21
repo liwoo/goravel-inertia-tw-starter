@@ -1,0 +1,118 @@
+# Optimized Dockerfile using scratch for minimal size
+# This version produces the smallest possible image
+
+# Build stage for Go backend
+FROM golang:1.21-alpine AS go-builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates
+
+# Create user and group files
+RUN echo "goravel:x:1001:1001:Goravel user:/app:/sbin/nologin" > /etc_passwd && \
+    echo "goravel:x:1001:" > /etc_group
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy only necessary source files
+COPY main.go ./
+COPY bootstrap ./bootstrap
+COPY app ./app
+COPY config ./config
+COPY routes ./routes
+COPY database ./database
+
+# Build with maximum optimizations
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -a -trimpath \
+    -ldflags="-w -s -extldflags '-static'" \
+    -tags netgo \
+    -o goravel-app .
+
+# Create directory structure in builder
+RUN mkdir -p /app-root/storage/logs \
+             /app-root/storage/app/public \
+             /app-root/storage/framework/cache \
+             /app-root/storage/framework/sessions \
+             /app-root/storage/framework/views \
+             /app-root/database/migrations \
+             /app-root/database/seeders
+
+# Build stage for React frontend
+FROM node:18-alpine AS node-builder
+
+WORKDIR /app
+
+# Copy package files for better caching
+COPY package*.json ./
+COPY pnpm-lock.yaml* ./
+COPY yarn.lock* ./
+
+# Install dependencies based on available lock file
+RUN if [ -f pnpm-lock.yaml ]; then \
+        npm install -g pnpm && pnpm install --frozen-lockfile; \
+    elif [ -f yarn.lock ]; then \
+        yarn install --frozen-lockfile; \
+    else \
+        npm ci; \
+    fi
+
+# Copy frontend source files
+COPY tsconfig.json ./
+COPY vite.config.ts ./
+COPY postcss.config.js ./
+COPY tailwind.config.js ./
+COPY components.json ./
+COPY resources ./resources
+
+# Build frontend assets with production optimizations
+ENV NODE_ENV=production
+RUN if [ -f pnpm-lock.yaml ]; then \
+        pnpm run build; \
+    elif [ -f yarn.lock ]; then \
+        yarn build; \
+    else \
+        npm run build; \
+    fi
+
+# Remove source maps and unnecessary files
+RUN find public -name "*.map" -delete
+
+# Final stage - using scratch for absolute minimal size
+FROM scratch
+
+# Copy timezone and ca-certificates from builder
+COPY --from=go-builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=go-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy user and group files
+COPY --from=go-builder /etc_passwd /etc/passwd
+COPY --from=go-builder /etc_group /etc/group
+
+# Copy the binary
+COPY --from=go-builder --chown=1001:1001 /app/goravel-app /app/goravel-app
+
+# Copy directory structure
+COPY --from=go-builder --chown=1001:1001 /app-root /app
+
+# Copy built frontend assets
+COPY --from=node-builder --chown=1001:1001 /app/public /app/public
+COPY --from=node-builder --chown=1001:1001 /app/resources/views /app/resources/views
+
+# Copy necessary files
+COPY --chown=1001:1001 database/migrations /app/database/migrations
+COPY --chown=1001:1001 database/seeders /app/database/seeders
+
+# Set working directory
+WORKDIR /app
+
+# Use non-root user
+USER 1001
+
+EXPOSE 3000
+
+# Use exec form for better signal handling
+ENTRYPOINT ["/app/goravel-app"]
