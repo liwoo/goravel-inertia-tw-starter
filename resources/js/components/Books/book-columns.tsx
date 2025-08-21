@@ -24,6 +24,7 @@ const StatusBadge = ({ status }: { status: BookStatus }) => {
     AVAILABLE: "default",
     BORROWED: "secondary", 
     MAINTENANCE: "destructive",
+    RESERVED: "outline",
   } as const
 
   return (

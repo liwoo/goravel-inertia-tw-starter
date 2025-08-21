@@ -147,7 +147,7 @@ export const bookColumns: CrudColumn<Book>[] = [
     className: 'w-28',
     render: (book) => (
       <div className="text-sm text-gray-500">
-        {new Date(book.createdAt).toLocaleDateString()}
+        {book.createdAt ? new Date(book.createdAt).toLocaleDateString() : '-'}
       </div>
     ),
   },

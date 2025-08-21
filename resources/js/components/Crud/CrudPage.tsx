@@ -227,7 +227,7 @@ export function CrudPage<T extends { id: number }>({
       if (simpleFilter.filterParams) {
         // Check if all filterParams match current filters
         const allParamsMatch = Object.entries(simpleFilter.filterParams).every(([key, value]) => {
-          const currentValue = actualFilters[key] !== undefined ? actualFilters[key] : filters[key];
+          const currentValue = actualFilters[key] !== undefined ? actualFilters[key] : (filters as any)[key];
           
           // Handle boolean comparisons (string "true"/"false" vs boolean true/false)
           if (typeof value === 'boolean' && typeof currentValue === 'string') {
@@ -254,7 +254,7 @@ export function CrudPage<T extends { id: number }>({
         }
       } else {
         // Default check: does the filter's key match its value in current filters?
-        const filterValue = actualFilters[simpleFilter.key] || filters[simpleFilter.key];
+        const filterValue = actualFilters[simpleFilter.key] || (filters as any)[simpleFilter.key];
         if (filterValue === simpleFilter.value) {
           return simpleFilter.value.toString();
         }
@@ -274,7 +274,7 @@ export function CrudPage<T extends { id: number }>({
     console.log('Filter state update:', { 
       filters, 
       activeFilter,
-      status: filters?.status 
+      status: (filters as any)?.status 
     });
     setActiveSimpleFilter(activeFilter);
   }, [filters, getActiveSimpleFilter]);

@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { EnhancedDataTable } from "@/components/Crud/enhanced-data-table"
 import { bookColumns } from "./book-columns"
 import { Book } from "@/types/book"
