@@ -63,6 +63,47 @@ APP_ENV=testing go test ./tests/integration -v
 APP_ENV=testing go test ./tests/feature -v
 ```
 
+## 🔍 Code Quality
+
+### Linting
+
+The project uses `golangci-lint` for code quality checks:
+
+```bash
+# Install golangci-lint
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
+
+# Run linter
+golangci-lint run
+
+# Auto-fix issues
+golangci-lint run --fix
+```
+
+### Pre-commit Hooks
+
+Enable automatic code quality checks before each commit:
+
+```bash
+# Option 1: Use git hooks directory
+./enable-hooks.sh
+
+# Option 2: Use pre-commit framework
+./setup-hooks.sh
+```
+
+The pre-commit hook will:
+- Format Go code with `gofmt`
+- Run `go mod tidy`
+- Run `golangci-lint`
+- Check for large files (>5MB)
+- Prevent commits with linting errors
+
+To skip hooks for a single commit:
+```bash
+git commit --no-verify
+```
+
 ### Test Categories
 
 | Category | Description | Path |

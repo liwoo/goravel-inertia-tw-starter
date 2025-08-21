@@ -13,8 +13,56 @@ import (
 
 // RoleService implements role-specific business logic using the builder pattern
 type RoleService struct {
-	contracts.CrudServiceContract
 	baseService contracts.CrudServiceContract
+}
+
+// Implement CrudServiceContract interface by delegating to baseService
+func (s *RoleService) GetList(req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	return s.baseService.GetList(req)
+}
+
+func (s *RoleService) GetByID(id uint) (interface{}, error) {
+	return s.baseService.GetByID(id)
+}
+
+func (s *RoleService) Create(data map[string]interface{}) (interface{}, error) {
+	return s.baseService.Create(data)
+}
+
+func (s *RoleService) Update(id uint, data map[string]interface{}) (interface{}, error) {
+	return s.baseService.Update(id, data)
+}
+
+func (s *RoleService) Delete(id uint) error {
+	return s.baseService.Delete(id)
+}
+
+func (s *RoleService) Search(query string, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	return s.baseService.Search(query, req)
+}
+
+func (s *RoleService) GetListAdvanced(req contracts.ListRequest, filters map[string]interface{}) (*contracts.PaginatedResult, error) {
+	return s.baseService.GetListAdvanced(req, filters)
+}
+
+func (s *RoleService) GetSearchableFields() []string {
+	return s.baseService.GetSearchableFields()
+}
+
+func (s *RoleService) GetSortableFields() []string {
+	return s.baseService.GetSortableFields()
+}
+
+func (s *RoleService) GetFilterableFields() []string {
+	return s.baseService.GetFilterableFields()
+}
+
+func (s *RoleService) GetValidationRules() map[string]interface{} {
+	return s.baseService.GetValidationRules()
+}
+
+func (s *RoleService) GetColumnMapping() map[string]string {
+	return s.baseService.GetColumnMapping()
 }
 
 // NewRoleService creates a new role service using the builder pattern
@@ -137,8 +185,7 @@ func NewRoleService() *RoleService {
 		Build()  // Returns a fully configured CrudServiceContract
 	
 	roleServiceInstance := &RoleService{
-		CrudServiceContract: service,
-		baseService:         service,
+		baseService: service,
 	}
 
 	// Set the actual service reference for proper method resolution

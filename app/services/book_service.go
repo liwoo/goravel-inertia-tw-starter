@@ -14,8 +14,52 @@ import (
 
 // BookService implements book-specific business logic using the builder pattern
 type BookService struct {
-	contracts.CrudServiceContract
 	baseService contracts.CrudServiceContract
+}
+
+// Implement CrudServiceContract interface by delegating to baseService
+func (s *BookService) GetList(req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	return s.baseService.GetList(req)
+}
+
+func (s *BookService) GetByID(id uint) (interface{}, error) {
+	return s.baseService.GetByID(id)
+}
+
+func (s *BookService) Create(data map[string]interface{}) (interface{}, error) {
+	return s.baseService.Create(data)
+}
+
+func (s *BookService) Update(id uint, data map[string]interface{}) (interface{}, error) {
+	return s.baseService.Update(id, data)
+}
+
+func (s *BookService) Delete(id uint) error {
+	return s.baseService.Delete(id)
+}
+
+func (s *BookService) Search(query string, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	return s.baseService.Search(query, req)
+}
+
+func (s *BookService) GetListAdvanced(req contracts.ListRequest, filters map[string]interface{}) (*contracts.PaginatedResult, error) {
+	return s.baseService.GetListAdvanced(req, filters)
+}
+
+func (s *BookService) GetSearchableFields() []string {
+	return s.baseService.GetSearchableFields()
+}
+
+func (s *BookService) GetSortableFields() []string {
+	return s.baseService.GetSortableFields()
+}
+
+func (s *BookService) GetFilterableFields() []string {
+	return s.baseService.GetFilterableFields()
+}
+
+func (s *BookService) GetValidationRules() map[string]interface{} {
+	return s.baseService.GetValidationRules()
 }
 
 // NewBookService creates a new book service using the builder pattern
@@ -106,8 +150,7 @@ func NewBookService() *BookService {
 		Build() // Returns a fully configured CrudServiceContract
 
 	bookServiceInstance := &BookService{
-		CrudServiceContract: service,
-		baseService:         service,
+		baseService: service,
 	}
 
 	// Set the actual service instance for proper method resolution

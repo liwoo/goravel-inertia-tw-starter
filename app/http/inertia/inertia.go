@@ -6,7 +6,7 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"github.com/petaki/inertia-go"
+	inertia "github.com/petaki/inertia-go"
 
 	"players/app/auth"   // Import auth for permission helper
 	"players/app/models" // Import the User model

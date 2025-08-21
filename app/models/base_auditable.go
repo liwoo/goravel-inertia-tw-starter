@@ -7,6 +7,12 @@ import (
 
 // Auditable provides audit fields for tracking resource lifecycle
 type Auditable struct {
+	// Standard GORM fields
+	ID        uint                  `gorm:"primarykey" json:"id"`
+	CreatedAt orm.Carbon            `json:"created_at"`
+	UpdatedAt orm.Carbon            `json:"updated_at"`
+	DeletedAt orm.DeletedAt         `gorm:"index" json:"deleted_at,omitempty"`
+	
 	// Creation tracking
 	CreatedBy   *uint     `gorm:"index" json:"created_by,omitempty"`
 	Creator     *User     `gorm:"foreignKey:CreatedBy" json:"creator,omitempty"`
@@ -22,10 +28,6 @@ type Auditable struct {
 	// Additional audit fields
 	IPAddress   string    `gorm:"type:varchar(45)" json:"ip_address,omitempty"`
 	UserAgent   string    `gorm:"type:text" json:"user_agent,omitempty"`
-	
-	// Standard timestamps (inherited from orm.Model)
-	orm.Model
-	orm.SoftDeletes
 }
 
 // AuditableInterface defines methods that auditable models should implement
@@ -90,9 +92,13 @@ func (a *Auditable) GetAuditInfo() *AuditInfo {
 }
 
 // BaseAuditableModel is a convenience type that other models can embed
-// This combines orm.Model with Auditable fields
+// This combines standard GORM fields with Auditable fields
 type BaseAuditableModel struct {
-	orm.Model
+	// Standard GORM fields
+	ID        uint                  `gorm:"primarykey" json:"id"`
+	CreatedAt orm.Carbon            `json:"created_at"`
+	UpdatedAt orm.Carbon            `json:"updated_at"`
+	DeletedAt orm.DeletedAt         `gorm:"index" json:"deleted_at,omitempty"`
 	
 	// Audit fields
 	CreatedBy   *uint     `gorm:"index" json:"created_by,omitempty"`
@@ -103,8 +109,6 @@ type BaseAuditableModel struct {
 	Deleter     *User     `gorm:"foreignKey:DeletedBy" json:"deleter,omitempty"`
 	IPAddress   string    `gorm:"type:varchar(45)" json:"ip_address,omitempty"`
 	UserAgent   string    `gorm:"type:text" json:"user_agent,omitempty"`
-	
-	orm.SoftDeletes
 }
 
 // Implement AuditableInterface for BaseAuditableModel

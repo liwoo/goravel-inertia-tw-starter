@@ -1,0 +1,70 @@
+run:
+  timeout: 5m
+  tests: false
+  skip-dirs:
+    - node_modules
+    - vendor
+    - tmp
+    - tests
+  skip-files:
+    - ".*_test.go"
+
+linters:
+  enable:
+    - gofmt
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - typecheck
+    - unused
+  disable:
+    - gosec
+    - errcheck
+    - gosimple
+    - structcheck
+    - varcheck
+    - deadcode
+    - exhaustive
+    - gocyclo
+    - dupl
+
+linters-settings:
+  gofmt:
+    simplify: true
+  govet:
+    check-shadowing: true
+  staticcheck:
+    go: "1.21"
+    checks: ["all", "-SA1019", "-ST1003"]
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+    
+    # Exclude typecheck for orm.Model embedded fields
+    - path: app/models/
+      linters:
+        - typecheck
+      text: "has no field or method"
+    
+    # Exclude import errors for Goravel framework v2
+    - linters:
+        - typecheck
+      text: "could not import github.com/goravel/framework"
+    
+    # Allow dot imports for standard library
+    - path: app/http/middleware/
+      linters:
+        - stylecheck
+      text: "should not use dot imports"
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
