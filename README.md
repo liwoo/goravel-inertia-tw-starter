@@ -5,60 +5,149 @@ A modern web application built with Goravel (Go) and React, featuring JWT authen
 ## 🚀 Quick Start
 
 ```bash
-# Clone and setup
+# 1. Clone and install dependencies
 git clone <repository-url>
 cd blog
 go mod download
 npm install
 
-# Configure environment
+# 2. Setup environment
 cp .env.example .env
 # Edit .env with your database credentials
 
-# Setup database and permissions
+# 3. Initialize database
 go run . artisan migrate
 go run . artisan key:generate
-go run . artisan seed #Seeds RBAC permissions as well as Books
+go run . artisan seed  # Seeds RBAC permissions and sample data
+
+# 4. Create admin user
 go run . artisan user:create-admin
 
-# Run the application
+# 5. Run the application (need 2 terminals)
 # Terminal 1: Backend
-air  # or: go run . serve
+air  # or: go run .
 
 # Terminal 2: Frontend
 npm run dev
+
+# 6. Open http://localhost:3500
 ```
-
-Visit `http://localhost:3500` and login with your admin credentials.
-
-## 🧪 Testing
-
-Run all tests with a single command:
-
-```bash
-./run_tests.sh
-```
-
-For specific test categories:
-
-```bash
-./run_tests.sh unit        # Unit tests (all passing)
-./run_tests.sh integration # Integration tests
-./run_tests.sh feature     # Feature tests
-./run_tests.sh coverage    # With coverage report
-```
-
-See [TESTING.md](TESTING.md) for detailed testing guide and [TEST_STATUS.md](TEST_STATUS.md) for current test status.
 
 ## 📋 Prerequisites
 
-- Go 1.18 or higher
-- Node.js 16 or higher
-- NPM or Yarn
-- MySQL/PostgreSQL/SQLite database
-- Air (optional, for hot reload): `go install github.com/cosmtrek/air@latest`
+- **Go 1.18+** - [Download Go](https://golang.org/dl/)
+- **Node.js 16+** - [Download Node.js](https://nodejs.org/)
+- **Database** - One of:
+  - SQLite (default, no setup needed)
+  - MySQL 5.7+
+  - PostgreSQL 12+
+- **Air** (optional, for hot reload):
+  ```bash
+  go install github.com/cosmtrek/air@latest
+  ```
+
+## 🧪 Testing
+
+### Quick Test Run
+
+```bash
+# Run all tests with proper environment setup
+APP_ENV=testing go test ./tests/... -v
+
+# Or use the convenience script
+./run_tests.sh
+
+# Run specific test suites
+APP_ENV=testing go test ./tests/unit -v
+APP_ENV=testing go test ./tests/integration -v
+APP_ENV=testing go test ./tests/feature -v
+```
+
+### Test Categories
+
+| Category | Description | Path |
+|----------|-------------|------|
+| Unit | Business logic, isolated components | `tests/unit/` |
+| Integration | Service layer, API endpoints | `tests/integration/` |
+| Feature | Full user workflows, UI interactions | `tests/feature/` |
+
+### Writing Tests
+
+```go
+// Example test structure
+package tests
+
+import (
+    "testing"
+    "github.com/stretchr/testify/suite"
+    "players/tests"
+)
+
+type YourTestSuite struct {
+    suite.Suite
+    tests.TestCase  // Provides database helpers
+}
+
+func TestYourTestSuite(t *testing.T) {
+    suite.Run(t, new(YourTestSuite))
+}
+
+func (s *YourTestSuite) SetupTest() {
+    s.RefreshDatabase()  // Clean database for each test
+}
+
+func (s *YourTestSuite) TestExample() {
+    // Your test logic
+    s.Equal(expected, actual)
+}
+```
+
+### Test Helpers
+
+- **Authentication**: Use `helpers.SetupJWTUser()` for creating test users
+- **Database**: Tests automatically use SQLite in-memory database
+- **HTTP Testing**: Use `httptest.NewServer(facades.Route())` for API tests
+
+### Common Test Commands
+
+```bash
+# Run with coverage
+APP_ENV=testing go test ./tests/... -v -cover
+
+# Run specific test
+APP_ENV=testing go test -v ./tests/feature -run TestBookCRUD
+
+# Run tests in watch mode (requires entr)
+find . -name "*.go" | entr -c go test ./tests/... -v
+
+# Clean test artifacts
+rm -rf tests/*/database/
+rm -rf tests/*/storage/
+```
 
 ## 🔧 Detailed Setup
+
+### First-Time Developer Setup
+
+```bash
+# 1. Install Go (if not installed)
+# macOS: brew install go
+# Ubuntu: sudo apt install golang-go
+# Windows: Download from https://golang.org/dl/
+
+# 2. Install Node.js (if not installed)
+# macOS: brew install node
+# Ubuntu: curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - && sudo apt install nodejs
+# Windows: Download from https://nodejs.org/
+
+# 3. Install Air for hot reload (recommended)
+go install github.com/cosmtrek/air@latest
+
+# 4. Verify installations
+go version      # Should show 1.18+
+node --version  # Should show 16+
+air -v          # Should show air version
+```
 
 ### 1. Initial Setup
 
@@ -67,8 +156,11 @@ See [TESTING.md](TESTING.md) for detailed testing guide and [TEST_STATUS.md](TES
 git clone <repository-url>
 cd blog
 
-# Install dependencies
+# Install Go dependencies
 go mod download
+go mod tidy  # Clean up any issues
+
+# Install frontend dependencies
 npm install  # or: yarn install
 
 # Setup environment
@@ -77,14 +169,31 @@ cp .env.example .env
 
 ### 2. Configure Database
 
-Edit `.env` file with your database credentials:
+For quickest setup, use SQLite (default):
 
 ```env
+# .env file - SQLite (no setup needed)
+DB_CONNECTION=sqlite
+DB_DATABASE=database/database.sqlite
+```
+
+For MySQL/PostgreSQL:
+
+```env
+# MySQL
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=goravel_blog
 DB_USERNAME=root
+DB_PASSWORD=yourpassword
+
+# PostgreSQL
+DB_CONNECTION=postgresql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=goravel_blog
+DB_USERNAME=postgres
 DB_PASSWORD=yourpassword
 ```
 
@@ -349,51 +458,94 @@ curl -X GET "http://localhost:3500/api/books"
 
 ## 🐛 Troubleshooting
 
+### Test Issues
+```bash
+# Tests failing with "panic: test timed out"
+# - Increase timeout: go test -timeout 30s
+# - Check for infinite loops or deadlocks
+
+# Database/migration errors in tests
+# - Tests use SQLite by default, no setup needed
+# - Ensure APP_ENV=testing is set
+# - Clean test databases: rm -rf tests/*/database/
+
+# "sql: Scan error" with dates
+# - Check migration uses DateTime() not String() for date fields
+# - Ensure model uses *time.Time for nullable dates
+
+# Mock errors in tests
+# - Use real facades for integration tests
+# - For unit tests, see helpers in tests/helpers/
+
+# Permission errors in tests
+# - Use helpers.SetupJWTUser() for test users with roles
+# - Check CLAUDE.md for test examples
+```
+
 ### Database Issues
 ```bash
 # Connection errors
 # - Check .env database credentials
 # - Ensure database server is running
-# - For SQLite, ensure database file exists
+# - For SQLite: touch database/database.sqlite
 
 # Migration errors
 go run . artisan migrate:rollback
 go run . artisan migrate:fresh
+
+# Foreign key constraint errors
+# - Check migration order in database/kernel.go
+# - Ensure related tables exist first
 ```
 
 ### Permission Issues
 ```bash
 # Permissions not working
-# 1. Check debug logs in console
-# 2. Verify permission format: service_action (e.g., books_create)
-# 3. Re-seed permissions:
+# 1. Enable debug logging: LOG_LEVEL=debug
+# 2. Check logs for "CheckScopedPermission" entries
+# 3. Verify permission format: service_action (e.g., books_create)
+# 4. Re-seed permissions:
 go run . artisan seed --seeder=rbac
 
 # User can't access features
-# - Check user has correct role
-# - Verify role has required permissions in /admin/permissions
+# - Check user role: go run . artisan user:show email@example.com
+# - Verify permissions: visit /admin/permissions as admin
+# - Check scoped permissions (by_all, by_me, by_my_role)
 ```
 
 ### Development Server Issues
 ```bash
-# Backend not reloading
-# - Restart with Ctrl+C then run again
-# - Use 'air' for hot reload
+# Backend not starting
+# - Check port 3500 is free: lsof -i :3500
+# - Verify Go modules: go mod tidy
+# - Check .env file exists and is valid
 
-# Frontend not updating
-# - Check npm run dev is running
-# - Clear browser cache
-# - Check browser console for errors
+# Frontend not building
+# - Clear node_modules: rm -rf node_modules && npm install
+# - Check Node version: node --version (needs 16+)
+# - Clear Vite cache: rm -rf node_modules/.vite
+
+# Hot reload not working
+# - Install Air: go install github.com/cosmtrek/air@latest
+# - Check .air.toml configuration
+# - Use 'air' instead of 'go run .'
 ```
 
-### Common Validation Errors
+### Common API Errors
 ```go
-// If you get "unexpected end of JSON input" in validation
+// "unexpected end of JSON input" in validation
 // Replace ValidateRequest with manual binding:
+var request requests.YourRequest
 if err := ctx.Request().Bind(&request); err != nil {
-    return nil, err
+    return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+        "error": "Invalid request format",
+    })
 }
-// Then add manual validation
+
+// JWT token issues
+// - Token stored in HTTP-only cookie named "token"
+// - Check cookie domain matches your URL
+// - For tests, use helpers.SetupJWTUser()
 ```
 
 ## 📚 Documentation

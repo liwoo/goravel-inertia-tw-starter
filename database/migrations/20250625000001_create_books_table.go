@@ -27,7 +27,7 @@ func (receiver *CreateBooksTable) Up() error {
 		table.String("isbn")
 		table.Text("description")
 		table.Float("price", 10, 2)
-		table.String("published_at").Nullable()
+		table.DateTime("published_at").Nullable()
 		table.String("status").Default("AVAILABLE") // AVAILABLE, BORROWED, MAINTENANCE
 		table.Text("tags").Nullable() // Add tags column directly in create table
 		table.Timestamps()
