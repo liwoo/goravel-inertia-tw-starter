@@ -11,8 +11,8 @@ env:
   NODE_VERSION: '18'
 
 jobs:
-  lint-backend:
-    name: Lint Backend
+  lint:
+    name: Lint Code
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +21,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
           
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -34,32 +40,19 @@ jobs:
         run: |
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
           
-      - name: Run golangci-lint
+      - name: Run Go linting
         run: golangci-lint run --timeout=5m
-
-  lint-frontend:
-    name: Lint Frontend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          
-      - name: Install dependencies
+        
+      - name: Install frontend dependencies
         run: npm ci
         
-      - name: Run ESLint
-        run: npm run lint || true
-        
-      - name: Type check
-        run: npm run typecheck || true
+      - name: Run frontend linting
+        run: |
+          npm run lint || true
+          npm run typecheck || true
 
-  test-backend:
-    name: Test Backend
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -91,12 +84,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
             
-      - name: Create test directories
-        run: |
-          mkdir -p resources/views
-          touch resources/views/dummy.tmpl
+      - name: Make test script executable
+        run: chmod +x ./run_tests.sh
           
-      - name: Run tests
+      - name: Run all tests with coverage
         env:
           APP_ENV: testing
           DB_CONNECTION: mysql
@@ -105,36 +96,17 @@ jobs:
           DB_DATABASE: goravel_test
           DB_USERNAME: root
           DB_PASSWORD: root
-        run: |
-          go test -v -cover -coverprofile=coverage.out ./tests/feature/...
+        run: ./run_tests.sh coverage
           
-      - name: Upload coverage
+      - name: Upload coverage report
         uses: actions/upload-artifact@v3
         with:
           name: coverage-report
           path: coverage.out
 
-  test-frontend:
-    name: Test Frontend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Run tests
-        run: npm test || true
-
   build:
     name: Build Docker Image
-    needs: [lint-backend, lint-frontend, test-backend, test-frontend]
+    needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
