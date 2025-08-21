@@ -42,7 +42,7 @@ export const userStatsConfigs: StatsCardConfig[] = [
     getValue: (stats) => stats.superAdmins,
     icon: <Shield className="h-4 w-4" />,
     iconClassName: 'text-blue-500',
-    description: 'Full system access',
+    getDescription: () => 'Full system access',
     valueClassName: 'text-blue-600',
   },
 ];

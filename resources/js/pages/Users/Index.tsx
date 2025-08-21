@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
   User, 
@@ -127,13 +127,13 @@ export default function UsersIndex({
   });
 
   // Custom form wrappers to include roles
-  const CreateFormWithRoles = (props: any) => (
-    <UserCreateForm {...props} roles={roles} />
-  );
+  const CreateFormWithRoles = forwardRef((props: any, ref) => (
+    <UserCreateForm {...props} roles={roles} ref={ref} />
+  ));
 
-  const EditFormWithRoles = (props: any) => (
-    <UserEditForm {...props} roles={roles} />
-  );
+  const EditFormWithRoles = forwardRef((props: any, ref) => (
+    <UserEditForm {...props} roles={roles} ref={ref} />
+  ));
 
   // Use extracted configurations
   const simpleFilters = createSimpleFilters(userSimpleFilters(stats));

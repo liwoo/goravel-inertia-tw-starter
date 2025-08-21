@@ -8,6 +8,7 @@ export interface User {
   created_at: string;
   updated_at: string;
   email_verified?: boolean;
+  last_login_at?: string;
   roles?: Role[];
 }
 
@@ -35,7 +36,7 @@ export interface UserListRequest {
   pageSize?: number;
   search?: string;
   sort?: string;
-  direction?: 'ASC' | 'DESC';
+  direction?: 'asc' | 'desc';
   filters?: Record<string, any>;
 }
 

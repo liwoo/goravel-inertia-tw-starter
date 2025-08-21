@@ -1,4 +1,4 @@
-import { router } from "@inertiajs/react";
+// SSE Manager for real-time event handling
 
 export interface SSEEvent {
   type: string;
@@ -20,8 +20,8 @@ class SSEManager {
   constructor() {
     // Listen for auth changes
     if (typeof window !== 'undefined') {
-      window.addEventListener('auth:login', this.handleAuthChange.bind(this));
-      window.addEventListener('auth:logout', this.disconnect.bind(this));
+      window.addEventListener('auth:login' as any, this.handleAuthChange.bind(this) as EventListener);
+      window.addEventListener('auth:logout' as any, this.disconnect.bind(this) as EventListener);
       
       // Auto-connect if we have a token
       this.authToken = this.getAuthToken();
