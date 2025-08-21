@@ -42,7 +42,7 @@ func (c *PermissionsController) Assign(ctx http.Context) http.Response {
 	err := facades.Orm().Query().
 		Where("id = ? AND is_active = ?", roleID, true).
 		First(&role)
-	
+
 	if err != nil {
 		return ctx.Response().Json(http.StatusNotFound, map[string]string{
 			"error": "Role not found",

@@ -66,10 +66,10 @@ func (s *BookService) GetValidationRules() map[string]interface{} {
 func NewBookService() *BookService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.Book]("books", "id").
-		WithSearchFields("title", "author", "isbn", "description").                                   // REQUIRED
+		WithSearchFields("title", "author", "isbn", "description").                                             // REQUIRED
 		WithSortFields("id", "title", "author", "price", "status", "created_at", "updated_at", "published_at"). // REQUIRED
-		WithFilterFields("status", "author").                                                         // REQUIRED
-		WithValidationRules(map[string]interface{}{                                                   // REQUIRED
+		WithFilterFields("status", "author").                                                                   // REQUIRED
+		WithValidationRules(map[string]interface{}{                                                             // REQUIRED
 			"title":       "required|string|max:255",
 			"author":      "required|string|max:100",
 			"isbn":        "required|string|max:20",
@@ -239,7 +239,7 @@ func (s *BookService) GetByISBN(isbn string) (*models.Book, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check if book was actually found (not just an empty struct)
 	if book.ID == 0 {
 		return nil, fmt.Errorf("book not found")

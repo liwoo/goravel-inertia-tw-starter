@@ -146,11 +146,11 @@ func (r *{{.RepositoryName}}) CountByStatus(status string) (int64, error) {
 
 	var result strings.Builder
 	err = t.Execute(&result, map[string]string{
-		"RepositoryName":     repositoryName,
-		"ModelName":          modelName,
-		"ResourceName":       resourceName,
-		"ResourceNameLower":  strings.ToLower(resourceName),
-		"TableName":          tableName,
+		"RepositoryName":    repositoryName,
+		"ModelName":         modelName,
+		"ResourceName":      resourceName,
+		"ResourceNameLower": strings.ToLower(resourceName),
+		"TableName":         tableName,
 	})
 
 	return result.String(), err

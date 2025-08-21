@@ -46,7 +46,7 @@ func (receiver *MakeCrudE2E) Handle(ctx console.Context) error {
 
 	// Convert name to various formats
 	resourceConfig := receiver.parseResourceName(name)
-	
+
 	ctx.Info(fmt.Sprintf("Generating complete CRUD system for: %s", resourceConfig.DisplayName))
 	ctx.Info("=====================================")
 
@@ -70,15 +70,15 @@ func (receiver *MakeCrudE2E) Handle(ctx console.Context) error {
 	}
 
 	generatedFiles := []string{}
-	
+
 	for _, step := range steps {
 		ctx.Info(fmt.Sprintf("🔨 %s...", step.description))
-		
+
 		if err := step.fn(ctx, resourceConfig, force); err != nil {
 			ctx.Error(fmt.Sprintf("Failed to generate %s: %v", step.name, err))
 			return err
 		}
-		
+
 		ctx.Success(fmt.Sprintf("✓ %s generated successfully", step.description))
 	}
 
@@ -89,7 +89,7 @@ func (receiver *MakeCrudE2E) Handle(ctx console.Context) error {
 	for _, file := range generatedFiles {
 		ctx.Info(fmt.Sprintf("  • %s", file))
 	}
-	
+
 	ctx.Info("")
 	ctx.Info("Next steps:")
 	ctx.Info("1. Run migration: go run . artisan migrate")
@@ -112,22 +112,22 @@ type ResourceConfig struct {
 	KebabName       string // product
 	KebabPluralName string // products
 	DisplayName     string // Product
-	
+
 	// Database
 	TableName string // products
-	
+
 	// File paths
-	ModelPath       string // app/models/product.go
-	ServicePath     string // app/services/product_service.go
-	ControllerPath  string // app/http/controllers/product_controller.go
+	ModelPath          string // app/models/product.go
+	ServicePath        string // app/services/product_service.go
+	ControllerPath     string // app/http/controllers/product_controller.go
 	PageControllerPath string // app/http/controllers/product_page_controller.go
-	RequestPath     string // app/http/requests/product_request.go
-	MigrationPath   string // database/migrations/
-	
+	RequestPath        string // app/http/requests/product_request.go
+	MigrationPath      string // database/migrations/
+
 	// Frontend paths
-	UITypesPath     string // resources/js/types/product.ts
+	UITypesPath      string // resources/js/types/product.ts
 	UIComponentsPath string // resources/js/components/Products/
-	UIPagesPath     string // resources/js/pages/Products/
+	UIPagesPath      string // resources/js/pages/Products/
 }
 
 // parseResourceName converts the input name to all required variations
@@ -136,7 +136,7 @@ func (receiver *MakeCrudE2E) parseResourceName(name string) ResourceConfig {
 	lowerName := strings.ToLower(name)
 	pluralName := receiver.pluralize(name)
 	lowerPluralName := strings.ToLower(pluralName)
-	
+
 	return ResourceConfig{
 		Name:            name,
 		LowerName:       lowerName,
@@ -148,17 +148,17 @@ func (receiver *MakeCrudE2E) parseResourceName(name string) ResourceConfig {
 		KebabPluralName: receiver.toKebabCase(pluralName),
 		DisplayName:     name,
 		TableName:       receiver.toSnakeCase(pluralName),
-		
-		ModelPath:       fmt.Sprintf("app/models/%s.go", receiver.toSnakeCase(name)),
-		ServicePath:     fmt.Sprintf("app/services/%s_service.go", receiver.toSnakeCase(name)),
-		ControllerPath:  fmt.Sprintf("app/http/controllers/%s_controller.go", receiver.toSnakeCase(name)),
+
+		ModelPath:          fmt.Sprintf("app/models/%s.go", receiver.toSnakeCase(name)),
+		ServicePath:        fmt.Sprintf("app/services/%s_service.go", receiver.toSnakeCase(name)),
+		ControllerPath:     fmt.Sprintf("app/http/controllers/%s_controller.go", receiver.toSnakeCase(name)),
 		PageControllerPath: fmt.Sprintf("app/http/controllers/%s_page_controller.go", receiver.toSnakeCase(name)),
-		RequestPath:     fmt.Sprintf("app/http/requests/%s_request.go", receiver.toSnakeCase(name)),
-		MigrationPath:   "database/migrations/",
-		
-		UITypesPath:     fmt.Sprintf("resources/js/types/%s.ts", lowerName),
+		RequestPath:        fmt.Sprintf("app/http/requests/%s_request.go", receiver.toSnakeCase(name)),
+		MigrationPath:      "database/migrations/",
+
+		UITypesPath:      fmt.Sprintf("resources/js/types/%s.ts", lowerName),
 		UIComponentsPath: fmt.Sprintf("resources/js/components/%s/", pluralName),
-		UIPagesPath:     fmt.Sprintf("resources/js/pages/%s/", pluralName),
+		UIPagesPath:      fmt.Sprintf("resources/js/pages/%s/", pluralName),
 	}
 }
 
@@ -232,7 +232,7 @@ func ({{.LowerName}} *{{.Name}}) Validate() error {
 func (receiver *MakeCrudE2E) generateMigration(ctx console.Context, config ResourceConfig, force bool) error {
 	timestamp := time.Now().Format("20060102150405")
 	migrationFile := fmt.Sprintf("%s%s_create_%s_table.go", config.MigrationPath, timestamp, config.TableName)
-	
+
 	template := `package migrations
 
 import (
@@ -1339,7 +1339,7 @@ func (c *{{.Name}}PageController) BuildPermissionsMap(ctx http.Context, resource
 
 func (receiver *MakeCrudE2E) generateRoutes(ctx console.Context, config ResourceConfig, force bool) error {
 	routeFile := fmt.Sprintf("routes/%s.go", config.LowerPluralName)
-	
+
 	template := `package routes
 
 import (
@@ -1376,7 +1376,7 @@ func {{.Name}}Routes(router route.Route) {
 
 func (receiver *MakeCrudE2E) generatePermissions(ctx console.Context, config ResourceConfig, force bool) error {
 	permissionFile := fmt.Sprintf("database/seeders/%s_permissions_seeder.go", config.LowerName)
-	
+
 	template := `package seeders
 
 import (

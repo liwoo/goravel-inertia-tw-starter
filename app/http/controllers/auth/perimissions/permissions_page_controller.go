@@ -66,9 +66,9 @@ func buildRoleStatistics() (map[string]interface{}, error) {
 // The generic page controller handles everything for us
 func (c *PermissionsPageController) Index(ctx http.Context) http.Response {
 	facades.Log().Debug("PermissionsPageController.Index called", map[string]interface{}{
-		"url": ctx.Request().Url(),
+		"url":    ctx.Request().Url(),
 		"method": ctx.Request().Method(),
-		"query": ctx.Request().Queries(),
+		"query":  ctx.Request().Queries(),
 	})
 	return c.GenericPageController.Index(ctx)
 }

@@ -6,20 +6,20 @@ import (
 
 type User struct {
 	BaseAuditableModel
-	
+
 	Name     string `gorm:"not null" json:"name"`
 	Email    string `gorm:"uniqueIndex;not null" json:"email"`
 	Password string `gorm:"not null" json:"-"`
-	
+
 	// Legacy role field (keep for backward compatibility)
 	Role string `gorm:"default:'USER'" json:"legacy_role"`
-	
+
 	// User status and metadata
-	IsActive     bool   `gorm:"default:true" json:"is_active"`
-	IsSuperAdmin bool   `gorm:"default:false;index" json:"is_super_admin"`
-	EmailVerified bool  `gorm:"default:false" json:"email_verified"`
-	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
-	
+	IsActive      bool       `gorm:"default:true" json:"is_active"`
+	IsSuperAdmin  bool       `gorm:"default:false;index" json:"is_super_admin"`
+	EmailVerified bool       `gorm:"default:false" json:"email_verified"`
+	LastLoginAt   *time.Time `json:"last_login_at,omitempty"`
+
 	// Many-to-many relationships
 	Roles []Role `gorm:"many2many:user_roles" json:"roles,omitempty"`
 }
@@ -45,7 +45,7 @@ func (u *User) HasPermission(permission string) bool {
 		if !role.IsActive {
 			continue
 		}
-		
+
 		allPerms := role.GetAllPermissions()
 		for _, perm := range allPerms {
 			if perm == permission {
@@ -59,24 +59,24 @@ func (u *User) HasPermission(permission string) bool {
 // GetAllPermissions returns all permissions from all user's roles
 func (u *User) GetAllPermissions() []string {
 	permissions := make(map[string]bool)
-	
+
 	for _, role := range u.Roles {
 		if !role.IsActive {
 			continue
 		}
-		
+
 		rolePerms := role.GetAllPermissions()
 		for _, perm := range rolePerms {
 			permissions[perm] = true
 		}
 	}
-	
+
 	// Convert map to slice
 	result := make([]string, 0, len(permissions))
 	for perm := range permissions {
 		result = append(result, perm)
 	}
-	
+
 	return result
 }
 
@@ -109,14 +109,14 @@ func (u *User) GetHighestRole() *Role {
 func (u *User) CanManageUser(other *User) bool {
 	userHighest := u.GetHighestRole()
 	otherHighest := other.GetHighestRole()
-	
+
 	if userHighest == nil {
 		return false
 	}
 	if otherHighest == nil {
 		return true // Can manage users with no roles
 	}
-	
+
 	return userHighest.IsHigherThan(otherHighest)
 }
 
@@ -126,10 +126,10 @@ func (u *User) IsSuperAdminUser() bool {
 	if u.IsSuperAdmin {
 		return true
 	}
-	
+
 	// Check legacy ADMIN role for backward compatibility
 	legacyAdmin := u.Role == "ADMIN" || u.Role == "SUPER_ADMIN"
-	
+
 	return u.HasRole("super-admin") || u.HasPermission("system.manage") || legacyAdmin
 }
 
@@ -143,18 +143,18 @@ func (u *User) SharesRoleWith(other *User) bool {
 	if u.ID == other.ID {
 		return true
 	}
-	
+
 	userRoles := make(map[uint]bool)
 	for _, role := range u.GetActiveRoles() {
 		userRoles[role.ID] = true
 	}
-	
+
 	for _, role := range other.GetActiveRoles() {
 		if userRoles[role.ID] {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -164,7 +164,7 @@ func (u *User) CanMessageUser(other *User) bool {
 	if u.IsSuperAdminUser() {
 		return true
 	}
-	
+
 	// Users can message others with shared roles
 	return u.SharesRoleWith(other)
 }

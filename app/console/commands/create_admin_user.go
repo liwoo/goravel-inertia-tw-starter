@@ -97,12 +97,12 @@ func (receiver *CreateAdminUser) Handle(ctx console.Context) error {
 	}
 
 	adminUser := models.User{
-		Name:         name,
-		Email:        email,
-		Password:     hashedPassword,
-		Role:         "ADMIN", // Keep legacy role for backward compatibility
-		IsActive:     true,
-		IsSuperAdmin: true, // Set super admin flag
+		Name:          name,
+		Email:         email,
+		Password:      hashedPassword,
+		Role:          "ADMIN", // Keep legacy role for backward compatibility
+		IsActive:      true,
+		IsSuperAdmin:  true, // Set super admin flag
 		EmailVerified: true, // Admin users are pre-verified
 	}
 

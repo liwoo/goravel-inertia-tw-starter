@@ -27,10 +27,10 @@ func NewPermissionService() *PermissionService {
 		roleCache:       make(map[string]*models.Role),
 		cacheExpiry:     15 * time.Minute, // Cache for 15 minutes
 	}
-	
+
 	// Initialize cache
 	service.refreshCache()
-	
+
 	return service
 }
 
@@ -39,34 +39,34 @@ func (s *PermissionService) HasPermission(user *models.User, permission string) 
 	if user == nil {
 		return false
 	}
-	
+
 	// Super admin has all permissions
 	if user.IsSuperAdminUser() {
 		return true
 	}
-	
+
 	// Always load fresh permissions
 	permissions := s.loadUserPermissions(user)
-	
+
 	// Debug log permissions
 	facades.Log().Debug("HasPermission check", map[string]interface{}{
-		"user_id": user.ID,
-		"email": user.Email,
+		"user_id":             user.ID,
+		"email":               user.Email,
 		"checking_permission": permission,
-		"user_permissions": permissions,
+		"user_permissions":    permissions,
 	})
-	
+
 	// Check direct permission match
 	for _, perm := range permissions {
 		if perm == permission {
 			return true
 		}
 	}
-	
+
 	// NOTE: We do NOT automatically grant base permissions when user has scoped versions
 	// This ensures proper scope validation happens in CheckScopedPermission
 	// For example, having "books_delete_by_me" does NOT grant "books_delete"
-	
+
 	// Check wildcard permissions
 	return s.hasWildcardPermission(permissions, permission)
 }
@@ -76,7 +76,7 @@ func (s *PermissionService) HasRole(user *models.User, roleSlug string) bool {
 	if user == nil {
 		return false
 	}
-	
+
 	return user.HasRole(roleSlug)
 }
 
@@ -85,16 +85,16 @@ func (s *PermissionService) CanAccessResource(user *models.User, action string, 
 	if user == nil {
 		return false
 	}
-	
+
 	// Build permission strings to check
 	permissions := []string{
-		fmt.Sprintf("%s.%s", resourceType, action),           // books.read
-		fmt.Sprintf("%s.%s.*", resourceType, action),         // books.read.*
-		fmt.Sprintf("%s.*", resourceType),                    // books.*
-		fmt.Sprintf("*.%s", action),                          // *.read
-		"*.*",                                                // *.*
+		fmt.Sprintf("%s.%s", resourceType, action),   // books.read
+		fmt.Sprintf("%s.%s.*", resourceType, action), // books.read.*
+		fmt.Sprintf("%s.*", resourceType),            // books.*
+		fmt.Sprintf("*.%s", action),                  // *.read
+		"*.*",                                        // *.*
 	}
-	
+
 	// Check each permission
 	for _, perm := range permissions {
 		if s.HasPermission(user, perm) {
@@ -105,7 +105,7 @@ func (s *PermissionService) CanAccessResource(user *models.User, action string, 
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -114,17 +114,17 @@ func (s *PermissionService) CanManageUser(manager *models.User, target *models.U
 	if manager == nil || target == nil {
 		return false
 	}
-	
+
 	// Super admin can manage anyone
 	if manager.IsSuperAdminUser() {
 		return true
 	}
-	
+
 	// Check user management permission
 	if !s.HasPermission(manager, "users.manage") {
 		return false
 	}
-	
+
 	// Check role hierarchy
 	return manager.CanManageUser(target)
 }
@@ -134,28 +134,28 @@ func (s *PermissionService) AssignRole(user *models.User, roleSlug string, assig
 	if user == nil {
 		return fmt.Errorf("user cannot be nil")
 	}
-	
+
 	// Check if assigner has permission
 	if assignedBy != nil && !s.HasPermission(assignedBy, "roles.assign") {
 		return fmt.Errorf("insufficient permissions to assign roles")
 	}
-	
+
 	// Get role
 	role, err := s.getRoleBySlug(roleSlug)
 	if err != nil {
 		return fmt.Errorf("role not found: %w", err)
 	}
-	
+
 	// Check if user already has this role (active or inactive)
 	var existingRole models.UserRole
 	err = facades.Orm().Query().
 		Where("user_id = ? AND role_id = ?", user.ID, role.ID).
 		First(&existingRole)
-	
+
 	if err == nil && existingRole.IsActive {
 		return fmt.Errorf("user already has role: %s", roleSlug)
 	}
-	
+
 	// Check role hierarchy (can't assign higher role than your own)
 	if assignedBy != nil && !assignedBy.IsSuperAdminUser() {
 		assignerHighest := assignedBy.GetHighestRole()
@@ -163,7 +163,7 @@ func (s *PermissionService) AssignRole(user *models.User, roleSlug string, assig
 			return fmt.Errorf("cannot assign role higher than your own")
 		}
 	}
-	
+
 	// Deactivate all existing active roles for this user
 	_, err = facades.Orm().Query().Model(&models.UserRole{}).
 		Where("user_id = ? AND is_active = ?", user.ID, true).
@@ -171,7 +171,7 @@ func (s *PermissionService) AssignRole(user *models.User, roleSlug string, assig
 	if err != nil {
 		return fmt.Errorf("failed to deactivate existing roles: %w", err)
 	}
-	
+
 	// Create or reactivate user-role assignment
 	if existingRole.ID != 0 {
 		// Reactivate existing role
@@ -184,25 +184,25 @@ func (s *PermissionService) AssignRole(user *models.User, roleSlug string, assig
 	} else {
 		// Create new user-role assignment
 		userRole := models.UserRole{
-			UserID:      user.ID,
-			RoleID:      role.ID,
-			AssignedAt:  time.Now(),
-			IsActive:    true,
+			UserID:     user.ID,
+			RoleID:     role.ID,
+			AssignedAt: time.Now(),
+			IsActive:   true,
 		}
-		
+
 		if assignedBy != nil {
 			userRole.AssignedByID = &assignedBy.ID
 		}
-		
+
 		err = facades.Orm().Query().Create(&userRole)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to assign role: %w", err)
 	}
-	
+
 	// Clear cache
 	s.clearUserCache(user.ID)
-	
+
 	return nil
 }
 
@@ -211,27 +211,27 @@ func (s *PermissionService) RemoveRole(user *models.User, roleSlug string, remov
 	if user == nil {
 		return fmt.Errorf("user cannot be nil")
 	}
-	
+
 	// Check permissions
 	if removedBy != nil && !s.HasPermission(removedBy, "roles.assign") {
 		return fmt.Errorf("insufficient permissions to remove roles")
 	}
-	
+
 	// Get role
 	role, err := s.getRoleBySlug(roleSlug)
 	if err != nil {
 		return fmt.Errorf("role not found: %w", err)
 	}
-	
+
 	// Remove user-role assignment
 	_, err = facades.Orm().Query().Where("user_id = ? AND role_id = ?", user.ID, role.ID).Delete(&models.UserRole{})
 	if err != nil {
 		return fmt.Errorf("failed to remove role: %w", err)
 	}
-	
+
 	// Clear cache
 	s.clearUserCache(user.ID)
-	
+
 	return nil
 }
 
@@ -240,7 +240,7 @@ func (s *PermissionService) GetUserPermissions(user *models.User) []string {
 	if user == nil {
 		return []string{}
 	}
-	
+
 	return s.loadUserPermissions(user)
 }
 
@@ -253,7 +253,7 @@ func (s *PermissionService) CreateRole(name, slug, description string, level int
 		Level:       level,
 		IsActive:    true,
 	}
-	
+
 	// Set parent if specified
 	if parentSlug != "" {
 		parent, err := s.getRoleBySlug(parentSlug)
@@ -262,15 +262,15 @@ func (s *PermissionService) CreateRole(name, slug, description string, level int
 		}
 		role.ParentID = &parent.ID
 	}
-	
+
 	err := facades.Orm().Query().Create(role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create role: %w", err)
 	}
-	
+
 	// Clear cache
 	s.refreshCache()
-	
+
 	return role, nil
 }
 
@@ -285,12 +285,12 @@ func (s *PermissionService) CreatePermission(name, slug, category, action, resou
 		Description: description,
 		IsActive:    true,
 	}
-	
+
 	err := facades.Orm().Query().Create(permission)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create permission: %w", err)
 	}
-	
+
 	return permission, nil
 }
 
@@ -301,19 +301,19 @@ func (s *PermissionService) GrantPermissionToRole(roleSlug, permissionSlug strin
 	if err != nil {
 		return fmt.Errorf("role not found: %w", err)
 	}
-	
+
 	permission, err := s.getPermissionBySlug(permissionSlug)
 	if err != nil {
 		return fmt.Errorf("permission not found: %w", err)
 	}
-	
+
 	// Check if already granted
 	var count int64
 	facades.Orm().Query().Model(&models.RolePermission{}).Where("role_id = ? AND permission_id = ?", role.ID, permission.ID).Count(&count)
 	if count > 0 {
 		return fmt.Errorf("permission already granted to role")
 	}
-	
+
 	// Create role-permission assignment
 	rolePermission := models.RolePermission{
 		RoleID:       role.ID,
@@ -321,19 +321,19 @@ func (s *PermissionService) GrantPermissionToRole(roleSlug, permissionSlug strin
 		GrantedAt:    time.Now(),
 		IsActive:     true,
 	}
-	
+
 	if grantedBy != nil {
 		rolePermission.GrantedByID = &grantedBy.ID
 	}
-	
+
 	err = facades.Orm().Query().Create(&rolePermission)
 	if err != nil {
 		return fmt.Errorf("failed to grant permission: %w", err)
 	}
-	
+
 	// Clear cache
 	s.refreshCache()
-	
+
 	return nil
 }
 
@@ -341,37 +341,37 @@ func (s *PermissionService) GrantPermissionToRole(roleSlug, permissionSlug strin
 
 func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	var permissions []string
-	
+
 	// First, load user with roles (without permissions to avoid the many2many issue)
 	var userWithRoles models.User
 	err := facades.Orm().Query().
 		Where("id = ?", user.ID).
 		With("Roles").
 		First(&userWithRoles)
-	
+
 	if err != nil {
 		return permissions
 	}
-	
+
 	// Collect all permissions from all roles through the pivot table
 	permissionMap := make(map[string]bool)
-	
+
 	for _, role := range userWithRoles.Roles {
 		if !role.IsActive {
 			continue
 		}
-		
+
 		// Load permissions through the pivot table to respect is_active status and scope
 		var rolePermissions []models.RolePermission
 		err := facades.Orm().Query().
 			Where("role_id = ? AND is_active = ?", role.ID, true).
 			With("Permission").
 			Find(&rolePermissions)
-		
+
 		if err != nil {
 			continue
 		}
-		
+
 		// Build permission slugs with scopes
 		for _, rp := range rolePermissions {
 			if rp.Permission.IsActive {
@@ -390,12 +390,12 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 			}
 		}
 	}
-	
+
 	// Convert map to slice
 	for permission := range permissionMap {
 		permissions = append(permissions, permission)
 	}
-	
+
 	return permissions
 }
 
@@ -407,24 +407,24 @@ func (s *PermissionService) hasWildcardPermission(permissions []string, targetPe
 			}
 		}
 	}
-	
+
 	return false
 }
 
 func (s *PermissionService) matchesWildcard(pattern, target string) bool {
 	patternParts := strings.Split(pattern, ".")
 	targetParts := strings.Split(target, ".")
-	
+
 	if len(patternParts) != len(targetParts) {
 		return false
 	}
-	
+
 	for i, part := range patternParts {
 		if part != "*" && part != targetParts[i] {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -432,21 +432,21 @@ func (s *PermissionService) getRoleBySlug(slug string) (*models.Role, error) {
 	s.cacheMutex.RLock()
 	role, exists := s.roleCache[slug]
 	s.cacheMutex.RUnlock()
-	
+
 	if exists && !s.isCacheExpired() {
 		return role, nil
 	}
-	
+
 	var dbRole models.Role
 	err := facades.Orm().Query().Where("slug = ? AND is_active = ?", slug, true).First(&dbRole)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	s.cacheMutex.Lock()
 	s.roleCache[slug] = &dbRole
 	s.cacheMutex.Unlock()
-	
+
 	return &dbRole, nil
 }
 
@@ -463,7 +463,7 @@ func (s *PermissionService) requiresOwnership(user *models.User, permission stri
 	if err != nil {
 		return false
 	}
-	
+
 	return perm.RequiresOwnership
 }
 
@@ -487,7 +487,7 @@ func (s *PermissionService) isResourceOwner(user *models.User, resourceType stri
 func (s *PermissionService) clearUserCache(userID uint) {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
-	
+
 	userKey := fmt.Sprintf("user_%d", userID)
 	delete(s.permissionCache, userKey)
 }
@@ -495,7 +495,7 @@ func (s *PermissionService) clearUserCache(userID uint) {
 func (s *PermissionService) refreshCache() {
 	s.cacheMutex.Lock()
 	defer s.cacheMutex.Unlock()
-	
+
 	// Clear existing cache
 	s.permissionCache = make(map[string][]string)
 	s.roleCache = make(map[string]*models.Role)

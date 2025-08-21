@@ -5,11 +5,11 @@ type StandardPermission string
 
 const (
 	// Basic CRUD permissions
-	PermissionCreate     StandardPermission = "CREATE"
-	PermissionRead       StandardPermission = "READ"
-	PermissionUpdate     StandardPermission = "UPDATE"
-	PermissionDelete     StandardPermission = "DELETE"
-	
+	PermissionCreate StandardPermission = "CREATE"
+	PermissionRead   StandardPermission = "READ"
+	PermissionUpdate StandardPermission = "UPDATE"
+	PermissionDelete StandardPermission = "DELETE"
+
 	// Extended permissions
 	PermissionExport     StandardPermission = "EXPORT"
 	PermissionBulkDelete StandardPermission = "BULK_DELETE"
@@ -33,9 +33,9 @@ func AllStandardPermissions() []StandardPermission {
 
 // ResourcePermissionConfig defines which permissions are available for a resource
 type ResourcePermissionConfig struct {
-	Resource          string                        `json:"resource"`
-	DisplayName       string                        `json:"display_name"`
-	Category          string                        `json:"category"`
+	Resource           string                       `json:"resource"`
+	DisplayName        string                       `json:"display_name"`
+	Category           string                       `json:"category"`
 	EnabledPermissions []StandardPermission         `json:"enabled_permissions"`
 	CustomPermissions  []CustomPermissionDefinition `json:"custom_permissions,omitempty"`
 }

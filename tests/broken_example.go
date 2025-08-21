@@ -11,7 +11,7 @@ import (
 
 func BrokenExample() {
 	service := services.NewBookService()
-	
+
 	// THIS SHOULD NOT COMPILE - missing WithAuthChecker
 	_ = contracts.NewStaticControllerBuilder[models.Book, *requests.BookCreateRequest, *requests.BookUpdateRequest](
 		"book",

@@ -19,10 +19,10 @@ func (provider *InertiaServiceProvider) Register(app foundation.Application) {
 	facades.Log().Info("InertiaServiceProvider: Register method STARTED")
 	// Get application URL from config
 	appURL := facades.Config().GetString("app.url", "http://localhost:8000")
-	
+
 	// Root template path
 	rootTemplate := "resources/views/app.tmpl"
-	
+
 	// Asset version (can be updated based on your assets)
 	version := "1.0.0"
 
@@ -48,11 +48,11 @@ func (provider *InertiaServiceProvider) Register(app foundation.Application) {
 	// Add a simple test function
 	inertiaManager.ShareFunc("hello", func() string { return "Hello from Inertia FuncMap!" })
 	facades.Log().Debug("InertiaServiceProvider: 'hello' function shared")
-	
+
 	// Share global view data
 	inertiaManager.ShareViewData("appName", facades.Config().GetString("app.name", "Goravel"))
 	facades.Log().Debug("InertiaServiceProvider: Global view data 'appName' shared")
-	
+
 	// Register the Inertia manager as a singleton
 	facades.App().Singleton("inertia", func(app foundation.Application) (any, error) {
 		return inertiaManager, nil

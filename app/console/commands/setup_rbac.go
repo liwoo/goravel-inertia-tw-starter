@@ -56,34 +56,34 @@ func (receiver *SetupRBAC) Handle(ctx console.Context) error {
 	// Step 3: Display summary
 	ctx.Info("RBAC Setup Summary:")
 	ctx.Info("==================")
-	
+
 	// Count roles and permissions
 	var roleCount, permissionCount int64
 	facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", true).Count(&roleCount)
 	facades.Orm().Query().Model(&models.Permission{}).Where("is_active = ?", true).Count(&permissionCount)
-	
+
 	ctx.Info(fmt.Sprintf("• Roles created: %d", roleCount))
 	ctx.Info(fmt.Sprintf("• Permissions created: %d", permissionCount))
-	
+
 	// Count users by role
 	var adminCount, userCount int64
 	facades.Orm().Query().Model(&models.User{}).Where("role = ?", "ADMIN").Count(&adminCount)
 	facades.Orm().Query().Model(&models.User{}).Where("role = ?", "USER").Count(&userCount)
-	
+
 	ctx.Info(fmt.Sprintf("• Admin users: %d (upgraded to super-admin)", adminCount))
 	ctx.Info(fmt.Sprintf("• Regular users: %d (upgraded to member)", userCount))
 
 	ctx.Success("RBAC system setup completed successfully!")
 	ctx.Info("You can now use the permission system in your controllers and services.")
 	ctx.Info("To create a new admin user: go run . artisan user:create-admin")
-	
+
 	return nil
 }
 
 // upgradeExistingUsers assigns RBAC roles to existing users based on their legacy roles
 func (receiver *SetupRBAC) upgradeExistingUsers(ctx console.Context) error {
 	permissionService := auth.GetPermissionService()
-	
+
 	// Get all existing users
 	var users []models.User
 	err := facades.Orm().Query().Find(&users)
@@ -94,7 +94,7 @@ func (receiver *SetupRBAC) upgradeExistingUsers(ctx console.Context) error {
 	upgraded := 0
 	for _, user := range users {
 		var targetRole string
-		
+
 		// Map legacy roles to RBAC roles
 		switch user.Role {
 		case "ADMIN":
@@ -106,14 +106,14 @@ func (receiver *SetupRBAC) upgradeExistingUsers(ctx console.Context) error {
 		default:
 			targetRole = "member" // Default fallback
 		}
-		
+
 		// Assign RBAC role
 		err := permissionService.AssignRole(&user, targetRole, nil)
 		if err != nil {
 			ctx.Warning(fmt.Sprintf("Failed to assign role '%s' to user '%s': %v", targetRole, user.Email, err))
 			continue
 		}
-		
+
 		upgraded++
 		ctx.Info(fmt.Sprintf("• Upgraded %s (%s) → %s role", user.Name, user.Email, targetRole))
 	}

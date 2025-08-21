@@ -70,10 +70,10 @@ func (receiver *AssignRole) Handle(ctx console.Context) error {
 	}
 
 	ctx.Success(fmt.Sprintf("Successfully assigned '%s' role to '%s' (%s)", role.Name, user.Name, user.Email))
-	
+
 	// Show user's current roles
 	receiver.showUserRoles(ctx, &user)
-	
+
 	return nil
 }
 
@@ -81,7 +81,7 @@ func (receiver *AssignRole) Handle(ctx console.Context) error {
 func (receiver *AssignRole) listAvailableRoles(ctx console.Context) {
 	var roles []models.Role
 	facades.Orm().Query().Where("is_active = ?", true).Order("level DESC").Find(&roles)
-	
+
 	for _, role := range roles {
 		ctx.Info(fmt.Sprintf("• %s (%s) - Level %d - %s", role.Slug, role.Name, role.Level, role.Description))
 	}
@@ -92,14 +92,14 @@ func (receiver *AssignRole) showUserRoles(ctx console.Context, user *models.User
 	// Load user with roles
 	var userWithRoles models.User
 	facades.Orm().Query().Where("id = ?", user.ID).First(&userWithRoles)
-	
+
 	ctx.Info(fmt.Sprintf("Current roles for %s:", user.Name))
-	
+
 	// Show legacy role
 	if userWithRoles.Role != "" {
 		ctx.Info(fmt.Sprintf("• Legacy Role: %s", userWithRoles.Role))
 	}
-	
+
 	// Show RBAC roles (simplified for now - would need to load relationships)
 	ctx.Info("• RBAC Roles: [Role relationships would be displayed here]")
 }

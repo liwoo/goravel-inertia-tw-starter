@@ -8,12 +8,12 @@ import (
 type EnforcedControllerBuilder[T any, C CreateRequestContract, U UpdateRequestContract] struct {
 	resourceName string
 	service      CrudServiceContract
-	
+
 	// These fields MUST be set before Build() can be called
 	createRequestFactory func() C
 	updateRequestFactory func() U
-	authChecker         func(ctx http.Context, action string, resource interface{}) error
-	
+	authChecker          func(ctx http.Context, action string, resource interface{}) error
+
 	// Flags to track what has been set
 	hasCreateFactory bool
 	hasUpdateFactory bool
@@ -67,19 +67,19 @@ func (b *EnforcedControllerBuilder[T, C, U]) Build() *EnforcedCrudController[T, 
 	if !b.hasAuthChecker {
 		panic("AuthChecker must be set via WithAuthChecker()")
 	}
-	
+
 	// Verify that the factories produce types that implement the interfaces
 	// This will cause a compile error if they don't
 	testCreate := b.createRequestFactory()
 	var _ CreateRequestContract = testCreate
-	
+
 	testUpdate := b.updateRequestFactory()
 	var _ UpdateRequestContract = testUpdate
-	
+
 	// Create the controller
 	controller := NewEnforcedCrudController[T, C, U](b.resourceName, b.service)
 	controller.CheckAuth = b.authChecker
-	
+
 	return controller
 }
 

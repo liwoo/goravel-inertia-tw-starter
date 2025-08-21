@@ -14,12 +14,13 @@ import (
 // service implementation for proper method resolution when using embedded structs.
 //
 // Usage:
-//   service := contracts.NewServiceBuilder[models.Book]("book", "id").Build()
-//   bookServiceInstance := &BookService{
-//       CrudServiceContract: service,
-//       baseService: service,
-//   }
-//   contracts.SetActualServiceHelper(service, bookServiceInstance, "BookService")
+//
+//	service := contracts.NewServiceBuilder[models.Book]("book", "id").Build()
+//	bookServiceInstance := &BookService{
+//	    CrudServiceContract: service,
+//	    baseService: service,
+//	}
+//	contracts.SetActualServiceHelper(service, bookServiceInstance, "BookService")
 func SetActualServiceHelper(service CrudServiceContract, actualService interface{}, serviceName string) {
 	if setter, ok := service.(interface {
 		SetActualService(interface{})

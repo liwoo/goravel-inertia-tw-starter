@@ -32,7 +32,7 @@ func init() {
 				"template": func() (render.HTMLRender, error) {
 					// Create a new template. It's good practice to give it a name.
 					tmpl := template.New("app")
-					
+
 					// Initialize the FuncMap
 					funcMap := template.FuncMap{
 						"marshal": func(v interface{}) template.JS {
@@ -54,17 +54,17 @@ func init() {
 
 					// Apply the FuncMap to the template
 					tmpl = tmpl.Funcs(funcMap)
-					
+
 					// Parse templates from the views directory
 					pattern := filepath.Join("resources", "views", "*.tmpl")
-					
+
 					// Parse the templates (this will now use the tmpl instance with funcMap applied)
 					parsedTmpl, err := tmpl.ParseGlob(pattern)
 					if err != nil {
 						// In test environment, we can skip template parsing errors
 						// Check both config and environment variable directly
-						isTestMode := facades.Config().GetString("app.env") == "testing" || 
-									  os.Getenv("APP_ENV") == "testing"
+						isTestMode := facades.Config().GetString("app.env") == "testing" ||
+							os.Getenv("APP_ENV") == "testing"
 						if isTestMode {
 							log.Printf("[config/http.go] Skipping template parsing error in test mode: %v", err)
 							// Return an empty template for tests
@@ -73,7 +73,7 @@ func init() {
 						log.Printf("[config/http.go] Error parsing templates: %v", err) // Use log for setup errors
 						return nil, err
 					}
-					
+
 					// Return a new HTML renderer with the parsed templates and options
 					// Pass the already parsed template (parsedTmpl) to gin.NewTemplate
 					return &render.HTMLProduction{Template: parsedTmpl}, nil

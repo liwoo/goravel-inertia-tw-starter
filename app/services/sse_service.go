@@ -151,8 +151,8 @@ func (s *SSEService) eventBroadcaster() {
 					default:
 						// Channel is full, skip this event
 						facades.Log().Warning("SSE client event channel full", map[string]interface{}{
-							"client_id": client.ID,
-							"user_id":   userID,
+							"client_id":  client.ID,
+							"user_id":    userID,
 							"event_type": broadcast.Event.Type,
 						})
 					}

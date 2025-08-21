@@ -209,12 +209,12 @@ func (s *APIScopedPermissionsTestSuite) loginAllUsers() {
 	s.editor2Cookie = s.login(s.editor2.Email, "password123")
 	s.member1Cookie = s.login(s.member1.Email, "password123")
 	s.member2Cookie = s.login(s.member2.Email, "password123")
-	
+
 	// Debug: check permissions for admin
 	var adminWithRoles models.User
 	facades.Orm().Query().Where("id = ?", s.admin.ID).With("Roles").First(&adminWithRoles)
 	s.T().Logf("Admin roles: %+v", adminWithRoles.Roles)
-	
+
 	// Check role permissions
 	var rolePerms []models.RolePermission
 	facades.Orm().Query().Where("role_id = ?", s.adminRole.ID).With("Permission").Find(&rolePerms)
@@ -237,30 +237,30 @@ func (s *APIScopedPermissionsTestSuite) login(email, password string) *http.Cook
 	resp, err := s.client.Do(req)
 	s.NoError(err)
 	defer resp.Body.Close()
-	
+
 	// Read response body
 	respBody, _ := io.ReadAll(resp.Body)
-	
+
 	// Check status code
 	if resp.StatusCode != http.StatusOK {
 		s.T().Logf("Login failed for %s. Status: %d, Body: %s", email, resp.StatusCode, string(respBody))
 		s.Fail("Login failed")
 		return nil
 	}
-	
+
 	// Parse JSON response
 	var loginResp map[string]interface{}
 	err = json.Unmarshal(respBody, &loginResp)
 	s.NoError(err, "Failed to parse login response")
-	
+
 	// Check success
 	success, ok := loginResp["success"].(bool)
 	s.True(ok && success, "Login was not successful")
-	
+
 	// Get token from response
 	data, ok := loginResp["data"].(map[string]interface{})
 	s.True(ok, "No data in login response")
-	
+
 	token, ok := data["token"].(string)
 	s.True(ok, "No token in login response")
 	s.NotEmpty(token, "Token is empty")
@@ -321,17 +321,17 @@ func (s *APIScopedPermissionsTestSuite) TestUnauthenticatedAccessDenied() {
 		"author": "Test Author",
 	}
 	body, _ := json.Marshal(bookData)
-	
+
 	req, err := http.NewRequest("POST", s.server.URL+"/api/books", bytes.NewReader(body))
 	s.NoError(err)
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	resp, err := s.client.Do(req)
 	s.NoError(err)
 	defer resp.Body.Close()
-	
+
 	// Should return 302 redirect to login, 401 unauthorized, or 403 forbidden
-	s.True(resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden, 
+	s.True(resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden,
 		"Unauthenticated POST request should return 302, 401, or 403, got %d", resp.StatusCode)
 }
 
@@ -340,13 +340,13 @@ func (s *APIScopedPermissionsTestSuite) TestAdminSeesAllBooks() {
 	// First, test if the auth endpoint works
 	meResult, meStatus := s.apiGet("/api/auth/me", s.adminCookie)
 	s.T().Logf("Me endpoint status: %d, response: %+v", meStatus, meResult)
-	
+
 	// Check that auth really works
 	s.Equal(http.StatusOK, meStatus, "Auth should work")
-	
+
 	result, status := s.apiGet("/api/books", s.adminCookie)
 	s.T().Logf("Books endpoint status: %d, response: %+v", status, result)
-	
+
 	// If we get a 403, it means the auth is required but failing
 	if status == http.StatusForbidden {
 		s.T().Logf("Got 403 Forbidden. Response: %+v", result)
@@ -355,7 +355,7 @@ func (s *APIScopedPermissionsTestSuite) TestAdminSeesAllBooks() {
 		s.Fail("Admin should have access to books")
 		return
 	}
-	
+
 	s.Equal(http.StatusOK, status, "Expected 200 OK, got %d", status)
 
 	// Check the response structure - handle nested data.data structure
@@ -367,7 +367,7 @@ func (s *APIScopedPermissionsTestSuite) TestAdminSeesAllBooks() {
 			s.T().Logf("No data array in wrapper: %+v", dataWrapper)
 			s.Fail("Expected data array in response")
 		}
-		
+
 		// Also check pagination info if available
 		if pagination, ok := dataWrapper["pagination"].(map[string]interface{}); ok {
 			if total, ok := pagination["total"].(float64); ok {
@@ -400,16 +400,16 @@ func (s *APIScopedPermissionsTestSuite) TestEditorSeesOnlyEditorBooks() {
 		// Check for nested data array
 		if data, ok := dataWrapper["data"].([]interface{}); ok {
 			s.Equal(4, len(data), "Editor should see 4 books (all editor books)")
-			
+
 			// Verify all books are from editors
 			for _, item := range data {
 				book := item.(map[string]interface{})
 				author := book["author"].(string)
-				s.True(author == "Editor One" || author == "Editor Two", 
+				s.True(author == "Editor One" || author == "Editor Two",
 					"Book should be from an editor, got: %s", author)
 			}
 		}
-		
+
 		// Check pagination total
 		if pagination, ok := dataWrapper["pagination"].(map[string]interface{}); ok {
 			if total, ok := pagination["total"].(float64); ok {
@@ -419,12 +419,12 @@ func (s *APIScopedPermissionsTestSuite) TestEditorSeesOnlyEditorBooks() {
 	} else if data, ok := result["data"].([]interface{}); ok {
 		// Fallback to direct data array
 		s.Equal(4, len(data), "Editor should see 4 books (all editor books)")
-		
+
 		// Verify all books are from editors
 		for _, item := range data {
 			book := item.(map[string]interface{})
 			author := book["author"].(string)
-			s.True(author == "Editor One" || author == "Editor Two", 
+			s.True(author == "Editor One" || author == "Editor Two",
 				"Book should be from an editor, got: %s", author)
 		}
 	} else if total, ok := result["meta"].(map[string]interface{})["total"].(float64); ok {
@@ -442,7 +442,7 @@ func (s *APIScopedPermissionsTestSuite) TestMemberSeesOnlyOwnBooks() {
 		// Check for nested data array
 		if data, ok := dataWrapper["data"].([]interface{}); ok {
 			s.Equal(2, len(data), "Member should see only their 2 books")
-			
+
 			// Verify all books belong to member1
 			for _, item := range data {
 				book := item.(map[string]interface{})
@@ -450,7 +450,7 @@ func (s *APIScopedPermissionsTestSuite) TestMemberSeesOnlyOwnBooks() {
 				s.Equal("Member One", author, "Book should belong to Member One")
 			}
 		}
-		
+
 		// Check pagination total
 		if pagination, ok := dataWrapper["pagination"].(map[string]interface{}); ok {
 			if total, ok := pagination["total"].(float64); ok {
@@ -460,7 +460,7 @@ func (s *APIScopedPermissionsTestSuite) TestMemberSeesOnlyOwnBooks() {
 	} else if data, ok := result["data"].([]interface{}); ok {
 		// Fallback to direct data array
 		s.Equal(2, len(data), "Member should see only their 2 books")
-		
+
 		// Verify all books belong to member1
 		for _, item := range data {
 			book := item.(map[string]interface{})
@@ -484,13 +484,13 @@ func (s *APIScopedPermissionsTestSuite) TestDifferentMembersSeeOwnBooks() {
 
 	// Get the data arrays - handle nested structure
 	var data1, data2 []interface{}
-	
+
 	if wrapper1, ok := result1["data"].(map[string]interface{}); ok {
 		data1, _ = wrapper1["data"].([]interface{})
 	} else {
 		data1, _ = result1["data"].([]interface{})
 	}
-	
+
 	if wrapper2, ok := result2["data"].(map[string]interface{}); ok {
 		data2, _ = wrapper2["data"].([]interface{})
 	} else {
@@ -503,7 +503,7 @@ func (s *APIScopedPermissionsTestSuite) TestDifferentMembersSeeOwnBooks() {
 	// Verify they see different books
 	book1 := data1[0].(map[string]interface{})
 	book2 := data2[0].(map[string]interface{})
-	
+
 	s.NotEqual(book1["isbn"], book2["isbn"], "Members should see different books")
 	s.Equal("Member One", book1["author"].(string))
 	s.Equal("Member Two", book2["author"].(string))
@@ -514,7 +514,7 @@ func (s *APIScopedPermissionsTestSuite) TestPaginationRespectsScopes() {
 	// Test with page size = 5 (smallest allowed page size)
 	result, status := s.apiGet("/api/books?page=1&pageSize=5", s.editor1Cookie)
 	s.Equal(http.StatusOK, status)
-	
+
 	// Debug: Log the full response
 	s.T().Logf("Pagination test response: %+v", result)
 
@@ -526,7 +526,7 @@ func (s *APIScopedPermissionsTestSuite) TestPaginationRespectsScopes() {
 			s.Equal(float64(5), pagination["per_page"].(float64), "Per page should be 5")
 			s.Equal(float64(1), pagination["last_page"].(float64), "Should have 1 page (4 items fit in page size 5)")
 		}
-		
+
 		// Also check filters to see what was passed
 		if filters, ok := dataWrapper["filters"].(map[string]interface{}); ok {
 			s.T().Logf("Filters in response: %+v", filters)
@@ -535,7 +535,7 @@ func (s *APIScopedPermissionsTestSuite) TestPaginationRespectsScopes() {
 				s.Equal(float64(5), pageSize, "Filters should show pageSize of 5")
 			}
 		}
-		
+
 		// Data should have all 4 items (since 4 items fit in page size 5)
 		if data, ok := dataWrapper["data"].([]interface{}); ok {
 			s.Equal(4, len(data), "Should return all 4 books (fits in page size 5)")
@@ -545,7 +545,7 @@ func (s *APIScopedPermissionsTestSuite) TestPaginationRespectsScopes() {
 		s.Equal(float64(4), meta["total"].(float64), "Total should be 4 for editor")
 		s.Equal(float64(5), meta["per_page"].(float64), "Per page should be 5")
 		s.Equal(float64(1), meta["last_page"].(float64), "Should have 1 page")
-		
+
 		// Data should have all 4 items
 		if data, ok := result["data"].([]interface{}); ok {
 			s.Equal(4, len(data), "Should return all 4 books")

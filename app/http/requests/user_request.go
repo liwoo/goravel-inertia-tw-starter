@@ -28,13 +28,13 @@ func (r *UserCreateRequest) Rules(ctx http.Context) map[string]string {
 	// "name":     "required|string|max:255|min:2",
 	// "email":    "required|email|max:255",
 	// "password": "required|string|min:8",
-	
+
 	rules := map[string]string{
 		"name":     "required|string",
 		"email":    "required|email",
 		"password": "required|string",
 	}
-	
+
 	// Optional fields - only validate if provided
 	if r.IsActive != nil {
 		rules["is_active"] = "boolean"
@@ -45,7 +45,7 @@ func (r *UserCreateRequest) Rules(ctx http.Context) map[string]string {
 	if r.RoleID != nil {
 		rules["role_id"] = "numeric"
 	}
-	
+
 	return rules
 }
 
@@ -93,7 +93,7 @@ func (r *UserCreateRequest) ToCreateData() map[string]interface{} {
 		"email":    r.Email,
 		"password": r.Password,
 	}
-	
+
 	// Add optional fields
 	if r.IsActive != nil {
 		data["is_active"] = *r.IsActive
@@ -104,7 +104,7 @@ func (r *UserCreateRequest) ToCreateData() map[string]interface{} {
 	if r.RoleID != nil {
 		data["role_id"] = float64(*r.RoleID)
 	}
-	
+
 	return data
 }
 
@@ -128,7 +128,7 @@ func (r *UserUpdateRequest) Authorize(ctx http.Context) error {
 // Rules returns the validation rules for the request
 func (r *UserUpdateRequest) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{}
-	
+
 	// TEMPORARY: Removed max/min due to Goravel bug
 	// Only validate fields that are provided
 	if r.Name != nil {
@@ -149,13 +149,13 @@ func (r *UserUpdateRequest) Rules(ctx http.Context) map[string]string {
 	if r.RoleID != nil {
 		rules["role_id"] = "numeric"
 	}
-	
+
 	// Goravel validation requires at least one rule
 	// Add a dummy rule if no fields are being updated
 	if len(rules) == 0 {
 		rules["_at_least_one_field"] = "sometimes"
 	}
-	
+
 	return rules
 }
 
@@ -190,7 +190,7 @@ func (r *UserUpdateRequest) PrepareForValidation(ctx http.Context) error {
 // ToUpdateData converts the request to data suitable for the service
 func (r *UserUpdateRequest) ToUpdateData() map[string]interface{} {
 	data := make(map[string]interface{})
-	
+
 	// Only include fields that are provided (not nil)
 	if r.Name != nil {
 		data["name"] = *r.Name
@@ -210,7 +210,7 @@ func (r *UserUpdateRequest) ToUpdateData() map[string]interface{} {
 	if r.RoleID != nil {
 		data["role_id"] = float64(*r.RoleID)
 	}
-	
+
 	return data
 }
 

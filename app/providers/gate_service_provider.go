@@ -31,7 +31,7 @@ func (receiver *GateServiceProvider) Boot(app foundation.Application) {
 // registerBookGates registers all book-related permissions
 func (receiver *GateServiceProvider) registerBookGates() {
 	gateHelper := helpers.NewGateHelper()
-	
+
 	// Define book-specific gate configuration
 	bookGateConfig := contracts.GateConfig{
 		ViewAnyHandler: func(ctx http.Context, user interface{}) access.Response {
@@ -84,7 +84,7 @@ func (receiver *GateServiceProvider) registerBookGates() {
 // registerUserGates registers all user-related permissions
 func (receiver *GateServiceProvider) registerUserGates() {
 	gateHelper := helpers.NewGateHelper()
-	
+
 	// User CRUD operations
 	userGateConfig := contracts.GateConfig{
 		ViewAnyHandler: func(ctx http.Context, user interface{}) access.Response {

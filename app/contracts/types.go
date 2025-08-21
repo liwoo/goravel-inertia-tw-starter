@@ -39,15 +39,15 @@ type PaginatedResult struct {
 
 // SearchRequest for search operations
 type SearchRequest struct {
-	Query       string                 `form:"q" json:"q"`
-	Page        int                    `form:"page" json:"page"`
-	PageSize    int                    `form:"pageSize" json:"pageSize"`
-	Sort        string                 `form:"sort" json:"sort"`
-	Direction   string                 `form:"direction" json:"direction"`
-	Filters     map[string]interface{} `form:"filters" json:"filters"`
-	SearchIn    []string               `form:"searchIn" json:"searchIn"`    // Specific fields to search in
-	Exact       bool                   `form:"exact" json:"exact"`           // Exact match vs fuzzy
-	Highlight   bool                   `form:"highlight" json:"highlight"`   // Whether to highlight results
+	Query     string                 `form:"q" json:"q"`
+	Page      int                    `form:"page" json:"page"`
+	PageSize  int                    `form:"pageSize" json:"pageSize"`
+	Sort      string                 `form:"sort" json:"sort"`
+	Direction string                 `form:"direction" json:"direction"`
+	Filters   map[string]interface{} `form:"filters" json:"filters"`
+	SearchIn  []string               `form:"searchIn" json:"searchIn"`   // Specific fields to search in
+	Exact     bool                   `form:"exact" json:"exact"`         // Exact match vs fuzzy
+	Highlight bool                   `form:"highlight" json:"highlight"` // Whether to highlight results
 }
 
 // SetDefaults applies sensible defaults to ListRequest

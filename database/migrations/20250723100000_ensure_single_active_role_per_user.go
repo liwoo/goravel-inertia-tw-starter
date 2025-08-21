@@ -16,7 +16,7 @@ func (r *EnsureSingleActiveRolePerUser20250723100000) Up() error {
 	// First, ensure only one active role per user
 	// Deactivate all but the most recent active role for each user
 	driver := facades.Config().GetString("database.default")
-	
+
 	if driver == "sqlite" {
 		// SQLite-compatible query
 		_, err := facades.Orm().Query().Exec(`
@@ -62,7 +62,7 @@ func (r *EnsureSingleActiveRolePerUser20250723100000) Up() error {
 			return err
 		}
 	}
-	
+
 	// Add a partial unique index to ensure only one active role per user
 	// This allows multiple inactive roles but only one active role
 	// Note: SQLite doesn't support partial indexes in the same way, so we'll skip for SQLite
@@ -76,7 +76,7 @@ func (r *EnsureSingleActiveRolePerUser20250723100000) Up() error {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 

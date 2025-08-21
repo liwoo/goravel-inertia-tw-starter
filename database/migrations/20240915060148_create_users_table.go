@@ -21,8 +21,8 @@ func (r *M20240915060148CreateUsersTable) Up() error {
 		table.String("email")
 		table.String("password")
 		table.String("role").Default("USER") // Add role column
-		table.Timestamps()    // Adds created_at and updated_at
-		table.SoftDeletes() // Adds deleted_at
+		table.Timestamps()                   // Adds created_at and updated_at
+		table.SoftDeletes()                  // Adds deleted_at
 	})
 }
 

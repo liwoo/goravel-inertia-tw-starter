@@ -172,7 +172,7 @@ func (c *MessageController) GetConversations(ctx http.Context) http.Response {
 	if end > len(conversations) {
 		end = len(conversations)
 	}
-	
+
 	paginatedConversations := conversations
 	if start < len(conversations) {
 		paginatedConversations = conversations[start:end]
@@ -387,7 +387,7 @@ func (c *MessageController) GetMessagableUsers(ctx http.Context) http.Response {
 	// - Super admins can message anyone
 	// - Regular users can discover people in their roles or below
 	var users []models.User
-	
+
 	if user.IsSuperAdmin {
 		// Super admins can see all active users except themselves
 		facades.Log().Info("Super admin getting all users", map[string]interface{}{
@@ -432,15 +432,15 @@ func (c *MessageController) GetMessagableUsers(ctx http.Context) http.Response {
 	// Return in the expected format
 	// The frontend expects response.data.data to be the paginated structure
 	paginatedResult := map[string]interface{}{
-		"data": messagableUsers,
-		"total": len(messagableUsers),
+		"data":         messagableUsers,
+		"total":        len(messagableUsers),
 		"current_page": 1,
-		"per_page": 100,
-		"last_page": 1,
-		"from": 1,
-		"to": len(messagableUsers),
+		"per_page":     100,
+		"last_page":    1,
+		"from":         1,
+		"to":           len(messagableUsers),
 	}
-	
+
 	return c.SuccessResponse(ctx, paginatedResult, "Messagable users retrieved successfully")
 }
 

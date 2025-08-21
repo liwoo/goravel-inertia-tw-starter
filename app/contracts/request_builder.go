@@ -30,14 +30,14 @@ type CreateRequestBuilderComplete struct {
 
 // baseCreateRequest implements the CreateRequestContract
 type baseCreateRequest struct {
-	rules              map[string]string
-	messages           map[string]string
-	attributes         map[string]string
-	authorize          func(ctx http.Context) error
-	prepareValidation  func(ctx http.Context) error
-	passedValidation   func(ctx http.Context) error
-	toCreateData       func() map[string]interface{}
-	context            http.Context
+	rules             map[string]string
+	messages          map[string]string
+	attributes        map[string]string
+	authorize         func(ctx http.Context) error
+	prepareValidation func(ctx http.Context) error
+	passedValidation  func(ctx http.Context) error
+	toCreateData      func() map[string]interface{}
+	context           http.Context
 }
 
 // NewCreateRequestBuilder creates a new create request builder
@@ -175,15 +175,15 @@ type UpdateRequestBuilderComplete struct {
 
 // baseUpdateRequest implements the UpdateRequestContract
 type baseUpdateRequest struct {
-	resourceID         interface{}
-	rules              map[string]string
-	messages           map[string]string
-	attributes         map[string]string
-	authorize          func(ctx http.Context) error
-	prepareValidation  func(ctx http.Context) error
-	passedValidation   func(ctx http.Context) error
-	toUpdateData       func() map[string]interface{}
-	context            http.Context
+	resourceID        interface{}
+	rules             map[string]string
+	messages          map[string]string
+	attributes        map[string]string
+	authorize         func(ctx http.Context) error
+	prepareValidation func(ctx http.Context) error
+	passedValidation  func(ctx http.Context) error
+	toUpdateData      func() map[string]interface{}
+	context           http.Context
 }
 
 // NewUpdateRequestBuilder creates a new update request builder

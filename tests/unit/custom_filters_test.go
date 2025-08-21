@@ -36,19 +36,19 @@ func (s *CustomFiltersTestSuite) TestOperatorsByType() {
 	s.Contains(stringOps, contracts.OperatorContains)
 	s.Contains(stringOps, contracts.OperatorStartsWith)
 	s.Contains(stringOps, contracts.OperatorEndsWith)
-	
+
 	// Number operators
 	numberOps := contracts.GetOperatorsForType(contracts.FilterTypeNumber)
 	s.Contains(numberOps, contracts.OperatorGreaterThan)
 	s.Contains(numberOps, contracts.OperatorLessThan)
 	s.Contains(numberOps, contracts.OperatorBetween)
-	
+
 	// Date operators
 	dateOps := contracts.GetOperatorsForType(contracts.FilterTypeDate)
 	s.Contains(dateOps, contracts.OperatorBefore)
 	s.Contains(dateOps, contracts.OperatorAfter)
 	s.Contains(dateOps, contracts.OperatorBetween)
-	
+
 	// Boolean operators
 	boolOps := contracts.GetOperatorsForType(contracts.FilterTypeBoolean)
 	s.Contains(boolOps, contracts.OperatorIsTrue)
@@ -69,7 +69,7 @@ func (s *CustomFiltersTestSuite) TestFilterDefinitionCreation() {
 			contracts.OperatorBetween,
 		},
 	)
-	
+
 	s.Equal("price", filterDef.Field)
 	s.Equal("Product Price", filterDef.Label)
 	s.Equal(contracts.FilterTypeNumber, filterDef.Type)
@@ -83,37 +83,37 @@ func (s *CustomFiltersTestSuite) TestFilterValueValidation() {
 		Field: "price",
 		Type:  contracts.FilterTypeNumber,
 	}
-	
+
 	s.NoError(numberFilter.ValidateValue(contracts.OperatorEquals, 25.99))
 	s.NoError(numberFilter.ValidateValue(contracts.OperatorBetween, []float64{10, 50}))
 	s.Error(numberFilter.ValidateValue(contracts.OperatorEquals, "not a number"))
-	
+
 	// Date validation
 	dateFilter := contracts.FilterDefinition{
 		Field: "published_at",
 		Type:  contracts.FilterTypeDate,
 	}
-	
+
 	s.NoError(dateFilter.ValidateValue(contracts.OperatorAfter, "2023-01-01"))
 	s.NoError(dateFilter.ValidateValue(contracts.OperatorBetween, []string{"2023-01-01", "2023-12-31"}))
 	s.Error(dateFilter.ValidateValue(contracts.OperatorAfter, "invalid-date"))
-	
+
 	// Boolean validation
 	boolFilter := contracts.FilterDefinition{
 		Field: "is_active",
 		Type:  contracts.FilterTypeBoolean,
 	}
-	
+
 	s.NoError(boolFilter.ValidateValue(contracts.OperatorIsTrue, nil))
 	s.NoError(boolFilter.ValidateValue(contracts.OperatorIsFalse, nil))
-	
+
 	// Enum validation
 	enumFilter := contracts.FilterDefinition{
-		Field: "status",
-		Type:  contracts.FilterTypeEnum,
+		Field:      "status",
+		Type:       contracts.FilterTypeEnum,
 		EnumValues: []string{"AVAILABLE", "BORROWED", "MAINTENANCE"},
 	}
-	
+
 	s.NoError(enumFilter.ValidateValue(contracts.OperatorEquals, "AVAILABLE"))
 	s.NoError(enumFilter.ValidateValue(contracts.OperatorIn, []string{"AVAILABLE", "BORROWED"}))
 	s.Error(enumFilter.ValidateValue(contracts.OperatorEquals, "INVALID_STATUS"))
@@ -127,13 +127,13 @@ func (s *CustomFiltersTestSuite) TestFilterQueryParsing() {
 		"operator": "greater_than",
 		"value":    25.99,
 	}
-	
+
 	filter, err := contracts.ParseFilterQuery(simpleQuery)
 	s.NoError(err)
 	s.Equal("price", filter.Field)
 	s.Equal(contracts.OperatorGreaterThan, filter.Operator)
 	s.Equal(25.99, filter.Value)
-	
+
 	// Compound filter with AND
 	compoundQuery := map[string]interface{}{
 		"logic": "AND",
@@ -150,7 +150,7 @@ func (s *CustomFiltersTestSuite) TestFilterQueryParsing() {
 			},
 		},
 	}
-	
+
 	compoundFilter, err := contracts.ParseCompoundFilter(compoundQuery)
 	s.NoError(err)
 	s.Equal(contracts.LogicAND, compoundFilter.Logic)
@@ -168,7 +168,7 @@ func (s *CustomFiltersTestSuite) TestFilterToSQL() {
 	sql, args := gtFilter.ToSQL()
 	s.Equal("price > ?", sql)
 	s.Equal([]interface{}{25.99}, args)
-	
+
 	// Test between
 	betweenFilter := contracts.FilterCondition{
 		Field:    "price",
@@ -178,7 +178,7 @@ func (s *CustomFiltersTestSuite) TestFilterToSQL() {
 	sql, args = betweenFilter.ToSQL()
 	s.Equal("price BETWEEN ? AND ?", sql)
 	s.Equal([]interface{}{10.0, 50.0}, args)
-	
+
 	// Test contains (string)
 	containsFilter := contracts.FilterCondition{
 		Field:    "title",
@@ -188,7 +188,7 @@ func (s *CustomFiltersTestSuite) TestFilterToSQL() {
 	sql, args = containsFilter.ToSQL()
 	s.Equal("title LIKE ?", sql)
 	s.Equal([]interface{}{"%Go%"}, args)
-	
+
 	// Test is null
 	nullFilter := contracts.FilterCondition{
 		Field:    "deleted_at",
@@ -228,7 +228,7 @@ func (s *CustomFiltersTestSuite) TestCompoundFilterToSQL() {
 			},
 		},
 	}
-	
+
 	sql, args := filter.ToSQL()
 	expectedSQL := "((price > ? AND status = ?) OR published_at > ?)"
 	s.Equal(expectedSQL, sql)
@@ -276,10 +276,10 @@ func (s *CustomFiltersTestSuite) TestFilterMetadataGeneration() {
 			EnumValues: []string{"AVAILABLE", "BORROWED", "MAINTENANCE"},
 		},
 	}
-	
+
 	metadata := contracts.GenerateFilterMetadata(filterDefs)
 	s.Len(metadata["filters"], 3)
-	
+
 	// Check first filter
 	filters := metadata["filters"].([]map[string]interface{})
 	priceFilter := filters[0]
@@ -292,12 +292,12 @@ func (s *CustomFiltersTestSuite) TestFilterMetadataGeneration() {
 // Test 9: Date Range Helpers
 func (s *CustomFiltersTestSuite) TestDateRangeHelpers() {
 	now := time.Now()
-	
+
 	// Test "is_today"
 	start, end := contracts.GetDateRangeForOperator(contracts.OperatorIsToday, now)
 	s.Equal(now.Truncate(24*time.Hour), start)
 	s.Equal(start.Add(24*time.Hour).Add(-time.Nanosecond), end)
-	
+
 	// Test "is_this_week"
 	start, end = contracts.GetDateRangeForOperator(contracts.OperatorIsThisWeek, now)
 	weekday := int(now.Weekday())
@@ -308,7 +308,7 @@ func (s *CustomFiltersTestSuite) TestDateRangeHelpers() {
 	expectedEnd := expectedStart.AddDate(0, 0, 7).Add(-time.Nanosecond)
 	s.Equal(expectedStart, start)
 	s.Equal(expectedEnd, end)
-	
+
 	// Test "is_this_month"
 	start, end = contracts.GetDateRangeForOperator(contracts.OperatorIsThisMonth, now)
 	expectedStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
@@ -321,13 +321,13 @@ func (s *CustomFiltersTestSuite) TestDateRangeHelpers() {
 func (s *CustomFiltersTestSuite) TestGORMIntegration() {
 	// This would be tested with actual database connection
 	// For now, we just test the query building logic
-	
+
 	filter := contracts.FilterCondition{
 		Field:    "price",
 		Operator: contracts.OperatorGreaterThan,
 		Value:    25.99,
 	}
-	
+
 	// The filter should be applicable to a GORM query
 	sql, args := filter.ToSQL()
 	s.Equal("price > ?", sql)

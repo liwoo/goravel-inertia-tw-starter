@@ -59,8 +59,12 @@ func (a *authConstantsHelper) GetActionDisplayName(action auth.CorePermissionAct
 
 // Permission action constants
 func (a *authConstantsHelper) PermissionView() auth.CorePermissionAction { return auth.PermissionView }
-func (a *authConstantsHelper) PermissionManage() auth.CorePermissionAction { return auth.PermissionManage }
-func (a *authConstantsHelper) PermissionExport() auth.CorePermissionAction { return auth.PermissionExport }
+func (a *authConstantsHelper) PermissionManage() auth.CorePermissionAction {
+	return auth.PermissionManage
+}
+func (a *authConstantsHelper) PermissionExport() auth.CorePermissionAction {
+	return auth.PermissionExport
+}
 
 // Role checks
 func (h *AuthHelper) HasRole(user interface{}, roles ...string) bool {
@@ -68,7 +72,7 @@ func (h *AuthHelper) HasRole(user interface{}, roles ...string) bool {
 	if !ok || u == nil {
 		return false
 	}
-	
+
 	for _, role := range roles {
 		if u.HasRole(role) {
 			return true
@@ -82,7 +86,7 @@ func (h *AuthHelper) HasAnyRole(user interface{}, roles []string) bool {
 	if !ok || u == nil {
 		return false
 	}
-	
+
 	// Use traditional loop since collect doesn't have Contains method for custom logic
 	for _, role := range roles {
 		if u.HasRole(role) {
@@ -97,7 +101,7 @@ func (h *AuthHelper) HasAllRoles(user interface{}, roles []string) bool {
 	if !ok || u == nil {
 		return false
 	}
-	
+
 	// Check if user has all required roles
 	for _, role := range roles {
 		if !u.HasRole(role) {
@@ -113,7 +117,7 @@ func (h *AuthHelper) HasPermission(user interface{}, permission string) bool {
 	if !ok || u == nil {
 		return false
 	}
-	
+
 	return u.HasPermission(permission)
 }
 
@@ -123,7 +127,7 @@ func (h *AuthHelper) IsOwner(user interface{}, resource interface{}) bool {
 	if !ok || u == nil {
 		return false
 	}
-	
+
 	// Add ownership logic based on resource type
 	switch r := resource.(type) {
 	case *models.Book:
@@ -144,7 +148,7 @@ func (h *AuthHelper) IsSuperAdmin(user interface{}) bool {
 	if !ok || u == nil {
 		return false
 	}
-	
+
 	return u.IsSuperAdminUser()
 }
 
@@ -162,7 +166,7 @@ func (h *AuthHelper) CanManageResource(user interface{}, resource string) bool {
 	if !ok || u == nil {
 		return false
 	}
-	
+
 	return u.HasPermission(resource + ".manage")
 }
 
@@ -171,7 +175,7 @@ func (h *AuthHelper) CanAccessResource(user interface{}, resource interface{}) b
 	if !ok || u == nil {
 		return false
 	}
-	
+
 	// Basic access check - can be extended
 	return u.IsActive
 }
@@ -234,12 +238,12 @@ func (g *GateHelper) RegisterResourceGates(resource string, config contracts.Gat
 	default:
 		service = auth.ServiceRegistry(resource)
 	}
-	
+
 	// Register viewAny gate
 	if config.ViewAnyHandler != nil {
 		g.RegisterGate(auth.BuildPermissionSlug(service, auth.PermissionView), config.ViewAnyHandler)
 	}
-	
+
 	// Register view gate (for individual resources)
 	if config.ViewHandler != nil {
 		viewGate := auth.BuildPermissionSlug(service, auth.PermissionRead)
@@ -251,12 +255,12 @@ func (g *GateHelper) RegisterResourceGates(resource string, config contracts.Gat
 			return config.ViewHandler(nil, user, model)
 		})
 	}
-	
+
 	// Register create gate
 	if config.CreateHandler != nil {
 		g.RegisterGate(auth.BuildPermissionSlug(service, auth.PermissionCreate), config.CreateHandler)
 	}
-	
+
 	// Register update gate
 	if config.UpdateHandler != nil {
 		updateGate := auth.BuildPermissionSlug(service, auth.PermissionUpdate)
@@ -267,7 +271,7 @@ func (g *GateHelper) RegisterResourceGates(resource string, config contracts.Gat
 			return config.UpdateHandler(nil, user, model)
 		})
 	}
-	
+
 	// Register delete gate
 	if config.DeleteHandler != nil {
 		deleteGate := auth.BuildPermissionSlug(service, auth.PermissionDelete)

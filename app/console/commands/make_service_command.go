@@ -298,12 +298,12 @@ func (s *{{.ServiceName}}) validate{{.ModelName}}Data(data map[string]interface{
 
 	var result strings.Builder
 	err = t.Execute(&result, map[string]string{
-		"ServiceName":        serviceName,
-		"ModelName":          modelName,
-		"ResourceName":       resourceName,
-		"ResourceNameLower":  strings.ToLower(resourceName),
-		"TableName":          tableName,
-		"RepositoryName":     repositoryName,
+		"ServiceName":       serviceName,
+		"ModelName":         modelName,
+		"ResourceName":      resourceName,
+		"ResourceNameLower": strings.ToLower(resourceName),
+		"TableName":         tableName,
+		"RepositoryName":    repositoryName,
 	})
 
 	return result.String(), err

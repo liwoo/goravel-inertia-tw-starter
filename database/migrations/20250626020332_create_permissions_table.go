@@ -33,5 +33,5 @@ func (r *M20250626020332CreatePermissionsTable) Up() error {
 
 // Down Reverse the migrations.
 func (r *M20250626020332CreatePermissionsTable) Down() error {
- 	return facades.Schema().DropIfExists("permissions")
+	return facades.Schema().DropIfExists("permissions")
 }

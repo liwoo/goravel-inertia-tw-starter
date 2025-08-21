@@ -451,15 +451,15 @@ func (c *{{.ControllerName}}) ValidateUpdateRequest(ctx http.Context, id uint) (
 
 	var result strings.Builder
 	err = t.Execute(&result, map[string]string{
-		"ControllerName":      controllerName,
-		"ServiceName":         serviceName,
-		"ServiceField":        serviceField,
-		"CreateRequestName":   createRequestName,
-		"UpdateRequestName":   updateRequestName,
-		"ModelName":           modelName,
-		"ResourceName":        resourceName,
-		"ResourceNameLower":   resourceNameLower,
-		"ResourceNamePlural":  resourceNamePlural,
+		"ControllerName":     controllerName,
+		"ServiceName":        serviceName,
+		"ServiceField":       serviceField,
+		"CreateRequestName":  createRequestName,
+		"UpdateRequestName":  updateRequestName,
+		"ModelName":          modelName,
+		"ResourceName":       resourceName,
+		"ResourceNameLower":  resourceNameLower,
+		"ResourceNamePlural": resourceNamePlural,
 	})
 
 	return result.String(), err
@@ -467,7 +467,7 @@ func (c *{{.ControllerName}}) ValidateUpdateRequest(ctx http.Context, id uint) (
 
 func createGates(ctx console.Context, resourceName string) error {
 	ctx.Info("Creating authorization gates...")
-	
+
 	gatePath := filepath.Join("app", "providers")
 	filename := filepath.Join(gatePath, strings.ToLower(resourceName)+"_gate_provider.go")
 
@@ -540,22 +540,22 @@ func (receiver *%sGateServiceProvider) Boot(app foundation.Application) {
 	// })
 }
 `,
-		strings.Title(resourceName),        // %sGateServiceProvider struct name
-		strings.Title(resourceName),        // %sGateServiceProvider Register method
-		strings.Title(resourceName),        // %sGateServiceProvider Boot method  
-		resourceNameLower,                  // Register %s resource gates
-		resourceNameLower,                  // Define %s-specific gate configuration
-		resourceNameLower,                  // %sGateConfig variable
-		resourceNameLower,                  // Everyone can view %s lists
-		resourceNameLower,                  // Everyone can view individual %ss
-		resourceNameLower,                  // Only moderators and admins can create %ss
-		resourceNameLower,                  // Only moderators and admins can update %ss
-		resourceNameLower,                  // Only admins can delete %ss
-		resourceNamePlural,                 // Register the gates for %ss
-		resourceNamePlural,                 // gateHelper.RegisterResourceGates("%s", %sGateConfig)
-		resourceNameLower,                  // %sGateConfig
-		resourceName,                       // TODO: Add custom gates specific to %s operations
-		resourceNamePlural,                 // facades.Gate().Define("activate.%s"
+		strings.Title(resourceName), // %sGateServiceProvider struct name
+		strings.Title(resourceName), // %sGateServiceProvider Register method
+		strings.Title(resourceName), // %sGateServiceProvider Boot method
+		resourceNameLower,           // Register %s resource gates
+		resourceNameLower,           // Define %s-specific gate configuration
+		resourceNameLower,           // %sGateConfig variable
+		resourceNameLower,           // Everyone can view %s lists
+		resourceNameLower,           // Everyone can view individual %ss
+		resourceNameLower,           // Only moderators and admins can create %ss
+		resourceNameLower,           // Only moderators and admins can update %ss
+		resourceNameLower,           // Only admins can delete %ss
+		resourceNamePlural,          // Register the gates for %ss
+		resourceNamePlural,          // gateHelper.RegisterResourceGates("%s", %sGateConfig)
+		resourceNameLower,           // %sGateConfig
+		resourceName,                // TODO: Add custom gates specific to %s operations
+		resourceNamePlural,          // facades.Gate().Define("activate.%s"
 	)
 }
 

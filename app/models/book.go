@@ -2,23 +2,23 @@ package models
 
 import (
 	"encoding/json"
-	"time"
 	"gorm.io/gorm"
+	"time"
 )
 
 // Book entity - now using BaseAuditableModel for consistent audit fields
 type Book struct {
 	BaseAuditableModel
-	
-	Title       string    `json:"title" gorm:"not null"`
-	Author      string    `json:"author" gorm:"not null"`
-	ISBN        string    `json:"isbn" gorm:"unique;not null"`
-	Description string    `json:"description"`
-	Price       float64   `json:"price" gorm:"default:0"`
-	Status      string    `json:"status" gorm:"default:'AVAILABLE'"` // AVAILABLE, BORROWED, MAINTENANCE, RESERVED
+
+	Title       string     `json:"title" gorm:"not null"`
+	Author      string     `json:"author" gorm:"not null"`
+	ISBN        string     `json:"isbn" gorm:"unique;not null"`
+	Description string     `json:"description"`
+	Price       float64    `json:"price" gorm:"default:0"`
+	Status      string     `json:"status" gorm:"default:'AVAILABLE'"` // AVAILABLE, BORROWED, MAINTENANCE, RESERVED
 	PublishedAt *time.Time `json:"publishedAt" gorm:"column:published_at"`
-	TagsJSON    string    `json:"-" gorm:"column:tags;type:text"` // Store as JSON string in database
-	Tags        []string  `json:"tags" gorm:"-"` // Virtual field for API
+	TagsJSON    string     `json:"-" gorm:"column:tags;type:text"` // Store as JSON string in database
+	Tags        []string   `json:"tags" gorm:"-"`                  // Virtual field for API
 }
 
 // BeforeSave hook to convert tags array to JSON

@@ -140,18 +140,18 @@ type ResourceControllerContract interface {
 
 // ControllerMetadata provides information about controller capabilities
 type ControllerMetadata struct {
-	ResourceType     string   `json:"resource_type"`
-	SupportedActions []string `json:"supported_actions"`
-	RequiredPerms    []string `json:"required_permissions"`
+	ResourceType     string                 `json:"resource_type"`
+	SupportedActions []string               `json:"supported_actions"`
+	RequiredPerms    []string               `json:"required_permissions"`
 	ValidationRules  map[string]interface{} `json:"validation_rules"`
-	PaginationConfig PaginationConfig `json:"pagination_config"`
-	ResponseFormats  []string `json:"response_formats"`
+	PaginationConfig PaginationConfig       `json:"pagination_config"`
+	ResponseFormats  []string               `json:"response_formats"`
 }
 
 // PaginationConfig defines pagination configuration for controllers
 type PaginationConfig struct {
-	DefaultPageSize int `json:"default_page_size"`
-	MaxPageSize     int `json:"max_page_size"`
+	DefaultPageSize int   `json:"default_page_size"`
+	MaxPageSize     int   `json:"max_page_size"`
 	AllowedSizes    []int `json:"allowed_sizes"`
 }
 
@@ -180,12 +180,12 @@ type PaginatedResponseFormat struct {
 
 // PaginationMeta provides pagination metadata
 type PaginationMeta struct {
-	CurrentPage int  `json:"current_page"`
-	LastPage    int  `json:"last_page"`
-	PerPage     int  `json:"per_page"`
+	CurrentPage int   `json:"current_page"`
+	LastPage    int   `json:"last_page"`
+	PerPage     int   `json:"per_page"`
 	Total       int64 `json:"total"`
-	From        int  `json:"from"`
-	To          int  `json:"to"`
-	HasNext     bool `json:"has_next"`
-	HasPrev     bool `json:"has_prev"`
+	From        int   `json:"from"`
+	To          int   `json:"to"`
+	HasNext     bool  `json:"has_next"`
+	HasPrev     bool  `json:"has_prev"`
 }

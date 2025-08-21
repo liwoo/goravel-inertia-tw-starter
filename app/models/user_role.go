@@ -11,7 +11,7 @@ type UserRole struct {
 	orm.Model
 	UserID uint `gorm:"not null;index" json:"user_id"`
 	RoleID uint `gorm:"not null;index" json:"role_id"`
-	
+
 	// Additional metadata for the relationship
 	AssignedByID *uint      `gorm:"index" json:"assigned_by_id,omitempty"`
 	AssignedBy   *User      `gorm:"foreignKey:AssignedByID" json:"assigned_by,omitempty"`
@@ -19,11 +19,11 @@ type UserRole struct {
 	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
 	IsActive     bool       `gorm:"default:true" json:"is_active"`
 	Note         string     `gorm:"type:text;column:notes" json:"note,omitempty"`
-	
+
 	// Foreign key relationships
 	User User `gorm:"foreignKey:UserID" json:"user"`
 	Role Role `gorm:"foreignKey:RoleID" json:"role"`
-	
+
 	orm.SoftDeletes
 }
 
@@ -50,21 +50,21 @@ type RolePermission struct {
 	orm.Model
 	RoleID       uint `gorm:"not null;index" json:"role_id"`
 	PermissionID uint `gorm:"not null;index" json:"permission_id"`
-	
+
 	// Scope for this specific role-permission assignment
-	Scope        string    `gorm:"type:varchar(20);default:'by_all';index" json:"scope"`
-	
+	Scope string `gorm:"type:varchar(20);default:'by_all';index" json:"scope"`
+
 	// Additional metadata
 	GrantedByID *uint     `gorm:"index" json:"granted_by_id,omitempty"`
 	GrantedBy   *User     `gorm:"foreignKey:GrantedByID" json:"granted_by,omitempty"`
 	GrantedAt   time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"granted_at"`
 	IsActive    bool      `gorm:"default:true" json:"is_active"`
 	Note        string    `gorm:"type:text;column:notes" json:"note,omitempty"`
-	
+
 	// Foreign key relationships
 	Role       Role       `gorm:"foreignKey:RoleID" json:"role"`
 	Permission Permission `gorm:"foreignKey:PermissionID" json:"permission"`
-	
+
 	orm.SoftDeletes
 }
 

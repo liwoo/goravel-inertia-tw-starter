@@ -32,11 +32,11 @@ func (receiver *CheckRolesCommand) Handle(ctx console.Context) error {
 	err := facades.Orm().Query().
 		With("User", "Role").
 		Find(&userRoles)
-	
+
 	if err != nil {
 		return fmt.Errorf("error loading user roles: %v", err)
 	}
-	
+
 	ctx.Info("=== User Roles Table ===")
 	for _, ur := range userRoles {
 		ctx.Info(fmt.Sprintf("User: %s (ID:%d), Role: %s (ID:%d), IsActive: %v, AssignedAt: %v",
@@ -44,13 +44,13 @@ func (receiver *CheckRolesCommand) Handle(ctx console.Context) error {
 			ur.Role.Name, ur.RoleID,
 			ur.IsActive, ur.AssignedAt))
 	}
-	
+
 	// Check if Lucky has any roles
 	var user models.User
 	err = facades.Orm().Query().
 		Where("email = ?", "lucky@test.com").
 		First(&user)
-	
+
 	if err == nil {
 		ctx.Info("\n=== Lucky's Roles (direct check) ===")
 		var luckyRoles []models.UserRole
@@ -58,12 +58,12 @@ func (receiver *CheckRolesCommand) Handle(ctx console.Context) error {
 			Where("user_id = ?", user.ID).
 			With("Role").
 			Find(&luckyRoles)
-		
+
 		for _, ur := range luckyRoles {
 			ctx.Info(fmt.Sprintf("Role: %s, IsActive: %v", ur.Role.Name, ur.IsActive))
 		}
 	}
-	
+
 	// Check all roles
 	var roles []models.Role
 	facades.Orm().Query().Find(&roles)
@@ -71,6 +71,6 @@ func (receiver *CheckRolesCommand) Handle(ctx console.Context) error {
 	for _, role := range roles {
 		ctx.Info(fmt.Sprintf("Role: %s (ID:%d), IsActive: %v", role.Name, role.ID, role.IsActive))
 	}
-	
+
 	return nil
 }

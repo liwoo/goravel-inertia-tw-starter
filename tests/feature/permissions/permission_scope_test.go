@@ -6,29 +6,29 @@ import (
 
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
-	
+
+	"players/app/contracts"
 	"players/app/models"
 	"players/app/services"
-	"players/app/contracts"
 	"players/tests"
 )
 
 type PermissionScopeTestSuite struct {
 	suite.Suite
 	tests.TestCase
-	
+
 	// Users
 	admin   *models.User
 	editor1 *models.User
 	editor2 *models.User
 	member1 *models.User
 	member2 *models.User
-	
+
 	// Roles
 	adminRole  *models.Role
 	editorRole *models.Role
 	memberRole *models.Role
-	
+
 	// Books
 	adminBooks   []*models.Book
 	editor1Books []*models.Book
@@ -53,19 +53,19 @@ func (s *PermissionScopeTestSuite) setupRolesAndPermissions() {
 	s.adminRole = &models.Role{Name: "Admin", Slug: "admin", IsActive: true}
 	s.editorRole = &models.Role{Name: "Editor", Slug: "editor", IsActive: true}
 	s.memberRole = &models.Role{Name: "Member", Slug: "member", IsActive: true}
-	
+
 	facades.Orm().Query().Create(s.adminRole)
 	facades.Orm().Query().Create(s.editorRole)
 	facades.Orm().Query().Create(s.memberRole)
-	
+
 	// Create the books_read permission
 	perm := &models.Permission{
-		Slug: "books_read",
-		Name: "Read Books",
+		Slug:     "books_read",
+		Name:     "Read Books",
 		IsActive: true,
 	}
 	facades.Orm().Query().Create(perm)
-	
+
 	// Admin: can read all books (by_all)
 	facades.Orm().Query().Create(&models.RolePermission{
 		RoleID:       s.adminRole.ID,
@@ -73,7 +73,7 @@ func (s *PermissionScopeTestSuite) setupRolesAndPermissions() {
 		Scope:        "by_all",
 		IsActive:     true,
 	})
-	
+
 	// Editor: can read books created by their role (by_my_role)
 	facades.Orm().Query().Create(&models.RolePermission{
 		RoleID:       s.editorRole.ID,
@@ -81,7 +81,7 @@ func (s *PermissionScopeTestSuite) setupRolesAndPermissions() {
 		Scope:        "by_my_role",
 		IsActive:     true,
 	})
-	
+
 	// Member: can read only their own books (by_me)
 	facades.Orm().Query().Create(&models.RolePermission{
 		RoleID:       s.memberRole.ID,
@@ -93,20 +93,20 @@ func (s *PermissionScopeTestSuite) setupRolesAndPermissions() {
 
 func (s *PermissionScopeTestSuite) setupUsers() {
 	password, _ := facades.Hash().Make("password")
-	
+
 	// Create users
 	s.admin = &models.User{Name: "Admin", Email: "admin@test.com", Password: password, IsActive: true}
 	s.editor1 = &models.User{Name: "Editor1", Email: "editor1@test.com", Password: password, IsActive: true}
 	s.editor2 = &models.User{Name: "Editor2", Email: "editor2@test.com", Password: password, IsActive: true}
 	s.member1 = &models.User{Name: "Member1", Email: "member1@test.com", Password: password, IsActive: true}
 	s.member2 = &models.User{Name: "Member2", Email: "member2@test.com", Password: password, IsActive: true}
-	
+
 	facades.Orm().Query().Create(s.admin)
 	facades.Orm().Query().Create(s.editor1)
 	facades.Orm().Query().Create(s.editor2)
 	facades.Orm().Query().Create(s.member1)
 	facades.Orm().Query().Create(s.member2)
-	
+
 	// Assign roles
 	facades.Orm().Query().Create(&models.UserRole{UserID: s.admin.ID, RoleID: s.adminRole.ID, IsActive: true, AssignedAt: time.Now()})
 	facades.Orm().Query().Create(&models.UserRole{UserID: s.editor1.ID, RoleID: s.editorRole.ID, IsActive: true, AssignedAt: time.Now()})
@@ -127,9 +127,9 @@ func (s *PermissionScopeTestSuite) setupBooks() {
 func (s *PermissionScopeTestSuite) createBooksForUser(user *models.User, count int) {
 	for i := 0; i < count; i++ {
 		book := &models.Book{
-			Title:  user.Name + " Book " + string(rune('A' + i)),
+			Title:  user.Name + " Book " + string(rune('A'+i)),
 			Author: user.Name,
-			ISBN:   user.Email + "-" + string(rune('1' + i)),
+			ISBN:   user.Email + "-" + string(rune('1'+i)),
 			Status: "AVAILABLE",
 			BaseAuditableModel: models.BaseAuditableModel{
 				CreatedBy: &user.ID,
@@ -143,16 +143,16 @@ func (s *PermissionScopeTestSuite) createBooksForUser(user *models.User, count i
 // Test that without authentication, no books are returned due to scope filtering
 func (s *PermissionScopeTestSuite) TestNoAuthNoBooks() {
 	bookService := services.NewBookService()
-	
+
 	// Request without context (no authentication)
 	req := contracts.ListRequest{
 		Page:     1,
 		PageSize: 100,
 	}
-	
+
 	result, err := bookService.GetList(req)
 	s.NoError(err)
-	
+
 	// Since scope filtering is enabled and no user is authenticated,
 	// the service should return all books (no filtering applied when no context)
 	s.Equal(int64(10), result.Total, "Without context, all 10 books should be returned")
@@ -176,13 +176,13 @@ func (s *PermissionScopeTestSuite) TestMemberSeesOnlyOwnBooks() {
 // Test that the count queries respect scope filtering
 func (s *PermissionScopeTestSuite) TestCountQueriesRespectScope() {
 	bookService := services.NewBookService()
-	
+
 	// Without authentication, should count all books
 	req := contracts.ListRequest{
 		Page:     1,
 		PageSize: 1, // Small page size to test pagination
 	}
-	
+
 	result, err := bookService.GetList(req)
 	s.NoError(err)
 	s.Equal(int64(10), result.Total, "Total count should be 10")

@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"strings"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"players/app/models"
+	"strings"
 )
 
 // OptionalJwtAuth is a middleware that attempts to parse JWT token if present
@@ -15,7 +15,7 @@ func OptionalJwtAuth() contractshttp.Middleware {
 		// Check for token in Authorization header
 		authHeader := ctx.Request().Header("Authorization", "")
 		tokenString := ""
-		
+
 		if authHeader != "" {
 			// Split "Bearer <token>"
 			headerParts := strings.Split(authHeader, " ")
@@ -23,7 +23,7 @@ func OptionalJwtAuth() contractshttp.Middleware {
 				tokenString = headerParts[1]
 			}
 		}
-		
+
 		// If token not found in header, try cookie
 		if tokenString == "" {
 			cookieToken := ctx.Request().Cookie("token")
@@ -31,7 +31,7 @@ func OptionalJwtAuth() contractshttp.Middleware {
 				tokenString = cookieToken
 			}
 		}
-		
+
 		// If we have a token, try to parse it
 		if tokenString != "" {
 			// Attempt to parse the token, but don't fail if it's invalid
@@ -43,7 +43,7 @@ func OptionalJwtAuth() contractshttp.Middleware {
 				facades.Auth(ctx).User(&user)
 			}
 		}
-		
+
 		// Continue to the next middleware/handler regardless of auth status
 		ctx.Request().Next()
 	}

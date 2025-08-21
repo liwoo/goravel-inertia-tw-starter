@@ -21,7 +21,7 @@ type MessageService struct {
 func NewMessageService() *MessageService {
 	// Create the generic service
 	genericService := contracts.NewGenericCrudService[models.Message]("message", "id")
-	
+
 	// Configure the service
 	genericService.
 		SetSearchFields("content", "subject").
@@ -43,7 +43,7 @@ func NewMessageService() *MessageService {
 			if _, exists := data["type"]; !exists {
 				data["type"] = string(models.MessageTypeDirect)
 			}
-			
+
 			// Validate sender and recipient
 			senderID, ok := data["sender_id"].(float64)
 			if !ok {
@@ -53,7 +53,7 @@ func NewMessageService() *MessageService {
 			if !ok {
 				return fmt.Errorf("invalid recipient_id")
 			}
-			
+
 			// Check if sender exists and is active
 			var sender models.User
 			if err := facades.Orm().Query().Model(&models.User{}).
@@ -62,7 +62,7 @@ func NewMessageService() *MessageService {
 				First(&sender); err != nil {
 				return fmt.Errorf("sender not found or inactive")
 			}
-			
+
 			// Check if recipient exists and is active
 			var recipient models.User
 			if err := facades.Orm().Query().Model(&models.User{}).
@@ -71,12 +71,12 @@ func NewMessageService() *MessageService {
 				First(&recipient); err != nil {
 				return fmt.Errorf("recipient not found or inactive")
 			}
-			
+
 			// Check messaging permissions
 			if !sender.CanMessageUser(&recipient) {
 				return fmt.Errorf("insufficient permissions to message this user")
 			}
-			
+
 			// Validate content
 			content, ok := data["content"].(string)
 			if !ok {
@@ -87,7 +87,7 @@ func NewMessageService() *MessageService {
 				return fmt.Errorf("message content cannot be empty")
 			}
 			data["content"] = content
-			
+
 			return nil
 		}).
 		SetCustomQuery(func(query orm.Query) orm.Query {
@@ -115,15 +115,15 @@ func NewMessageService() *MessageService {
 			}
 			return query
 		})
-	
+
 	service := &MessageService{
 		GenericCrudService: genericService,
 		sseService:         NewSSEService(),
 	}
-	
+
 	// Register service
 	contracts.MustRegisterCrudService("messages", service)
-	
+
 	return service
 }
 
@@ -137,29 +137,29 @@ func (s *MessageService) SendMessage(senderID uint, recipientID uint, content st
 		"content":      content,
 		"type":         string(messageType),
 	}
-	
+
 	result, err := s.Create(data)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	message := result.(*models.Message)
-	
+
 	// Emit SSE events
 	s.sseService.NotifyNewMessage(senderID, recipientID, message)
-	
+
 	// Update unread count for recipient
 	if count, err := s.GetUnreadCount(recipientID); err == nil {
 		s.sseService.UpdateUnreadCount(recipientID, count)
 	}
-	
+
 	return message, nil
 }
 
 // SendBroadcast sends a broadcast message to multiple recipients
 func (s *MessageService) SendBroadcast(senderID uint, recipientIDs []uint, content string, subject string) ([]*models.Message, error) {
 	var messages []*models.Message
-	
+
 	for _, recipientID := range recipientIDs {
 		data := map[string]interface{}{
 			"sender_id":    float64(senderID),
@@ -168,7 +168,7 @@ func (s *MessageService) SendBroadcast(senderID uint, recipientIDs []uint, conte
 			"subject":      subject,
 			"type":         string(models.MessageTypeSystem),
 		}
-		
+
 		result, err := s.Create(data)
 		if err != nil {
 			// Log error but continue with other recipients
@@ -178,10 +178,10 @@ func (s *MessageService) SendBroadcast(senderID uint, recipientIDs []uint, conte
 			})
 			continue
 		}
-		
+
 		messages = append(messages, result.(*models.Message))
 	}
-	
+
 	return messages, nil
 }
 
@@ -234,32 +234,32 @@ func (s *MessageService) MarkAsRead(messageID uint, userID uint) error {
 	if err != nil {
 		return err
 	}
-	
+
 	message := result.(*models.Message)
 	if message.RecipientID == nil || *message.RecipientID != userID {
 		return fmt.Errorf("unauthorized to mark this message as read")
 	}
-	
+
 	// Check if already read by checking ReadAt
 	if message.ReadAt != nil {
 		return nil // Already read
 	}
-	
+
 	_, err = s.Update(messageID, map[string]interface{}{
 		"status":  string(models.MessageStatusRead),
 		"read_at": time.Now(),
 	})
-	
+
 	if err == nil {
 		// Emit SSE events
 		s.sseService.NotifyMessageRead(message.SenderID, messageID)
-		
+
 		// Update unread count for recipient
 		if count, err := s.GetUnreadCount(userID); err == nil {
 			s.sseService.UpdateUnreadCount(userID, count)
 		}
 	}
-	
+
 	return err
 }
 
@@ -271,12 +271,12 @@ func (s *MessageService) MarkAsImportant(messageID uint, userID uint, important 
 	if err != nil {
 		return err
 	}
-	
+
 	message := result.(*models.Message)
 	if message.SenderID != userID && (message.RecipientID == nil || *message.RecipientID != userID) {
 		return fmt.Errorf("unauthorized to modify this message")
 	}
-	
+
 	// TODO: Add is_important field to Message model and migration
 	return fmt.Errorf("marking messages as important is not yet implemented")
 }
@@ -288,22 +288,22 @@ func (s *MessageService) DeleteMessage(messageID uint, userID uint) error {
 	if err != nil {
 		return err
 	}
-	
+
 	message := result.(*models.Message)
 	if message.SenderID != userID && (message.RecipientID == nil || *message.RecipientID != userID) {
 		return fmt.Errorf("unauthorized to delete this message")
 	}
-	
+
 	// For now, we'll use the generic delete which soft deletes the entire message
 	// In a real app, you might want to track deletion per user
 	err = s.Delete(messageID)
-	
+
 	if err == nil {
 		// Emit SSE events to both sender and recipient
 		s.sseService.NotifyMessageDeleted(message.SenderID, messageID)
 		if message.RecipientID != nil {
 			s.sseService.NotifyMessageDeleted(*message.RecipientID, messageID)
-			
+
 			// Update unread count if message was unread
 			if message.ReadAt == nil {
 				if count, err := s.GetUnreadCount(*message.RecipientID); err == nil {
@@ -312,7 +312,7 @@ func (s *MessageService) DeleteMessage(messageID uint, userID uint) error {
 			}
 		}
 	}
-	
+
 	return err
 }
 
@@ -323,7 +323,7 @@ func (s *MessageService) GetConversations(userID uint) ([]interface{}, error) {
 		UserID       uint      `json:"user_id"`
 		LastActivity time.Time `json:"last_activity"`
 	}
-	
+
 	// Query to get unique conversation partners
 	query := `
 		SELECT DISTINCT 
@@ -338,14 +338,14 @@ func (s *MessageService) GetConversations(userID uint) ([]interface{}, error) {
 		GROUP BY user_id
 		ORDER BY last_activity DESC
 	`
-	
+
 	if err := facades.Orm().Query().Raw(query, userID, userID, userID).Scan(&conversations); err != nil {
 		return nil, err
 	}
-	
+
 	// Now build the conversation objects
 	result := make([]interface{}, 0, len(conversations))
-	
+
 	for _, conv := range conversations {
 		// Get the user details
 		var user models.User
@@ -355,7 +355,7 @@ func (s *MessageService) GetConversations(userID uint) ([]interface{}, error) {
 			First(&user); err != nil {
 			continue // Skip if user not found
 		}
-		
+
 		// Get the latest message between the two users
 		var latestMessage models.Message
 		if err := facades.Orm().Query().Model(&models.Message{}).
@@ -365,14 +365,14 @@ func (s *MessageService) GetConversations(userID uint) ([]interface{}, error) {
 			First(&latestMessage); err != nil {
 			continue // Skip if no messages found
 		}
-		
+
 		// Get unread count
 		var unreadCount int64
 		facades.Orm().Query().Model(&models.Message{}).
 			Where("sender_id = ? AND recipient_id = ? AND status = ? AND deleted_at IS NULL",
 				conv.UserID, userID, models.MessageStatusSent).
 			Count(&unreadCount)
-		
+
 		// Build conversation object
 		conversation := map[string]interface{}{
 			"user": map[string]interface{}{
@@ -392,10 +392,10 @@ func (s *MessageService) GetConversations(userID uint) ([]interface{}, error) {
 			"unread_count":  unreadCount,
 			"last_activity": conv.LastActivity,
 		}
-		
+
 		result = append(result, conversation)
 	}
-	
+
 	return result, nil
 }
 
@@ -408,24 +408,24 @@ func (s *MessageService) GetConversation(user1ID uint, user2ID uint, req contrac
 		Where("(sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)",
 			user1ID, user2ID, user2ID, user1ID).
 		Order("created_at DESC")
-	
+
 	// Apply pagination manually
 	var total int64
 	if err := query.Count(&total); err != nil {
 		return nil, err
 	}
-	
+
 	offset := (req.Page - 1) * req.PageSize
 	if err := query.Offset(offset).Limit(req.PageSize).Find(&messages); err != nil {
 		return nil, err
 	}
-	
+
 	// Convert to interface slice
 	data := make([]interface{}, len(messages))
 	for i, msg := range messages {
 		data[i] = msg
 	}
-	
+
 	// Use pagination utility
 	return &contracts.PaginatedResult{
 		Data:        data,

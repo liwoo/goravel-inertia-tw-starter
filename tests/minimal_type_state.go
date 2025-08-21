@@ -31,7 +31,7 @@ func TestMinimalTypeState() {
 	// This should compile
 	result := NewBuilder().SetA("a").SetB("b").Build()
 	_ = result
-	
+
 	// These should NOT compile if uncommented:
 	// NewBuilder().Build() // Error: Build undefined
 	// NewBuilder().SetB("b") // Error: SetB undefined

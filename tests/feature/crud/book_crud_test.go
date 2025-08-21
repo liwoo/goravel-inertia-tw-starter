@@ -23,11 +23,11 @@ import (
 type BookCRUDTestSuite struct {
 	suite.Suite
 	tests.TestCase
-	
-	server *httptest.Server
-	client *http.Client
+
+	server     *httptest.Server
+	client     *http.Client
 	authCookie *http.Cookie
-	testUser *models.User
+	testUser   *models.User
 }
 
 func TestBookCRUDTestSuite(t *testing.T) {
@@ -37,7 +37,7 @@ func TestBookCRUDTestSuite(t *testing.T) {
 func (s *BookCRUDTestSuite) SetupSuite() {
 	// Start test server
 	s.server = httptest.NewServer(facades.Route())
-	
+
 	// Create HTTP client with cookie jar
 	jar, _ := cookiejar.New(nil)
 	s.client = &http.Client{
@@ -58,7 +58,7 @@ func (s *BookCRUDTestSuite) TearDownSuite() {
 func (s *BookCRUDTestSuite) SetupTest() {
 	// Clean database
 	s.RefreshDatabase()
-	
+
 	// Create test user with permissions
 	s.setupTestUser()
 }
@@ -83,7 +83,7 @@ func (s *BookCRUDTestSuite) setupTestUser() {
 		Level: 100,
 	}
 	s.Nil(facades.Orm().Query().Create(adminRole))
-	
+
 	// Create all book permissions
 	permissions := []string{"create", "read", "update", "delete"}
 	for _, perm := range permissions {
@@ -95,12 +95,12 @@ func (s *BookCRUDTestSuite) setupTestUser() {
 		s.Nil(facades.Orm().Query().Create(permission))
 		s.Nil(helpers.AssignPermissionToRole(adminRole, permission, "by_all"))
 	}
-	
+
 	// Create test user
 	user, err := helpers.SetupJWTUser("booktest@example.com", "password", adminRole)
 	s.Nil(err)
 	s.testUser = user
-	
+
 	// Login
 	s.authCookie = s.loginUser("booktest@example.com", "password")
 	s.NotNil(s.authCookie)
@@ -111,18 +111,18 @@ func (s *BookCRUDTestSuite) loginUser(email, password string) *http.Cookie {
 		"email":    email,
 		"password": password,
 	}
-	
+
 	jsonData, _ := json.Marshal(loginData)
 	resp, err := s.client.Post(s.server.URL+"/api/auth/login", "application/json", bytes.NewBuffer(jsonData))
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "token" {
 			return cookie
 		}
 	}
-	
+
 	return nil
 }
 
@@ -132,32 +132,32 @@ func (s *BookCRUDTestSuite) makeRequest(method, path string, body interface{}) (
 		jsonBody, _ := json.Marshal(body)
 		bodyReader = bytes.NewBuffer(jsonBody)
 	}
-	
+
 	req, err := http.NewRequest(method, s.server.URL+path, bodyReader)
 	s.Nil(err)
-	
+
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Accept", "application/json")
-	
+
 	if s.authCookie != nil {
 		req.AddCookie(s.authCookie)
 	}
-	
+
 	resp, err := s.client.Do(req)
 	s.Nil(err)
-	
+
 	respBody, err := io.ReadAll(resp.Body)
 	s.Nil(err)
 	resp.Body.Close()
-	
+
 	var result map[string]interface{}
 	if len(respBody) > 0 {
 		err = json.Unmarshal(respBody, &result)
 		s.Nil(err)
 	}
-	
+
 	return resp, result
 }
 
@@ -173,15 +173,15 @@ func (s *BookCRUDTestSuite) TestCreateBook() {
 		"publishedAt": "2024-01-01",
 		"tags":        []string{"test", "fiction"},
 	}
-	
+
 	resp, result := s.makeRequest("POST", "/api/books", bookData)
-	
+
 	if resp.StatusCode != http.StatusCreated {
 		fmt.Printf("Create book failed: %d - %+v\n", resp.StatusCode, result)
 	}
 	s.Equal(http.StatusCreated, resp.StatusCode)
 	s.True(result["success"].(bool))
-	
+
 	// Check if data exists before asserting
 	if result["data"] == nil {
 		s.FailNow("Response missing 'data' field", "Response: %+v", result)
@@ -202,9 +202,9 @@ func (s *BookCRUDTestSuite) TestCreateBookValidation() {
 	bookData := map[string]interface{}{
 		"description": "A test book description",
 	}
-	
+
 	resp, result := s.makeRequest("POST", "/api/books", bookData)
-	
+
 	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
 	s.False(result["success"].(bool))
 	s.Contains(strings.ToLower(result["message"].(string)), "validation")
@@ -222,12 +222,12 @@ func (s *BookCRUDTestSuite) TestGetBook() {
 	}
 	book.CreatedBy = &s.testUser.ID
 	s.Nil(facades.Orm().Query().Create(book))
-	
+
 	resp, result := s.makeRequest("GET", fmt.Sprintf("/api/books/%d", book.ID), nil)
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
 	s.True(result["success"].(bool))
-	
+
 	data := result["data"].(map[string]interface{})
 	s.Equal("Get Test Book", data["title"])
 	s.Equal("Get Test Author", data["author"])
@@ -246,19 +246,19 @@ func (s *BookCRUDTestSuite) TestUpdateBook() {
 	}
 	book.CreatedBy = &s.testUser.ID
 	s.Nil(facades.Orm().Query().Create(book))
-	
+
 	updateData := map[string]interface{}{
 		"title":       "Updated Book Title",
 		"price":       24.99,
 		"status":      "BORROWED",
 		"description": "Updated description",
 	}
-	
+
 	resp, result := s.makeRequest("PUT", fmt.Sprintf("/api/books/%d", book.ID), updateData)
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
 	s.True(result["success"].(bool))
-	
+
 	data := result["data"].(map[string]interface{})
 	s.Equal("Updated Book Title", data["title"])
 	s.Equal(24.99, data["price"])
@@ -279,11 +279,11 @@ func (s *BookCRUDTestSuite) TestDeleteBook() {
 	}
 	book.CreatedBy = &s.testUser.ID
 	s.Nil(facades.Orm().Query().Create(book))
-	
+
 	resp, _ := s.makeRequest("DELETE", fmt.Sprintf("/api/books/%d", book.ID), nil)
-	
+
 	s.Equal(http.StatusNoContent, resp.StatusCode)
-	
+
 	// Verify soft delete
 	var deletedBook models.Book
 	err := facades.Orm().Query().WithTrashed().Where("id", book.ID).First(&deletedBook)
@@ -306,40 +306,40 @@ func (s *BookCRUDTestSuite) TestPagination() {
 		book.CreatedBy = &s.testUser.ID
 		s.Nil(facades.Orm().Query().Create(book))
 	}
-	
+
 	// Test first page (default page size 20)
 	resp, result := s.makeRequest("GET", "/api/books?page=1", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	// For paginated responses, data is nested
 	data := result["data"].(map[string]interface{})
 	items := data["data"].([]interface{})
 	pagination := data["pagination"].(map[string]interface{})
-	
+
 	s.Equal(20, len(items))
 	s.Equal(float64(1), pagination["current_page"])
 	s.Equal(float64(25), pagination["total"])
 	s.Equal(float64(2), pagination["last_page"])
-	
+
 	// Test second page
 	resp, result = s.makeRequest("GET", "/api/books?page=2", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
 	pagination = data["pagination"].(map[string]interface{})
-	
+
 	s.Equal(5, len(items))
 	s.Equal(float64(2), pagination["current_page"])
-	
+
 	// Test custom page size
 	resp, result = s.makeRequest("GET", "/api/books?page=1&pageSize=10", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
 	pagination = data["pagination"].(map[string]interface{})
-	
+
 	s.Equal(10, len(items))
 	s.Equal(float64(3), pagination["last_page"]) // 25 items / 10 per page = 3 pages
 }
@@ -357,10 +357,10 @@ func (s *BookCRUDTestSuite) TestSorting() {
 		{"Beta Book", "Alice Author", 20.00, "2024-02-01"},
 		{"Gamma Book", "Bob Author", 10.00, "2024-03-01"},
 	}
-	
+
 	// First, clean up any existing books to ensure clean test
 	facades.Orm().Query().Exec("DELETE FROM books")
-	
+
 	for i, b := range books {
 		pubDate, _ := time.Parse("2006-01-02", b.date)
 		book := &models.Book{
@@ -375,48 +375,48 @@ func (s *BookCRUDTestSuite) TestSorting() {
 		s.Nil(facades.Orm().Query().Create(book))
 		time.Sleep(10 * time.Millisecond) // Ensure different created_at times
 	}
-	
+
 	// Test sort by title ascending
 	resp, result := s.makeRequest("GET", "/api/books?sort=title&direction=asc", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	// For paginated responses, data is nested
 	data := result["data"].(map[string]interface{})
 	items := data["data"].([]interface{})
-	
+
 	s.Equal("Alpha Book", items[0].(map[string]interface{})["title"])
 	s.Equal("Beta Book", items[1].(map[string]interface{})["title"])
 	s.Equal("Gamma Book", items[2].(map[string]interface{})["title"])
-	
+
 	// Test sort by price descending
 	resp, result = s.makeRequest("GET", "/api/books?sort=price&direction=desc", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
-	
+
 	s.Equal(float64(30.00), items[0].(map[string]interface{})["price"].(float64))
 	s.Equal(float64(20.00), items[1].(map[string]interface{})["price"].(float64))
 	s.Equal(float64(10.00), items[2].(map[string]interface{})["price"].(float64))
-	
+
 	// Test sort by author
 	resp, result = s.makeRequest("GET", "/api/books?sort=author&direction=asc", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
-	
+
 	s.Equal("Alice Author", items[0].(map[string]interface{})["author"])
 	s.Equal("Bob Author", items[1].(map[string]interface{})["author"])
 	s.Equal("Charlie Author", items[2].(map[string]interface{})["author"])
-	
+
 	// Test default sort (created_at DESC)
 	resp, result = s.makeRequest("GET", "/api/books", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
-	
+
 	// Most recently created should be first
 	s.Equal("Gamma Book", items[0].(map[string]interface{})["title"])
 }
@@ -439,7 +439,7 @@ func (s *BookCRUDTestSuite) TestSearch() {
 		{"Go Testing", "Carol Green", "9780123456789", "Testing strategies for Go"},
 		{"Go Microservices", "Dave Black", "9780987123456", "Microservices with Go"},
 	}
-	
+
 	for _, b := range books {
 		book := &models.Book{
 			Title:       b.title,
@@ -452,67 +452,67 @@ func (s *BookCRUDTestSuite) TestSearch() {
 		book.CreatedBy = &s.testUser.ID
 		s.Nil(facades.Orm().Query().Create(book))
 	}
-	
+
 	// Search by title
 	resp, result := s.makeRequest("GET", "/api/books/search?q=Go", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	// For paginated responses, data is nested
 	data := result["data"].(map[string]interface{})
 	items := data["data"].([]interface{})
-	
+
 	s.Equal(6, len(items)) // Should find 6 Go books now with the expanded test data
-	
+
 	// Search by author
 	resp, result = s.makeRequest("GET", "/api/books/search?q=John", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
-	
+
 	s.GreaterOrEqual(len(items), 3) // John Doe (2 books) and Bob Johnson (1 book)
-	
+
 	// Search by description
 	resp, result = s.makeRequest("GET", "/api/books/search?q=programming", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
-	
+
 	s.GreaterOrEqual(len(items), 2) // At least 2 books have "programming" in description
-	
+
 	// Search with no results
 	resp, result = s.makeRequest("GET", "/api/books/search?q=NoSuchBook", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
-	
+
 	s.Equal(0, len(items))
-	
+
 	// Search with pagination - verify pagination works correctly
 	resp, result = s.makeRequest("GET", "/api/books/search?q=Go&page=1&pageSize=5", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
 	pagination := data["pagination"].(map[string]interface{})
-	
+
 	// Verify pagination structure and that we get some results
 	s.True(len(items) > 0 && len(items) <= 5) // Should get some items, max 5
 	s.True(pagination["total"].(float64) > 0) // Should have some total count
 	s.Equal(float64(1), pagination["current_page"])
 	s.True(pagination["last_page"].(float64) >= 1) // Should have at least 1 page
-	
-	// Test that pageSize parameter is being respected by checking second page 
+
+	// Test that pageSize parameter is being respected by checking second page
 	if pagination["total"].(float64) > 5 {
 		resp, result = s.makeRequest("GET", "/api/books/search?q=Go&page=2&pageSize=5", nil)
 		s.Equal(http.StatusOK, resp.StatusCode)
-		
+
 		data = result["data"].(map[string]interface{})
 		items = data["data"].([]interface{})
 		pagination = data["pagination"].(map[string]interface{})
-		
+
 		// Verify we get remaining items and pagination is consistent
 		s.True(len(items) >= 0 && len(items) <= 5)
 		s.Equal(float64(2), pagination["current_page"])
@@ -533,7 +533,7 @@ func (s *BookCRUDTestSuite) TestFiltering() {
 		{"Book 4", "Author B", "AVAILABLE"},
 		{"Book 5", "Author C", "RESERVED"},
 	}
-	
+
 	for i, b := range books {
 		book := &models.Book{
 			Title:  b.title,
@@ -545,39 +545,39 @@ func (s *BookCRUDTestSuite) TestFiltering() {
 		book.CreatedBy = &s.testUser.ID
 		s.Nil(facades.Orm().Query().Create(book))
 	}
-	
+
 	// Filter by status
 	resp, result := s.makeRequest("GET", "/api/books?status=AVAILABLE", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	// For paginated responses, data is nested
 	data := result["data"].(map[string]interface{})
 	items := data["data"].([]interface{})
-	
+
 	s.Equal(2, len(items))
 	for _, item := range items {
 		s.Equal("AVAILABLE", item.(map[string]interface{})["status"])
 	}
-	
+
 	// Filter by author
 	resp, result = s.makeRequest("GET", "/api/books?author=Author%20A", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
-	
+
 	s.Equal(2, len(items))
 	for _, item := range items {
 		s.Equal("Author A", item.(map[string]interface{})["author"])
 	}
-	
+
 	// Multiple filters
 	resp, result = s.makeRequest("GET", "/api/books?status=AVAILABLE&author=Author%20B", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
-	
+
 	s.Equal(1, len(items))
 	s.Equal("Book 4", items[0].(map[string]interface{})["title"])
 }
@@ -592,9 +592,9 @@ func (s *BookCRUDTestSuite) TestCombinedFeatures() {
 		} else if i%5 == 0 {
 			status = "MAINTENANCE"
 		}
-		
+
 		author := fmt.Sprintf("Author %c", 'A'+(i%3))
-		
+
 		book := &models.Book{
 			Title:       fmt.Sprintf("Book %02d", i),
 			Author:      author,
@@ -606,19 +606,19 @@ func (s *BookCRUDTestSuite) TestCombinedFeatures() {
 		book.CreatedBy = &s.testUser.ID
 		s.Nil(facades.Orm().Query().Create(book))
 	}
-	
+
 	// Search with filter, sort and pagination
 	resp, result := s.makeRequest("GET", "/api/books/search?q=searchable&status=AVAILABLE&sort=price&direction=desc&page=1&pageSize=5", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	// For paginated responses, data is nested
 	data := result["data"].(map[string]interface{})
 	items := data["data"].([]interface{})
 	pagination := data["pagination"].(map[string]interface{})
-	
+
 	s.Equal(5, len(items))
 	s.True(pagination["total"].(float64) > 0)
-	
+
 	// Verify all items match criteria
 	prevPrice := 100.0
 	for _, item := range items {
@@ -635,7 +635,7 @@ func (s *BookCRUDTestSuite) TestCombinedFeatures() {
 // Test soft delete behavior
 func (s *BookCRUDTestSuite) TestSoftDelete() {
 	fmt.Printf("DEBUG: Starting TestSoftDelete\n")
-	
+
 	// Create a book
 	book := &models.Book{
 		Title:  "Soft Delete Test",
@@ -649,7 +649,7 @@ func (s *BookCRUDTestSuite) TestSoftDelete() {
 	s.Nil(facades.Orm().Query().Create(book))
 	bookID := book.ID
 	fmt.Printf("DEBUG: Created book with ID: %d\n", bookID)
-	
+
 	// Check list before delete
 	resp, result := s.makeRequest("GET", "/api/books", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
@@ -659,13 +659,13 @@ func (s *BookCRUDTestSuite) TestSoftDelete() {
 	for _, item := range items {
 		fmt.Printf("DEBUG: Book before delete: ID=%v\n", item.(map[string]interface{})["id"])
 	}
-	
+
 	// Delete the book
 	fmt.Printf("DEBUG: About to delete book ID: %d\n", bookID)
 	deleteResp, _ := s.makeRequest("DELETE", fmt.Sprintf("/api/books/%d", bookID), nil)
 	fmt.Printf("DEBUG: DELETE response status: %d\n", deleteResp.StatusCode)
 	s.Equal(http.StatusNoContent, deleteResp.StatusCode)
-	
+
 	// Try to get the deleted book - should fail
 	resp, result = s.makeRequest("GET", fmt.Sprintf("/api/books/%d", bookID), nil)
 	fmt.Printf("DEBUG: GET after delete - status: %d\n", resp.StatusCode)
@@ -673,11 +673,11 @@ func (s *BookCRUDTestSuite) TestSoftDelete() {
 		fmt.Printf("DEBUG: GET after delete - response: %+v\n", result)
 	}
 	s.Equal(http.StatusNotFound, resp.StatusCode)
-	
+
 	// Verify it's not in the list
 	resp, result = s.makeRequest("GET", "/api/books", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	// For paginated responses, data is nested
 	data = result["data"].(map[string]interface{})
 	items = data["data"].([]interface{})
@@ -686,7 +686,7 @@ func (s *BookCRUDTestSuite) TestSoftDelete() {
 		fmt.Printf("DEBUG: Book after delete: ID=%v\n", item.(map[string]interface{})["id"])
 		s.NotEqual(float64(bookID), item.(map[string]interface{})["id"])
 	}
-	
+
 	// Verify it still exists in database with deleted_at
 	var deletedBook models.Book
 	err := facades.Orm().Query().WithTrashed().Where("id", bookID).First(&deletedBook)
@@ -761,10 +761,10 @@ func (s *BookCRUDTestSuite) TestValidationRules() {
 			errorField:  "title",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		resp, result := s.makeRequest("POST", "/api/books", tc.data)
-		
+
 		if tc.expectError {
 			s.Equal(http.StatusUnprocessableEntity, resp.StatusCode, tc.name)
 			s.False(result["success"].(bool), tc.name)

@@ -2,25 +2,25 @@ package models
 
 import (
 	"fmt"
-	
+
 	"gorm.io/gorm"
 )
 
 // Role represents a user role with hierarchical structure
 type Role struct {
 	BaseAuditableModel
-	
+
 	Name        string `gorm:"uniqueIndex;not null" json:"name"`
 	Slug        string `gorm:"uniqueIndex;not null" json:"slug"`
 	Description string `gorm:"type:text" json:"description"`
 	Level       int    `gorm:"default:0" json:"level"` // Higher = more permissions
 	IsActive    bool   `gorm:"default:true" json:"is_active"`
-	
+
 	// Hierarchical structure
 	ParentID *uint  `gorm:"index" json:"parent_id,omitempty"`
 	Parent   *Role  `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
 	Children []Role `gorm:"foreignKey:ParentID" json:"children,omitempty"`
-	
+
 	// Relationships
 	Users       []User       `gorm:"many2many:user_roles" json:"users,omitempty"`
 	Permissions []Permission `gorm:"many2many:role_permissions" json:"permissions,omitempty"`
@@ -55,14 +55,14 @@ func (r *Role) HasPermission(permission string) bool {
 // GetAllPermissions returns all permissions including inherited ones
 func (r *Role) GetAllPermissions() []string {
 	permissions := make(map[string]bool)
-	
+
 	// Add direct permissions
 	for _, perm := range r.Permissions {
 		if perm.IsActive {
 			permissions[perm.Slug] = true
 		}
 	}
-	
+
 	// Add inherited permissions from parent roles
 	if r.Parent != nil {
 		parentPerms := r.Parent.GetAllPermissions()
@@ -70,13 +70,13 @@ func (r *Role) GetAllPermissions() []string {
 			permissions[perm] = true
 		}
 	}
-	
+
 	// Convert map to slice
 	result := make([]string, 0, len(permissions))
 	for perm := range permissions {
 		result = append(result, perm)
 	}
-	
+
 	return result
 }
 

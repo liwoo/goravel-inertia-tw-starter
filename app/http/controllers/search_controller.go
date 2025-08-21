@@ -91,7 +91,7 @@ func (c *SearchController) searchBooks(query string) []SearchResult {
 
 	// Build query for case-insensitive search
 	searchPattern := "%" + query + "%"
-	
+
 	// Search in title, author, isbn, and description
 	// Using COLLATE NOCASE for SQLite compatibility
 	facades.Orm().Query().
@@ -109,7 +109,7 @@ func (c *SearchController) searchBooks(query string) []SearchResult {
 		if book.Status != "" {
 			subtitle = fmt.Sprintf("%s • %s", book.Author, book.Status)
 		}
-		
+
 		results = append(results, SearchResult{
 			ID:       book.ID,
 			Title:    book.Title,
@@ -160,7 +160,7 @@ func (c *SearchController) searchRoles(query string) []SearchResult {
 	// Search in name, slug, and description
 	facades.Orm().Query().
 		Where("is_active = ?", true).
-		Where("(name COLLATE NOCASE LIKE ? OR slug COLLATE NOCASE LIKE ? OR description COLLATE NOCASE LIKE ?)", 
+		Where("(name COLLATE NOCASE LIKE ? OR slug COLLATE NOCASE LIKE ? OR description COLLATE NOCASE LIKE ?)",
 			searchPattern, searchPattern, searchPattern).
 		Order("name ASC").
 		Limit(10).
@@ -189,7 +189,7 @@ func (c *SearchController) searchPermissions(query string) []SearchResult {
 	// Search in name, slug, and description
 	facades.Orm().Query().
 		Where("is_active = ?", true).
-		Where("(name COLLATE NOCASE LIKE ? OR slug COLLATE NOCASE LIKE ? OR description COLLATE NOCASE LIKE ?)", 
+		Where("(name COLLATE NOCASE LIKE ? OR slug COLLATE NOCASE LIKE ? OR description COLLATE NOCASE LIKE ?)",
 			searchPattern, searchPattern, searchPattern).
 		Order("name ASC").
 		Limit(10).

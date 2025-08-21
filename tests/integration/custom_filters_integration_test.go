@@ -21,11 +21,11 @@ import (
 type CustomFiltersIntegrationTestSuite struct {
 	suite.Suite
 	tests.TestCase
-	
-	server *httptest.Server
-	client *http.Client
+
+	server     *httptest.Server
+	client     *http.Client
 	authCookie *http.Cookie
-	testUser *models.User
+	testUser   *models.User
 }
 
 func TestCustomFiltersIntegrationTestSuite(t *testing.T) {
@@ -49,13 +49,13 @@ func (s *CustomFiltersIntegrationTestSuite) TearDownSuite() {
 func (s *CustomFiltersIntegrationTestSuite) SetupTest() {
 	// Clean database
 	s.RefreshDatabase()
-	
+
 	// Clear any existing books
 	facades.Orm().Query().Exec("DELETE FROM books")
-	
+
 	// Create test user with permissions
 	s.setupTestUser()
-	
+
 	// Create test books
 	s.createTestBooks()
 }
@@ -68,7 +68,7 @@ func (s *CustomFiltersIntegrationTestSuite) setupTestUser() {
 		Level: 100,
 	}
 	s.Nil(facades.Orm().Query().Create(adminRole))
-	
+
 	// Create book permissions
 	permissions := []string{"create", "read", "update", "delete"}
 	for _, perm := range permissions {
@@ -80,12 +80,12 @@ func (s *CustomFiltersIntegrationTestSuite) setupTestUser() {
 		s.Nil(facades.Orm().Query().Create(permission))
 		s.Nil(helpers.AssignPermissionToRole(adminRole, permission, "by_all"))
 	}
-	
+
 	// Create test user
 	user, err := helpers.SetupJWTUser("admin@test.com", "password", adminRole)
 	s.Nil(err)
 	s.testUser = user
-	
+
 	// Login
 	s.authCookie = s.loginUser("admin@test.com", "password")
 }
@@ -95,18 +95,18 @@ func (s *CustomFiltersIntegrationTestSuite) loginUser(email, password string) *h
 		"email":    email,
 		"password": password,
 	}
-	
+
 	jsonData, _ := json.Marshal(loginData)
 	resp, err := s.client.Post(s.server.URL+"/api/auth/login", "application/json", bytes.NewBuffer(jsonData))
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "token" {
 			return cookie
 		}
 	}
-	
+
 	return nil
 }
 
@@ -125,7 +125,7 @@ func (s *CustomFiltersIntegrationTestSuite) createTestBooks() {
 		{"Rust Programming", "Alice Brown", 49.99, "MAINTENANCE", timePtr(time.Now().AddDate(0, -3, 0))},
 		{"TypeScript Advanced", "Charlie Wilson", 34.99, "AVAILABLE", timePtr(time.Now())},
 	}
-	
+
 	for i, b := range books {
 		book := &models.Book{
 			Title:       b.title,
@@ -152,38 +152,38 @@ func (s *CustomFiltersIntegrationTestSuite) makeRequest(method, path string, bod
 	} else {
 		bodyReader = bytes.NewReader([]byte{})
 	}
-	
+
 	req, err := http.NewRequest(method, s.server.URL+path, bodyReader)
 	s.Nil(err)
-	
+
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Accept", "application/json")
-	
+
 	if s.authCookie != nil {
 		req.AddCookie(s.authCookie)
 	}
-	
+
 	resp, err := s.client.Do(req)
 	s.Nil(err)
-	
+
 	var result map[string]interface{}
 	if resp.Body != nil {
 		defer resp.Body.Close()
 		json.NewDecoder(resp.Body).Decode(&result)
 	}
-	
+
 	return resp, result
 }
 
 // Test filter metadata endpoint
 func (s *CustomFiltersIntegrationTestSuite) TestFilterMetadataEndpoint() {
 	resp, result := s.makeRequest("GET", "/api/books/filters", nil)
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
 	s.True(result["success"].(bool))
-	
+
 	// Check metadata structure
 	data := result["data"].(map[string]interface{})
 	s.NotNil(data["filters"])
@@ -191,11 +191,11 @@ func (s *CustomFiltersIntegrationTestSuite) TestFilterMetadataEndpoint() {
 	s.NotNil(data["searchable_fields"])
 	s.NotNil(data["sortable_fields"])
 	s.NotNil(data["filterable_fields"])
-	
+
 	// Check filter definitions
 	filters := data["filters"].([]interface{})
 	s.Greater(len(filters), 0)
-	
+
 	// Check that price filter exists
 	var foundPriceFilter bool
 	for _, f := range filters {
@@ -218,23 +218,23 @@ func (s *CustomFiltersIntegrationTestSuite) TestSimpleCustomFilter() {
 		"operator": "greater_than",
 		"value":    30,
 	}
-	
+
 	filterJSON, _ := json.Marshal(filter)
 	params := url.Values{}
 	params.Set("filters", string(filterJSON))
-	
+
 	resp, result := s.makeRequest("GET", "/api/books?"+params.Encode(), nil)
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
 	s.True(result["success"].(bool))
-	
+
 	// Check results
 	data := result["data"].(map[string]interface{})
 	items := data["data"].([]interface{})
-	
+
 	// Should have 2 books with price > 30 (JavaScript Guide: 39.99, Rust Programming: 49.99, TypeScript Advanced: 34.99)
 	s.Equal(3, len(items))
-	
+
 	// Verify all returned books have price > 30
 	for _, item := range items {
 		book := item.(map[string]interface{})
@@ -260,26 +260,26 @@ func (s *CustomFiltersIntegrationTestSuite) TestCompoundCustomFilter() {
 			},
 		},
 	}
-	
+
 	filterJSON, _ := json.Marshal(filter)
 	params := url.Values{}
 	params.Set("filters", string(filterJSON))
-	
+
 	resp, result := s.makeRequest("GET", "/api/books?"+params.Encode(), nil)
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
 	s.True(result["success"].(bool))
-	
+
 	// Check results
 	data := result["data"].(map[string]interface{})
 	items := data["data"].([]interface{})
-	
+
 	// Should have books with price > 25 AND status = AVAILABLE
 	// Go Programming: 29.99, AVAILABLE
 	// JavaScript Guide: 39.99, AVAILABLE
 	// TypeScript Advanced: 34.99, AVAILABLE
 	s.Equal(3, len(items))
-	
+
 	// Verify all returned books match criteria
 	for _, item := range items {
 		book := item.(map[string]interface{})
@@ -296,23 +296,23 @@ func (s *CustomFiltersIntegrationTestSuite) TestDateRangeFilter() {
 		"operator": "after",
 		"value":    time.Now().AddDate(-1, 0, 0).Format("2006-01-02"),
 	}
-	
+
 	filterJSON, _ := json.Marshal(filter)
 	params := url.Values{}
 	params.Set("filters", string(filterJSON))
-	
+
 	resp, result := s.makeRequest("GET", "/api/books?"+params.Encode(), nil)
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
 	s.True(result["success"].(bool))
-	
+
 	// Check results
 	data := result["data"].(map[string]interface{})
 	items := data["data"].([]interface{})
-	
+
 	// Should have books published in the last year
 	s.Greater(len(items), 0)
-	
+
 	// Verify all returned books were published in the last year
 	oneYearAgo := time.Now().AddDate(-1, 0, 0)
 	for _, item := range items {

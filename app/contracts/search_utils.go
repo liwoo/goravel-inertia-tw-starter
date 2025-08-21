@@ -9,9 +9,9 @@ import (
 
 // SearchConfig defines the configuration for search operations
 type SearchConfig struct {
-	Query           string   // The search query
-	SearchableFields []string // Fields to search in
-	ValidateFunc    func(query string) error // Optional validation function
+	Query            string                   // The search query
+	SearchableFields []string                 // Fields to search in
+	ValidateFunc     func(query string) error // Optional validation function
 }
 
 // SearchBuilder provides utilities for building search queries
@@ -45,7 +45,7 @@ func (sb *SearchBuilder) ApplySearch(query orm.Query, config SearchConfig) (orm.
 	conditions := make([]string, len(config.SearchableFields))
 	values := make([]interface{}, len(config.SearchableFields))
 	searchPattern := "%" + config.Query + "%"
-	
+
 	for i, field := range config.SearchableFields {
 		conditions[i] = field + " LIKE ?"
 		values[i] = searchPattern
@@ -63,7 +63,7 @@ func (sb *SearchBuilder) ApplySearchWithService(query orm.Query, search string, 
 		ValidateSearchQuery(string) error
 		GetSearchableFields() []string
 	})
-	
+
 	if !ok {
 		return query, fmt.Errorf("service does not implement searchable interface")
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"players/app/models"
-	)
+)
 
 // PermissionHelper provides permission checking utilities
 type PermissionHelper struct {
@@ -37,24 +37,24 @@ func (h *PermissionHelper) GetAuthenticatedUser(ctx http.Context) *models.User {
 			return testUser
 		}
 	}
-	
+
 	var user models.User
 	err := facades.Auth(ctx).User(&user)
 	if err != nil || user.ID == 0 {
 		return nil
 	}
-	
+
 	// Load user with roles only (permissions will be loaded separately through pivot table)
 	var userWithRoles models.User
 	err = facades.Orm().Query().
 		Where("id = ?", user.ID).
-		With("Roles").  // Only preload roles, not permissions
+		With("Roles"). // Only preload roles, not permissions
 		First(&userWithRoles)
-	
+
 	if err != nil {
 		return nil
 	}
-	
+
 	return &userWithRoles
 }
 
@@ -64,11 +64,11 @@ func (h *PermissionHelper) RequireAuthentication(ctx http.Context) (*models.User
 	if user == nil {
 		return nil, fmt.Errorf("authentication required")
 	}
-	
+
 	if !user.IsActive {
 		return nil, fmt.Errorf("account is deactivated")
 	}
-	
+
 	return user, nil
 }
 
@@ -78,11 +78,11 @@ func (h *PermissionHelper) RequirePermission(ctx http.Context, permission string
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if !h.permissionService.HasPermission(user, permission) {
 		return nil, fmt.Errorf("insufficient permissions: %s required", permission)
 	}
-	
+
 	return user, nil
 }
 
@@ -92,11 +92,11 @@ func (h *PermissionHelper) RequireRole(ctx http.Context, role string) (*models.U
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if !h.permissionService.HasRole(user, role) {
 		return nil, fmt.Errorf("insufficient role: %s required", role)
 	}
-	
+
 	return user, nil
 }
 
@@ -106,11 +106,11 @@ func (h *PermissionHelper) RequireResourceAccess(ctx http.Context, action string
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if !h.permissionService.CanAccessResource(user, action, resourceType, resourceID) {
 		return nil, fmt.Errorf("insufficient permissions for %s.%s on resource %d", resourceType, action, resourceID)
 	}
-	
+
 	return user, nil
 }
 
@@ -120,7 +120,7 @@ func (h *PermissionHelper) CheckPermission(ctx http.Context, permission string) 
 	if user == nil {
 		return false
 	}
-	
+
 	return h.permissionService.HasPermission(user, permission)
 }
 
@@ -130,7 +130,7 @@ func (h *PermissionHelper) CheckRole(ctx http.Context, role string) bool {
 	if user == nil {
 		return false
 	}
-	
+
 	return h.permissionService.HasRole(user, role)
 }
 
@@ -140,7 +140,7 @@ func (h *PermissionHelper) CheckResourceAccess(ctx http.Context, action string, 
 	if user == nil {
 		return false
 	}
-	
+
 	return h.permissionService.CanAccessResource(user, action, resourceType, resourceID)
 }
 
@@ -156,7 +156,7 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 			"canManage": false,
 		}
 	}
-	
+
 	// Helper function to check permission with scoped variants
 	hasPermissionWithScope := func(basePermission string) bool {
 		// Check base permission and all scoped variants
@@ -166,7 +166,7 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 			basePermission + "_by_my_role",
 			basePermission + "_by_me",
 		}
-		
+
 		for _, perm := range scopedPermissions {
 			if h.permissionService.HasPermission(user, perm) {
 				return true
@@ -174,14 +174,14 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 		}
 		return false
 	}
-	
+
 	// Use the new service_action format
 	viewSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionView)
 	readSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionRead)
 	createSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionCreate)
 	updateSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionUpdate)
 	deleteSlug := BuildPermissionSlug(ServiceRegistry(resourceType), PermissionDelete)
-	
+
 	perms := map[string]bool{
 		// Use 'view' permission for listing/viewing, 'read' for accessing individual items
 		"canView":   hasPermissionWithScope(viewSlug) || hasPermissionWithScope(readSlug),
@@ -189,20 +189,20 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 		"canEdit":   hasPermissionWithScope(updateSlug),
 		"canDelete": hasPermissionWithScope(deleteSlug),
 		"canManage": hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionManage)),
-		
+
 		// Additional permissions
 		"canExport":     hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionExport)),
 		"canBulkUpdate": hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionBulkUpdate)),
 		"canBulkDelete": hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionBulkDelete)),
-		
+
 		// Special report permissions
 		"canViewReports": hasPermissionWithScope(BuildPermissionSlug(ServiceReports, PermissionView)),
-		
+
 		// Admin permissions (legacy)
 		"isAdmin":      user.IsAdmin(),
 		"isSuperAdmin": user.IsSuperAdminUser(),
 	}
-	
+
 	return perms
 }
 
@@ -212,7 +212,7 @@ func (h *PermissionHelper) CheckServicePermission(ctx http.Context, service Serv
 	if user == nil {
 		return false
 	}
-	
+
 	permissionSlug := BuildPermissionSlug(service, action)
 	return h.permissionService.HasPermission(user, permissionSlug)
 }
@@ -223,16 +223,16 @@ func (h *PermissionHelper) RequireServicePermission(ctx http.Context, service Se
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check for any scoped variant of the permission
 	basePermission := BuildPermissionSlug(service, action)
 	scopedPermissions := []string{
 		basePermission,
 		basePermission + "_by_all",
-		basePermission + "_by_my_role", 
+		basePermission + "_by_my_role",
 		basePermission + "_by_me",
 	}
-	
+
 	hasPermission := false
 	for _, perm := range scopedPermissions {
 		if h.permissionService.HasPermission(user, perm) {
@@ -240,11 +240,11 @@ func (h *PermissionHelper) RequireServicePermission(ctx http.Context, service Se
 			break
 		}
 	}
-	
+
 	if !hasPermission {
 		return nil, fmt.Errorf("insufficient permissions: %s required", basePermission)
 	}
-	
+
 	return user, nil
 }
 
@@ -254,14 +254,14 @@ func (h *PermissionHelper) GetUserRoles(ctx http.Context) []string {
 	if user == nil {
 		return []string{}
 	}
-	
+
 	roles := make([]string, 0, len(user.Roles))
 	for _, role := range user.Roles {
 		if role.IsActive {
 			roles = append(roles, role.Slug)
 		}
 	}
-	
+
 	return roles
 }
 
@@ -271,7 +271,7 @@ func (h *PermissionHelper) GetUserPermissions(ctx http.Context) []string {
 	if user == nil {
 		return []string{}
 	}
-	
+
 	return h.permissionService.GetUserPermissions(user)
 }
 
@@ -281,17 +281,17 @@ func (h *PermissionHelper) CanManageUser(ctx http.Context, targetUserID uint) bo
 	if user == nil {
 		return false
 	}
-	
+
 	// Load target user
 	var targetUser models.User
 	err := facades.Orm().Query().
 		Where("id = ?", targetUserID).
 		First(&targetUser)
-	
+
 	if err != nil {
 		return false
 	}
-	
+
 	return h.permissionService.CanManageUser(user, &targetUser)
 }
 

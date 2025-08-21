@@ -13,7 +13,7 @@ import (
 type BookTagsTestSuite struct {
 	suite.Suite
 	tests.TestCase
-	
+
 	testUser *models.User
 }
 
@@ -59,4 +59,3 @@ func (s *BookTagsTestSuite) Test_BookCreation_WithTags() {
 	expectedTags := []string{"fiction", "test", "golang"}
 	s.Equal(expectedTags, createdBook.Tags, "Tags should be stored correctly")
 }
-

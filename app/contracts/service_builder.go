@@ -39,7 +39,7 @@ type ServiceBuilderComplete[T any] struct {
 func NewServiceBuilder[T any](resourceName string, primaryKey string) *ServiceBuilder[T] {
 	// Create the service using the existing constructor
 	service := NewGenericCrudService[T](resourceName, primaryKey)
-	
+
 	return &ServiceBuilder[T]{
 		service: service,
 	}
@@ -104,12 +104,12 @@ func (b *ServiceBuilderComplete[T]) WithScopeFiltering(serviceRegistry string, u
 	b.builder.service.enableScopeFiltering = true
 	// Map service name to auth.ServiceRegistry
 	serviceMap := map[string]auth.ServiceRegistry{
-		"books": "books",
-		"users": "users",
-		"roles": "roles",
+		"books":       "books",
+		"users":       "users",
+		"roles":       "roles",
 		"permissions": "permissions",
 	}
-	
+
 	if registry, ok := serviceMap[serviceRegistry]; ok {
 		b.builder.service.serviceRegistry = registry
 	}
@@ -177,7 +177,7 @@ func (b *ServiceBuilderComplete[T]) Build() CrudServiceContract {
 	if len(b.builder.service.validationRules) == 0 {
 		panic("Validation rules not set")
 	}
-	
+
 	// Wrap the service to adapt the interface
 	return &crudServiceAdapter[T]{
 		service: b.builder.service,
@@ -186,7 +186,7 @@ func (b *ServiceBuilderComplete[T]) Build() CrudServiceContract {
 
 // crudServiceAdapter adapts GenericCrudService to implement CrudServiceContract
 type crudServiceAdapter[T any] struct {
-	service *GenericCrudService[T]
+	service       *GenericCrudService[T]
 	actualService interface{} // Reference to the actual service (e.g., BookService) for method resolution
 }
 

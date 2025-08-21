@@ -31,7 +31,7 @@ func (r *SecureRouteRegistrar) RegisterSecuredCRUD(
 	if controller.GetUpdateValidator() == nil {
 		panic("Controller update validator returned nil")
 	}
-	
+
 	// Register the routes
 	r.route.Get(path, crudController.Index)
 	r.route.Post(path, crudController.Store)
@@ -54,11 +54,11 @@ func (r *SecureRouteRegistrar) RegisterSecuredResource(
 // Example usage function that shows compile-time enforcement
 func ExampleSecureRegistration(r route.Route) {
 	_ = NewSecureRouteRegistrar(r)
-	
+
 	// This will compile - controller implements all interfaces
 	// var securedController *InterfaceEnforcedController[Model, *CreateReq, *UpdateReq]
 	// registrar.RegisterSecuredCRUD("/api/items", securedController, securedController)
-	
+
 	// This will NOT compile - missing SecuredCrudController interface
 	// var unsecuredController *GenericCrudController[Model, *CreateReq, *UpdateReq]
 	// registrar.RegisterSecuredCRUD("/api/items", unsecuredController, unsecuredController)

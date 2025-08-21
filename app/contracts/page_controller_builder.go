@@ -7,9 +7,9 @@ import (
 
 // PageControllerBuilder uses a step-by-step builder pattern to ensure all required methods are implemented
 type PageControllerBuilder struct {
-	controller *GenericPageController
+	controller       *GenericPageController
 	permissionAction auth.CorePermissionAction
-	propsFunc func(result *PaginatedResult, req *ListRequest, permissions map[string]bool, stats map[string]interface{}) PageProps
+	propsFunc        func(result *PaginatedResult, req *ListRequest, permissions map[string]bool, stats map[string]interface{}) PageProps
 }
 
 // Step 1: Required - Set service
@@ -39,7 +39,7 @@ func NewPageControllerBuilder(resourceName string, pageComponent string) *PageCo
 		PageComponent: pageComponent,
 	}
 	controller := NewGenericPageController(config)
-	
+
 	return &PageControllerBuilder{
 		controller: controller,
 	}
@@ -106,8 +106,8 @@ func (b *PageControllerBuilderComplete) Build() PageControllerContract {
 	// Create a wrapper that ensures all interface methods are implemented
 	return &pageControllerContractWrapper{
 		GenericPageController: b.builder.controller,
-		permissionAction: b.builder.permissionAction,
-		propsFunc: b.builder.propsFunc,
+		permissionAction:      b.builder.permissionAction,
+		propsFunc:             b.builder.propsFunc,
 	}
 }
 
@@ -115,7 +115,7 @@ func (b *PageControllerBuilderComplete) Build() PageControllerContract {
 type pageControllerContractWrapper struct {
 	*GenericPageController
 	permissionAction auth.CorePermissionAction
-	propsFunc func(result *PaginatedResult, req *ListRequest, permissions map[string]bool, stats map[string]interface{}) PageProps
+	propsFunc        func(result *PaginatedResult, req *ListRequest, permissions map[string]bool, stats map[string]interface{}) PageProps
 }
 
 // Implement PageControllerContract methods that need customization
@@ -133,8 +133,8 @@ func (w *pageControllerContractWrapper) GetProps(result *PaginatedResult, req *L
 			LastPage:    result.LastPage,
 			PerPage:     result.PerPage,
 			Total:       result.Total,
-			From:        (result.CurrentPage - 1) * result.PerPage + 1,
-			To:          min(result.CurrentPage * result.PerPage, int(result.Total)),
+			From:        (result.CurrentPage-1)*result.PerPage + 1,
+			To:          min(result.CurrentPage*result.PerPage, int(result.Total)),
 			HasNext:     result.CurrentPage < result.LastPage,
 			HasPrev:     result.CurrentPage > 1,
 		},
@@ -148,7 +148,7 @@ func convertToPermissionsMap(permissions map[string]bool) PermissionsMap {
 	pm := PermissionsMap{
 		Custom: make(map[string]bool),
 	}
-	
+
 	// Map common permissions
 	pm.CanView = permissions["canView"]
 	pm.CanCreate = permissions["canCreate"]
@@ -160,18 +160,18 @@ func convertToPermissionsMap(permissions map[string]bool) PermissionsMap {
 	pm.CanBulkDelete = permissions["canBulkDelete"]
 	pm.IsAdmin = permissions["isAdmin"]
 	pm.IsSuperAdmin = permissions["isSuperAdmin"]
-	
+
 	// Add any other permissions to custom
 	for k, v := range permissions {
 		switch k {
-		case "canView", "canCreate", "canEdit", "canDelete", "canManage", 
-		     "canExport", "canBulkUpdate", "canBulkDelete", "isAdmin", "isSuperAdmin":
+		case "canView", "canCreate", "canEdit", "canDelete", "canManage",
+			"canExport", "canBulkUpdate", "canBulkDelete", "isAdmin", "isSuperAdmin":
 			// Already mapped
 		default:
 			pm.Custom[k] = v
 		}
 	}
-	
+
 	return pm
 }
 

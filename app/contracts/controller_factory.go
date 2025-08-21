@@ -29,7 +29,7 @@ func (cf *ControllerFactory) RegisterController(name string, controller Resource
 			return fmt.Errorf("controller '%s' validation failed: %w", name, err)
 		}
 	}
-	
+
 	cf.registeredControllers[name] = controller
 	return nil
 }
@@ -49,7 +49,7 @@ func (cf *ControllerFactory) RegisterPageController(name string, controller Page
 			return fmt.Errorf("page controller '%s' validation failed: %w", name, err)
 		}
 	}
-	
+
 	cf.registeredPages[name] = controller
 	return nil
 }
@@ -100,65 +100,65 @@ func (cf *ControllerFactory) ListPageControllers() []string {
 // ValidateAllControllers validates all registered controllers
 func (cf *ControllerFactory) ValidateAllControllers() map[string]ControllerValidationResult {
 	results := make(map[string]ControllerValidationResult)
-	
+
 	for name, controller := range cf.registeredControllers {
 		results[name] = ValidateControllerImplementation(controller)
 	}
-	
+
 	for name, controller := range cf.registeredPages {
 		results[name+"_page"] = ValidateControllerImplementation(controller)
 	}
-	
+
 	return results
 }
 
 // validateControllerContracts validates that a controller implements all required contracts
 func (cf *ControllerFactory) validateControllerContracts(controller interface{}) error {
 	controllerType := reflect.TypeOf(controller)
-	
+
 	// Check if controller implements ResourceControllerContract
 	resourceControllerType := reflect.TypeOf((*ResourceControllerContract)(nil)).Elem()
 	if !controllerType.Implements(resourceControllerType) {
 		return fmt.Errorf("controller must implement ResourceControllerContract interface")
 	}
-	
+
 	// Validate specific method implementations for CRUD operations
 	requiredMethods := []string{
 		"Index", "Show", "Store", "Update", "Delete",
 		"ValidatePaginationRequest", "GetPaginationDefaults", "BuildPaginatedResponse",
 		"ValidateCreateRequest", "ValidateUpdateRequest", "ValidateID", "GetValidationRules",
-		"SuccessResponse", "CreatedResponse", "NoContentResponse", 
+		"SuccessResponse", "CreatedResponse", "NoContentResponse",
 		"BadRequestResponse", "NotFoundResponse", "ForbiddenResponse",
 		"ValidationErrorResponse", "InternalErrorResponse",
-		"ResourceNotFoundResponse", "ResourceCreatedResponse", 
+		"ResourceNotFoundResponse", "ResourceCreatedResponse",
 		"ResourceUpdatedResponse", "ResourceDeletedResponse",
 		"CheckPermission", "GetCurrentUser", "RequireAuthentication", "BuildPermissionsMap",
 	}
-	
+
 	missing := []string{}
 	for _, methodName := range requiredMethods {
 		if _, hasMethod := controllerType.MethodByName(methodName); !hasMethod {
 			missing = append(missing, methodName)
 		}
 	}
-	
+
 	if len(missing) > 0 {
 		return fmt.Errorf("controller is missing required methods: %v", missing)
 	}
-	
+
 	return nil
 }
 
 // validatePageControllerContracts validates that a page controller implements all required contracts
 func (cf *ControllerFactory) validatePageControllerContracts(controller interface{}) error {
 	controllerType := reflect.TypeOf(controller)
-	
+
 	// Check if controller implements PageControllerContract
 	pageControllerType := reflect.TypeOf((*PageControllerContract)(nil)).Elem()
 	if !controllerType.Implements(pageControllerType) {
 		return fmt.Errorf("page controller must implement PageControllerContract interface")
 	}
-	
+
 	// Validate specific method implementations for page operations
 	requiredMethods := []string{
 		"Index",
@@ -166,18 +166,18 @@ func (cf *ControllerFactory) validatePageControllerContracts(controller interfac
 		"CheckPermission", "GetCurrentUser", "RequireAuthentication", "BuildPermissionsMap",
 		"BuildPageProps", "GetPageMetadata", "ValidatePageRequest",
 	}
-	
+
 	missing := []string{}
 	for _, methodName := range requiredMethods {
 		if _, hasMethod := controllerType.MethodByName(methodName); !hasMethod {
 			missing = append(missing, methodName)
 		}
 	}
-	
+
 	if len(missing) > 0 {
 		return fmt.Errorf("page controller is missing required methods: %v", missing)
 	}
-	
+
 	return nil
 }
 

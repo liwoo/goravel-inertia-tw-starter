@@ -6,10 +6,10 @@ type PermissionScope string
 const (
 	// ScopeByMe - User can only access resources they created
 	ScopeByMe PermissionScope = "by_me"
-	
+
 	// ScopeByMyRole - User can access resources created by anyone with their role or lower
 	ScopeByMyRole PermissionScope = "by_my_role"
-	
+
 	// ScopeByAll - User can access all resources regardless of creator (current default)
 	ScopeByAll PermissionScope = "by_all"
 )
@@ -54,7 +54,7 @@ func IsScopedPermission(slug string) bool {
 func ParsePermissionSlug(slug string) (service string, action string, scope PermissionScope) {
 	// Default scope if not specified
 	scope = ScopeByAll
-	
+
 	// Check if it's a scoped permission
 	for _, s := range GetAllPermissionScopes() {
 		suffix := "_" + string(s)
@@ -64,7 +64,7 @@ func ParsePermissionSlug(slug string) (service string, action string, scope Perm
 			break
 		}
 	}
-	
+
 	// Split remaining slug into service and action
 	for i := 0; i < len(slug); i++ {
 		if slug[i] == '_' {
@@ -73,6 +73,6 @@ func ParsePermissionSlug(slug string) (service string, action string, scope Perm
 			break
 		}
 	}
-	
+
 	return service, action, scope
 }

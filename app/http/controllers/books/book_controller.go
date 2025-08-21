@@ -202,13 +202,13 @@ func (c *BookController) GetFilters(ctx http.Context) http.Response {
 				"operators": []string{"before", "after", "between", "not_between", "is_today", "is_this_week", "is_this_month", "last_n_days"},
 			},
 		},
-		"logic_operators":     []string{"AND", "OR"},
-		"resource":            "book",
-		"filterable_fields":   []string{"status", "author"},
-		"searchable_fields":   []string{"title", "author", "isbn", "description"},
-		"sortable_fields":     []string{"id", "title", "author", "price", "created_at", "updated_at", "published_at"},
+		"logic_operators":   []string{"AND", "OR"},
+		"resource":          "book",
+		"filterable_fields": []string{"status", "author"},
+		"searchable_fields": []string{"title", "author", "isbn", "description"},
+		"sortable_fields":   []string{"id", "title", "author", "price", "created_at", "updated_at", "published_at"},
 	}
-	
+
 	return ctx.Response().Json(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data":    metadata,

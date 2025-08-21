@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	
+
 	"github.com/goravel/framework/contracts/database/orm"
 )
 
@@ -87,7 +87,7 @@ func (b *BaseCrudService) ValidateFilterValue(field string, value interface{}) b
 	if value == nil {
 		return false
 	}
-	
+
 	switch v := value.(type) {
 	case string:
 		return strings.TrimSpace(v) != ""
@@ -117,17 +117,17 @@ func (b *BaseCrudService) GetPrimaryKey() string {
 func (b *BaseCrudService) ValidateListRequest(req *ListRequest) error {
 	// Set defaults first
 	req.SetDefaults()
-	
+
 	// Validate pagination
 	if err := b.ValidatePaginationParams(req.Page, req.PageSize); err != nil {
 		return fmt.Errorf("pagination validation failed: %w", err)
 	}
-	
+
 	// Validate sort direction if provided
 	if req.Direction != "" && !b.ValidateSortDirection(req.Direction) {
 		return fmt.Errorf("invalid sort direction: %s", req.Direction)
 	}
-	
+
 	return nil
 }
 
@@ -136,7 +136,7 @@ func (b *BaseCrudService) SanitizeListRequest(req *ListRequest) {
 	if req.Page <= 0 {
 		req.Page = 1
 	}
-	
+
 	// Ensure pageSize is within bounds
 	if req.PageSize <= 0 {
 		req.PageSize = b.defaultPageSize
@@ -144,7 +144,7 @@ func (b *BaseCrudService) SanitizeListRequest(req *ListRequest) {
 	if req.PageSize > b.maxPageSize {
 		req.PageSize = b.maxPageSize
 	}
-	
+
 	// Normalize sort direction
 	if req.Direction != "" {
 		req.Direction = strings.ToUpper(req.Direction)
@@ -152,7 +152,7 @@ func (b *BaseCrudService) SanitizeListRequest(req *ListRequest) {
 			req.Direction = "DESC"
 		}
 	}
-	
+
 	// Trim search query
 	req.Search = strings.TrimSpace(req.Search)
 }
@@ -163,11 +163,11 @@ func (b *BaseCrudService) ValidateBulkOperation(ids []uint) error {
 	if len(ids) == 0 {
 		return errors.New("no IDs provided for bulk operation")
 	}
-	
+
 	if len(ids) > 1000 { // Prevent massive bulk operations
 		return errors.New("bulk operation cannot exceed 1000 items")
 	}
-	
+
 	// Check for duplicates
 	seen := make(map[uint]bool)
 	for _, id := range ids {
@@ -179,7 +179,7 @@ func (b *BaseCrudService) ValidateBulkOperation(ids []uint) error {
 		}
 		seen[id] = true
 	}
-	
+
 	return nil
 }
 
@@ -188,30 +188,30 @@ func (b *BaseCrudService) ValidateBulkOperation(ids []uint) error {
 func (b *BaseCrudService) ValidateSearchQuery(query string) error {
 	// Trim whitespace
 	query = strings.TrimSpace(query)
-	
+
 	// Check minimum length
 	if len(query) < 2 {
 		return errors.New("search query must be at least 2 characters long")
 	}
-	
+
 	// Check maximum length
 	if len(query) > 200 {
 		return errors.New("search query cannot exceed 200 characters")
 	}
-	
+
 	// Check for SQL injection patterns (basic)
 	lowerQuery := strings.ToLower(query)
 	dangerousPatterns := []string{
 		"drop ", "delete ", "insert ", "update ", "alter ", "create ",
 		"truncate ", "exec ", "execute ", "--", "/*", "*/", "xp_", "sp_",
 	}
-	
+
 	for _, pattern := range dangerousPatterns {
 		if strings.Contains(lowerQuery, pattern) {
 			return fmt.Errorf("search query contains invalid pattern: %s", pattern)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -219,7 +219,7 @@ func (b *BaseCrudService) BuildSearchQuery(query string, searchableFields []stri
 	// Escape special characters for LIKE queries
 	query = strings.ReplaceAll(query, "%", "\\%")
 	query = strings.ReplaceAll(query, "_", "\\_")
-	
+
 	// Add wildcards for fuzzy search
 	return "%" + query + "%"
 }
@@ -250,17 +250,17 @@ func (b *BaseCrudService) ValidateSearchRequest(req *SearchRequest) error {
 	if err := b.ValidateSearchQuery(req.Query); err != nil {
 		return fmt.Errorf("search query validation failed: %w", err)
 	}
-	
+
 	// Validate pagination
 	if err := b.ValidatePaginationParams(req.Page, req.PageSize); err != nil {
 		return fmt.Errorf("pagination validation failed: %w", err)
 	}
-	
+
 	// Validate sort direction if provided
 	if req.Direction != "" && !b.ValidateSortDirection(req.Direction) {
 		return fmt.Errorf("invalid sort direction: %s", req.Direction)
 	}
-	
+
 	return nil
 }
 
@@ -287,33 +287,33 @@ func ValidateServiceImplementation(service interface{}) ServiceValidationResult 
 		Errors:  []string{},
 		Missing: []string{},
 	}
-	
+
 	// Check if service implements CompleteCrudService
 	if _, ok := service.(CompleteCrudService); !ok {
 		result.Valid = false
 		result.Errors = append(result.Errors, "service does not implement CompleteCrudService interface")
 	}
-	
+
 	// Check if service implements individual contracts
 	if _, ok := service.(CrudServiceContract); !ok {
 		result.Valid = false
 		result.Missing = append(result.Missing, "CrudServiceContract")
 	}
-	
+
 	if _, ok := service.(PaginationServiceContract); !ok {
 		result.Valid = false
 		result.Missing = append(result.Missing, "PaginationServiceContract")
 	}
-	
+
 	if _, ok := service.(SortableServiceContract); !ok {
 		result.Valid = false
 		result.Missing = append(result.Missing, "SortableServiceContract")
 	}
-	
+
 	if _, ok := service.(FilterableServiceContract); !ok {
 		result.Valid = false
 		result.Missing = append(result.Missing, "FilterableServiceContract")
 	}
-	
+
 	return result
 }

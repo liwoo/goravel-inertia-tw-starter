@@ -13,7 +13,7 @@ import (
 
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
-	
+
 	"players/app/models"
 	"players/tests"
 	"players/tests/helpers"
@@ -22,12 +22,12 @@ import (
 type BookFiltersComprehensiveTestSuite struct {
 	suite.Suite
 	tests.TestCase
-	
+
 	// Test data
-	testUser     *models.User
-	testBooks    []*models.Book
-	server       *httptest.Server
-	client       *http.Client
+	testUser  *models.User
+	testBooks []*models.Book
+	server    *httptest.Server
+	client    *http.Client
 }
 
 func TestBookFiltersComprehensiveTestSuite(t *testing.T) {
@@ -37,10 +37,10 @@ func TestBookFiltersComprehensiveTestSuite(t *testing.T) {
 func (s *BookFiltersComprehensiveTestSuite) SetupTest() {
 	// Start test server first - this ensures facades are initialized
 	s.startTestServer()
-	
+
 	// Run migrations to ensure schema is up to date
 	s.RefreshDatabase()
-	
+
 	// Setup test data
 	s.setupTestUser()
 	s.setupTestBooks()
@@ -49,7 +49,7 @@ func (s *BookFiltersComprehensiveTestSuite) SetupTest() {
 func (s *BookFiltersComprehensiveTestSuite) startTestServer() {
 	// Create a test server
 	s.server = httptest.NewServer(facades.Route())
-	
+
 	// Create HTTP client with cookie jar
 	jar, _ := cookiejar.New(nil)
 	s.client = &http.Client{
@@ -70,12 +70,12 @@ func (s *BookFiltersComprehensiveTestSuite) setupTestUser() {
 		IsActive: true,
 	}
 	facades.Orm().Query().Create(role)
-	
+
 	// Create user using the JWT workaround helper
 	user, err := helpers.SetupJWTUser("test@example.com", "password", role)
 	s.NoError(err)
 	s.testUser = user
-	
+
 	// Create and assign books_read permission with by_all scope
 	permission := &models.Permission{
 		Name:     "Read Books",
@@ -85,7 +85,7 @@ func (s *BookFiltersComprehensiveTestSuite) setupTestUser() {
 		IsActive: true,
 	}
 	facades.Orm().Query().Create(permission)
-	
+
 	// Assign permission to role with by_all scope
 	rolePermission := &models.RolePermission{
 		RoleID:       role.ID,
@@ -103,7 +103,7 @@ func (s *BookFiltersComprehensiveTestSuite) setupTestBooks() {
 	lastWeek := now.AddDate(0, 0, -7)
 	lastMonth := now.AddDate(0, -1, 0)
 	lastYear := now.AddDate(-1, 0, 0)
-	
+
 	s.testBooks = []*models.Book{
 		// Book 1: War and Peace
 		{
@@ -143,8 +143,8 @@ func (s *BookFiltersComprehensiveTestSuite) setupTestBooks() {
 			Title:       "Modern Warfare Tactics",
 			Author:      "James Wilson",
 			ISBN:        "978-1-234-56789-0",
-			Description: "",  // Test empty description
-			Price:       0,   // Test zero price
+			Description: "", // Test empty description
+			Price:       0,  // Test zero price
 			Status:      "MAINTENANCE",
 			PublishedAt: &yesterday,
 			Tags:        []string{}, // Test empty tags
@@ -172,7 +172,7 @@ func (s *BookFiltersComprehensiveTestSuite) setupTestBooks() {
 			Tags:        []string{"memoir", "war", "journalism"},
 		},
 	}
-	
+
 	// Create books with audit fields
 	for _, book := range s.testBooks {
 		book.CreatedBy = &s.testUser.ID
@@ -187,18 +187,18 @@ func (s *BookFiltersComprehensiveTestSuite) TestStringFilter_TitleContains() {
 		"operator": "contains",
 		"value":    "war",
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 4, "Should find 4 books with 'war' in title (case-insensitive)")
-	
+
 	// Verify the correct books were returned
 	titles := s.extractFieldValues(items, "title")
 	s.Contains(titles, "War and Peace")
@@ -214,15 +214,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestStringFilter_AuthorStartsWith() 
 		"operator": "starts_with",
 		"value":    "J",
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 3) // James Wilson, Jon Bentley, John Smith
 }
@@ -234,15 +234,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestNumberFilter_PriceGreaterThan() 
 		"operator": "greater_than",
 		"value":    25.0,
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 2) // War and Peace (45.99), Programming Pearls (39.99)
 }
@@ -254,15 +254,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestNumberFilter_PriceBetween() {
 		"operator": "between",
 		"value":    []float64{15, 30},
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 2) // Peace Like a River (18.95), War Stories (25.00)
 }
@@ -274,15 +274,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestDateFilter_PublishedBefore() {
 		"operator": "before",
 		"value":    time.Now().AddDate(0, 0, -3).Format("2006-01-02"),
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.GreaterOrEqual(len(items), 3) // At least lastWeek, lastMonth, lastYear books
 }
@@ -296,15 +296,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestDateFilter_IsToday() {
 		"operator": "is_today",
 		"value":    nil,
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 1) // War Stories published today
 }
@@ -317,15 +317,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestEnumFilter_StatusEquals() {
 		"operator": "equals",
 		"value":    "AVAILABLE",
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 3) // War and Peace, Peace Like a River, War Stories
 }
@@ -337,15 +337,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestEnumFilter_StatusIn() {
 		"operator": "in",
 		"value":    []string{"BORROWED", "RESERVED"},
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 2) // The Art of War, Programming Pearls
 }
@@ -357,15 +357,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestArrayFilter_TagsContains() {
 		"operator": "contains",
 		"value":    "war",
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 3) // Books with "war" tag
 }
@@ -377,15 +377,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestArrayFilter_TagsIsEmpty() {
 		"operator": "is_empty",
 		"value":    nil,
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 1) // Modern Warfare Tactics has empty tags
 }
@@ -397,15 +397,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestNullCheck_PublishedAtIsNull() {
 		"operator": "is_null",
 		"value":    nil,
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 1) // The Art of War has null published_at
 }
@@ -427,15 +427,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestCombinedFilters_ANDLogic() {
 			},
 		},
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 2) // War and Peace, War Stories
 }
@@ -457,15 +457,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestCombinedFilters_ORLogic() {
 			},
 		},
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 3) // The Art of War (12.50), Modern Warfare (0), War and Peace (45.99)
 }
@@ -508,15 +508,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestComplexNestedFilters() {
 			},
 		},
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Greater(len(items), 0)
 }
@@ -548,15 +548,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestMultipleFieldTypesCombined() {
 			},
 		},
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 1) // Only Programming Pearls matches all criteria
 }
@@ -568,15 +568,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestEdgeCase_EmptyDescription() {
 		"operator": "is_empty",
 		"value":    nil,
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Len(items, 1) // Modern Warfare Tactics has empty description
 }
@@ -585,21 +585,21 @@ func (s *BookFiltersComprehensiveTestSuite) TestEdgeCase_EmptyDescription() {
 func (s *BookFiltersComprehensiveTestSuite) TestDateFilter_BetweenRange() {
 	startDate := time.Now().AddDate(0, 0, -10).Format("2006-01-02")
 	endDate := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
-	
+
 	filter := map[string]interface{}{
 		"field":    "published_at",
 		"operator": "between",
 		"value":    []string{startDate, endDate},
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Equal(1, len(items)) // Only Programming Pearls (lastWeek)
 }
@@ -613,15 +613,15 @@ func (s *BookFiltersComprehensiveTestSuite) TestStringFilter_RegexMatch() {
 		"operator": "regex_match",
 		"value":    "^978-[0-9]-",
 	}
-	
+
 	resp := s.makeFilterRequest(filter)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	s.Equal(2, len(items)) // Modern Warfare and War Stories match pattern
 }
@@ -634,24 +634,24 @@ func (s *BookFiltersComprehensiveTestSuite) TestFiltersWithSorting() {
 		"operator": "equals",
 		"value":    "AVAILABLE",
 	}
-	
+
 	req := map[string]interface{}{
-		"filters": filter,
-		"sort":    "price",
+		"filters":   filter,
+		"sort":      "price",
 		"direction": "desc",
 	}
-	
+
 	resp := s.makeRequest(req)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	items := s.getItemsFromResponse(result)
 	prices := s.extractFieldValues(items, "price")
-	
+
 	// Verify descending order
 	for i := 1; i < len(prices); i++ {
 		s.GreaterOrEqual(prices[i-1].(float64), prices[i].(float64))
@@ -665,27 +665,27 @@ func (s *BookFiltersComprehensiveTestSuite) TestFiltersWithPagination() {
 		"operator": "greater_than",
 		"value":    0,
 	}
-	
+
 	req := map[string]interface{}{
-		"filters": filter,
-		"page":    "1",
+		"filters":  filter,
+		"page":     "1",
 		"per_page": "2",
 	}
-	
+
 	resp := s.makeRequest(req)
 	defer resp.Body.Close()
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &result)
-	
+
 	// Get filtered items
 	items := s.getItemsFromResponse(result)
-	
+
 	// Verify filter is working - should return 5 books with price > 0
 	s.Equal(5, len(items), "Should return 5 books with price > 0")
-	
+
 	// Note: Pagination might be implemented at the controller level
 	// This test primarily verifies that filters work with additional query parameters
 }
@@ -702,11 +702,11 @@ func (s *BookFiltersComprehensiveTestSuite) makeFilterRequest(filter interface{}
 func (s *BookFiltersComprehensiveTestSuite) makeRequest(params interface{}) *http.Response {
 	// First login to get auth cookie
 	s.loginUser("test@example.com", "password")
-	
+
 	// Create request with filters as query parameters
 	url := fmt.Sprintf("%s/api/books", s.server.URL)
 	req, _ := http.NewRequest("GET", url, nil)
-	
+
 	// Add filters as query parameter
 	if params != nil {
 		q := req.URL.Query()
@@ -720,9 +720,9 @@ func (s *BookFiltersComprehensiveTestSuite) makeRequest(params interface{}) *htt
 		}
 		req.URL.RawQuery = q.Encode()
 	}
-	
+
 	req.Header.Set("Accept", "application/json")
-	
+
 	resp, _ := s.client.Do(req)
 	return resp
 }
@@ -733,14 +733,17 @@ func (s *BookFiltersComprehensiveTestSuite) loginUser(email, password string) *h
 		"password": password,
 	}
 	body, _ := json.Marshal(loginData)
-	
+
 	req, _ := http.NewRequest("POST", fmt.Sprintf("%s/api/auth/login", s.server.URL), bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	
-	resp, _ := s.client.Do(req)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil
+	}
 	defer resp.Body.Close()
-	
+
 	// Get auth cookie
 	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "goravel_session" {
@@ -775,7 +778,7 @@ func (s *BookFiltersComprehensiveTestSuite) TearDownTest() {
 		orm.Query().Exec("DELETE FROM roles")
 		orm.Query().Exec("DELETE FROM users WHERE email = 'test@example.com'")
 	}
-	
+
 	if s.server != nil {
 		s.server.Close()
 	}

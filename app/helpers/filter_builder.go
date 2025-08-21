@@ -24,7 +24,7 @@ func (f *FilterBuilder) Search(fields []string, term string) *FilterBuilder {
 	}
 
 	searchTerm := "%" + term + "%"
-	
+
 	// Build OR conditions for search
 	f.query = f.query.Where(func(query orm.Query) orm.Query {
 		for i, field := range fields {
@@ -36,7 +36,7 @@ func (f *FilterBuilder) Search(fields []string, term string) *FilterBuilder {
 		}
 		return query
 	})
-	
+
 	return f
 }
 

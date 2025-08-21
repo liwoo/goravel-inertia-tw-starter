@@ -13,13 +13,13 @@ import (
 
 // PageProps represents the typed structure for Inertia.js page props
 type PageProps struct {
-	Data        PaginatedData          `json:"data"`
-	Filters     FilterState            `json:"filters"`
-	Permissions PermissionsMap         `json:"permissions"`
-	Meta        PageMetadata           `json:"meta"`
+	Data        PaginatedData  `json:"data"`
+	Filters     FilterState    `json:"filters"`
+	Permissions PermissionsMap `json:"permissions"`
+	Meta        PageMetadata   `json:"meta"`
 	// Additional props can be added via composition
-	Stats       interface{}            `json:"stats,omitempty"`
-	Extra       map[string]interface{} `json:"-"` // For custom fields
+	Stats interface{}            `json:"stats,omitempty"`
+	Extra map[string]interface{} `json:"-"` // For custom fields
 }
 
 // PermissionMatrixPageProps represents specialized props for permission matrix pages
@@ -37,7 +37,7 @@ type PermissionMatrixPageProps struct {
 func (p PermissionMatrixPageProps) ToMap() map[string]interface{} {
 	// Get base props map
 	result := p.PageProps.ToMap()
-	
+
 	// Add permission matrix specific fields
 	result["allPermissions"] = p.AllPermissions
 	result["services"] = p.Services
@@ -45,7 +45,7 @@ func (p PermissionMatrixPageProps) ToMap() map[string]interface{} {
 	result["matrixData"] = p.MatrixData
 	result["title"] = p.Title
 	result["subtitle"] = p.Subtitle
-	
+
 	return result
 }
 
@@ -85,7 +85,7 @@ type PermissionsMap struct {
 	IsAdmin       bool `json:"isAdmin"`
 	IsSuperAdmin  bool `json:"isSuperAdmin"`
 	// Additional custom permissions
-	Custom        map[string]bool `json:"-"`
+	Custom map[string]bool `json:"-"`
 }
 
 // PageMetadata represents page metadata
@@ -113,17 +113,17 @@ func (p PageProps) ToMap() map[string]interface{} {
 		"permissions": p.Permissions.ToMap(),
 		"meta":        p.Meta.ToMap(),
 	}
-	
+
 	// Add stats if present
 	if p.Stats != nil {
 		result["stats"] = p.Stats
 	}
-	
+
 	// Add any extra fields
 	for k, v := range p.Extra {
 		result[k] = v
 	}
-	
+
 	return result
 }
 
@@ -141,12 +141,12 @@ func (p PermissionsMap) ToMap() map[string]bool {
 		"isAdmin":       p.IsAdmin,
 		"isSuperAdmin":  p.IsSuperAdmin,
 	}
-	
+
 	// Add custom permissions
 	for k, v := range p.Custom {
 		result[k] = v
 	}
-	
+
 	return result
 }
 
@@ -163,12 +163,12 @@ func (m PageMetadata) ToMap() map[string]interface{} {
 			"allowedSizes":    m.PaginationConfig.AllowedSizes,
 		},
 	}
-	
+
 	// Add custom metadata
 	for k, v := range m.Custom {
 		result[k] = v
 	}
-	
+
 	return result
 }
 
@@ -195,29 +195,28 @@ func NewBaseCrudController(resourceType string) *BaseCrudController {
 
 func (c *BaseCrudController) ValidatePaginationRequest(ctx http.Context) (*ListRequest, error) {
 	req := &ListRequest{}
-	
+
 	// Set the HTTP context for permission checks
 	req.Context = ctx
-	
+
 	// Parse pagination parameters
 	req.Page = ctx.Request().QueryInt("page", 1)
 	req.PageSize = ctx.Request().QueryInt("pageSize", c.defaultPageSize)
 	req.Search = ctx.Request().Query("search", "")
 	req.Sort = ctx.Request().Query("sort", "")
 	req.Direction = ctx.Request().Query("direction", "")
-	
+
 	// Normalize direction to uppercase for consistency
 	if req.Direction != "" {
 		req.Direction = strings.ToUpper(req.Direction)
 	}
-	
-	
+
 	// Parse filters from query parameters
 	req.Filters = make(map[string]interface{})
-	
+
 	// Get all query parameters as strings
 	queries := ctx.Request().Queries()
-	
+
 	// List of known non-filter parameters
 	knownParams := map[string]bool{
 		"page":      true,
@@ -227,7 +226,7 @@ func (c *BaseCrudController) ValidatePaginationRequest(ctx http.Context) (*ListR
 		"direction": true,
 		"filters":   true, // Special parameter for custom filters JSON
 	}
-	
+
 	// Check for custom filters JSON parameter
 	if filtersJSON := ctx.Request().Query("filters", ""); filtersJSON != "" {
 		// Parse custom filters from JSON
@@ -235,7 +234,7 @@ func (c *BaseCrudController) ValidatePaginationRequest(ctx http.Context) (*ListR
 			req.Filters["__custom_filters"] = customFilters
 		}
 	}
-	
+
 	// Add all other query parameters as simple filters
 	for key := range queries {
 		if !knownParams[key] {
@@ -246,21 +245,20 @@ func (c *BaseCrudController) ValidatePaginationRequest(ctx http.Context) (*ListR
 			}
 		}
 	}
-	
-	
+
 	// Validate pagination parameters
 	if req.Page <= 0 {
 		return nil, fmt.Errorf("page must be greater than 0")
 	}
-	
+
 	if req.PageSize <= 0 {
 		req.PageSize = c.defaultPageSize
 	}
-	
+
 	if req.PageSize > c.maxPageSize {
 		return nil, fmt.Errorf("pageSize cannot exceed %d", c.maxPageSize)
 	}
-	
+
 	// Validate page size is in allowed sizes
 	validPageSize := false
 	for _, size := range c.allowedPageSizes {
@@ -269,11 +267,11 @@ func (c *BaseCrudController) ValidatePaginationRequest(ctx http.Context) (*ListR
 			break
 		}
 	}
-	
+
 	if !validPageSize {
 		req.PageSize = c.defaultPageSize
 	}
-	
+
 	// Validate sort direction
 	if req.Direction != "" {
 		upper := strings.ToUpper(req.Direction)
@@ -283,10 +281,10 @@ func (c *BaseCrudController) ValidatePaginationRequest(ctx http.Context) (*ListR
 			req.Direction = upper
 		}
 	}
-	
+
 	// Set defaults
 	req.SetDefaults()
-	
+
 	return req, nil
 }
 
@@ -308,42 +306,42 @@ func (c *BaseCrudController) BuildTypedPaginatedResponse(result *PaginatedResult
 
 func (c *BaseCrudController) ValidateSearchRequest(ctx http.Context) (*SearchRequest, error) {
 	req := &SearchRequest{}
-	
+
 	// Parse search parameters
 	req.Query = ctx.Request().Query("q", "")
 	req.Page = ctx.Request().QueryInt("page", 1)
 	req.PageSize = ctx.Request().QueryInt("pageSize", c.defaultPageSize)
 	req.Sort = ctx.Request().Query("sort", "relevance")
 	req.Direction = ctx.Request().Query("direction", "DESC")
-	
+
 	// Parse searchIn fields
 	searchInStr := ctx.Request().Query("searchIn", "")
 	if searchInStr != "" {
 		req.SearchIn = strings.Split(searchInStr, ",")
 	}
-	
+
 	// Parse boolean flags
 	req.Exact = ctx.Request().Query("exact", "false") == "true"
 	req.Highlight = ctx.Request().Query("highlight", "true") == "true"
-	
+
 	// Parse filters from query parameters
 	req.Filters = make(map[string]interface{})
-	
+
 	// Get all query parameters
 	queries := ctx.Request().Queries()
-	
+
 	// List of known non-filter parameters for search
 	knownParams := map[string]bool{
-		"q":          true,
-		"page":       true,
-		"pageSize":   true,
-		"sort":       true,
-		"direction":  true,
-		"searchIn":   true,
-		"exact":      true,
-		"highlight":  true,
+		"q":         true,
+		"page":      true,
+		"pageSize":  true,
+		"sort":      true,
+		"direction": true,
+		"searchIn":  true,
+		"exact":     true,
+		"highlight": true,
 	}
-	
+
 	// Add all other query parameters as filters
 	for key, values := range queries {
 		if !knownParams[key] && len(values) > 0 {
@@ -351,43 +349,43 @@ func (c *BaseCrudController) ValidateSearchRequest(ctx http.Context) (*SearchReq
 			req.Filters[key] = values[0]
 		}
 	}
-	
+
 	// Validate search query
 	if strings.TrimSpace(req.Query) == "" {
 		return nil, fmt.Errorf("search query cannot be empty")
 	}
-	
+
 	// Validate pagination
 	if req.Page <= 0 {
 		return nil, fmt.Errorf("page must be greater than 0")
 	}
-	
+
 	if req.PageSize <= 0 || req.PageSize > c.maxPageSize {
 		req.PageSize = c.defaultPageSize
 	}
-	
+
 	// Set defaults
 	req.SetDefaults()
-	
+
 	return req, nil
 }
 
 func (c *BaseCrudController) BuildSearchResponse(result *PaginatedResult, request *SearchRequest) map[string]interface{} {
 	// Build typed response
 	response := c.BuildTypedSearchResponse(result, request)
-	
+
 	// Convert to map with legacy structure for compatibility
 	return map[string]interface{}{
 		"data":       response.Results,
 		"pagination": response.Pagination,
 		"search": map[string]interface{}{
-			"query":       request.Query,
-			"sort":        request.Sort,
-			"direction":   request.Direction,
-			"searchIn":    request.SearchIn,
-			"exact":       request.Exact,
-			"highlight":   request.Highlight,
-			"filters":     request.Filters,
+			"query":     request.Query,
+			"sort":      request.Sort,
+			"direction": request.Direction,
+			"searchIn":  request.SearchIn,
+			"exact":     request.Exact,
+			"highlight": request.Highlight,
+			"filters":   request.Filters,
 		},
 	}
 }
@@ -404,7 +402,7 @@ func (c *BaseCrudController) BuildTypedSearchResponse(result *PaginatedResult, r
 		HasNext:     result.HasNext,
 		HasPrev:     result.HasPrev,
 	}
-	
+
 	filters := FiltersMeta{
 		Page:      request.Page,
 		PageSize:  request.PageSize,
@@ -413,15 +411,15 @@ func (c *BaseCrudController) BuildTypedSearchResponse(result *PaginatedResult, r
 		Direction: request.Direction,
 		Filters:   request.Filters,
 	}
-	
+
 	response := NewSearchResponse(result.Data, request.Query, pagination, filters)
-	
+
 	// Add search metadata
 	if len(request.SearchIn) > 0 {
 		response.Meta.SearchedIn = request.SearchIn
 	}
 	response.Meta.Highlighted = request.Highlight
-	
+
 	return response
 }
 
@@ -432,16 +430,16 @@ func (c *BaseCrudController) ValidateID(ctx http.Context, paramName string) (uin
 	if idStr == "" {
 		return 0, fmt.Errorf("%s parameter is required", paramName)
 	}
-	
+
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		return 0, fmt.Errorf("invalid %s: must be a positive integer", paramName)
 	}
-	
+
 	if id == 0 {
 		return 0, fmt.Errorf("invalid %s: must be greater than 0", paramName)
 	}
-	
+
 	return uint(id), nil
 }
 
@@ -616,7 +614,7 @@ func (c *BaseCrudController) BulkOperationResponse(ctx http.Context, bulkResult 
 		Data:    bulkResult,
 		Message: message,
 	}
-	
+
 	// Determine appropriate status code
 	statusCode := http.StatusOK
 	if bulkResult.FailedCount > 0 && bulkResult.SuccessCount == 0 {
@@ -624,7 +622,7 @@ func (c *BaseCrudController) BulkOperationResponse(ctx http.Context, bulkResult 
 	} else if bulkResult.FailedCount > 0 {
 		statusCode = http.StatusPartialContent
 	}
-	
+
 	return ctx.Response().Json(statusCode, response)
 }
 
@@ -706,26 +704,26 @@ func (c *BasePageController) BuildPageProps(data interface{}, filters interface{
 		"filters":     filters,
 		"permissions": permissions,
 	}
-	
+
 	if meta != nil {
 		for key, value := range meta {
 			props[key] = value
 		}
 	}
-	
+
 	// Add page metadata
 	props["meta"] = c.GetPageMetadata()
-	
+
 	return props
 }
 
 func (c *BasePageController) GetPageMetadata() map[string]interface{} {
 	return map[string]interface{}{
-		"version":       "1.0.0",
-		"component":     c.pageComponent,
-		"resourceType":  c.resourceType,
-		"timestamp":     "1234567890", // Could use time.Now().Unix()
-		"pagination":    c.GetPaginationConfig(),
+		"version":      "1.0.0",
+		"component":    c.pageComponent,
+		"resourceType": c.resourceType,
+		"timestamp":    "1234567890", // Could use time.Now().Unix()
+		"pagination":   c.GetPaginationConfig(),
 	}
 }
 
@@ -746,7 +744,7 @@ func (c *BasePageController) BuildTypedPermissions(perms map[string]bool) Permis
 	result := PermissionsMap{
 		Custom: make(map[string]bool),
 	}
-	
+
 	// Map known permissions
 	for key, value := range perms {
 		switch key {
@@ -775,16 +773,16 @@ func (c *BasePageController) BuildTypedPermissions(perms map[string]bool) Permis
 			result.Custom[key] = value
 		}
 	}
-	
+
 	return result
 }
 
 // GetPermissionMatrixProps builds typed props for permission matrix pages
-func (c *BasePageController) GetPermissionMatrixProps(data interface{}, filters map[string]interface{}, 
-	permissions PermissionsMap, stats interface{}, allPermissions []interface{}, 
+func (c *BasePageController) GetPermissionMatrixProps(data interface{}, filters map[string]interface{},
+	permissions PermissionsMap, stats interface{}, allPermissions []interface{},
 	services []interface{}, actions []interface{}, matrixData map[string]interface{},
 	title, subtitle string) PermissionMatrixPageProps {
-	
+
 	// Convert data to PaginatedData
 	var paginatedData PaginatedData
 	if dataMap, ok := data.(map[string]interface{}); ok {
@@ -810,12 +808,12 @@ func (c *BasePageController) GetPermissionMatrixProps(data interface{}, filters 
 			paginatedData.To = to
 		}
 	}
-	
+
 	// Build filter state
 	filterState := FilterState{
 		Filters: filters,
 	}
-	
+
 	return PermissionMatrixPageProps{
 		PageProps: PageProps{
 			Data:        paginatedData,
@@ -852,29 +850,29 @@ func ValidateControllerImplementation(controller interface{}) ControllerValidati
 		MissingMethods:   []string{},
 		InvalidResponses: []string{},
 	}
-	
+
 	// Check if controller implements CrudControllerContract
 	if _, ok := controller.(CrudControllerContract); !ok {
 		result.Valid = false
 		result.Errors = append(result.Errors, "controller does not implement CrudControllerContract interface")
 	}
-	
+
 	// Check if controller implements individual contracts
 	if _, ok := controller.(PaginationControllerContract); !ok {
 		result.Valid = false
 		result.MissingMethods = append(result.MissingMethods, "PaginationControllerContract")
 	}
-	
+
 	if _, ok := controller.(ValidationControllerContract); !ok {
 		result.Valid = false
 		result.MissingMethods = append(result.MissingMethods, "ValidationControllerContract")
 	}
-	
+
 	if _, ok := controller.(ResponseControllerContract); !ok {
 		result.Valid = false
 		result.MissingMethods = append(result.MissingMethods, "ResponseControllerContract")
 	}
-	
+
 	return result
 }
 
@@ -884,12 +882,12 @@ func (c *BaseCrudController) ParseCustomFilters(filtersJSON string) (interface{}
 	if err := json.Unmarshal([]byte(filtersJSON), &filterData); err != nil {
 		return nil, fmt.Errorf("invalid filter JSON: %v", err)
 	}
-	
+
 	// Check if it's a compound filter
 	if _, hasLogic := filterData["logic"]; hasLogic {
 		return ParseCompoundFilter(filterData)
 	}
-	
+
 	// Otherwise, it's a simple filter
 	return ParseFilterQuery(filterData)
 }

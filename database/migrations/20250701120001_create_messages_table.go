@@ -22,31 +22,31 @@ func (receiver *CreateMessagesTable) Description() string {
 func (receiver *CreateMessagesTable) Up() error {
 	return facades.Schema().Create("messages", func(table schema.Blueprint) {
 		table.ID()
-		
+
 		// Core message fields
 		table.Text("content")
 		table.String("type", 20).Default("direct") // direct, group, system
 		table.String("status", 20).Default("sent") // sent, delivered, read, deleted
-		
+
 		// User relationships
 		table.UnsignedBigInteger("sender_id")
 		table.UnsignedBigInteger("recipient_id").Nullable()
-		
+
 		// Group messaging (for future use)
 		table.UnsignedBigInteger("group_id").Nullable()
-		
+
 		// Message metadata
 		table.Boolean("is_edited").Default(false)
 		table.Timestamp("edited_at").Nullable()
 		table.Timestamp("read_at").Nullable()
 		table.Timestamp("delivered_at").Nullable()
-		
+
 		// Threading support
 		table.UnsignedBigInteger("parent_message_id").Nullable()
-		
+
 		// Attachments support
 		table.Boolean("has_attachments").Default(false)
-		
+
 		table.Timestamps()
 		table.SoftDeletes()
 	})

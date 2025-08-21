@@ -112,7 +112,7 @@ func (s *UserCRUDTestSuite) TestCreateUser_ShortPassword_ValidationError() {
 	userData := map[string]interface{}{
 		"name":           "Test User",
 		"email":          "test@example.com",
-		"password":       "123",    // Too short
+		"password":       "123", // Too short
 		"is_active":      true,
 		"is_super_admin": false,
 	}
@@ -270,9 +270,9 @@ func (s *UserCRUDTestSuite) TestListUsers_WithPagination_Success() {
 
 	// Test pagination
 	request := contracts.ListRequest{
-		Page:     1,
-		PageSize: 3,
-		Sort:     "created_at",
+		Page:      1,
+		PageSize:  3,
+		Sort:      "created_at",
 		Direction: "DESC",
 	}
 
@@ -352,43 +352,43 @@ func (s *UserCRUDTestSuite) TestCreateUser_ReproduceUIValidationError_Debug() {
 
 	// This should succeed with valid data
 	result, err := s.userService.Create(userData)
-	
+
 	if err != nil {
 		s.T().Logf("ERROR: User creation failed: %v", err)
 		s.T().Logf("This indicates a validation bug - valid data is being rejected")
-		
+
 		// Log the full error details for debugging
 		s.T().Logf("Full error string: %s", err.Error())
-		
+
 		// Check if it's a validation error with specific messages
 		if errStr := err.Error(); errStr != "" {
 			s.T().Logf("Error analysis:")
-			if contains := func(s, substr string) bool { 
-				return len(s) >= len(substr) && (len(substr) == 0 || s[len(s)-len(substr):] == substr || 
-				       (len(s) > len(substr) && s[:len(substr)] == substr) || 
-				       (len(s) > len(substr) && s[len(s)-len(substr):] == substr))
+			if contains := func(s, substr string) bool {
+				return len(s) >= len(substr) && (len(substr) == 0 || s[len(s)-len(substr):] == substr ||
+					(len(s) > len(substr) && s[:len(substr)] == substr) ||
+					(len(s) > len(substr) && s[len(s)-len(substr):] == substr))
 			}; contains(errStr, "max") {
 				s.T().Log("- Contains 'max' validation error (unexpected for short strings)")
 			}
-			if contains := func(s, substr string) bool { 
-				return len(s) >= len(substr) && (len(substr) == 0 || s[len(s)-len(substr):] == substr || 
-				       (len(s) > len(substr) && s[:len(substr)] == substr) || 
-				       (len(s) > len(substr) && s[len(s)-len(substr):] == substr))
+			if contains := func(s, substr string) bool {
+				return len(s) >= len(substr) && (len(substr) == 0 || s[len(s)-len(substr):] == substr ||
+					(len(s) > len(substr) && s[:len(substr)] == substr) ||
+					(len(s) > len(substr) && s[len(s)-len(substr):] == substr))
 			}; contains(errStr, "min") {
 				s.T().Log("- Contains 'min' validation error")
 			}
 		}
-		
+
 		// This assertion will fail and show the validation issue
 		s.NoError(err, "User creation should succeed with valid data - this indicates a validation bug")
 	} else {
 		s.T().Log("SUCCESS: User creation succeeded as expected")
 		s.NotNil(result)
-		
+
 		createdUser := result.(*models.User)
 		s.Equal("Test User", createdUser.Name)
 		s.Equal("test@example.com", createdUser.Email)
-		
+
 		s.T().Log("User created successfully - no validation bug detected")
 	}
 }

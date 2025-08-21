@@ -1,8 +1,8 @@
 package contracts
 
 import (
-	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/database/orm"
+	"github.com/goravel/framework/contracts/http"
 )
 
 // ============================================================================
@@ -17,17 +17,17 @@ type CrudServiceContract interface {
 	Create(data map[string]interface{}) (interface{}, error)
 	Update(id uint, data map[string]interface{}) (interface{}, error)
 	Delete(id uint) error
-	
+
 	// Search and filtering
 	Search(query string, req ListRequest) (*PaginatedResult, error)
 	GetListAdvanced(req ListRequest, filters map[string]interface{}) (*PaginatedResult, error)
-	
+
 	// Metadata
 	GetSearchableFields() []string
 	GetSortableFields() []string
 	GetFilterableFields() []string
 	GetValidationRules() map[string]interface{}
-	
+
 	// Column mapping for frontend/backend field names
 	GetColumnMapping() map[string]string
 	MapSortField(frontendField string) (string, bool)
@@ -36,7 +36,7 @@ type CrudServiceContract interface {
 // GenericCrudServiceContract extends CrudServiceContract with type safety
 type GenericCrudServiceContract[T any] interface {
 	CrudServiceContract
-	
+
 	// Type-safe methods
 	GetByIDTyped(id uint) (*T, error)
 	CreateTyped(data map[string]interface{}) (*T, error)
@@ -70,10 +70,10 @@ type RequestContract interface {
 	Rules(ctx http.Context) map[string]string
 	Messages(ctx http.Context) map[string]string
 	Attributes(ctx http.Context) map[string]string
-	
+
 	// Authorization
 	Authorize(ctx http.Context) error
-	
+
 	// Lifecycle hooks
 	PrepareForValidation(ctx http.Context) error
 	PassedValidation(ctx http.Context) error
@@ -114,14 +114,14 @@ type ServiceBuilderContract interface {
 	SetSortFields(fields ...string) ServiceBuilderContract
 	SetFilterFields(fields ...string) ServiceBuilderContract
 	SetValidationRules(rules map[string]interface{}) ServiceBuilderContract
-	
+
 	// Optional configuration methods
 	SetRelations(relations ...string) ServiceBuilderContract
 	SetDefaultSort(field string, direction string) ServiceBuilderContract
 	SetDefaultPageSize(size int) ServiceBuilderContract
 	EnableSoftDeletes() ServiceBuilderContract
 	EnableScopeFiltering(serviceRegistry string, userField string) ServiceBuilderContract
-	
+
 	// Hook methods
 	SetBeforeCreate(hook func(data map[string]interface{}) error) ServiceBuilderContract
 	SetAfterCreate(hook func(model interface{}) error) ServiceBuilderContract
@@ -129,12 +129,12 @@ type ServiceBuilderContract interface {
 	SetAfterUpdate(hook func(model interface{}) error) ServiceBuilderContract
 	SetBeforeDelete(hook func(id uint) error) ServiceBuilderContract
 	SetAfterDelete(hook func(id uint) error) ServiceBuilderContract
-	
+
 	// Custom behavior
 	SetCustomSearch(fn func(query orm.Query, search string) orm.Query) ServiceBuilderContract
 	SetCustomFilters(fn func(query orm.Query, filters map[string]interface{}) orm.Query) ServiceBuilderContract
 	SetCustomQuery(fn func(query orm.Query) orm.Query) ServiceBuilderContract
-	
+
 	// Build method to finalize and return the service
 	Build() (CrudServiceContract, error)
 }

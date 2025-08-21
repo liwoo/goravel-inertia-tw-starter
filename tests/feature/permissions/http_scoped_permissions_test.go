@@ -23,7 +23,7 @@ import (
 type HTTPScopedPermissionsTestSuite struct {
 	suite.Suite
 	tests.TestCase
-	
+
 	server *httptest.Server
 	client *http.Client
 }
@@ -35,7 +35,7 @@ func TestHTTPScopedPermissionsTestSuite(t *testing.T) {
 func (s *HTTPScopedPermissionsTestSuite) SetupTest() {
 	// Start test server first - this ensures facades are initialized
 	s.startTestServer()
-	
+
 	// Run migrations to ensure schema is up to date
 	s.RefreshDatabase()
 }
@@ -52,7 +52,7 @@ func (s *HTTPScopedPermissionsTestSuite) TearDownTest() {
 		orm.Query().Exec("DELETE FROM permissions WHERE name LIKE 'Test %' OR slug LIKE 'books_create' OR slug LIKE 'books_read' OR slug LIKE 'books_update' OR slug LIKE 'books_delete'")
 		orm.Query().Exec("DELETE FROM roles WHERE name LIKE 'Test %' OR slug IN ('author', 'viewer', 'member', 'test_admin', 'test_member', 'test_viewer')")
 	}
-	
+
 	if s.server != nil {
 		s.server.Close()
 	}
@@ -61,7 +61,7 @@ func (s *HTTPScopedPermissionsTestSuite) TearDownTest() {
 func (s *HTTPScopedPermissionsTestSuite) startTestServer() {
 	// Create a test server
 	s.server = httptest.NewServer(facades.Route())
-	
+
 	// Create HTTP client with cookie jar
 	jar, _ := cookiejar.New(nil)
 	s.client = &http.Client{
@@ -97,20 +97,20 @@ func (s *HTTPScopedPermissionsTestSuite) loginUser(email, password string) *http
 		"email":    email,
 		"password": password,
 	}
-	
+
 	jsonData, _ := json.Marshal(loginData)
 	resp, err := s.client.Post(s.server.URL+"/api/auth/login", "application/json", bytes.NewBuffer(jsonData))
 	s.Nil(err)
-	
+
 	// Read body before deferring close
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("Login failed for %s: status=%d, body=%s\n", email, resp.StatusCode, string(body))
 		return nil
 	}
-	
+
 	// Get the auth cookie
 	for _, cookie := range resp.Cookies() {
 		fmt.Printf("Cookie found: %s = %s\n", cookie.Name, cookie.Value)
@@ -118,11 +118,11 @@ func (s *HTTPScopedPermissionsTestSuite) loginUser(email, password string) *http
 			return cookie
 		}
 	}
-	
+
 	// If no cookie found, try to debug
 	fmt.Printf("Login response for %s: %s\n", email, string(body))
 	fmt.Printf("All cookies received: %v\n", resp.Cookies())
-	
+
 	// Check if token is in response body
 	var loginResp map[string]interface{}
 	if err := json.Unmarshal(body, &loginResp); err == nil {
@@ -132,7 +132,7 @@ func (s *HTTPScopedPermissionsTestSuite) loginUser(email, password string) *http
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -142,17 +142,17 @@ func (s *HTTPScopedPermissionsTestSuite) makeRequest(method, path string, body i
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Accept", "application/json")
-	
+
 	if authCookie != nil {
 		req.AddCookie(authCookie)
 		fmt.Printf("Making request to %s with cookie: %s=%s\n", path, authCookie.Name, authCookie.Value)
 	}
-	
+
 	return s.client.Do(req)
 }
 
@@ -166,7 +166,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestAdminCanSeeAllBooksWithByAllScope()
 	// Create permission with by_all scope
 	viewBooksPermission := &models.Permission{
 		Name:  "books_read_by_all",
-		Slug:  "books_read",  // Base slug without scope
+		Slug:  "books_read", // Base slug without scope
 		Scope: "by_all",
 	}
 	s.Nil(facades.Orm().Query().Create(viewBooksPermission))
@@ -178,13 +178,13 @@ func (s *HTTPScopedPermissionsTestSuite) TestAdminCanSeeAllBooksWithByAllScope()
 	admin, err := helpers.SetupJWTUser("admin@example.com", "password", adminRole)
 	s.Nil(err)
 	s.NotNil(admin)
-	
+
 	// Create normal user (will have different ID)
 	hashedPassword, err := facades.Hash().Make("password")
 	s.Nil(err)
 	normalUser := &models.User{
 		Name:     "Normal User",
-		Email:    "user@example.com", 
+		Email:    "user@example.com",
 		Password: hashedPassword,
 		IsActive: true,
 	}
@@ -200,7 +200,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestAdminCanSeeAllBooksWithByAllScope()
 		PublishedAt: &now,
 	}
 	adminBook.CreatedBy = &admin.ID
-	
+
 	userBook := &models.Book{
 		Title:       "User's Book",
 		Author:      "User Author",
@@ -208,39 +208,39 @@ func (s *HTTPScopedPermissionsTestSuite) TestAdminCanSeeAllBooksWithByAllScope()
 		PublishedAt: &now,
 	}
 	userBook.CreatedBy = &normalUser.ID
-	
+
 	s.Nil(facades.Orm().Query().Create(adminBook))
 	s.Nil(facades.Orm().Query().Create(userBook))
 
 	// Login as admin
 	authCookie := s.loginUser(admin.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for admin")
-	
+
 	// Test admin can see all books
 	resp, err := s.makeRequest("GET", "/api/books", nil, authCookie)
 	s.Nil(err)
-	
+
 	// Read response body for debugging
 	respBody, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	
+
 	fmt.Printf("Books response status: %d\n", resp.StatusCode)
 	fmt.Printf("Books response body: %s\n", string(respBody))
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.Unmarshal(respBody, &result)
 	s.Nil(err)
-	
+
 	// The response structure is {"success": true, "data": {"data": [...]}}
 	dataObj, ok := result["data"].(map[string]interface{})
 	s.True(ok, "Should have data object")
-	
+
 	data, ok := dataObj["data"].([]interface{})
 	s.True(ok, "Should have data array")
 	s.GreaterOrEqual(len(data), 2) // Should see at least our 2 test books
-	
+
 	// Check that our created books are in the results
 	foundAdminBook := false
 	foundUserBook := false
@@ -279,10 +279,10 @@ func (s *HTTPScopedPermissionsTestSuite) TestManagerCanSeeRoleBooksWithByMyRoleS
 	// Create users
 	hashedPassword, err := facades.Hash().Make("password")
 	s.Nil(err)
-	
+
 	// manager1 will be created via SetupJWTUser
 	var manager1 *models.User
-	
+
 	manager2 := &models.User{
 		Name:     "Manager 2",
 		Email:    "manager2@example.com",
@@ -299,11 +299,11 @@ func (s *HTTPScopedPermissionsTestSuite) TestManagerCanSeeRoleBooksWithByMyRoleS
 	manager1, err = helpers.SetupJWTUser("manager1@example.com", "password", managerRole)
 	s.Nil(err)
 	s.NotNil(manager1)
-	
+
 	// Create other users
 	s.Nil(facades.Orm().Query().Create(manager2))
 	s.Nil(facades.Orm().Query().Create(employee))
-	
+
 	// Assign roles (manager1 already has role from SetupJWTUser)
 	s.Nil(s.assignRole(manager2, managerRole))
 	s.Nil(s.assignRole(employee, employeeRole))
@@ -317,15 +317,15 @@ func (s *HTTPScopedPermissionsTestSuite) TestManagerCanSeeRoleBooksWithByMyRoleS
 		PublishedAt: &now,
 	}
 	manager1Book.CreatedBy = &manager1.ID
-	
+
 	manager2Book := &models.Book{
-		Title:       "Manager 2's Book", 
+		Title:       "Manager 2's Book",
 		Author:      "Manager 2",
 		ISBN:        fmt.Sprintf("MGR2-ROLE-%d-%d", time.Now().Unix(), manager2.ID),
 		PublishedAt: &now,
 	}
 	manager2Book.CreatedBy = &manager2.ID
-	
+
 	employeeBook := &models.Book{
 		Title:       "Employee's Book",
 		Author:      "Employee",
@@ -333,7 +333,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestManagerCanSeeRoleBooksWithByMyRoleS
 		PublishedAt: &now,
 	}
 	employeeBook.CreatedBy = &employee.ID
-	
+
 	s.Nil(facades.Orm().Query().Create(manager1Book))
 	s.Nil(facades.Orm().Query().Create(manager2Book))
 	s.Nil(facades.Orm().Query().Create(employeeBook))
@@ -341,34 +341,34 @@ func (s *HTTPScopedPermissionsTestSuite) TestManagerCanSeeRoleBooksWithByMyRoleS
 	// Login as manager1
 	authCookie := s.loginUser(manager1.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for manager1")
-	
+
 	// Test manager1 can see all manager books but not employee books
 	resp, err := s.makeRequest("GET", "/api/books", nil, authCookie)
 	s.Nil(err)
-	
+
 	// Read response body for debugging
 	respBody, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("Manager test response status: %d\n", resp.StatusCode)
 		fmt.Printf("Manager test response body: %s\n", string(respBody))
 	}
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.Unmarshal(respBody, &result)
 	s.Nil(err)
-	
+
 	// The response structure is {"success": true, "data": {"data": [...]}}
 	dataObj, ok := result["data"].(map[string]interface{})
 	s.True(ok, "Should have data object")
-	
+
 	data, ok := dataObj["data"].([]interface{})
 	s.True(ok, "Should have data array")
 	s.GreaterOrEqual(len(data), 2, "Should have at least the 2 manager books")
-	
+
 	// Count books from our test managers
 	managerBookCount := 0
 	employeeBookCount := 0
@@ -394,7 +394,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUserCanSeeOwnBooksWithByMeScope() {
 	// Create permission with by_me scope
 	viewBooksPermission := &models.Permission{
 		Name:  "books_read_by_me",
-		Slug:  "books_read",  // Base slug without scope
+		Slug:  "books_read", // Base slug without scope
 		Scope: "by_me",
 	}
 	s.Nil(facades.Orm().Query().Create(viewBooksPermission))
@@ -405,7 +405,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUserCanSeeOwnBooksWithByMeScope() {
 	// Create users
 	hashedPassword, err := facades.Hash().Make("password")
 	s.Nil(err)
-	
+
 	// user1 will be created via SetupJWTUser
 	var user1 *models.User
 	user2 := &models.User{
@@ -418,7 +418,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUserCanSeeOwnBooksWithByMeScope() {
 	user1, err = helpers.SetupJWTUser("user1@example.com", "password", userRole)
 	s.Nil(err)
 	s.NotNil(user1)
-	
+
 	// Create user2
 	s.Nil(facades.Orm().Query().Create(user2))
 	s.Nil(s.assignRole(user2, userRole))
@@ -432,7 +432,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUserCanSeeOwnBooksWithByMeScope() {
 		PublishedAt: &now,
 	}
 	user1Book1.CreatedBy = &user1.ID
-	
+
 	user1Book2 := &models.Book{
 		Title:       "User 1's Second Book",
 		Author:      "User 1",
@@ -440,7 +440,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUserCanSeeOwnBooksWithByMeScope() {
 		PublishedAt: &now,
 	}
 	user1Book2.CreatedBy = &user1.ID
-	
+
 	user2Book := &models.Book{
 		Title:       "User 2's Book",
 		Author:      "User 2",
@@ -448,7 +448,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUserCanSeeOwnBooksWithByMeScope() {
 		PublishedAt: &now,
 	}
 	user2Book.CreatedBy = &user2.ID
-	
+
 	s.Nil(facades.Orm().Query().Create(user1Book1))
 	s.Nil(facades.Orm().Query().Create(user1Book2))
 	s.Nil(facades.Orm().Query().Create(user2Book))
@@ -456,29 +456,29 @@ func (s *HTTPScopedPermissionsTestSuite) TestUserCanSeeOwnBooksWithByMeScope() {
 	// Login as user1
 	authCookie := s.loginUser(user1.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for user1")
-	
+
 	// Test user1 can see only their own books
 	resp, err := s.makeRequest("GET", "/api/books", nil, authCookie)
 	s.Nil(err)
-	
+
 	// Read response body
 	respBody, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.Unmarshal(respBody, &result)
 	s.Nil(err)
-	
+
 	// The response structure is {"success": true, "data": {"data": [...]}}
 	dataObj, ok := result["data"].(map[string]interface{})
 	s.True(ok, "Should have data object")
-	
+
 	data, ok := dataObj["data"].([]interface{})
 	s.True(ok, "Should have data array")
 	s.GreaterOrEqual(len(data), 2, "Should have at least the 2 user1 books")
-	
+
 	// Count books from our test user1
 	user1BookCount := 0
 	user2BookCount := 0
@@ -504,7 +504,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUserWithoutPermissionCannotAccessBo
 	// Create user
 	hashedPassword, err := facades.Hash().Make("password")
 	s.Nil(err)
-	
+
 	user := &models.User{
 		Name:     "Restricted User",
 		Email:    "restricted@example.com",
@@ -512,19 +512,19 @@ func (s *HTTPScopedPermissionsTestSuite) TestUserWithoutPermissionCannotAccessBo
 		IsActive: true,
 	}
 	s.Nil(facades.Orm().Query().Create(user))
-	
+
 	// Assign role
 	s.Nil(s.assignRole(user, userRole))
 
 	// Login as restricted user
 	authCookie := s.loginUser(user.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for restricted user")
-	
+
 	// Test user cannot access books
 	resp, err := s.makeRequest("GET", "/api/books", nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusForbidden, resp.StatusCode)
 }
 
@@ -552,7 +552,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestCreateBookWithPermission() {
 	// Login as author
 	authCookie := s.loginUser(author.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for author")
-	
+
 	// Test creating a book
 	now := time.Now()
 	// Generate unique ISBN to avoid conflicts
@@ -565,15 +565,15 @@ func (s *HTTPScopedPermissionsTestSuite) TestCreateBookWithPermission() {
 		"description":  "A test book",
 		"price":        29.99,
 	}
-	
+
 	jsonData, _ := json.Marshal(bookData)
 	resp, err := s.makeRequest("POST", "/api/books", bytes.NewBuffer(jsonData), authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	// Read body before checking status
 	bodyBytes, _ := io.ReadAll(resp.Body)
-	
+
 	if resp.StatusCode != http.StatusCreated {
 		fmt.Printf("Create failed: status=%d, body=%s\n", resp.StatusCode, string(bodyBytes))
 		// Check if it's a redirect
@@ -581,17 +581,17 @@ func (s *HTTPScopedPermissionsTestSuite) TestCreateBookWithPermission() {
 			fmt.Printf("Redirected to: %s\n", location)
 		}
 	}
-	
+
 	s.Equal(http.StatusCreated, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.Unmarshal(bodyBytes, &result)
 	s.Nil(err)
-	
+
 	// Access the created book data from the wrapped response
 	data, ok := result["data"].(map[string]interface{})
 	s.True(ok, "Response should have data field")
-	
+
 	s.Equal("New Book", data["title"])
 	s.Equal("Test Author", data["author"])
 	s.Equal(uniqueISBN, data["isbn"])
@@ -601,14 +601,14 @@ func (s *HTTPScopedPermissionsTestSuite) TestCreateBookWithPermission() {
 	var book models.Book
 	err = facades.Orm().Query().Where("isbn", uniqueISBN).First(&book)
 	s.Nil(err)
-	
+
 	if book.CreatedBy != nil {
 		fmt.Printf("Book in DB: ID=%d, CreatedBy=%d\n", book.ID, *book.CreatedBy)
 	} else {
 		fmt.Printf("Book in DB: ID=%d, CreatedBy=nil\n", book.ID)
 	}
 	fmt.Printf("Expected author.ID=%d\n", author.ID)
-	
+
 	s.NotNil(book.CreatedBy, "Book should have created_by set")
 	s.Equal(author.ID, *book.CreatedBy)
 }
@@ -630,7 +630,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUpdateBookWithScopedPermission() {
 	// Create users
 	hashedPassword, err := facades.Hash().Make("password")
 	s.Nil(err)
-	
+
 	// editor1 will be created via SetupJWTUser
 	var editor1 *models.User
 	editor2 := &models.User{
@@ -644,7 +644,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUpdateBookWithScopedPermission() {
 	s.Nil(err)
 	s.NotNil(editor1)
 	s.Greater(editor1.ID, uint(0), "JWT user must have valid ID")
-	
+
 	// Create editor2
 	s.Nil(facades.Orm().Query().Create(editor2))
 	s.Nil(s.assignRole(editor2, editorRole))
@@ -658,7 +658,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUpdateBookWithScopedPermission() {
 		PublishedAt: &now,
 	}
 	editor1Book.CreatedBy = &editor1.ID
-	
+
 	editor2Book := &models.Book{
 		Title:       "Editor 2's Book",
 		Author:      "Editor 2",
@@ -666,10 +666,10 @@ func (s *HTTPScopedPermissionsTestSuite) TestUpdateBookWithScopedPermission() {
 		PublishedAt: &now,
 	}
 	editor2Book.CreatedBy = &editor2.ID
-	
+
 	s.Nil(facades.Orm().Query().Create(editor1Book))
 	s.Nil(facades.Orm().Query().Create(editor2Book))
-	
+
 	// Debug: Print book ownership
 	fmt.Printf("Editor1 ID: %d, Editor1Book ID: %d, CreatedBy: %v\n", editor1.ID, editor1Book.ID, *editor1Book.CreatedBy)
 	fmt.Printf("Editor2 ID: %d, Editor2Book ID: %d, CreatedBy: %v\n", editor2.ID, editor2Book.ID, *editor2Book.CreatedBy)
@@ -677,7 +677,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUpdateBookWithScopedPermission() {
 	// Login as editor1
 	authCookie := s.loginUser(editor1.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for editor1")
-	
+
 	// Test editor1 can update their own book
 	updateData := map[string]interface{}{
 		"title":        "Updated Book Title",
@@ -685,22 +685,22 @@ func (s *HTTPScopedPermissionsTestSuite) TestUpdateBookWithScopedPermission() {
 		"isbn":         editor1Book.ISBN,
 		"published_at": editor1Book.PublishedAt.Format("2006-01-02 15:04:05"),
 	}
-	
+
 	jsonData, _ := json.Marshal(updateData)
 	resp, err := s.makeRequest("PUT", fmt.Sprintf("/api/books/%d", editor1Book.ID), bytes.NewBuffer(jsonData), authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// Access the updated book data from the wrapped response
 	data, ok := result["data"].(map[string]interface{})
 	s.True(ok, "Response should have data field")
-	
+
 	s.Equal("Updated Book Title", data["title"])
 	s.Equal(float64(editor1Book.ID), data["id"])
 
@@ -708,7 +708,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestUpdateBookWithScopedPermission() {
 	resp, err = s.makeRequest("PUT", fmt.Sprintf("/api/books/%d", editor2Book.ID), bytes.NewBuffer(jsonData), authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusForbidden, resp.StatusCode)
 }
 
@@ -730,7 +730,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestDeleteBookWithScopedPermission() {
 	owner1, err := helpers.SetupJWTUser("owner1@example.com", "password", ownerRole)
 	s.Nil(err)
 	s.NotNil(owner1)
-	
+
 	owner2, err := helpers.SetupJWTUser("owner2@example.com", "password", ownerRole)
 	s.Nil(err)
 	s.NotNil(owner2)
@@ -744,7 +744,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestDeleteBookWithScopedPermission() {
 		PublishedAt: &now,
 	}
 	owner1Book.CreatedBy = &owner1.ID
-	
+
 	owner2Book := &models.Book{
 		Title:       "Owner 2's Book",
 		Author:      "Owner 2",
@@ -752,20 +752,19 @@ func (s *HTTPScopedPermissionsTestSuite) TestDeleteBookWithScopedPermission() {
 		PublishedAt: &now,
 	}
 	owner2Book.CreatedBy = &owner2.ID
-	
+
 	s.Nil(facades.Orm().Query().Create(owner1Book))
 	s.Nil(facades.Orm().Query().Create(owner2Book))
-	
 
 	// Login as owner1
 	authCookie := s.loginUser(owner1.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for owner1")
-	
+
 	// Test owner1 can delete their own book
 	resp, err := s.makeRequest("DELETE", fmt.Sprintf("/api/books/%d", owner1Book.ID), nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusNoContent, resp.StatusCode)
 
 	// Skip soft delete verification for now - there's an issue with permission checking
@@ -775,7 +774,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestDeleteBookWithScopedPermission() {
 	resp, err = s.makeRequest("DELETE", fmt.Sprintf("/api/books/%d", owner2Book.ID), nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusForbidden, resp.StatusCode)
 }
 
@@ -791,7 +790,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 	createOwnPermission := &models.Permission{Name: "books_create_by_me", Slug: "books_create", Scope: "by_me"}
 	updateRolePermission := &models.Permission{Name: "books_update_by_my_role", Slug: "books_update", Scope: "by_my_role"}
 	deleteOwnPermission := &models.Permission{Name: "books_delete_by_me", Slug: "books_delete", Scope: "by_me"}
-	
+
 	s.Nil(facades.Orm().Query().Create(viewAllPermission))
 	s.Nil(facades.Orm().Query().Create(createOwnPermission))
 	s.Nil(facades.Orm().Query().Create(updateRolePermission))
@@ -809,7 +808,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 	superUser, err := helpers.SetupJWTUser("super@example.com", "password", superRole)
 	s.Nil(err)
 	s.NotNil(superUser)
-	
+
 	limitedUser, err := helpers.SetupJWTUser("limited@example.com", "password", limitedRole)
 	s.Nil(err)
 	s.NotNil(limitedUser)
@@ -823,7 +822,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 		PublishedAt: &now,
 	}
 	superBook.CreatedBy = &superUser.ID
-	
+
 	limitedBook := &models.Book{
 		Title:       "Limited's Book",
 		Author:      "Limited",
@@ -831,24 +830,24 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 		PublishedAt: &now,
 	}
 	limitedBook.CreatedBy = &limitedUser.ID
-	
+
 	s.Nil(facades.Orm().Query().Create(superBook))
 	s.Nil(facades.Orm().Query().Create(limitedBook))
 
 	// Test super user can view all books
 	superAuthCookie := s.loginUser(superUser.Email, "password")
 	s.NotNil(superAuthCookie, "Should get auth cookie for super user")
-	
+
 	resp, err := s.makeRequest("GET", "/api/books", nil, superAuthCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// Handle nested response structure
 	if dataMap, ok := result["data"].(map[string]interface{}); ok {
 		if items, ok := dataMap["data"].([]interface{}); ok {
@@ -862,11 +861,11 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 	// Test limited user cannot view books (no view permission)
 	limitedAuthCookie := s.loginUser(limitedUser.Email, "password")
 	s.NotNil(limitedAuthCookie, "Should get auth cookie for limited user")
-	
+
 	resp, err = s.makeRequest("GET", "/api/books", nil, limitedAuthCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusForbidden, resp.StatusCode)
 
 	// Test limited user can create a book
@@ -877,12 +876,12 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 		"published_at": now.Format("2006-01-02 15:04:05"),
 		"price":        19.99,
 	}
-	
+
 	jsonData, _ := json.Marshal(bookData)
 	resp, err = s.makeRequest("POST", "/api/books", bytes.NewBuffer(jsonData), limitedAuthCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusCreated, resp.StatusCode)
 
 	// Test super user cannot create (no create permission)
@@ -891,7 +890,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 	resp, err = s.makeRequest("POST", "/api/books", bytes.NewBuffer(jsonData), superAuthCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusForbidden, resp.StatusCode)
 }
 
@@ -929,26 +928,26 @@ func (s *HTTPScopedPermissionsTestSuite) TestPaginationWithScopedPermissions() {
 	// Login as viewer
 	authCookie := s.loginUser(viewer.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for viewer")
-	
+
 	// Test first page
 	resp, err := s.makeRequest("GET", "/api/books?page=1&per_page=10", nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// The response has nested structure: result.data.data contains items, result.data.pagination contains pagination info
 	dataMap := result["data"].(map[string]interface{})
 	items := dataMap["data"].([]interface{})
 	pagination := dataMap["pagination"].(map[string]interface{})
-	
+
 	// Note: API returns per_page as pageSize (20) not the requested per_page (10)
 	// We created 15 books, so first page should have all 15
-	s.Equal(15, len(items)) 
+	s.Equal(15, len(items))
 	// Total could vary based on test runs, just verify it's > 15
 	s.GreaterOrEqual(pagination["total"], float64(15))
 	s.Equal(float64(1), pagination["current_page"])
@@ -961,17 +960,17 @@ func (s *HTTPScopedPermissionsTestSuite) TestPaginationWithScopedPermissions() {
 	resp, err = s.makeRequest("GET", "/api/books?page=2&per_page=10", nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// The response has nested structure: result.data.data contains items, result.data.pagination contains pagination info
 	dataMap = result["data"].(map[string]interface{})
 	items = dataMap["data"].([]interface{})
 	pagination = dataMap["pagination"].(map[string]interface{})
-	
+
 	// Page 2 should have no items (all 15 fit on page 1)
 	s.Equal(0, len(items)) // No items on page 2
 	s.Equal(float64(2), pagination["current_page"])
@@ -1020,18 +1019,18 @@ func (s *HTTPScopedPermissionsTestSuite) TestSortingWithScopedPermissions() {
 	// Login as sorter
 	authCookie := s.loginUser(sorter.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for sorter")
-	
+
 	// Test ascending sort
 	resp, err := s.makeRequest("GET", "/api/books?sort=title&direction=asc", nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// Handle nested response structure
 	var data []interface{}
 	if dataMap, ok := result["data"].(map[string]interface{}); ok {
@@ -1041,7 +1040,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestSortingWithScopedPermissions() {
 	} else if items, ok := result["data"].([]interface{}); ok {
 		data = items
 	}
-	
+
 	s.GreaterOrEqual(len(data), 3)
 	firstBook := data[0].(map[string]interface{})
 	s.Equal("Alpha Book", firstBook["title"])
@@ -1050,12 +1049,12 @@ func (s *HTTPScopedPermissionsTestSuite) TestSortingWithScopedPermissions() {
 	resp, err = s.makeRequest("GET", "/api/books?sort=title&direction=desc", nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// Handle nested response structure
 	if dataMap, ok := result["data"].(map[string]interface{}); ok {
 		if items, ok := dataMap["data"].([]interface{}); ok {
@@ -1085,7 +1084,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestSearchWithScopedPermissions() {
 	searcher, err := helpers.SetupJWTUser("searcher@example.com", "password", searcherRole)
 	s.Nil(err)
 	s.NotNil(searcher)
-	
+
 	otherUser, err := helpers.SetupJWTUser("other@example.com", "password", searcherRole)
 	s.Nil(err)
 	s.NotNil(otherUser)
@@ -1099,7 +1098,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestSearchWithScopedPermissions() {
 		PublishedAt: &now,
 	}
 	goBook.CreatedBy = &searcher.ID
-	
+
 	pythonBook := &models.Book{
 		Title:       "Python for Beginners",
 		Author:      "Python Master",
@@ -1107,7 +1106,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestSearchWithScopedPermissions() {
 		PublishedAt: &now,
 	}
 	pythonBook.CreatedBy = &searcher.ID
-	
+
 	// This book should not appear in results (different owner)
 	javaBook := &models.Book{
 		Title:       "Java Programming",
@@ -1116,7 +1115,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestSearchWithScopedPermissions() {
 		PublishedAt: &now,
 	}
 	javaBook.CreatedBy = &otherUser.ID
-	
+
 	s.Nil(facades.Orm().Query().Create(goBook))
 	s.Nil(facades.Orm().Query().Create(pythonBook))
 	s.Nil(facades.Orm().Query().Create(javaBook))
@@ -1124,18 +1123,18 @@ func (s *HTTPScopedPermissionsTestSuite) TestSearchWithScopedPermissions() {
 	// Login as searcher
 	authCookie := s.loginUser(searcher.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for searcher")
-	
+
 	// Test search by title
 	resp, err := s.makeRequest("GET", "/api/books/search?q=Programming&page=1&pageSize=20", nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// Handle nested response structure
 	if dataMap, ok := result["data"].(map[string]interface{}); ok {
 		// Response is nested with data.data structure
@@ -1162,12 +1161,12 @@ func (s *HTTPScopedPermissionsTestSuite) TestSearchWithScopedPermissions() {
 	resp, err = s.makeRequest("GET", "/api/books/search?q=Go&page=1&pageSize=20", nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// Handle nested response structure
 	if dataMap, ok := result["data"].(map[string]interface{}); ok {
 		// Response is nested with data.data structure
@@ -1211,7 +1210,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestShowBookWithScopedPermission() {
 	reader, err := helpers.SetupJWTUser("reader@example.com", "password", readerRole)
 	s.Nil(err)
 	s.NotNil(reader)
-	
+
 	otherReader, err := helpers.SetupJWTUser("other_reader@example.com", "password", readerRole)
 	s.Nil(err)
 	s.NotNil(otherReader)
@@ -1226,7 +1225,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestShowBookWithScopedPermission() {
 		Description: "A book owned by the reader",
 	}
 	readerBook.CreatedBy = &reader.ID
-	
+
 	otherBook := &models.Book{
 		Title:       "Other's Book",
 		Author:      "Other Author",
@@ -1235,29 +1234,29 @@ func (s *HTTPScopedPermissionsTestSuite) TestShowBookWithScopedPermission() {
 		Description: "A book owned by someone else",
 	}
 	otherBook.CreatedBy = &otherReader.ID
-	
+
 	s.Nil(facades.Orm().Query().Create(readerBook))
 	s.Nil(facades.Orm().Query().Create(otherBook))
 
 	// Login as reader
 	authCookie := s.loginUser(reader.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for reader")
-	
+
 	// Test reader can view their own book
 	resp, err := s.makeRequest("GET", fmt.Sprintf("/api/books/%d", readerBook.ID), nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// Access the book data from the wrapped response
 	data, ok := result["data"].(map[string]interface{})
 	s.True(ok, "Response should have data field")
-	
+
 	s.Equal(float64(readerBook.ID), data["id"])
 	s.Equal("Reader's Book", data["title"])
 	s.Equal("A book owned by the reader", data["description"])
@@ -1266,7 +1265,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestShowBookWithScopedPermission() {
 	resp, err = s.makeRequest("GET", fmt.Sprintf("/api/books/%d", otherBook.ID), nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusForbidden, resp.StatusCode)
 }
 
@@ -1301,18 +1300,18 @@ func (s *HTTPScopedPermissionsTestSuite) TestBulkOperationsRespectScopes() {
 	// Login as admin
 	authCookie := s.loginUser(admin.Email, "password")
 	s.NotNil(authCookie, "Should get auth cookie for admin")
-	
+
 	// First verify all books exist
 	resp, err := s.makeRequest("GET", "/api/books", nil, authCookie)
 	s.Nil(err)
 	defer resp.Body.Close()
-	
+
 	s.Equal(http.StatusOK, resp.StatusCode)
-	
+
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	s.Nil(err)
-	
+
 	// Handle nested response structure
 	if dataMap, ok := result["data"].(map[string]interface{}); ok {
 		if items, ok := dataMap["data"].([]interface{}); ok {
@@ -1327,14 +1326,14 @@ func (s *HTTPScopedPermissionsTestSuite) TestBulkOperationsRespectScopes() {
 func (s *HTTPScopedPermissionsTestSuite) TestUnauthenticatedAccessDenied() {
 	// Test accessing protected endpoints without authentication
 	endpoints := []struct {
-		method string
-		path   string
+		method         string
+		path           string
 		expectedStatus int
 	}{
-		{"GET", "/api/books", http.StatusForbidden}, // Public endpoint but returns 403 without permission
-		{"POST", "/api/books", http.StatusFound}, // Protected endpoint redirects (302)
+		{"GET", "/api/books", http.StatusForbidden},  // Public endpoint but returns 403 without permission
+		{"POST", "/api/books", http.StatusFound},     // Protected endpoint redirects (302)
 		{"GET", "/api/books/1", http.StatusNotFound}, // Book doesn't exist, returns 404
-		{"PUT", "/api/books/1", http.StatusFound}, // Protected endpoint redirects (302)
+		{"PUT", "/api/books/1", http.StatusFound},    // Protected endpoint redirects (302)
 		{"DELETE", "/api/books/1", http.StatusFound}, // Protected endpoint redirects (302)
 	}
 
@@ -1342,9 +1341,9 @@ func (s *HTTPScopedPermissionsTestSuite) TestUnauthenticatedAccessDenied() {
 		resp, err := s.makeRequest(endpoint.method, endpoint.path, nil, nil)
 		s.Nil(err)
 		defer resp.Body.Close()
-		
+
 		// Check expected status based on endpoint behavior
-		s.Equal(endpoint.expectedStatus, resp.StatusCode, 
+		s.Equal(endpoint.expectedStatus, resp.StatusCode,
 			fmt.Sprintf("Expected %d for %s %s", endpoint.expectedStatus, endpoint.method, endpoint.path))
 	}
 }
@@ -1364,7 +1363,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestConcurrentRequestsWithDifferentScop
 	userPerm := &models.Permission{Name: "books_read_by_me", Slug: "books_read", Scope: "by_me"}
 	s.Nil(facades.Orm().Query().Create(adminPerm))
 	s.Nil(facades.Orm().Query().Create(userPerm))
-	
+
 	s.Nil(helpers.AssignPermissionToRole(roles[0], adminPerm, "by_all"))
 	s.Nil(helpers.AssignPermissionToRole(roles[1], userPerm, "by_me"))
 
@@ -1372,7 +1371,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestConcurrentRequestsWithDifferentScop
 	admin, err := helpers.SetupJWTUser("concurrent_admin@example.com", "password", roles[0])
 	s.Nil(err)
 	s.NotNil(admin)
-	
+
 	user, err := helpers.SetupJWTUser("concurrent_user@example.com", "password", roles[1])
 	s.Nil(err)
 	s.NotNil(user)
@@ -1387,7 +1386,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestConcurrentRequestsWithDifferentScop
 			PublishedAt: &now,
 		}
 		adminBook.CreatedBy = &admin.ID
-		
+
 		userBook := &models.Book{
 			Title:       fmt.Sprintf("User Book %d", i),
 			Author:      "User",
@@ -1395,7 +1394,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestConcurrentRequestsWithDifferentScop
 			PublishedAt: &now,
 		}
 		userBook.CreatedBy = &user.ID
-		
+
 		s.Nil(facades.Orm().Query().Create(adminBook))
 		s.Nil(facades.Orm().Query().Create(userBook))
 	}
@@ -1412,9 +1411,9 @@ func (s *HTTPScopedPermissionsTestSuite) TestConcurrentRequestsWithDifferentScop
 		count    int
 		err      error
 	}
-	
+
 	results := make(chan result, 2)
-	
+
 	// Admin request (should see all 6 books)
 	go func() {
 		resp, err := s.makeRequest("GET", "/api/books", nil, adminCookie)
@@ -1423,12 +1422,12 @@ func (s *HTTPScopedPermissionsTestSuite) TestConcurrentRequestsWithDifferentScop
 			return
 		}
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode != http.StatusOK {
 			results <- result{userType: "admin", err: fmt.Errorf("unexpected status: %d", resp.StatusCode)}
 			return
 		}
-		
+
 		var response map[string]interface{}
 		json.NewDecoder(resp.Body).Decode(&response)
 		// Handle nested response structure
@@ -1444,7 +1443,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestConcurrentRequestsWithDifferentScop
 			results <- result{userType: "admin", err: fmt.Errorf("no data field in response")}
 		}
 	}()
-	
+
 	// User request (should see only 3 books)
 	go func() {
 		resp, err := s.makeRequest("GET", "/api/books", nil, userCookie)
@@ -1453,12 +1452,12 @@ func (s *HTTPScopedPermissionsTestSuite) TestConcurrentRequestsWithDifferentScop
 			return
 		}
 		defer resp.Body.Close()
-		
+
 		if resp.StatusCode != http.StatusOK {
 			results <- result{userType: "user", err: fmt.Errorf("unexpected status: %d", resp.StatusCode)}
 			return
 		}
-		
+
 		var response map[string]interface{}
 		json.NewDecoder(resp.Body).Decode(&response)
 		// Handle nested response structure
@@ -1474,12 +1473,12 @@ func (s *HTTPScopedPermissionsTestSuite) TestConcurrentRequestsWithDifferentScop
 			results <- result{userType: "user", err: fmt.Errorf("no data field in response")}
 		}
 	}()
-	
+
 	// Collect results
 	for i := 0; i < 2; i++ {
 		res := <-results
 		s.Nil(res.err)
-		
+
 		if res.userType == "admin" {
 			// Admin should see at least 6 books (3 from each user)
 			s.GreaterOrEqual(res.count, 6, "Admin should see all books")

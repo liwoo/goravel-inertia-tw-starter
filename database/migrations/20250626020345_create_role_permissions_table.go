@@ -25,12 +25,12 @@ func (r *M20250626020345CreateRolePermissionsTable) Up() error {
 		table.Boolean("is_active").Default(true)
 		table.Timestamps()
 		table.SoftDeletes()
-		
+
 		// Add indexes
 		table.Index("role_id")
 		table.Index("permission_id")
 		table.Index("granted_by_id")
-		
+
 		// Add foreign key constraints
 		table.Foreign("role_id").References("id").On("roles")
 		table.Foreign("permission_id").References("id").On("permissions")
@@ -40,5 +40,5 @@ func (r *M20250626020345CreateRolePermissionsTable) Up() error {
 
 // Down Reverse the migrations.
 func (r *M20250626020345CreateRolePermissionsTable) Down() error {
- 	return facades.Schema().DropIfExists("role_permissions")
+	return facades.Schema().DropIfExists("role_permissions")
 }

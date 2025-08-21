@@ -82,7 +82,7 @@ func (receiver *MakeCrudGenericCommand) Handle(ctx console.Context) error {
 		router.Put("/%s/{id}", %sController.Update)
 		router.Delete("/%s/{id}", %sController.Delete)
 	})
-`, 
+`,
 		resourceNameLower, resourceNameLower, resourceName,
 		resourceNamePlural, resourceNameLower,
 		resourceNamePlural, resourceNameLower,
@@ -113,7 +113,7 @@ func createGenericService(resourceName string, searchFields, sortFields, filterF
 	}
 
 	filename := filepath.Join(servicePath, resourceNameLower+"_service.go")
-	
+
 	// Check if file already exists
 	if _, err := os.Stat(filename); err == nil {
 		return fmt.Errorf("service already exists")
@@ -229,7 +229,7 @@ func createGenericController(resourceName string) error {
 	}
 
 	filename := filepath.Join(controllerPath, resourceNameLower+"_controller.go")
-	
+
 	// Check if file already exists
 	if _, err := os.Stat(filename); err == nil {
 		return fmt.Errorf("controller already exists")

@@ -2,7 +2,7 @@ package requests
 
 import (
 	"fmt"
-	
+
 	"github.com/goravel/framework/contracts/http"
 	"players/app/contracts"
 )

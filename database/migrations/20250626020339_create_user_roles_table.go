@@ -31,5 +31,5 @@ func (r *M20250626020339CreateUserRolesTable) Up() error {
 
 // Down Reverse the migrations.
 func (r *M20250626020339CreateUserRolesTable) Down() error {
- 	return facades.Schema().DropIfExists("user_roles")
+	return facades.Schema().DropIfExists("user_roles")
 }

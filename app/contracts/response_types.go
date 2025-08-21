@@ -2,9 +2,9 @@ package contracts
 
 // PaginatedResponse represents a strongly typed paginated API response
 type PaginatedResponse struct {
-	Data       interface{}          `json:"data"`
-	Pagination PaginationInfo       `json:"pagination"`
-	Filters    FiltersMeta          `json:"filters"`
+	Data       interface{}            `json:"data"`
+	Pagination PaginationInfo         `json:"pagination"`
+	Filters    FiltersMeta            `json:"filters"`
 	Meta       map[string]interface{} `json:"meta,omitempty"`
 }
 
@@ -45,19 +45,19 @@ type CollectionResponse struct {
 
 // SearchResponse represents a search results response
 type SearchResponse struct {
-	Results    interface{}      `json:"results"`
-	Query      string           `json:"query"`
-	Pagination PaginationInfo   `json:"pagination"`
-	Filters    FiltersMeta      `json:"filters"`
-	Meta       SearchMeta       `json:"meta,omitempty"`
+	Results    interface{}    `json:"results"`
+	Query      string         `json:"query"`
+	Pagination PaginationInfo `json:"pagination"`
+	Filters    FiltersMeta    `json:"filters"`
+	Meta       SearchMeta     `json:"meta,omitempty"`
 }
 
 // SearchMeta represents search-specific metadata
 type SearchMeta struct {
-	SearchTime    float64  `json:"search_time_ms,omitempty"`
-	SearchedIn    []string `json:"searched_in,omitempty"`
-	TotalMatches  int      `json:"total_matches,omitempty"`
-	Highlighted   bool     `json:"highlighted,omitempty"`
+	SearchTime   float64  `json:"search_time_ms,omitempty"`
+	SearchedIn   []string `json:"searched_in,omitempty"`
+	TotalMatches int      `json:"total_matches,omitempty"`
+	Highlighted  bool     `json:"highlighted,omitempty"`
 }
 
 // BulkOperationResponse represents a response for bulk operations
@@ -79,10 +79,10 @@ type BulkOperationError struct {
 
 // ValidationErrorResponse represents validation error details
 type ValidationErrorResponse struct {
-	Success bool                     `json:"success"`
-	Message string                   `json:"message"`
-	Errors  map[string][]string      `json:"errors"`
-	Meta    map[string]interface{}   `json:"meta,omitempty"`
+	Success bool                   `json:"success"`
+	Message string                 `json:"message"`
+	Errors  map[string][]string    `json:"errors"`
+	Meta    map[string]interface{} `json:"meta,omitempty"`
 }
 
 // Helper methods for PaginatedResponse
@@ -119,11 +119,11 @@ func (r *PaginatedResponse) ToMap() map[string]interface{} {
 		"pagination": r.Pagination,
 		"filters":    r.Filters,
 	}
-	
+
 	if r.Meta != nil && len(r.Meta) > 0 {
 		result["meta"] = r.Meta
 	}
-	
+
 	return result
 }
 

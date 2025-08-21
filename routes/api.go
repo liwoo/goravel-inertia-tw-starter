@@ -40,7 +40,7 @@ func Api(router route.Router) {
 	// Book resource routes (with optional auth for scoped permissions)
 	router.Middleware(optionalAuth).Group(func(optionalAuthRouter route.Router) {
 		optionalAuthRouter.Get("/books", bookController.Index)
-		optionalAuthRouter.Get("/books/search", bookController.Search) // Search endpoint (must be before {id})
+		optionalAuthRouter.Get("/books/search", bookController.Search)          // Search endpoint (must be before {id})
 		optionalAuthRouter.Get("/books/filters", bookController.FilterMetadata) // Filter metadata endpoint
 		optionalAuthRouter.Get("/books/available", bookController.Available)
 		optionalAuthRouter.Get("/books/isbn/{isbn}", bookController.GetByISBN)

@@ -23,35 +23,35 @@ type BookCreateRequest struct {
 // Rules defines validation rules for book creation
 func (r *BookCreateRequest) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
-		"title":       "required",
-		"author":      "required", 
-		"isbn":        "required",
-		"price":       fmt.Sprintf("required|%s", fmt.Sprintf(contracts.MinValue, 0)),
-		"status":      "in:AVAILABLE,BORROWED,MAINTENANCE,RESERVED",
+		"title":  "required",
+		"author": "required",
+		"isbn":   "required",
+		"price":  fmt.Sprintf("required|%s", fmt.Sprintf(contracts.MinValue, 0)),
+		"status": "in:AVAILABLE,BORROWED,MAINTENANCE,RESERVED",
 	}
-	
+
 	return rules
 }
 
 // Messages defines custom validation messages
 func (r *BookCreateRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"title.required":      "Book title is required",
-		"title.max":           "Book title cannot exceed 255 characters",
-		"author.required":     "Author name is required",
-		"author.max":          "Author name cannot exceed 100 characters",
-		"isbn.required":       "ISBN is required",
-		"isbn.regex":          "ISBN must be 10-13 digits",
-		"isbn.unique":         "This ISBN already exists",
-		"price.required":      "Price is required",
-		"price.numeric":       "Price must be a valid number",
-		"price.min":           "Price must be greater than or equal to 0",
-		"status.in":           "Status must be one of: AVAILABLE, BORROWED, MAINTENANCE",
-		"publishedAt.date":    "Published date must be a valid date",
-		"publishedAt.before":  "Published date cannot be in the future",
-		"tags.array":          "Tags must be an array",
-		"tags.max":            "Maximum 10 tags allowed",
-		"tags.*.max":          "Each tag cannot exceed 50 characters",
+		"title.required":     "Book title is required",
+		"title.max":          "Book title cannot exceed 255 characters",
+		"author.required":    "Author name is required",
+		"author.max":         "Author name cannot exceed 100 characters",
+		"isbn.required":      "ISBN is required",
+		"isbn.regex":         "ISBN must be 10-13 digits",
+		"isbn.unique":        "This ISBN already exists",
+		"price.required":     "Price is required",
+		"price.numeric":      "Price must be a valid number",
+		"price.min":          "Price must be greater than or equal to 0",
+		"status.in":          "Status must be one of: AVAILABLE, BORROWED, MAINTENANCE",
+		"publishedAt.date":   "Published date must be a valid date",
+		"publishedAt.before": "Published date cannot be in the future",
+		"tags.array":         "Tags must be an array",
+		"tags.max":           "Maximum 10 tags allowed",
+		"tags.*.max":         "Each tag cannot exceed 50 characters",
 	}
 }
 
@@ -161,18 +161,18 @@ func (r *BookUpdateRequest) Rules(ctx http.Context) map[string]string {
 // Messages defines custom validation messages for updates
 func (r *BookUpdateRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"title.max":           "Book title cannot exceed 255 characters",
-		"author.max":          "Author name cannot exceed 100 characters",
-		"isbn.regex":          "ISBN must be 10-13 digits",
-		"isbn.unique":         "This ISBN already exists",
-		"price.numeric":       "Price must be a valid number",
-		"price.min":           "Price must be greater than or equal to 0",
-		"status.in":           "Status must be one of: AVAILABLE, BORROWED, MAINTENANCE",
-		"publishedAt.date":    "Published date must be a valid date",
-		"publishedAt.before":  "Published date cannot be in the future",
-		"tags.array":          "Tags must be an array",
-		"tags.max":            "Maximum 10 tags allowed",
-		"tags.*.max":          "Each tag cannot exceed 50 characters",
+		"title.max":          "Book title cannot exceed 255 characters",
+		"author.max":         "Author name cannot exceed 100 characters",
+		"isbn.regex":         "ISBN must be 10-13 digits",
+		"isbn.unique":        "This ISBN already exists",
+		"price.numeric":      "Price must be a valid number",
+		"price.min":          "Price must be greater than or equal to 0",
+		"status.in":          "Status must be one of: AVAILABLE, BORROWED, MAINTENANCE",
+		"publishedAt.date":   "Published date must be a valid date",
+		"publishedAt.before": "Published date cannot be in the future",
+		"tags.array":         "Tags must be an array",
+		"tags.max":           "Maximum 10 tags allowed",
+		"tags.*.max":         "Each tag cannot exceed 50 characters",
 	}
 }
 

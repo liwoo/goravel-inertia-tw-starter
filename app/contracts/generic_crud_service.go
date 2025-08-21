@@ -70,16 +70,16 @@ func NewGenericCrudService[T any](resourceName string, primaryKey string) *Gener
 // GetList retrieves paginated list of resources
 func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, error) {
 	facades.Log().Debug("GenericCrudService.GetList called", map[string]interface{}{
-		"service": s.tableName,
-		"page": req.Page,
-		"pageSize": req.PageSize,
-		"sort": req.Sort,
-		"direction": req.Direction,
-		"filters": req.Filters,
-		"actualService": s.actualService != nil,
+		"service":           s.tableName,
+		"page":              req.Page,
+		"pageSize":          req.PageSize,
+		"sort":              req.Sort,
+		"direction":         req.Direction,
+		"filters":           req.Filters,
+		"actualService":     s.actualService != nil,
 		"actualServiceType": fmt.Sprintf("%T", s.actualService),
 	})
-	
+
 	// Validate and sanitize request
 	if err := s.ValidateListRequest(&req); err != nil {
 		return nil, err
@@ -157,10 +157,10 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 			// Remove custom filters from regular filters
 			delete(req.Filters, "__custom_filters")
 		}
-		
+
 		// Apply field mapping to remaining filters
 		mappedFilters := s.applyFieldMapping(req.Filters)
-		
+
 		facades.Log().Info("Applying filters", map[string]interface{}{
 			"service":          s.tableName,
 			"originalFilters":  req.Filters,
@@ -313,15 +313,15 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 	// Get paginated items
 	var items []T
 	facades.Log().Info("About to execute query Find", map[string]interface{}{
-		"service": s.tableName,
-		"offset":  offset,
-		"limit":   req.PageSize,
-		"sort": req.Sort,
+		"service":   s.tableName,
+		"offset":    offset,
+		"limit":     req.PageSize,
+		"sort":      req.Sort,
 		"direction": req.Direction,
 	})
-	
+
 	// Note: SQL query will be logged by GORM if logging is enabled
-	
+
 	if err := query.Find(&items); err != nil {
 		facades.Log().Error("Query Find failed", map[string]interface{}{
 			"service": s.tableName,
@@ -496,15 +496,15 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 	// Get paginated items
 	var items []T
 	facades.Log().Info("About to execute query Find", map[string]interface{}{
-		"service": s.tableName,
-		"offset":  offset,
-		"limit":   req.PageSize,
-		"sort": req.Sort,
+		"service":   s.tableName,
+		"offset":    offset,
+		"limit":     req.PageSize,
+		"sort":      req.Sort,
 		"direction": req.Direction,
 	})
-	
+
 	// Note: SQL query will be logged by GORM if logging is enabled
-	
+
 	if err := query.Find(&items); err != nil {
 		facades.Log().Error("Query Find failed", map[string]interface{}{
 			"service": s.tableName,
@@ -552,7 +552,7 @@ func (s *GenericCrudService[T]) GetByID(id uint) (interface{}, error) {
 	var model T
 	// Create a new instance for the query
 	query := facades.Orm().Query()
-	
+
 	// Load relations if configured
 	for _, relation := range s.relations {
 		query = query.With(relation)
@@ -584,7 +584,7 @@ func (s *GenericCrudService[T]) GetByID(id uint) (interface{}, error) {
 	}
 
 	fmt.Printf("DEBUG: GetByID - Found valid model with ID %d\n", id)
-	
+
 	return &model, nil
 }
 
@@ -627,7 +627,7 @@ func (s *GenericCrudService[T]) GetByIDWithContext(ctx http.Context, id uint) (i
 func (s *GenericCrudService[T]) Create(data map[string]interface{}) (interface{}, error) {
 	// Apply field mapping first (frontend -> database)
 	mappedData := s.applyFieldMapping(data)
-	
+
 	// Validate using validation rules on mapped data
 	if err := s.validateWithRules(mappedData, false); err != nil {
 		return nil, err
@@ -749,7 +749,7 @@ func (s *GenericCrudService[T]) Delete(id uint) error {
 	if err := facades.Orm().Query().Table(s.tableName).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
 		return fmt.Errorf("failed to find %s for deletion: %w", s.tableName, err)
 	}
-	
+
 	// Now delete the found record (this should trigger soft delete)
 	if _, err := facades.Orm().Query().Delete(&model); err != nil {
 		return fmt.Errorf("failed to delete %s: %w", s.tableName, err)
@@ -1188,7 +1188,7 @@ func (s *GenericCrudService[T]) setFieldsRecursivelyHelper(modelValue reflect.Va
 				"structType": field.Type.String(),
 				"structName": field.Name,
 			})
-			
+
 			// Recursively set fields in embedded struct
 			if err := s.setFieldsRecursivelyHelper(fieldValue, data); err != nil {
 				return err
@@ -1219,9 +1219,9 @@ func (s *GenericCrudService[T]) setFieldsRecursivelyHelper(modelValue reflect.Va
 				"fieldName": fieldName,
 				"fieldType": fieldValue.Type().String(),
 				"valueType": fmt.Sprintf("%T", value),
-				"value": value,
+				"value":     value,
 			})
-			
+
 			// Handle different types of values
 			if value == nil {
 				// Set zero value for nil
@@ -1230,7 +1230,7 @@ func (s *GenericCrudService[T]) setFieldsRecursivelyHelper(modelValue reflect.Va
 			}
 
 			setValue := reflect.ValueOf(value)
-			
+
 			// Handle pointer fields
 			if fieldValue.Kind() == reflect.Ptr {
 				if setValue.Kind() == reflect.Ptr {
@@ -1267,39 +1267,39 @@ func (s *GenericCrudService[T]) setFieldsRecursivelyHelper(modelValue reflect.Va
 // applyCustomFilters applies custom filter conditions to a query
 func (s *GenericCrudService[T]) applyCustomFilters(query orm.Query, customFilters interface{}) orm.Query {
 	facades.Log().Debug("Applying custom filters", map[string]interface{}{
-		"service": s.tableName,
+		"service":    s.tableName,
 		"filterType": fmt.Sprintf("%T", customFilters),
 	})
-	
+
 	switch filter := customFilters.(type) {
 	case *FilterCondition:
 		sql, args := filter.ToSQL()
 		facades.Log().Debug("Applying FilterCondition", map[string]interface{}{
-			"sql": sql,
+			"sql":  sql,
 			"args": args,
 		})
 		if sql != "" {
 			// Use Where with raw SQL instead of WhereRaw
 			query = query.Where(sql, args...)
 		}
-		
+
 	case *CompoundFilter:
 		sql, args := filter.ToSQL()
 		facades.Log().Debug("Applying CompoundFilter", map[string]interface{}{
-			"sql": sql,
+			"sql":  sql,
 			"args": args,
 		})
 		if sql != "" {
 			// Use Where with raw SQL instead of WhereRaw
 			query = query.Where(sql, args...)
 		}
-		
+
 	default:
 		facades.Log().Warning("Unknown custom filter type", map[string]interface{}{
 			"type": fmt.Sprintf("%T", customFilters),
 		})
 	}
-	
+
 	return query
 }
 
@@ -1314,18 +1314,18 @@ func (s *GenericCrudService[T]) applyFieldMapping(data map[string]interface{}) m
 			mapping = mappingProvider.GetColumnMapping()
 		}
 	}
-	
+
 	// If no mapping available, return data as-is
 	if mapping == nil || len(mapping) == 0 {
 		return data
 	}
-	
+
 	facades.Log().Debug("GenericCrudService applyFieldMapping", map[string]interface{}{
-		"service": s.tableName,
-		"mapping": mapping,
+		"service":      s.tableName,
+		"mapping":      mapping,
 		"originalData": data,
 	})
-	
+
 	// Apply mapping
 	result := make(map[string]interface{})
 	for key, value := range data {
@@ -1351,8 +1351,8 @@ func (s *GenericCrudService[T]) applyFieldMapping(data map[string]interface{}) m
 				result[mappedKey] = value
 			}
 			facades.Log().Debug("Field mapped", map[string]interface{}{
-				"from": key,
-				"to": mappedKey,
+				"from":  key,
+				"to":    mappedKey,
 				"value": value,
 			})
 		} else {
@@ -1360,11 +1360,11 @@ func (s *GenericCrudService[T]) applyFieldMapping(data map[string]interface{}) m
 			result[key] = value
 		}
 	}
-	
+
 	facades.Log().Debug("GenericCrudService applyFieldMapping result", map[string]interface{}{
-		"service": s.tableName,
+		"service":    s.tableName,
 		"mappedData": result,
 	})
-	
+
 	return result
 }

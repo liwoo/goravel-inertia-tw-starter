@@ -43,20 +43,20 @@ const (
 	Required = "required"
 
 	// String validations
-	MinLength = "min:%d"        // min:3
-	MaxLength = "max:%d"        // max:255
+	MinLength = "min:%d" // min:3
+	MaxLength = "max:%d" // max:255
 	Email     = "email"
 	URL       = "url"
 	Alpha     = "alpha"
 	AlphaNum  = "alpha_num"
-	Regex     = "regex:%s"      // regex:^[a-zA-Z0-9_]+$
+	Regex     = "regex:%s" // regex:^[a-zA-Z0-9_]+$
 
 	// Numeric validations
 	Numeric  = "numeric"
 	Integer  = "integer"
-	MinValue = "min:%v"         // min:0
-	MaxValue = "max:%v"         // max:100
-	Between  = "between:%v,%v"  // between:1,100
+	MinValue = "min:%v"        // min:0
+	MaxValue = "max:%v"        // max:100
+	Between  = "between:%v,%v" // between:1,100
 
 	// Date validations
 	Date       = "date"

@@ -14,11 +14,11 @@ func (r *PopulateCreatedByForBooks20250723110000) Signature() string {
 // Up Run the migrations.
 func (r *PopulateCreatedByForBooks20250723110000) Up() error {
 	// In test environment with SQLite in-memory, skip this migration
-	if facades.Config().GetString("database.default") == "sqlite" && 
-	   facades.Config().GetString("database.connections.sqlite.database") == ":memory:" {
+	if facades.Config().GetString("database.default") == "sqlite" &&
+		facades.Config().GetString("database.connections.sqlite.database") == ":memory:" {
 		return nil
 	}
-	
+
 	// Get the first admin/super admin user
 	var adminUserID uint
 	err := facades.Orm().Query().Raw(`
@@ -31,7 +31,7 @@ func (r *PopulateCreatedByForBooks20250723110000) Up() error {
 		)
 		LIMIT 1
 	`).Scan(&adminUserID)
-	
+
 	if err != nil || adminUserID == 0 {
 		// If no admin found, use the first user
 		err = facades.Orm().Query().Raw(`SELECT id FROM users LIMIT 1`).Scan(&adminUserID)
@@ -40,14 +40,14 @@ func (r *PopulateCreatedByForBooks20250723110000) Up() error {
 			return nil
 		}
 	}
-	
+
 	// Update all books without created_by to use this admin user
 	_, err = facades.Orm().Query().Exec(`
 		UPDATE books 
 		SET created_by = ? 
 		WHERE created_by IS NULL
 	`, adminUserID)
-	
+
 	return err
 }
 

@@ -8,11 +8,11 @@ import (
 // InterfaceEnforcedController is a base controller that implements all required security interfaces
 type InterfaceEnforcedController[T any, C CreateRequestContract, U UpdateRequestContract] struct {
 	*EnforcedCrudController[T, C, U]
-	
+
 	// These fields ensure the interfaces are satisfied
-	authChecker      func(ctx http.Context, action string, resource interface{}) error
-	createValidator  RequestValidator
-	updateValidator  RequestValidator
+	authChecker     func(ctx http.Context, action string, resource interface{}) error
+	createValidator RequestValidator
+	updateValidator RequestValidator
 }
 
 // Compile-time check that our controller implements all required interfaces
@@ -50,19 +50,19 @@ func (v *defaultRequestValidator[C, U]) ValidateCreate(ctx http.Context, data in
 	if !ok {
 		return fmt.Errorf("invalid create request type")
 	}
-	
+
 	// Validate using the contract methods
 	if err := createReq.PrepareForValidation(ctx); err != nil {
 		return err
 	}
-	
+
 	// Here you would integrate with Goravel's validation
 	// For now, we assume the Rules() method defines validation
 	rules := createReq.Rules(ctx)
 	if len(rules) == 0 {
 		return fmt.Errorf("no validation rules defined for create request")
 	}
-	
+
 	return nil
 }
 
@@ -71,29 +71,29 @@ func (v *defaultRequestValidator[C, U]) ValidateUpdate(ctx http.Context, id stri
 	if !ok {
 		return fmt.Errorf("invalid update request type")
 	}
-	
+
 	// Validate using the contract methods
 	if err := updateReq.PrepareForValidation(ctx); err != nil {
 		return err
 	}
-	
+
 	// Here you would integrate with Goravel's validation
 	rules := updateReq.Rules(ctx)
 	if len(rules) == 0 {
 		return fmt.Errorf("no validation rules defined for update request")
 	}
-	
+
 	return nil
 }
 
 // InterfaceEnforcedBuilder builds controllers with compile-time interface enforcement
 type InterfaceEnforcedBuilder[T any, C CreateRequestContract, U UpdateRequestContract] struct {
 	controller *InterfaceEnforcedController[T, C, U]
-	
+
 	// Track what's been set
-	hasAuth     bool
-	hasCreate   bool
-	hasUpdate   bool
+	hasAuth   bool
+	hasCreate bool
+	hasUpdate bool
 }
 
 // NewInterfaceEnforcedBuilder creates a new builder
@@ -102,7 +102,7 @@ func NewInterfaceEnforcedBuilder[T any, C CreateRequestContract, U UpdateRequest
 	service CrudServiceContract,
 ) *InterfaceEnforcedBuilder[T, C, U] {
 	base := NewEnforcedCrudController[T, C, U](resourceName, service)
-	
+
 	return &InterfaceEnforcedBuilder[T, C, U]{
 		controller: &InterfaceEnforcedController[T, C, U]{
 			EnforcedCrudController: base,
@@ -148,9 +148,9 @@ func (b *InterfaceEnforcedBuilder[T, C, U]) Build() *InterfaceEnforcedController
 	if !b.hasUpdate {
 		panic("InterfaceEnforcedBuilder: ValidateUpdateRequest() must be called before Build()")
 	}
-	
+
 	// Verify the controller implements all interfaces at build time
 	var _ SecuredCrudController = b.controller
-	
+
 	return b.controller
 }

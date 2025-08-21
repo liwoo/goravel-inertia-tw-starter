@@ -14,7 +14,7 @@ import (
 // UserService implements user-specific business logic using the builder pattern
 type UserService struct {
 	contracts.CrudServiceContract // Embedded interface - inherits all methods
-	baseService contracts.CrudServiceContract
+	baseService                   contracts.CrudServiceContract
 }
 
 // NewUserService creates a new user service using the builder pattern
@@ -377,7 +377,7 @@ func (s *UserService) MapSortField(frontendField string) (string, bool) {
 			}
 		}
 	}
-	
+
 	// Check if the field is directly sortable
 	sortableFields := s.baseService.GetSortableFields()
 	for _, field := range sortableFields {
@@ -416,7 +416,7 @@ func (s *UserService) Create(data map[string]interface{}) (interface{}, error) {
 	if err := s.validateUserData(data, true); err != nil {
 		return nil, err
 	}
-	
+
 	// Call the base Create method
 	return s.baseService.Create(data)
 }
@@ -427,7 +427,7 @@ func (s *UserService) Update(id uint, data map[string]interface{}) (interface{},
 	if err := s.validateUserData(data, false); err != nil {
 		return nil, err
 	}
-	
+
 	// Call the base Update method
 	return s.baseService.Update(id, data)
 }
@@ -452,7 +452,7 @@ func (s *UserService) validateUserData(data map[string]interface{}, isCreate boo
 	} else if isCreate {
 		return fmt.Errorf("name is required")
 	}
-	
+
 	// Validate email
 	if email, exists := data["email"]; exists {
 		emailStr, ok := email.(string)
@@ -483,7 +483,7 @@ func (s *UserService) validateUserData(data map[string]interface{}, isCreate boo
 	} else if isCreate {
 		return fmt.Errorf("email is required")
 	}
-	
+
 	// Validate password
 	if password, exists := data["password"]; exists {
 		passwordStr, ok := password.(string)
@@ -499,6 +499,6 @@ func (s *UserService) validateUserData(data map[string]interface{}, isCreate boo
 	} else if isCreate {
 		return fmt.Errorf("password is required")
 	}
-	
+
 	return nil
 }

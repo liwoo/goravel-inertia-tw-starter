@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"os"
-	
+
 	"github.com/goravel/framework/contracts/database/schema"
 	"github.com/goravel/framework/facades"
 )
@@ -27,7 +27,7 @@ func (receiver *UpdateBooksPublishedAtToDatetime) Up() error {
 	if os.Getenv("DB_CONNECTION") == "sqlite" || os.Getenv("APP_ENV") == "testing" {
 		return nil
 	}
-	
+
 	return facades.Schema().Table("books", func(table schema.Blueprint) {
 		// Drop the old string column
 		table.DropColumn("published_at")
@@ -43,7 +43,7 @@ func (receiver *UpdateBooksPublishedAtToDatetime) Down() error {
 	if os.Getenv("DB_CONNECTION") == "sqlite" || os.Getenv("APP_ENV") == "testing" {
 		return nil
 	}
-	
+
 	return facades.Schema().Table("books", func(table schema.Blueprint) {
 		// Drop the datetime column
 		table.DropColumn("published_at")

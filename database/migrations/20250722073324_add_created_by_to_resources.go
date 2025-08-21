@@ -24,7 +24,7 @@ func (r *M20250722073324AddCreatedByToResources) Up() error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Add created_by to users table (for tracking who created other users)
 	err = facades.Schema().Table("users", func(table schema.Blueprint) {
 		table.UnsignedBigInteger("created_by").Nullable().Comment("User who created this user")
@@ -34,7 +34,7 @@ func (r *M20250722073324AddCreatedByToResources) Up() error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Add created_by to roles table
 	err = facades.Schema().Table("roles", func(table schema.Blueprint) {
 		table.UnsignedBigInteger("created_by").Nullable().Comment("User who created this role")
@@ -44,14 +44,14 @@ func (r *M20250722073324AddCreatedByToResources) Up() error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Add created_by to permissions table
 	err = facades.Schema().Table("permissions", func(table schema.Blueprint) {
 		table.UnsignedBigInteger("created_by").Nullable().Comment("User who created this permission")
 		table.Foreign("created_by").References("id").On("users")
 		table.Index("created_by")
 	})
-	
+
 	return err
 }
 
@@ -66,7 +66,7 @@ func (r *M20250722073324AddCreatedByToResources) Down() error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Remove from roles
 	err = facades.Schema().Table("roles", func(table schema.Blueprint) {
 		table.DropForeign("created_by")
@@ -76,7 +76,7 @@ func (r *M20250722073324AddCreatedByToResources) Down() error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Remove from users
 	err = facades.Schema().Table("users", func(table schema.Blueprint) {
 		table.DropForeign("created_by")
@@ -86,13 +86,13 @@ func (r *M20250722073324AddCreatedByToResources) Down() error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Remove from books
 	err = facades.Schema().Table("books", func(table schema.Blueprint) {
 		table.DropForeign("created_by")
 		table.DropIndex("created_by")
 		table.DropColumn("created_by")
 	})
-	
+
 	return err
 }

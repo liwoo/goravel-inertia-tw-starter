@@ -102,7 +102,7 @@ func (s *NotificationService) CreateNotification(
 	expiresAt *time.Time,
 	data string,
 ) (*models.Notification, error) {
-	
+
 	// Validate required fields
 	if title == "" {
 		return nil, fmt.Errorf("notification title is required")
@@ -155,7 +155,7 @@ func (s *NotificationService) CreateNotification(
 
 	// Emit SSE event for new notification
 	s.sseService.NotifyNewNotification(userID, notification)
-	
+
 	// Update notification counts
 	if counts, err := s.GetNotificationCounts(userID); err == nil {
 		s.sseService.UpdateNotificationCounts(userID, counts)
@@ -177,17 +177,17 @@ func (s *NotificationService) MarkAsRead(notificationID, userID uint) error {
 
 	notification.MarkAsRead()
 	err := facades.Orm().Query().Save(&notification)
-	
+
 	if err == nil {
 		// Emit SSE event
 		s.sseService.NotifyNotificationRead(userID, notificationID)
-		
+
 		// Update notification counts
 		if counts, err := s.GetNotificationCounts(userID); err == nil {
 			s.sseService.UpdateNotificationCounts(userID, counts)
 		}
 	}
-	
+
 	return err
 }
 
@@ -201,14 +201,14 @@ func (s *NotificationService) MarkAllAsRead(userID uint) error {
 			"is_read": true,
 			"read_at": now,
 		})
-	
+
 	if err == nil {
 		// Update notification counts
 		if counts, err := s.GetNotificationCounts(userID); err == nil {
 			s.sseService.UpdateNotificationCounts(userID, counts)
 		}
 	}
-	
+
 	return err
 }
 
@@ -221,17 +221,17 @@ func (s *NotificationService) DismissNotification(notificationID, userID uint) e
 
 	notification.Dismiss()
 	err := facades.Orm().Query().Save(&notification)
-	
+
 	if err == nil {
 		// Emit SSE event
 		s.sseService.NotifyNotificationDismissed(userID, notificationID)
-		
+
 		// Update notification counts
 		if counts, err := s.GetNotificationCounts(userID); err == nil {
 			s.sseService.UpdateNotificationCounts(userID, counts)
 		}
 	}
-	
+
 	return err
 }
 
@@ -315,14 +315,14 @@ func (s *NotificationService) CreateSystemNotification(
 	expiresAt *time.Time,
 	roleFilter []string, // Optional: only send to users with these roles
 ) error {
-	
+
 	if priority == "" {
 		priority = "normal"
 	}
 
 	// Get users to notify
 	query := facades.Orm().Query().Where("is_active = ?", true)
-	
+
 	if len(roleFilter) > 0 {
 		query = query.
 			Where("EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = users.id AND r.slug IN ?)", roleFilter)
@@ -336,12 +336,12 @@ func (s *NotificationService) CreateSystemNotification(
 	// Create notifications for each user
 	for _, user := range users {
 		notification := &models.Notification{
-			Title:       title,
-			Message:     message,
-			Type:        "system",
-			UserID:      user.ID,
-			Priority:    priority,
-			ExpiresAt:   expiresAt,
+			Title:     title,
+			Message:   message,
+			Type:      "system",
+			UserID:    user.ID,
+			Priority:  priority,
+			ExpiresAt: expiresAt,
 		}
 
 		if err := facades.Orm().Query().Create(notification); err != nil {
@@ -358,7 +358,7 @@ func (s *NotificationService) CreateSystemNotification(
 // GetNotificationsByType gets notifications of a specific type for a user
 func (s *NotificationService) GetNotificationsByType(userID uint, notificationType string, limit int) ([]models.Notification, error) {
 	var notifications []models.Notification
-	
+
 	query := facades.Orm().Query().Model(&models.Notification{}).
 		With("TriggerUser").
 		Where("user_id = ? AND type = ? AND is_dismissed = ?", userID, notificationType, false).

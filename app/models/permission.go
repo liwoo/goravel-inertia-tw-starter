@@ -3,20 +3,20 @@ package models
 // Permission represents a specific permission that can be granted to roles
 type Permission struct {
 	BaseAuditableModel
-	
+
 	Name        string `gorm:"uniqueIndex;not null" json:"name"`
 	Slug        string `gorm:"uniqueIndex;not null" json:"slug"`
 	Description string `gorm:"type:text" json:"description"`
-	Category    string `gorm:"index;not null" json:"category"` // e.g., "books", "users", "system"
-	Resource    string `gorm:"index" json:"resource"`          // Specific resource type
-	Action      string `gorm:"index;not null" json:"action"`   // e.g., "create", "read", "update", "delete"
+	Category    string `gorm:"index;not null" json:"category"`      // e.g., "books", "users", "system"
+	Resource    string `gorm:"index" json:"resource"`               // Specific resource type
+	Action      string `gorm:"index;not null" json:"action"`        // e.g., "create", "read", "update", "delete"
 	Scope       string `gorm:"index;default:'by_all'" json:"scope"` // by_me, by_my_role, by_all
 	IsActive    bool   `gorm:"default:true" json:"is_active"`
-	
+
 	// Permission metadata
 	RequiresOwnership bool `gorm:"default:false" json:"requires_ownership"` // User must own the resource
 	CanDelegate       bool `gorm:"default:false" json:"can_delegate"`       // Can grant this permission to others
-	
+
 	// Relationships
 	Roles []Role `gorm:"many2many:role_permissions" json:"roles,omitempty"`
 }
@@ -41,9 +41,9 @@ func (p *Permission) Matches(permissionString string) bool {
 
 // PermissionCategory represents permission categories
 type PermissionCategory struct {
-	Name        string `json:"name"`
-	Slug        string `json:"slug"`
-	Description string `json:"description"`
+	Name        string   `json:"name"`
+	Slug        string   `json:"slug"`
+	Description string   `json:"description"`
 	Actions     []string `json:"actions"`
 }
 

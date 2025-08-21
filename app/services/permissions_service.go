@@ -2,10 +2,10 @@ package services
 
 import (
 	"fmt"
-	"strings"
 	"players/app/contracts"
 	"players/app/helpers"
 	"players/app/models"
+	"strings"
 
 	"github.com/goravel/framework/facades"
 )
@@ -36,22 +36,22 @@ type PermissionMatrixData struct {
 // RoleWithPermissions includes role data with current permission assignments
 type RoleWithPermissions struct {
 	models.Role
-	PermissionIDs []uint `json:"permission_ids"`
-	PermissionCount int  `json:"permission_count"`
+	PermissionIDs   []uint `json:"permission_ids"`
+	PermissionCount int    `json:"permission_count"`
 }
 
 // PermissionGrouped represents permissions grouped by category
 type PermissionGrouped struct {
-	Category    string               `json:"category"`
-	Permissions []models.Permission  `json:"permissions"`
+	Category    string              `json:"category"`
+	Permissions []models.Permission `json:"permissions"`
 }
 
 // MatrixStats provides overview statistics
 type MatrixStats struct {
-	TotalRoles       int `json:"total_roles"`
-	TotalPermissions int `json:"total_permissions"`
-	TotalAssignments int `json:"total_assignments"`
-	ActiveRoles      int `json:"active_roles"`
+	TotalRoles        int `json:"total_roles"`
+	TotalPermissions  int `json:"total_permissions"`
+	TotalAssignments  int `json:"total_assignments"`
+	ActiveRoles       int `json:"active_roles"`
 	ActivePermissions int `json:"active_permissions"`
 }
 
@@ -93,19 +93,19 @@ func (s *PermissionsService) GetPermissionMatrix() (*PermissionMatrixData, error
 	// Build matrix data
 	matrix := make(map[uint][]uint)
 	rolesWithPermissions := make([]RoleWithPermissions, len(roles))
-	
+
 	for i, role := range roles {
 		permissionIDs := make([]uint, len(role.Permissions))
 		for j, perm := range role.Permissions {
 			permissionIDs[j] = perm.ID
 		}
-		
+
 		rolesWithPermissions[i] = RoleWithPermissions{
 			Role:            role,
 			PermissionIDs:   permissionIDs,
 			PermissionCount: len(permissionIDs),
 		}
-		
+
 		matrix[role.ID] = permissionIDs
 	}
 
@@ -147,7 +147,7 @@ func (s *PermissionsService) AssignPermissionToRole(roleID, permissionID uint) e
 		RoleID:       roleID,
 		PermissionID: permissionID,
 	}
-	
+
 	err = facades.Orm().Query().Table("role_permissions").Create(&rolePermission)
 	if err != nil {
 		return fmt.Errorf("failed to assign permission: %w", err)
@@ -221,7 +221,7 @@ func (s *PermissionsService) SyncRolePermissions(roleID uint, permissionIDs []ui
 			RoleID:       roleID,
 			PermissionID: permissionID,
 		}
-		
+
 		err = tx.Table("role_permissions").Create(&rolePermission)
 		if err != nil {
 			tx.Rollback()
@@ -250,7 +250,7 @@ func (s *PermissionsService) GetRolePermissions(roleID uint) ([]models.Permissio
 // groupPermissionsByCategory groups permissions by their category
 func (s *PermissionsService) groupPermissionsByCategory(permissions []models.Permission) []PermissionGrouped {
 	categoryMap := make(map[string][]models.Permission)
-	
+
 	for _, perm := range permissions {
 		categoryMap[perm.Category] = append(categoryMap[perm.Category], perm)
 	}
@@ -289,10 +289,10 @@ func (s *PermissionsService) calculateMatrixStats(roles []models.Role, permissio
 	}
 
 	return MatrixStats{
-		TotalRoles:       len(roles),
-		TotalPermissions: len(permissions),
-		TotalAssignments: totalAssignments,
-		ActiveRoles:      activeRoles,
+		TotalRoles:        len(roles),
+		TotalPermissions:  len(permissions),
+		TotalAssignments:  totalAssignments,
+		ActiveRoles:       activeRoles,
 		ActivePermissions: activePermissions,
 	}
 }
@@ -339,23 +339,23 @@ func (s *PermissionsService) GetPermissionsByCategory() (map[string][]models.Per
 func (s *PermissionsService) SyncPermissionsFromGates() error {
 	// Import the auth package to access permission constants
 	auth := helpers.GetAuth()
-	
+
 	// Generate permissions dynamically from the service registry
 	var permissions []models.Permission
-	
+
 	// Iterate through all registered services
 	for _, service := range auth.GetAllServiceRegistries() {
 		// Get valid actions for this service
 		actions := auth.GetServiceActions(service)
-		
+
 		for _, action := range actions {
 			// Build the permission slug using the new format
 			slug := auth.BuildPermissionSlug(service, action)
-			
+
 			// Create permission name and description
 			name := fmt.Sprintf("%s %s", auth.GetActionDisplayName(action), auth.GetServiceDisplayName(service))
 			description := fmt.Sprintf("Permission to %s for %s", string(action), auth.GetServiceDisplayName(service))
-			
+
 			// Special handling for certain actions
 			switch action {
 			case auth.PermissionView():
@@ -365,7 +365,7 @@ func (s *PermissionsService) SyncPermissionsFromGates() error {
 			case auth.PermissionExport():
 				description = fmt.Sprintf("Export data from %s", strings.ToLower(auth.GetServiceDisplayName(service)))
 			}
-			
+
 			permission := models.Permission{
 				Name:        name,
 				Slug:        slug,
@@ -375,11 +375,11 @@ func (s *PermissionsService) SyncPermissionsFromGates() error {
 				Description: description,
 				IsActive:    true,
 			}
-			
+
 			permissions = append(permissions, permission)
 		}
 	}
-	
+
 	// Add any custom permissions that don't fit the standard pattern
 	customPermissions := []models.Permission{
 		{
@@ -410,14 +410,14 @@ func (s *PermissionsService) SyncPermissionsFromGates() error {
 			IsActive:    true,
 		},
 	}
-	
+
 	permissions = append(permissions, customPermissions...)
-	
+
 	// Sync all permissions to the database
 	for _, perm := range permissions {
 		var existing models.Permission
 		err := facades.Orm().Query().Where("slug = ?", perm.Slug).First(&existing)
-		
+
 		if err != nil {
 			// Permission doesn't exist, create it
 			if err := facades.Orm().Query().Create(&perm); err != nil {
@@ -433,25 +433,25 @@ func (s *PermissionsService) SyncPermissionsFromGates() error {
 				"description": perm.Description,
 				"is_active":   true,
 			}
-			
+
 			if _, err := facades.Orm().Query().Model(&existing).Where("id = ?", existing.ID).Update(updateData); err != nil {
 				return fmt.Errorf("failed to update permission %s: %w", perm.Slug, err)
 			}
 		}
 	}
-	
+
 	// Mark any permissions not in our list as inactive
 	var allDbPermissions []models.Permission
 	if err := facades.Orm().Query().Find(&allDbPermissions); err != nil {
 		return fmt.Errorf("failed to fetch all permissions: %w", err)
 	}
-	
+
 	// Create a map of active permission slugs
 	activeSlugMap := make(map[string]bool)
 	for _, perm := range permissions {
 		activeSlugMap[perm.Slug] = true
 	}
-	
+
 	// Deactivate permissions not in our active list
 	for _, dbPerm := range allDbPermissions {
 		if !activeSlugMap[dbPerm.Slug] && dbPerm.IsActive {
@@ -463,6 +463,6 @@ func (s *PermissionsService) SyncPermissionsFromGates() error {
 			}
 		}
 	}
-	
+
 	return nil
 }

@@ -21,15 +21,15 @@ func NewAuditHelper() *AuditHelper {
 // SetCreateAuditFields sets audit fields for creation operations
 func (h *AuditHelper) SetCreateAuditFields(ctx http.Context, data map[string]interface{}) {
 	user := h.permissionHelper.GetAuthenticatedUser(ctx)
-	
+
 	if user != nil {
 		data["created_by"] = user.ID
-		
+
 		// Also set IP address and user agent if available
 		if ipAddr := ctx.Request().Ip(); ipAddr != "" {
 			data["ip_address"] = ipAddr
 		}
-		
+
 		if userAgent := ctx.Request().Header("User-Agent"); userAgent != "" {
 			data["user_agent"] = userAgent
 		}
@@ -39,15 +39,15 @@ func (h *AuditHelper) SetCreateAuditFields(ctx http.Context, data map[string]int
 // SetUpdateAuditFields sets audit fields for update operations
 func (h *AuditHelper) SetUpdateAuditFields(ctx http.Context, data map[string]interface{}) {
 	user := h.permissionHelper.GetAuthenticatedUser(ctx)
-	
+
 	if user != nil {
 		data["updated_by"] = user.ID
-		
+
 		// Also set IP address and user agent if available
 		if ipAddr := ctx.Request().Ip(); ipAddr != "" {
 			data["ip_address"] = ipAddr
 		}
-		
+
 		if userAgent := ctx.Request().Header("User-Agent"); userAgent != "" {
 			data["user_agent"] = userAgent
 		}
@@ -57,15 +57,15 @@ func (h *AuditHelper) SetUpdateAuditFields(ctx http.Context, data map[string]int
 // SetDeleteAuditFields sets audit fields for deletion operations
 func (h *AuditHelper) SetDeleteAuditFields(ctx http.Context, data map[string]interface{}) {
 	user := h.permissionHelper.GetAuthenticatedUser(ctx)
-	
+
 	if user != nil {
 		data["deleted_by"] = user.ID
-		
+
 		// Also set IP address and user agent if available
 		if ipAddr := ctx.Request().Ip(); ipAddr != "" {
 			data["ip_address"] = ipAddr
 		}
-		
+
 		if userAgent := ctx.Request().Header("User-Agent"); userAgent != "" {
 			data["user_agent"] = userAgent
 		}

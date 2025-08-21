@@ -35,22 +35,22 @@ func (receiver *SetupPermissionsCommand) Handle(ctx console.Context) error {
 
 	// Get all services and actions
 	services := auth.GetAllServiceRegistries()
-	
+
 	permissionsCreated := 0
 	permissionsSkipped := 0
 
 	for _, service := range services {
 		actions := auth.GetServiceActions(service)
-		
+
 		for _, action := range actions {
 			permissionSlug := auth.BuildPermissionSlug(service, action)
-			
+
 			// Check if permission already exists
 			var existingPermission models.Permission
 			err := facades.Orm().Query().
 				Where("slug = ?", permissionSlug).
 				First(&existingPermission)
-			
+
 			if err == nil {
 				// Permission already exists
 				permissionsSkipped++
@@ -80,12 +80,12 @@ func (receiver *SetupPermissionsCommand) Handle(ctx console.Context) error {
 	}
 
 	ctx.Success(fmt.Sprintf("Permission setup complete! Created: %d, Skipped: %d", permissionsCreated, permissionsSkipped))
-	
+
 	// Show next steps
 	ctx.Info("Next steps:")
 	ctx.Line("1. Run 'go run . artisan permissions:list' to see all permissions")
 	ctx.Line("2. Run 'go run . artisan permissions:assign-role <role> <permission>' to assign permissions")
 	ctx.Line("3. Visit /admin/permissions to manage permissions via the web interface")
-	
+
 	return nil
 }

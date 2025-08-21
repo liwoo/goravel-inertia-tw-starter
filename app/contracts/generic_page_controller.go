@@ -14,53 +14,53 @@ import (
 // with built-in contract implementations and common patterns
 type GenericPageController struct {
 	*BasePageController
-	
+
 	// Service integration
-	service          CrudServiceContract
+	service           CrudServiceContract
 	serviceIdentifier auth.ServiceRegistry
-	authHelper       AuthHelper
-	
+	authHelper        AuthHelper
+
 	// Configuration
-	requireSuperAdmin bool
+	requireSuperAdmin     bool
 	customPermissionCheck func(ctx http.Context) error
-	
+
 	// Statistics configuration
-	statsEnabled     bool
-	statsBuilder     func(controller *GenericPageController) map[string]interface{}
-	
+	statsEnabled bool
+	statsBuilder func(controller *GenericPageController) map[string]interface{}
+
 	// Additional data providers
 	extraDataProviders map[string]func(ctx http.Context) (interface{}, error)
-	
+
 	// Current request context for statistics
 	currentContext http.Context
 }
 
 // GenericPageConfig holds configuration for creating a generic page controller
 type GenericPageConfig struct {
-	ResourceType      string
-	PageComponent     string
-	Service           CrudServiceContract
-	ServiceIdentifier auth.ServiceRegistry
-	RequireSuperAdmin bool
+	ResourceType          string
+	PageComponent         string
+	Service               CrudServiceContract
+	ServiceIdentifier     auth.ServiceRegistry
+	RequireSuperAdmin     bool
 	CustomPermissionCheck func(ctx http.Context) error
-	StatsEnabled      bool
-	StatsBuilder      func(controller *GenericPageController) map[string]interface{}
+	StatsEnabled          bool
+	StatsBuilder          func(controller *GenericPageController) map[string]interface{}
 }
 
 // NewGenericPageController creates a new generic page controller with reduced boilerplate
 func NewGenericPageController(config GenericPageConfig) *GenericPageController {
 	controller := &GenericPageController{
 		BasePageController:    NewBasePageController(config.ResourceType, config.PageComponent),
-		service:              config.Service,
-		serviceIdentifier:    config.ServiceIdentifier,
-		authHelper:           nil, // Will be set by the concrete controller
-		requireSuperAdmin:    config.RequireSuperAdmin,
+		service:               config.Service,
+		serviceIdentifier:     config.ServiceIdentifier,
+		authHelper:            nil, // Will be set by the concrete controller
+		requireSuperAdmin:     config.RequireSuperAdmin,
 		customPermissionCheck: config.CustomPermissionCheck,
-		statsEnabled:         config.StatsEnabled,
-		statsBuilder:         config.StatsBuilder,
-		extraDataProviders:   make(map[string]func(ctx http.Context) (interface{}, error)),
+		statsEnabled:          config.StatsEnabled,
+		statsBuilder:          config.StatsBuilder,
+		extraDataProviders:    make(map[string]func(ctx http.Context) (interface{}, error)),
 	}
-	
+
 	return controller
 }
 
@@ -68,26 +68,26 @@ func NewGenericPageController(config GenericPageConfig) *GenericPageController {
 func (c *GenericPageController) Index(ctx http.Context) http.Response {
 	// Store context for use in statistics
 	c.currentContext = ctx
-	
+
 	// Debug: Log incoming request with filters parameter
 	filtersParam := ctx.Request().Query("filters", "")
 	fmt.Printf("DEBUG: GenericPageController.Index called with filters param: '%s'\n", filtersParam)
-	
+
 	// 1. Permission/Access Check
 	if err := c.performPermissionCheck(ctx); err != nil {
 		return c.renderForbidden(ctx, err)
 	}
-	
+
 	// 2. Validate Request
 	req, err := c.ValidatePageRequest(ctx)
 	if err != nil {
 		req = &ListRequest{Page: 1, PageSize: c.defaultPageSize, Context: ctx}
 		req.SetDefaults()
 	}
-	
+
 	// 3. Build Permissions Map
 	permissions := c.BuildPermissionsMap(ctx, string(c.serviceIdentifier))
-	
+
 	// 4. Fetch Data
 	result, err := c.service.GetList(*req)
 	if err != nil {
@@ -95,13 +95,13 @@ func (c *GenericPageController) Index(ctx http.Context) http.Response {
 		result = c.emptyResult(req)
 	}
 	fmt.Printf("DEBUG GenericPageController: GetList result - Total: %d, Data count: %d\n", result.Total, len(result.Data))
-	
+
 	// 5. Get Statistics (always get basic counts for filters, full stats if permitted)
 	var stats map[string]interface{}
 	if c.statsEnabled {
 		// Always get basic statistics for filter counts
 		stats = c.getBasicStatistics()
-		
+
 		// Add advanced statistics if user has permission
 		if permissions["canViewReports"] || permissions["canManage"] {
 			advancedStats := c.getStatistics()
@@ -111,20 +111,20 @@ func (c *GenericPageController) Index(ctx http.Context) http.Response {
 			}
 		}
 	}
-	
+
 	// 6. Build Typed Permissions
 	typedPermissions := c.BuildTypedPermissions(permissions)
-	
+
 	// 7. Build Props
 	props := c.GetProps(result, req, typedPermissions, stats)
-	
+
 	// 8. Add Extra Data
 	propsMap := props.ToMap()
 	if err := c.addExtraData(ctx, propsMap); err != nil {
 		// Log error but continue
 		fmt.Printf("Error adding extra data: %v\n", err)
 	}
-	
+
 	// 9. Render
 	return inertia.Render(ctx, c.pageComponent, propsMap)
 }
@@ -135,19 +135,19 @@ func (c *GenericPageController) performPermissionCheck(ctx http.Context) error {
 	if c.customPermissionCheck != nil {
 		return c.customPermissionCheck(ctx)
 	}
-	
+
 	// Super admin check
 	if c.requireSuperAdmin {
 		return c.checkSuperAdmin(ctx)
 	}
-	
+
 	// Service-based permission check
 	if c.serviceIdentifier != "" {
 		permHelper := auth.GetPermissionHelper()
 		_, err := permHelper.RequireServicePermission(ctx, c.serviceIdentifier, auth.PermissionRead)
 		return err
 	}
-	
+
 	// Default: require authentication only
 	return c.RequireAuthentication(ctx)
 }
@@ -169,24 +169,24 @@ func (c *GenericPageController) renderForbidden(ctx http.Context, err error) htt
 	if err != nil {
 		message = err.Error()
 	}
-	
+
 	// Try Inertia error page first
 	if c.requireSuperAdmin {
 		message = "Access denied: Super admin privileges required"
 	}
-	
+
 	// For Inertia requests, render error page
 	if ctx.Request().Header("X-Inertia") != "" {
 		return inertia.Render(ctx, "Errors/403", map[string]interface{}{
-			"message": message,
+			"message":  message,
 			"resource": c.resourceType,
 		})
 	}
-	
+
 	// Default JSON response
 	return ctx.Response().Status(403).Json(map[string]interface{}{
-		"error":   "Forbidden",
-		"message": message,
+		"error":    "Forbidden",
+		"message":  message,
 		"resource": c.resourceType,
 	})
 }
@@ -217,13 +217,13 @@ func (c *GenericPageController) getBasicStatistics() map[string]interface{} {
 	if c.service == nil {
 		return make(map[string]interface{})
 	}
-	
+
 	// If we have a stats builder, use it to get full stats
 	// These basic stats are needed for filter badges
 	if c.statsBuilder != nil {
 		return c.statsBuilder(c)
 	}
-	
+
 	// Otherwise just return total count
 	stats := make(map[string]interface{})
 	stats["total"] = c.GetTotalCount()
@@ -260,18 +260,18 @@ func (c *GenericPageController) GetCountByFilter(filters map[string]interface{})
 		PageSize: 1,
 		Filters:  filters,
 	}
-	
+
 	// Add context if available
 	if c.currentContext != nil {
 		req.Context = c.currentContext
 	}
-	
+
 	// Use GetList instead of GetListAdvanced to ensure scope filtering is applied
 	result, err := c.service.GetList(req)
 	if err != nil {
 		return 0
 	}
-	
+
 	return int(result.Total)
 }
 
@@ -292,7 +292,7 @@ func (c *GenericPageController) GetTotalCount() int {
 		}
 		return int(result.Total)
 	}
-	
+
 	// Fallback without context
 	req := ListRequest{PageSize: 1}
 	result, err := c.service.GetList(req)
@@ -314,7 +314,7 @@ func (c *GenericPageController) CheckPermission(ctx http.Context, permission str
 	if c.requireSuperAdmin {
 		return c.checkSuperAdmin(ctx)
 	}
-	
+
 	permHelper := auth.GetPermissionHelper()
 	_, err := permHelper.RequirePermission(ctx, permission)
 	return err
@@ -342,18 +342,18 @@ func (c *GenericPageController) BuildPermissionsMap(ctx http.Context, resourceTy
 		permHelper := auth.GetPermissionHelper()
 		user := permHelper.GetAuthenticatedUser(ctx)
 		isSuperAdmin := user != nil && user.IsSuperAdmin
-		
+
 		return map[string]bool{
-			"canView":       isSuperAdmin,
-			"canCreate":     isSuperAdmin,
-			"canEdit":       isSuperAdmin,
-			"canDelete":     isSuperAdmin,
-			"canManage":     isSuperAdmin,
-			"canExport":     isSuperAdmin,
+			"canView":        isSuperAdmin,
+			"canCreate":      isSuperAdmin,
+			"canEdit":        isSuperAdmin,
+			"canDelete":      isSuperAdmin,
+			"canManage":      isSuperAdmin,
+			"canExport":      isSuperAdmin,
 			"canViewReports": isSuperAdmin,
 		}
 	}
-	
+
 	// Default permission building
 	permHelper := auth.GetPermissionHelper()
 	return permHelper.BuildPermissionsMap(ctx, resourceType)
@@ -363,15 +363,15 @@ func (c *GenericPageController) BuildPermissionsMap(ctx http.Context, resourceTy
 func (c *GenericPageController) BuildStandardStatistics(statusField string, statuses []string) map[string]interface{} {
 	stats := make(map[string]interface{})
 	stats["total"] = c.GetTotalCount()
-	
+
 	// Count by each status
 	for _, status := range statuses {
 		key := fmt.Sprintf("%sCount", strings.ToLower(status))
 		stats[key] = c.GetCountByFilter(map[string]interface{}{statusField: status})
 	}
-	
+
 	// Add timestamp
 	stats["lastUpdated"] = time.Now().Format(time.RFC3339)
-	
+
 	return stats
 }

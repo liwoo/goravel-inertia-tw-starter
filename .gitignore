@@ -64,7 +64,6 @@ tests/unit/**/storage/
 # Development scripts and config
 .air.toml
 start_ssh_agent.sh
-run_tests.sh
 clean_test_db.sh
 
 # Temporary test scripts

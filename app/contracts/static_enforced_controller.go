@@ -8,7 +8,7 @@ import (
 // The zero value of this struct is NOT usable - you MUST use the builder
 type StaticEnforcedController[T any, C CreateRequestContract, U UpdateRequestContract] struct {
 	*EnforcedCrudController[T, C, U]
-	
+
 	// These fields ensure the controller was properly constructed
 	_ requiredCreateRequest[C]
 	_ requiredUpdateRequest[U]
@@ -22,7 +22,7 @@ func (c *StaticEnforcedController[T, C, U]) GetFilters(ctx http.Context) http.Re
 	metadata := map[string]interface{}{
 		"filters": []interface{}{},
 	}
-	
+
 	return ctx.Response().Json(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data":    metadata,
@@ -99,7 +99,7 @@ func (b *StaticControllerBuilder[T, C, U, needsAuthChecker]) WithAuthChecker(
 func (b *StaticControllerBuilder[T, C, U, readyToBuild]) Build() *StaticEnforcedController[T, C, U] {
 	controller := NewEnforcedCrudController[T, C, U](b.resourceName, b.service)
 	controller.CheckAuth = b.authChecker
-	
+
 	return &StaticEnforcedController[T, C, U]{
 		EnforcedCrudController: controller,
 	}

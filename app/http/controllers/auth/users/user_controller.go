@@ -87,7 +87,7 @@ func (c *UserController) GetFilters(ctx http.Context) http.Response {
 			},
 		},
 	}
-	
+
 	return ctx.Response().Json(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data":    metadata,

@@ -13,10 +13,10 @@ func TestSimpleHTTPRequest(t *testing.T) {
 	// Create a test server
 	server := httptest.NewServer(facades.Route())
 	defer server.Close()
-	
+
 	// Create HTTP client
 	client := &http.Client{}
-	
+
 	// Make a simple request to root
 	resp, err := client.Get(server.URL + "/")
 	assert.NoError(t, err)

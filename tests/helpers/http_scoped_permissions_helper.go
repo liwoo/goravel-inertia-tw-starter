@@ -1,9 +1,9 @@
 package helpers
 
 import (
-	"time"
 	"github.com/goravel/framework/facades"
 	"players/app/models"
+	"time"
 )
 
 // AssignPermissionToRole assigns a permission to a role with scope

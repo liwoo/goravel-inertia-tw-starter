@@ -27,7 +27,7 @@ func (sf *ServiceFactory) RegisterService(name string, service CompleteCrudServi
 			return fmt.Errorf("service '%s' validation failed: %w", name, err)
 		}
 	}
-	
+
 	sf.registeredServices[name] = service
 	return nil
 }
@@ -60,24 +60,24 @@ func (sf *ServiceFactory) ListServices() []string {
 // ValidateAllServices validates all registered services
 func (sf *ServiceFactory) ValidateAllServices() map[string]ServiceValidationResult {
 	results := make(map[string]ServiceValidationResult)
-	
+
 	for name, service := range sf.registeredServices {
 		results[name] = ValidateServiceImplementation(service)
 	}
-	
+
 	return results
 }
 
 // validateServiceContracts validates that a service implements all required contracts
 func (sf *ServiceFactory) validateServiceContracts(service interface{}) error {
 	serviceType := reflect.TypeOf(service)
-	
+
 	// Check if service implements CompleteCrudService
 	completeCrudType := reflect.TypeOf((*CompleteCrudService)(nil)).Elem()
 	if !serviceType.Implements(completeCrudType) {
 		return fmt.Errorf("service must implement CompleteCrudService interface")
 	}
-	
+
 	// Validate specific method implementations
 	requiredMethods := []string{
 		"GetList", "GetListAdvanced", "GetByID", "Create", "Update", "Delete",
@@ -88,18 +88,18 @@ func (sf *ServiceFactory) validateServiceContracts(service interface{}) error {
 		"BulkCreate", "BulkUpdate", "BulkDelete", "ValidateBulkOperation",
 		"GetTableName", "GetPrimaryKey", "GetModel", "GetValidationRules", "GetColumnMapping",
 	}
-	
+
 	missing := []string{}
 	for _, methodName := range requiredMethods {
 		if _, hasMethod := serviceType.MethodByName(methodName); !hasMethod {
 			missing = append(missing, methodName)
 		}
 	}
-	
+
 	if len(missing) > 0 {
 		return fmt.Errorf("service is missing required methods: %v", missing)
 	}
-	
+
 	return nil
 }
 

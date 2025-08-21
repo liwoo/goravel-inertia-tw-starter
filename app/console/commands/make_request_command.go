@@ -42,7 +42,7 @@ func (receiver *MakeRequestCommand) Handle(ctx console.Context) error {
 	}
 
 	isUpdate := ctx.OptionBool("update")
-	
+
 	var filename string
 	var content string
 	var err error
@@ -74,13 +74,13 @@ func (receiver *MakeRequestCommand) Handle(ctx console.Context) error {
 	}
 
 	ctx.Info(fmt.Sprintf("Request [%s] created successfully", filename))
-	
+
 	if !isUpdate {
 		ctx.Info("To create the corresponding update request, run:")
 		baseName := strings.TrimSuffix(strings.TrimSuffix(name, "Request"), "Create")
 		ctx.Info(fmt.Sprintf("  go run . artisan make:request %s --update", baseName))
 	}
-	
+
 	return nil
 }
 
@@ -208,10 +208,10 @@ func (r *{{.RequestName}}) ToCreateData() map[string]interface{} {
 
 	var result strings.Builder
 	err = t.Execute(&result, map[string]string{
-		"RequestName":        requestName,
-		"ResourceName":       resourceName,
-		"ResourceNameLower":  resourceNameLower,
-		"BackTick":           "`",
+		"RequestName":       requestName,
+		"ResourceName":      resourceName,
+		"ResourceNameLower": resourceNameLower,
+		"BackTick":          "`",
 	})
 
 	return result.String(), err
@@ -364,10 +364,10 @@ func (r *{{.RequestName}}) GetResourceID() interface{} {
 
 	var result strings.Builder
 	err = t.Execute(&result, map[string]string{
-		"RequestName":        requestName,
-		"ResourceName":       resourceName,
-		"ResourceNameLower":  resourceNameLower,
-		"BackTick":           "`",
+		"RequestName":       requestName,
+		"ResourceName":      resourceName,
+		"ResourceNameLower": resourceNameLower,
+		"BackTick":          "`",
 	})
 
 	return result.String(), err

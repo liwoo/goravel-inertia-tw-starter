@@ -1,10 +1,10 @@
 package middleware
 
 import (
+	"fmt" // For logging detailed info
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"strings"
-	"fmt" // For logging detailed info
 )
 
 // RedirectIfAuthenticated redirects authenticated users from / to /dashboard.

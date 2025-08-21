@@ -50,7 +50,7 @@ func (r *UniqueRule) Passes(data validation.Data, val any, options ...any) bool 
 
 	table := options[0].(string)
 	column := options[1].(string)
-	
+
 	var ignoreID string
 	if len(options) > 2 {
 		ignoreID = fmt.Sprint(options[2])
@@ -64,7 +64,7 @@ func (r *UniqueRule) Passes(data validation.Data, val any, options ...any) bool 
 
 	// Build query
 	query := facades.Orm().Query().Table(table).Where(column, value)
-	
+
 	// If we have an ID to ignore (for updates), exclude it
 	if ignoreID != "" && ignoreID != "0" {
 		query = query.Where("id", "!=", ignoreID)
@@ -73,7 +73,7 @@ func (r *UniqueRule) Passes(data validation.Data, val any, options ...any) bool 
 	// Check if record exists
 	var count int64
 	query.Count(&count)
-	
+
 	return count == 0
 }
 

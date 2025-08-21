@@ -22,57 +22,57 @@ type RolesController struct {
 // This ensures all required methods are implemented and configured
 func NewRolesController() *RolesController {
 	roleService := services.NewRoleService()
-	
+
 	// Build controller with compile-time enforcement
 	// The builder pattern ensures all required steps are completed
 	staticController := contracts.NewStaticControllerBuilder[models.Role, *requests.RoleCreateRequest, *requests.RoleUpdateRequest](
 		"role",
 		roleService,
 	).
-	ValidateCreateRequest().
-	ValidateUpdateRequest().
-	WithAuthChecker(func(ctx http.Context, action string, resource interface{}) error {
-		scopedHelper := auth.GetScopedPermissionHelper()
-		
-		// Map generic actions to permission actions
-		var permAction auth.CorePermissionAction
-		switch action {
-		case "viewAny", "view":
-			permAction = auth.PermissionRead
-		case "create":
-			permAction = auth.PermissionCreate
-		case "update":
-			permAction = auth.PermissionUpdate
-		case "delete":
-			permAction = auth.PermissionDelete
-		default:
-			permAction = auth.PermissionManage
-		}
-		
-		// For specific resource actions, pass the resource
-		if resource != nil {
-			_, err := scopedHelper.RequireScopedPermission(ctx, auth.ServiceRoles, permAction, resource)
+		ValidateCreateRequest().
+		ValidateUpdateRequest().
+		WithAuthChecker(func(ctx http.Context, action string, resource interface{}) error {
+			scopedHelper := auth.GetScopedPermissionHelper()
+
+			// Map generic actions to permission actions
+			var permAction auth.CorePermissionAction
+			switch action {
+			case "viewAny", "view":
+				permAction = auth.PermissionRead
+			case "create":
+				permAction = auth.PermissionCreate
+			case "update":
+				permAction = auth.PermissionUpdate
+			case "delete":
+				permAction = auth.PermissionDelete
+			default:
+				permAction = auth.PermissionManage
+			}
+
+			// For specific resource actions, pass the resource
+			if resource != nil {
+				_, err := scopedHelper.RequireScopedPermission(ctx, auth.ServiceRoles, permAction, resource)
+				return err
+			}
+
+			// For general actions, check without specific resource
+			_, err := scopedHelper.RequireScopedPermission(ctx, auth.ServiceRoles, permAction, nil)
 			return err
-		}
-		
-		// For general actions, check without specific resource
-		_, err := scopedHelper.RequireScopedPermission(ctx, auth.ServiceRoles, permAction, nil)
-		return err
-	}).
-	Build()
-	
+		}).
+		Build()
+
 	controller := &RolesController{
 		StaticEnforcedController: staticController,
-		roleService: roleService,
+		roleService:              roleService,
 	}
-	
+
 	// Set custom hooks for handling permissions
 	controller.SetAfterStore(func(ctx http.Context, result interface{}) http.Response {
 		// Handle permission assignment if provided
 		if role, ok := result.(*models.Role); ok {
 			var requestData requests.RoleCreateRequest
 			ctx.Request().Bind(&requestData)
-			
+
 			if len(requestData.Permissions) > 0 {
 				// Assign permissions to the newly created role
 				if err := assignPermissionsFromSlugs(controller.roleService, role.ID, requestData.Permissions); err != nil {
@@ -84,10 +84,10 @@ func NewRolesController() *RolesController {
 				}
 			}
 		}
-		
+
 		return nil
 	})
-	
+
 	return controller
 }
 
@@ -147,13 +147,13 @@ func (c *RolesController) UpdatePermissions(ctx http.Context) http.Response {
 		if permSlug, ok := p.(string); ok {
 			// Parse scoped permission (e.g., "books_read_by_all")
 			baseSlug, scope := parsePermissionWithScope(permSlug)
-			
+
 			// Find the permission by slug
 			var permission models.Permission
 			err := facades.Orm().Query().
 				Where("slug = ? AND is_active = ?", baseSlug, true).
 				First(&permission)
-			
+
 			if err == nil {
 				permissionIDs = append(permissionIDs, permission.ID)
 				scopes[permission.ID] = scope
@@ -212,13 +212,13 @@ func assignPermissionsFromSlugs(roleService *services.RoleService, roleID uint, 
 	for _, permSlug := range permissionSlugs {
 		// Parse scoped permission
 		baseSlug, scope := parsePermissionWithScope(permSlug)
-		
+
 		// Find the permission by slug
 		var permission models.Permission
 		err := facades.Orm().Query().
 			Where("slug = ? AND is_active = ?", baseSlug, true).
 			First(&permission)
-		
+
 		if err == nil {
 			permissionIDs = append(permissionIDs, permission.ID)
 			scopes[permission.ID] = scope
@@ -228,6 +228,6 @@ func assignPermissionsFromSlugs(roleService *services.RoleService, roleID uint, 
 	if len(permissionIDs) > 0 {
 		return roleService.AssignPermissions(roleID, permissionIDs, scopes)
 	}
-	
+
 	return nil
 }

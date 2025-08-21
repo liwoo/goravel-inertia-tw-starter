@@ -48,7 +48,7 @@ func (pb *PaginationBuilder) paginateInterfaceSlice(items []interface{}, page, p
 
 	// Calculate pagination metadata
 	lastPage := pb.CalculateLastPage(total, int64(pageSize))
-	
+
 	return &PaginatedResult{
 		Data:        pageItems,
 		Total:       total,
@@ -112,7 +112,7 @@ func PaginateSliceWithConverter[T any](items []T, page, pageSize int, converter 
 	// Calculate pagination metadata
 	pb := &PaginationBuilder{}
 	lastPage := pb.CalculateLastPage(total, int64(pageSize))
-	
+
 	return &PaginatedResult{
 		Data:        data,
 		Total:       total,
@@ -148,7 +148,7 @@ func ManualPaginate[T any](items []T, page, pageSize int) (pageItems []T, total 
 	pb := &PaginationBuilder{}
 	from = pb.CalculateFrom(offset, len(pageItems))
 	to = pb.CalculateTo(offset, len(pageItems))
-	
+
 	return pageItems, total, from, to
 }
 
@@ -190,29 +190,29 @@ func (pb *PaginationBuilder) ValidatePaginationBounds(offset, limit, totalItems 
 	if offset < 0 {
 		offset = 0
 	}
-	
+
 	// Ensure offset doesn't exceed total items
 	if offset >= totalItems {
 		offset = totalItems
 	}
-	
+
 	// Ensure limit is positive
 	if limit <= 0 {
 		limit = 20 // Default page size
 	}
-	
+
 	// Calculate valid end position
 	end := offset + limit
 	if end > totalItems {
 		end = totalItems
 	}
-	
+
 	// Adjust limit based on actual available items
 	validLimit = end - offset
 	if validLimit < 0 {
 		validLimit = 0
 	}
-	
+
 	return offset, validLimit
 }
 
@@ -244,12 +244,12 @@ func (pb *PaginationBuilder) GetPageRange(currentPage, lastPage, maxVisible int)
 	if maxVisible <= 0 {
 		maxVisible = 10
 	}
-	
+
 	// Calculate start and end of range
 	halfVisible := maxVisible / 2
 	start := currentPage - halfVisible
 	end := currentPage + halfVisible
-	
+
 	// Adjust boundaries
 	if start < 1 {
 		start = 1
@@ -259,12 +259,12 @@ func (pb *PaginationBuilder) GetPageRange(currentPage, lastPage, maxVisible int)
 		end = lastPage
 		start = collect.Max([]int{1, end - maxVisible + 1})
 	}
-	
+
 	// Build page range
 	pages := make([]int, 0, end-start+1)
 	for i := start; i <= end; i++ {
 		pages = append(pages, i)
 	}
-	
+
 	return pages
 }

@@ -2,9 +2,9 @@ package contracts
 
 import (
 	"fmt"
-	"time"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 // FilterType represents the data type of a filter field
@@ -34,16 +34,16 @@ const (
 	OperatorNotEquals FilterOperator = "not_equals"
 	OperatorIsNull    FilterOperator = "is_null"
 	OperatorIsNotNull FilterOperator = "is_not_null"
-	
+
 	// String operators
-	OperatorContains     FilterOperator = "contains"
-	OperatorNotContains  FilterOperator = "not_contains"
-	OperatorStartsWith   FilterOperator = "starts_with"
-	OperatorEndsWith     FilterOperator = "ends_with"
-	OperatorIsEmpty      FilterOperator = "is_empty"
-	OperatorIsNotEmpty   FilterOperator = "is_not_empty"
-	OperatorRegexMatch   FilterOperator = "regex_match"
-	
+	OperatorContains    FilterOperator = "contains"
+	OperatorNotContains FilterOperator = "not_contains"
+	OperatorStartsWith  FilterOperator = "starts_with"
+	OperatorEndsWith    FilterOperator = "ends_with"
+	OperatorIsEmpty     FilterOperator = "is_empty"
+	OperatorIsNotEmpty  FilterOperator = "is_not_empty"
+	OperatorRegexMatch  FilterOperator = "regex_match"
+
 	// Number operators
 	OperatorGreaterThan        FilterOperator = "greater_than"
 	OperatorLessThan           FilterOperator = "less_than"
@@ -51,22 +51,22 @@ const (
 	OperatorLessThanOrEqual    FilterOperator = "less_than_or_equal"
 	OperatorBetween            FilterOperator = "between"
 	OperatorNotBetween         FilterOperator = "not_between"
-	
+
 	// Date/DateTime operators
-	OperatorBefore       FilterOperator = "before"
-	OperatorAfter        FilterOperator = "after"
-	OperatorIsToday      FilterOperator = "is_today"
-	OperatorIsYesterday  FilterOperator = "is_yesterday"
-	OperatorIsThisWeek   FilterOperator = "is_this_week"
-	OperatorIsThisMonth  FilterOperator = "is_this_month"
-	OperatorIsThisYear   FilterOperator = "is_this_year"
-	OperatorLastNDays    FilterOperator = "last_n_days"
-	OperatorNextNDays    FilterOperator = "next_n_days"
-	
+	OperatorBefore      FilterOperator = "before"
+	OperatorAfter       FilterOperator = "after"
+	OperatorIsToday     FilterOperator = "is_today"
+	OperatorIsYesterday FilterOperator = "is_yesterday"
+	OperatorIsThisWeek  FilterOperator = "is_this_week"
+	OperatorIsThisMonth FilterOperator = "is_this_month"
+	OperatorIsThisYear  FilterOperator = "is_this_year"
+	OperatorLastNDays   FilterOperator = "last_n_days"
+	OperatorNextNDays   FilterOperator = "next_n_days"
+
 	// Boolean operators
 	OperatorIsTrue  FilterOperator = "is_true"
 	OperatorIsFalse FilterOperator = "is_false"
-	
+
 	// Array operators
 	OperatorIn          FilterOperator = "in"
 	OperatorNotIn       FilterOperator = "not_in"
@@ -90,7 +90,7 @@ func GetOperatorsForType(filterType FilterType) []FilterOperator {
 		OperatorIsNull,
 		OperatorIsNotNull,
 	}
-	
+
 	switch filterType {
 	case FilterTypeString:
 		return append(commonOps,
@@ -102,7 +102,7 @@ func GetOperatorsForType(filterType FilterType) []FilterOperator {
 			OperatorIsNotEmpty,
 			OperatorRegexMatch,
 		)
-		
+
 	case FilterTypeNumber:
 		return append(commonOps,
 			OperatorGreaterThan,
@@ -112,7 +112,7 @@ func GetOperatorsForType(filterType FilterType) []FilterOperator {
 			OperatorBetween,
 			OperatorNotBetween,
 		)
-		
+
 	case FilterTypeDate, FilterTypeDateTime:
 		return append(commonOps,
 			OperatorBefore,
@@ -127,7 +127,7 @@ func GetOperatorsForType(filterType FilterType) []FilterOperator {
 			OperatorLastNDays,
 			OperatorNextNDays,
 		)
-		
+
 	case FilterTypeBoolean:
 		return []FilterOperator{
 			OperatorIsTrue,
@@ -135,7 +135,7 @@ func GetOperatorsForType(filterType FilterType) []FilterOperator {
 			OperatorIsNull,
 			OperatorIsNotNull,
 		}
-		
+
 	case FilterTypeEnum:
 		return []FilterOperator{
 			OperatorEquals,
@@ -145,7 +145,7 @@ func GetOperatorsForType(filterType FilterType) []FilterOperator {
 			OperatorIsNull,
 			OperatorIsNotNull,
 		}
-		
+
 	case FilterTypeArray:
 		return []FilterOperator{
 			OperatorContains,
@@ -155,7 +155,7 @@ func GetOperatorsForType(filterType FilterType) []FilterOperator {
 			OperatorIsEmpty,
 			OperatorIsNotEmpty,
 		}
-		
+
 	default:
 		return commonOps
 	}
@@ -168,7 +168,7 @@ type FilterDefinition struct {
 	Type       FilterType             `json:"type"`
 	Operators  []FilterOperator       `json:"operators"`
 	Validation map[string]interface{} `json:"validation,omitempty"`
-	Format     string                 `json:"format,omitempty"`     // For date/datetime formatting
+	Format     string                 `json:"format,omitempty"`      // For date/datetime formatting
 	EnumValues []string               `json:"enum_values,omitempty"` // For enum type
 	Default    interface{}            `json:"default,omitempty"`     // Default value
 }
@@ -193,7 +193,7 @@ func (fd FilterDefinition) ValidateValue(operator FilterOperator, value interfac
 	if len(validOps) == 0 {
 		validOps = GetOperatorsForType(fd.Type)
 	}
-	
+
 	operatorValid := false
 	for _, op := range validOps {
 		if op == operator {
@@ -204,7 +204,7 @@ func (fd FilterDefinition) ValidateValue(operator FilterOperator, value interfac
 	if !operatorValid {
 		return fmt.Errorf("operator %s is not valid for field %s of type %s", operator, fd.Field, fd.Type)
 	}
-	
+
 	// Some operators don't require values
 	if operator == OperatorIsNull || operator == OperatorIsNotNull ||
 		operator == OperatorIsEmpty || operator == OperatorIsNotEmpty ||
@@ -214,7 +214,7 @@ func (fd FilterDefinition) ValidateValue(operator FilterOperator, value interfac
 		operator == OperatorIsThisYear {
 		return nil
 	}
-	
+
 	// Validate value based on type
 	switch fd.Type {
 	case FilterTypeNumber:
@@ -230,7 +230,7 @@ func (fd FilterDefinition) ValidateValue(operator FilterOperator, value interfac
 	case FilterTypeArray:
 		return fd.validateArrayValue(operator, value)
 	}
-	
+
 	return nil
 }
 
@@ -312,7 +312,7 @@ func (fd FilterDefinition) validateEnumValue(operator FilterOperator, value inte
 	if len(fd.EnumValues) == 0 {
 		return nil // No enum values defined, accept any
 	}
-	
+
 	switch operator {
 	case OperatorIn, OperatorNotIn:
 		// Expect array of enum values
@@ -399,42 +399,42 @@ func contains(slice []string, item string) bool {
 
 // FilterCondition represents a single filter condition
 type FilterCondition struct {
-	Field    string          `json:"field"`
-	Operator FilterOperator  `json:"operator"`
-	Value    interface{}     `json:"value"`
-	Type     FilterType      `json:"type,omitempty"`
+	Field    string         `json:"field"`
+	Operator FilterOperator `json:"operator"`
+	Value    interface{}    `json:"value"`
+	Type     FilterType     `json:"type,omitempty"`
 }
 
 // ToSQL converts the filter condition to SQL with placeholders
 func (fc FilterCondition) ToSQL() (string, []interface{}) {
 	var sql string
 	var args []interface{}
-	
+
 	switch fc.Operator {
 	case OperatorEquals:
 		sql = fmt.Sprintf("%s = ?", fc.Field)
 		args = []interface{}{fc.Value}
-		
+
 	case OperatorNotEquals:
 		sql = fmt.Sprintf("%s != ?", fc.Field)
 		args = []interface{}{fc.Value}
-		
+
 	case OperatorGreaterThan:
 		sql = fmt.Sprintf("%s > ?", fc.Field)
 		args = []interface{}{fc.Value}
-		
+
 	case OperatorLessThan:
 		sql = fmt.Sprintf("%s < ?", fc.Field)
 		args = []interface{}{fc.Value}
-		
+
 	case OperatorGreaterThanOrEqual:
 		sql = fmt.Sprintf("%s >= ?", fc.Field)
 		args = []interface{}{fc.Value}
-		
+
 	case OperatorLessThanOrEqual:
 		sql = fmt.Sprintf("%s <= ?", fc.Field)
 		args = []interface{}{fc.Value}
-		
+
 	case OperatorBetween:
 		if slice, ok := fc.Value.([]float64); ok && len(slice) == 2 {
 			sql = fmt.Sprintf("%s BETWEEN ? AND ?", fc.Field)
@@ -443,7 +443,7 @@ func (fc FilterCondition) ToSQL() (string, []interface{}) {
 			sql = fmt.Sprintf("%s BETWEEN ? AND ?", fc.Field)
 			args = slice
 		}
-		
+
 	case OperatorNotBetween:
 		if slice, ok := fc.Value.([]float64); ok && len(slice) == 2 {
 			sql = fmt.Sprintf("%s NOT BETWEEN ? AND ?", fc.Field)
@@ -452,39 +452,39 @@ func (fc FilterCondition) ToSQL() (string, []interface{}) {
 			sql = fmt.Sprintf("%s NOT BETWEEN ? AND ?", fc.Field)
 			args = slice
 		}
-		
+
 	case OperatorContains:
 		sql = fmt.Sprintf("%s LIKE ?", fc.Field)
 		args = []interface{}{fmt.Sprintf("%%%v%%", fc.Value)}
-		
+
 	case OperatorNotContains:
 		sql = fmt.Sprintf("%s NOT LIKE ?", fc.Field)
 		args = []interface{}{fmt.Sprintf("%%%v%%", fc.Value)}
-		
+
 	case OperatorStartsWith:
 		sql = fmt.Sprintf("%s LIKE ?", fc.Field)
 		args = []interface{}{fmt.Sprintf("%v%%", fc.Value)}
-		
+
 	case OperatorEndsWith:
 		sql = fmt.Sprintf("%s LIKE ?", fc.Field)
 		args = []interface{}{fmt.Sprintf("%%%v", fc.Value)}
-		
+
 	case OperatorIsNull:
 		sql = fmt.Sprintf("%s IS NULL", fc.Field)
 		args = []interface{}{}
-		
+
 	case OperatorIsNotNull:
 		sql = fmt.Sprintf("%s IS NOT NULL", fc.Field)
 		args = []interface{}{}
-		
+
 	case OperatorIsEmpty:
 		sql = fmt.Sprintf("(%s IS NULL OR %s = '')", fc.Field, fc.Field)
 		args = []interface{}{}
-		
+
 	case OperatorIsNotEmpty:
 		sql = fmt.Sprintf("(%s IS NOT NULL AND %s != '')", fc.Field, fc.Field)
 		args = []interface{}{}
-		
+
 	case OperatorIn:
 		if slice, ok := fc.Value.([]string); ok {
 			placeholders := make([]string, len(slice))
@@ -501,7 +501,7 @@ func (fc FilterCondition) ToSQL() (string, []interface{}) {
 			}
 			sql = fmt.Sprintf("%s IN (%s)", fc.Field, joinStrings(placeholders, ","))
 		}
-		
+
 	case OperatorNotIn:
 		if slice, ok := fc.Value.([]string); ok {
 			placeholders := make([]string, len(slice))
@@ -518,7 +518,7 @@ func (fc FilterCondition) ToSQL() (string, []interface{}) {
 			}
 			sql = fmt.Sprintf("%s NOT IN (%s)", fc.Field, joinStrings(placeholders, ","))
 		}
-		
+
 	case OperatorBefore, OperatorAfter:
 		if fc.Operator == OperatorBefore {
 			sql = fmt.Sprintf("%s < ?", fc.Field)
@@ -526,39 +526,39 @@ func (fc FilterCondition) ToSQL() (string, []interface{}) {
 			sql = fmt.Sprintf("%s > ?", fc.Field)
 		}
 		args = []interface{}{fc.Value}
-		
+
 	case OperatorIsTrue:
 		sql = fmt.Sprintf("%s = ?", fc.Field)
 		args = []interface{}{true}
-		
+
 	case OperatorIsFalse:
 		sql = fmt.Sprintf("%s = ?", fc.Field)
 		args = []interface{}{false}
-		
+
 	default:
 		// For date range operators and others not yet implemented
 		sql = fmt.Sprintf("%s = ?", fc.Field)
 		args = []interface{}{fc.Value}
 	}
-	
+
 	return sql, args
 }
 
 // CompoundFilter represents a compound filter with AND/OR logic
 type CompoundFilter struct {
-	Logic      LogicOperator   `json:"logic"`
-	Conditions []interface{}   `json:"conditions"` // Can be FilterCondition or CompoundFilter
+	Logic      LogicOperator `json:"logic"`
+	Conditions []interface{} `json:"conditions"` // Can be FilterCondition or CompoundFilter
 }
 
 // ToSQL converts the compound filter to SQL with placeholders
 func (cf CompoundFilter) ToSQL() (string, []interface{}) {
 	var sqlParts []string
 	var allArgs []interface{}
-	
+
 	for _, condition := range cf.Conditions {
 		var sql string
 		var args []interface{}
-		
+
 		switch c := condition.(type) {
 		case FilterCondition:
 			sql, args = c.ToSQL()
@@ -571,20 +571,20 @@ func (cf CompoundFilter) ToSQL() (string, []interface{}) {
 				sql, args = fc.ToSQL()
 			}
 		}
-		
+
 		if sql != "" {
 			sqlParts = append(sqlParts, sql)
 			allArgs = append(allArgs, args...)
 		}
 	}
-	
+
 	if len(sqlParts) == 0 {
 		return "", []interface{}{}
 	}
-	
+
 	separator := fmt.Sprintf(" %s ", cf.Logic)
 	combinedSQL := fmt.Sprintf("(%s)", joinStrings(sqlParts, separator))
-	
+
 	return combinedSQL, allArgs
 }
 
@@ -594,27 +594,27 @@ func ParseFilterQuery(query map[string]interface{}) (*FilterCondition, error) {
 	if !ok {
 		return nil, fmt.Errorf("field is required")
 	}
-	
+
 	operatorStr, ok := query["operator"].(string)
 	if !ok {
 		return nil, fmt.Errorf("operator is required")
 	}
-	
+
 	operator := FilterOperator(operatorStr)
-	
+
 	value := query["value"]
-	
+
 	filter := &FilterCondition{
 		Field:    field,
 		Operator: operator,
 		Value:    value,
 	}
-	
+
 	// If type is specified, use it
 	if typeStr, ok := query["type"].(string); ok {
 		filter.Type = FilterType(typeStr)
 	}
-	
+
 	return filter, nil
 }
 
@@ -624,12 +624,12 @@ func ParseCompoundFilter(query map[string]interface{}) (*CompoundFilter, error) 
 	if !ok {
 		return nil, fmt.Errorf("logic operator is required for compound filter")
 	}
-	
+
 	logic := LogicOperator(logicStr)
 	if logic != LogicAND && logic != LogicOR {
 		return nil, fmt.Errorf("invalid logic operator: %s", logicStr)
 	}
-	
+
 	conditionsRaw, ok := query["conditions"].([]interface{})
 	if !ok {
 		conditionsSlice, ok := query["conditions"].([]map[string]interface{})
@@ -642,18 +642,18 @@ func ParseCompoundFilter(query map[string]interface{}) (*CompoundFilter, error) 
 			conditionsRaw[i] = c
 		}
 	}
-	
+
 	filter := &CompoundFilter{
 		Logic:      logic,
 		Conditions: []interface{}{},
 	}
-	
+
 	for _, condRaw := range conditionsRaw {
 		condMap, ok := condRaw.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		
+
 		// Check if it's a nested compound filter
 		if _, hasLogic := condMap["logic"]; hasLogic {
 			nestedFilter, err := ParseCompoundFilter(condMap)
@@ -670,7 +670,7 @@ func ParseCompoundFilter(query map[string]interface{}) (*CompoundFilter, error) 
 			filter.Conditions = append(filter.Conditions, *condition)
 		}
 	}
-	
+
 	return filter, nil
 }
 
@@ -682,7 +682,7 @@ func parseFilterConditionFromMap(m map[string]interface{}) (*FilterCondition, er
 // GenerateFilterMetadata generates metadata for frontend consumption
 func GenerateFilterMetadata(definitions []FilterDefinition) map[string]interface{} {
 	filters := make([]map[string]interface{}, len(definitions))
-	
+
 	for i, def := range definitions {
 		filterMeta := map[string]interface{}{
 			"field":     def.Field,
@@ -690,12 +690,12 @@ func GenerateFilterMetadata(definitions []FilterDefinition) map[string]interface
 			"type":      def.Type.String(),
 			"operators": make([]string, len(def.Operators)),
 		}
-		
+
 		// Convert operators to strings
 		for j, op := range def.Operators {
 			filterMeta["operators"].([]string)[j] = string(op)
 		}
-		
+
 		// Add optional fields if present
 		if def.Validation != nil {
 			filterMeta["validation"] = def.Validation
@@ -709,10 +709,10 @@ func GenerateFilterMetadata(definitions []FilterDefinition) map[string]interface
 		if def.Default != nil {
 			filterMeta["default"] = def.Default
 		}
-		
+
 		filters[i] = filterMeta
 	}
-	
+
 	return map[string]interface{}{
 		"filters": filters,
 		"logic_operators": []string{
@@ -725,39 +725,39 @@ func GenerateFilterMetadata(definitions []FilterDefinition) map[string]interface
 // GetDateRangeForOperator returns start and end dates for date range operators
 func GetDateRangeForOperator(operator FilterOperator, baseDate time.Time) (time.Time, time.Time) {
 	var start, end time.Time
-	
+
 	switch operator {
 	case OperatorIsToday:
 		start = baseDate.Truncate(24 * time.Hour)
-		end = start.Add(24*time.Hour).Add(-time.Nanosecond)
-		
+		end = start.Add(24 * time.Hour).Add(-time.Nanosecond)
+
 	case OperatorIsYesterday:
 		start = baseDate.AddDate(0, 0, -1).Truncate(24 * time.Hour)
-		end = start.Add(24*time.Hour).Add(-time.Nanosecond)
-		
+		end = start.Add(24 * time.Hour).Add(-time.Nanosecond)
+
 	case OperatorIsThisWeek:
 		// Assuming week starts on Monday
 		weekday := int(baseDate.Weekday())
 		if weekday == 0 {
 			weekday = 7 // Sunday = 7
 		}
-		start = baseDate.AddDate(0, 0, -(weekday-1)).Truncate(24 * time.Hour)
+		start = baseDate.AddDate(0, 0, -(weekday - 1)).Truncate(24 * time.Hour)
 		end = start.AddDate(0, 0, 7).Add(-time.Nanosecond)
-		
+
 	case OperatorIsThisMonth:
 		start = time.Date(baseDate.Year(), baseDate.Month(), 1, 0, 0, 0, 0, baseDate.Location())
 		end = start.AddDate(0, 1, 0).Add(-time.Nanosecond)
-		
+
 	case OperatorIsThisYear:
 		start = time.Date(baseDate.Year(), 1, 1, 0, 0, 0, 0, baseDate.Location())
 		end = start.AddDate(1, 0, 0).Add(-time.Nanosecond)
-		
+
 	default:
 		// For other operators, return the base date as both start and end
 		start = baseDate
 		end = baseDate
 	}
-	
+
 	return start, end
 }
 

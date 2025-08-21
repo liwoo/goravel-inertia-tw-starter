@@ -17,7 +17,7 @@ func BuildStandardPageProps(
 			CurrentPage: result.CurrentPage,
 			LastPage:    result.LastPage,
 			PerPage:     result.PerPage,
-			From:        (result.CurrentPage - 1) * result.PerPage + 1,
+			From:        (result.CurrentPage-1)*result.PerPage + 1,
 			To:          min(result.CurrentPage*result.PerPage, int(result.Total)),
 			HasNext:     result.CurrentPage < result.LastPage,
 			HasPrev:     result.CurrentPage > 1,

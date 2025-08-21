@@ -26,10 +26,10 @@ type ViteManifest map[string]ManifestEntry
 
 // ViteHelper handles Vite asset generation
 type ViteHelper struct {
-	isDev         bool
-	manifest      ViteManifest
-	publicPath    string // Base path for built assets, e.g., "/build"
-	devServerURL  string // URL for the Vite development server, e.g., "http://localhost:5173"
+	isDev        bool
+	manifest     ViteManifest
+	publicPath   string // Base path for built assets, e.g., "/build"
+	devServerURL string // URL for the Vite development server, e.g., "http://localhost:5173"
 }
 
 // NewViteHelper creates a new ViteHelper instance.
@@ -41,9 +41,9 @@ func NewViteHelper() *ViteHelper {
 	devServerURL := facades.Config().GetString("vite.dev_server_url", "http://localhost:5173")
 
 	vh := &ViteHelper{
-		isDev:         isDev,
-		publicPath:    publicPath,
-		devServerURL:  devServerURL,
+		isDev:        isDev,
+		publicPath:   publicPath,
+		devServerURL: devServerURL,
 	}
 
 	// Load manifest in production mode

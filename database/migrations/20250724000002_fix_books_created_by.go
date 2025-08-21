@@ -15,11 +15,11 @@ func (r *FixBooksCreatedBy20250124) Signature() string {
 // Up Run the migrations.
 func (r *FixBooksCreatedBy20250124) Up() error {
 	// In test environment with SQLite in-memory, skip this migration
-	if facades.Config().GetString("database.default") == "sqlite" && 
-	   facades.Config().GetString("database.connections.sqlite.database") == ":memory:" {
+	if facades.Config().GetString("database.default") == "sqlite" &&
+		facades.Config().GetString("database.connections.sqlite.database") == ":memory:" {
 		return nil
 	}
-	
+
 	// Get the first super admin user
 	var superAdminID uint
 	err := facades.Orm().Query().Table("users").Where("is_super_admin = ?", true).Select("id").First(&superAdminID)
@@ -31,26 +31,26 @@ func (r *FixBooksCreatedBy20250124) Up() error {
 			return nil
 		}
 	}
-	
+
 	// Update all books without created_by
 	_, err = facades.Orm().Query().Table("books").Where("created_by IS NULL").Update("created_by", superAdminID)
 	if err != nil {
 		return err
 	}
-	
+
 	// Also update updated_by
 	_, err = facades.Orm().Query().Table("books").Where("updated_by IS NULL").Update("updated_by", superAdminID)
 	if err != nil {
 		return err
 	}
-	
+
 	// Also update other tables that might have the same issue
 	tables := []string{"users", "roles", "permissions"}
 	for _, table := range tables {
 		facades.Orm().Query().Table(table).Where("created_by IS NULL").Update("created_by", superAdminID)
 		facades.Orm().Query().Table(table).Where("updated_by IS NULL").Update("updated_by", superAdminID)
 	}
-	
+
 	return nil
 }
 

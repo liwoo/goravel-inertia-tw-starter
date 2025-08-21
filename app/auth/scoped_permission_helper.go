@@ -24,46 +24,46 @@ func (h *ScopedPermissionChecker) CheckScopedPermission(
 	if user == nil {
 		return false
 	}
-	
+
 	// Super admins bypass all scope checks
 	if user.IsSuperAdminUser() {
 		return true
 	}
-	
+
 	// Check all three scopes from most to least restrictive
 	scopes := []PermissionScope{ScopeByAll, ScopeByMyRole, ScopeByMe}
-	
+
 	// Debug logging
 	facades.Log().Debug("CheckScopedPermission", map[string]interface{}{
 		"user_id": user.ID,
-		"email": user.Email,
+		"email":   user.Email,
 		"service": service,
-		"action": action,
+		"action":  action,
 	})
-	
+
 	for _, scope := range scopes {
 		permissionSlug := GetPermissionSlug(service, action, scope)
-		
+
 		// Check if user has this scoped permission
 		hasPermission := h.permissionService.HasPermission(user, permissionSlug)
 		facades.Log().Debug("Checking permission", map[string]interface{}{
-			"permission": permissionSlug,
+			"permission":     permissionSlug,
 			"has_permission": hasPermission,
-			"scope": scope,
+			"scope":          scope,
 		})
-		
+
 		if hasPermission {
 			// Now verify the scope requirements
 			validated := h.validateScope(user, scope, resource)
 			facades.Log().Debug("Scope validation", map[string]interface{}{
-				"scope": scope,
+				"scope":     scope,
 				"validated": validated,
 			})
 			if validated {
 				return true
 			}
 		}
-		
+
 		// Also check the old-style permission format for backward compatibility
 		oldStyleSlug := string(service) + "_" + string(action)
 		if h.permissionService.HasPermission(user, oldStyleSlug) {
@@ -73,7 +73,7 @@ func (h *ScopedPermissionChecker) CheckScopedPermission(
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -84,20 +84,20 @@ func (h *ScopedPermissionChecker) validateScope(user *models.User, scope Permiss
 	if resource == nil {
 		return true
 	}
-	
+
 	switch scope {
 	case ScopeByAll:
 		// No additional validation needed - user can access all resources
 		return true
-		
+
 	case ScopeByMe:
 		// User can only access resources they created
 		return h.isResourceCreatedBy(resource, user.ID)
-		
+
 	case ScopeByMyRole:
 		// User can access resources created by users with the same role or lower level
 		return h.isResourceCreatedByRoleLevel(resource, user)
-		
+
 	default:
 		return false
 	}
@@ -124,7 +124,7 @@ func (h *ScopedPermissionChecker) isResourceCreatedBy(resource interface{}, user
 // isResourceCreatedByRoleLevel checks if a resource was created by someone at the same role level or lower
 func (h *ScopedPermissionChecker) isResourceCreatedByRoleLevel(resource interface{}, user *models.User) bool {
 	var creatorID *uint
-	
+
 	// Extract creator ID from resource
 	switch r := resource.(type) {
 	case *models.Book:
@@ -138,23 +138,23 @@ func (h *ScopedPermissionChecker) isResourceCreatedByRoleLevel(resource interfac
 	default:
 		return false
 	}
-	
+
 	if creatorID == nil {
 		// If no creator is set, we can't validate role level
 		return false
 	}
-	
+
 	// Get the creator's user record
 	var creator models.User
 	err := facades.Orm().Query().Where("id = ?", *creatorID).With("Roles").First(&creator)
 	if err != nil {
 		return false
 	}
-	
+
 	// Compare role levels
 	userMaxLevel := h.getUserMaxRoleLevel(user)
 	creatorMaxLevel := h.getUserMaxRoleLevel(&creator)
-	
+
 	// User can access if their role level is >= creator's role level
 	return userMaxLevel >= creatorMaxLevel
 }
@@ -181,11 +181,11 @@ func (h *ScopedPermissionChecker) RequireScopedPermission(
 	if user == nil {
 		return nil, fmt.Errorf("authentication required")
 	}
-	
+
 	if !h.CheckScopedPermission(ctx, service, action, resource) {
 		return user, fmt.Errorf("insufficient permissions for %s.%s", service, action)
 	}
-	
+
 	return user, nil
 }
 
@@ -195,7 +195,7 @@ var scopedPermissionHelper *ScopedPermissionChecker
 func GetScopedPermissionHelper() *ScopedPermissionChecker {
 	if scopedPermissionHelper == nil {
 		scopedPermissionHelper = &ScopedPermissionChecker{
-			PermissionHelper: GetPermissionHelper(),
+			PermissionHelper:  GetPermissionHelper(),
 			permissionService: NewPermissionService(),
 		}
 	}

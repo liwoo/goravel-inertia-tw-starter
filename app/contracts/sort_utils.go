@@ -10,11 +10,11 @@ import (
 
 // SortConfig defines the configuration for sort operations
 type SortConfig struct {
-	Field           string // The field to sort by
-	Direction       string // The sort direction (ASC/DESC)
-	ValidateFunc    func(field string) bool // Field validation function
-	MapFieldFunc    func(field string) (string, bool) // Field mapping function
-	GetDefaultFunc  func() (string, string) // Default sort function
+	Field          string                            // The field to sort by
+	Direction      string                            // The sort direction (ASC/DESC)
+	ValidateFunc   func(field string) bool           // Field validation function
+	MapFieldFunc   func(field string) (string, bool) // Field mapping function
+	GetDefaultFunc func() (string, string)           // Default sort function
 }
 
 // SortBuilder provides utilities for building sort queries
@@ -29,7 +29,7 @@ func NewSortBuilder() *SortBuilder {
 func (sb *SortBuilder) ApplySort(query orm.Query, config SortConfig) orm.Query {
 	// Determine the field and direction to use
 	field, direction := sb.determineSortParams(config)
-	
+
 	// Build and apply the order clause
 	orderClause := field + " " + str.Of(direction).Upper().String()
 	return query.Order(orderClause)
@@ -44,7 +44,7 @@ func (sb *SortBuilder) ApplySortWithService(query orm.Query, sort, direction str
 		MapSortField(string) (string, bool)
 		GetDefaultSort() (string, string)
 	})
-	
+
 	if !ok {
 		return query, fmt.Errorf("service does not implement sortable interface")
 	}
@@ -56,7 +56,7 @@ func (sb *SortBuilder) ApplySortWithService(query orm.Query, sort, direction str
 		MapFieldFunc:   sortable.MapSortField,
 		GetDefaultFunc: sortable.GetDefaultSort,
 	}
-	
+
 	// Validate direction separately
 	if direction != "" && !sortable.ValidateSortDirection(direction) {
 		// Only replace the direction, keep the field
@@ -69,7 +69,7 @@ func (sb *SortBuilder) ApplySortWithService(query orm.Query, sort, direction str
 
 // determineSortParams determines the final sort field and direction
 func (sb *SortBuilder) determineSortParams(config SortConfig) (field, direction string) {
-	
+
 	// If no sort field specified, use default
 	if config.Field == "" || config.Direction == "" {
 		if config.GetDefaultFunc != nil {
@@ -112,12 +112,12 @@ func (sb *SortBuilder) BuildSortClause(field, direction string) string {
 	if field == "" {
 		return ""
 	}
-	
+
 	direction = str.Of(direction).Upper().String()
 	if direction != "ASC" && direction != "DESC" {
 		direction = "DESC"
 	}
-	
+
 	return field + " " + direction
 }
 
@@ -150,18 +150,18 @@ func (sb *SortBuilder) CombineSortClauses(clauses ...string) string {
 // ParseSortString parses a sort string like "name:asc,created_at:desc"
 func (sb *SortBuilder) ParseSortString(sortString string) []struct{ Field, Direction string } {
 	var result []struct{ Field, Direction string }
-	
+
 	if sortString == "" {
 		return result
 	}
-	
+
 	parts := strings.Split(sortString, ",")
 	for _, part := range parts {
 		part = str.Of(part).Trim().String()
 		if part == "" {
 			continue
 		}
-		
+
 		fieldDir := strings.Split(part, ":")
 		if len(fieldDir) == 2 {
 			result = append(result, struct{ Field, Direction string }{
@@ -176,6 +176,6 @@ func (sb *SortBuilder) ParseSortString(sortString string) []struct{ Field, Direc
 			})
 		}
 	}
-	
+
 	return result
 }
