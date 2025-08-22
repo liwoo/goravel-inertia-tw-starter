@@ -1,6 +1,19 @@
 # Goravel Blog Application
 
+[![CI](https://github.com/liwoo/goravel-inertia-tw-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/liwoo/goravel-inertia-tw-starter/actions/workflows/ci.yml)
+[![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://go.dev/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://hub.docker.com/r/liwoo/goravel-inertia-tw-starter)
+[![codecov](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter/branch/main/graph/badge.svg)](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter)
+
 A modern web application built with Goravel (Go) and React, featuring JWT authentication, RBAC permissions, CRUD generators, dark mode, and a responsive UI.
+
+## 📊 Build Status
+
+| Branch | Status | Coverage |
+|--------|--------|----------|
+| main   | [![CI](https://github.com/liwoo/goravel-inertia-tw-starter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/liwoo/goravel-inertia-tw-starter/actions) | [![codecov](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter/branch/main/graph/badge.svg)](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter) |
+| develop | [![CI](https://github.com/liwoo/goravel-inertia-tw-starter/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/liwoo/goravel-inertia-tw-starter/actions) | [![codecov](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter/branch/develop/graph/badge.svg)](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter) |
 
 ## 🚀 Quick Start
 
