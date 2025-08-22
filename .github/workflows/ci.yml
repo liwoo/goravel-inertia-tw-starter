@@ -97,8 +97,20 @@ jobs:
           DB_PASSWORD: root
         run: ./run_tests.sh coverage
           
+      - name: Display coverage summary
+        if: always()
+        run: |
+          if [ -f coverage.out ]; then
+            echo "Coverage file size: $(ls -lh coverage.out | awk '{print $5}')"
+            echo "Coverage summary:"
+            go tool cover -func=coverage.out | tail -10
+          else
+            echo "No coverage file found"
+          fi
+          
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: coverage-report
           path: coverage.out
@@ -108,9 +120,10 @@ jobs:
         with:
           file: ./coverage.out
           flags: unittests
-          name: codecov-umbrella
+          name: codecov-${{ github.ref_name }}
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
 
   build:
     name: Build Docker Image

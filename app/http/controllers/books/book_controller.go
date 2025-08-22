@@ -286,69 +286,41 @@ func (c *BookController) GetByAuthor(ctx http.Context) http.Response {
 // GetFilterDefinitions returns custom filter definitions for books
 func (c *BookController) GetFilterDefinitions() []contracts.FilterDefinition {
 	return []contracts.FilterDefinition{
-		// Price filter
+		// Price filter - uses all number operators automatically
 		contracts.NewFilterDefinition(
 			"price",
 			"Price",
 			contracts.FilterTypeNumber,
-			[]contracts.FilterOperator{
-				contracts.OperatorEquals,
-				contracts.OperatorGreaterThan,
-				contracts.OperatorLessThan,
-				contracts.OperatorGreaterThanOrEqual,
-				contracts.OperatorLessThanOrEqual,
-				contracts.OperatorBetween,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeNumber)
 		),
-		// Status filter
+		// Status filter - uses all enum operators automatically
 		{
-			Field: "status",
-			Label: "Status",
-			Type:  contracts.FilterTypeEnum,
-			Operators: []contracts.FilterOperator{
-				contracts.OperatorEquals,
-				contracts.OperatorNotEquals,
-				contracts.OperatorIn,
-				contracts.OperatorNotIn,
-			},
+			Field:      "status",
+			Label:      "Status",
+			Type:       contracts.FilterTypeEnum,
+			Operators:  nil, // Will use GetOperatorsForType(FilterTypeEnum)
 			EnumValues: []string{"AVAILABLE", "BORROWED", "MAINTENANCE", "RESERVED", "LOST"},
 		},
-		// Published date filter
+		// Published date filter - uses all date operators automatically
 		contracts.NewFilterDefinition(
 			"published_at",
 			"Published Date",
 			contracts.FilterTypeDate,
-			[]contracts.FilterOperator{
-				contracts.OperatorBefore,
-				contracts.OperatorAfter,
-				contracts.OperatorBetween,
-				contracts.OperatorIsToday,
-				contracts.OperatorIsThisMonth,
-				contracts.OperatorIsThisYear,
-				contracts.OperatorLastNDays,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeDate)
 		),
-		// Author filter
+		// Author filter - uses all string operators automatically
 		contracts.NewFilterDefinition(
 			"author",
 			"Author",
 			contracts.FilterTypeString,
-			[]contracts.FilterOperator{
-				contracts.OperatorEquals,
-				contracts.OperatorContains,
-				contracts.OperatorStartsWith,
-				contracts.OperatorEndsWith,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeString)
 		),
-		// Is Verified filter
+		// Is Verified filter - uses all boolean operators automatically
 		contracts.NewFilterDefinition(
 			"is_verified",
 			"Verified",
 			contracts.FilterTypeBoolean,
-			[]contracts.FilterOperator{
-				contracts.OperatorIsTrue,
-				contracts.OperatorIsFalse,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeBoolean)
 		),
 	}
 }

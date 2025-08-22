@@ -1,0 +1,56 @@
+# Codecov configuration
+# https://docs.codecov.io/docs/codecov-yaml
+
+# Coverage configuration
+coverage:
+  # Coverage targets
+  status:
+    project:
+      default:
+        # Adjust coverage targets as needed
+        target: auto
+        threshold: 1%
+        base: auto
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+
+# Parser configuration
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+# Comment configuration
+comment:
+  layout: "reach,diff,flags,tree,betaprofiling"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Ignore paths
+ignore:
+  - "vendor/**/*"
+  - "**/*_test.go"
+  - "**/mock_*.go"
+  - "**/generated.go"
+  - "database/migrations/**/*"
+  - "resources/**/*"
+  - "public/**/*"
+  - "storage/**/*"
+  - "bootstrap/**/*"
+  - "config/**/*"
+
+# Flag configuration
+flags:
+  unittests:
+    paths:
+      - "app/**"
+      - "tests/**"
+    carryforward: true

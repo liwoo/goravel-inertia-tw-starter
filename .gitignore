@@ -7,6 +7,7 @@ storage/framework
 node_modules
 storage/temp/
 storage/logs/*.log
+./storage/logs/*.log
 
 # Binaries for programs and plugins
 *.exe

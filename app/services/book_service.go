@@ -325,54 +325,33 @@ func (s *BookService) ReturnBook(id uint) error {
 // GetFilterDefinitions returns filter definitions for the books resource
 func (s *BookService) GetFilterDefinitions() []contracts.FilterDefinition {
 	return []contracts.FilterDefinition{
-		// Title filter
+		// Title filter - uses all string operators automatically
 		contracts.NewFilterDefinition(
 			"title",
 			"Title",
 			contracts.FilterTypeString,
-			[]contracts.FilterOperator{
-				contracts.OperatorContains,
-				contracts.OperatorNotContains,
-				contracts.OperatorStartsWith,
-				contracts.OperatorEndsWith,
-				contracts.OperatorEquals,
-				contracts.OperatorNotEquals,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeString)
 		),
-		// Author filter
+		// Author filter - uses all string operators automatically
 		contracts.NewFilterDefinition(
 			"author",
 			"Author",
 			contracts.FilterTypeString,
-			[]contracts.FilterOperator{
-				contracts.OperatorContains,
-				contracts.OperatorNotContains,
-				contracts.OperatorEquals,
-				contracts.OperatorNotEquals,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeString)
 		),
-		// ISBN filter
+		// ISBN filter - uses all string operators automatically
 		contracts.NewFilterDefinition(
 			"isbn",
 			"ISBN",
 			contracts.FilterTypeString,
-			[]contracts.FilterOperator{
-				contracts.OperatorEquals,
-				contracts.OperatorNotEquals,
-				contracts.OperatorContains,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeString)
 		),
-		// Status filter
+		// Status filter - uses all enum operators automatically
 		{
-			Field: "status",
-			Label: "Status",
-			Type:  contracts.FilterTypeEnum,
-			Operators: []contracts.FilterOperator{
-				contracts.OperatorEquals,
-				contracts.OperatorNotEquals,
-				contracts.OperatorIn,
-				contracts.OperatorNotIn,
-			},
+			Field:     "status",
+			Label:     "Status",
+			Type:      contracts.FilterTypeEnum,
+			Operators: nil, // Will use GetOperatorsForType(FilterTypeEnum)
 			EnumValues: []string{
 				"AVAILABLE",
 				"BORROWED",
@@ -380,67 +359,33 @@ func (s *BookService) GetFilterDefinitions() []contracts.FilterDefinition {
 				"RESERVED",
 			},
 		},
-		// Price filter
+		// Price filter - uses all number operators automatically
 		contracts.NewFilterDefinition(
 			"price",
 			"Price",
 			contracts.FilterTypeNumber,
-			[]contracts.FilterOperator{
-				contracts.OperatorEquals,
-				contracts.OperatorNotEquals,
-				contracts.OperatorGreaterThan,
-				contracts.OperatorLessThan,
-				contracts.OperatorGreaterThanOrEqual,
-				contracts.OperatorLessThanOrEqual,
-				contracts.OperatorBetween,
-				contracts.OperatorNotBetween,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeNumber)
 		),
-		// Published date filter
+		// Published date filter - uses all date operators automatically
 		contracts.NewFilterDefinition(
 			"published_at",
 			"Published Date",
 			contracts.FilterTypeDate,
-			[]contracts.FilterOperator{
-				contracts.OperatorBefore,
-				contracts.OperatorAfter,
-				contracts.OperatorBetween,
-				contracts.OperatorNotBetween,
-				contracts.OperatorIsToday,
-				contracts.OperatorIsYesterday,
-				contracts.OperatorIsThisWeek,
-				contracts.OperatorIsThisMonth,
-				contracts.OperatorIsThisYear,
-				contracts.OperatorLastNDays,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeDate)
 		),
-		// Created date filter
+		// Created date filter - uses all datetime operators automatically
 		contracts.NewFilterDefinition(
 			"created_at",
 			"Date Added",
 			contracts.FilterTypeDateTime,
-			[]contracts.FilterOperator{
-				contracts.OperatorBefore,
-				contracts.OperatorAfter,
-				contracts.OperatorBetween,
-				contracts.OperatorNotBetween,
-				contracts.OperatorIsToday,
-				contracts.OperatorIsThisWeek,
-				contracts.OperatorIsThisMonth,
-				contracts.OperatorLastNDays,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeDateTime)
 		),
-		// Tags filter (for array/JSON field)
+		// Tags filter - uses all array operators automatically
 		contracts.NewFilterDefinition(
 			"tags",
 			"Tags",
 			contracts.FilterTypeArray,
-			[]contracts.FilterOperator{
-				contracts.OperatorContains,
-				contracts.OperatorNotContains,
-				contracts.OperatorIsEmpty,
-				contracts.OperatorIsNotEmpty,
-			},
+			nil, // Will use GetOperatorsForType(FilterTypeArray)
 		),
 	}
 }
