@@ -246,13 +246,13 @@ export function FilterConditionBuilder({
   };
 
   return (
-    <div className="flex gap-2 items-start p-3 border rounded-lg bg-muted/30">
+    <div className="flex flex-col sm:flex-row gap-2 items-start p-3 border rounded-lg bg-muted/30">
       {/* Field Selector */}
       <Select 
         value={condition.field && condition.field !== '' ? condition.field : undefined} 
         onValueChange={handleFieldChange}
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="Select field" />
         </SelectTrigger>
         <SelectContent>
@@ -274,7 +274,7 @@ export function FilterConditionBuilder({
           value={condition.operator && condition.operator !== '' ? condition.operator : undefined} 
           onValueChange={handleOperatorChange}
         >
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Select operator" />
           </SelectTrigger>
           <SelectContent>

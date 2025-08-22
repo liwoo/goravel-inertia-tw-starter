@@ -60,10 +60,10 @@ export function CrudDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, type, canSave, canEdit, onSave, onEdit, onClose]);
   const sizeClasses = {
-    sm: 'w-[400px]',
-    md: 'w-[600px]',
-    lg: 'w-[800px]',
-    xl: 'w-[1000px]',
+    sm: 'w-full sm:w-[400px]',
+    md: 'w-full sm:w-[600px]',
+    lg: 'w-full sm:w-[800px]',
+    xl: 'w-full sm:w-[1000px]',
     full: 'w-full',
   };
 
@@ -98,11 +98,12 @@ export function CrudDrawer({
           "transform transition-transform duration-300 ease-in-out",
           isOpen ? "translate-x-0" : "translate-x-full",
           sizeClasses[size],
+          "max-w-full", // Ensure drawer never exceeds viewport width
           className
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -156,7 +157,7 @@ export function CrudDrawer({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {children}
           </div>
         </div>

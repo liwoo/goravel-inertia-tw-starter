@@ -319,8 +319,14 @@ export function CrudPage<T extends { id: number }>({
     const params: Record<string, any> = {
       page: 1,
       pageSize: pageSize,
-      ...overrides, // Apply overrides first so they can be overridden below if needed
     };
+    
+    // Apply overrides, filtering out null/undefined values
+    Object.keys(overrides).forEach(key => {
+      if (overrides[key] !== null && overrides[key] !== undefined) {
+        params[key] = overrides[key];
+      }
+    });
     
     // Preserve core navigation parameters from current filters
     if (filters?.sort && !overrides.hasOwnProperty('sort')) params.sort = filters.sort;
@@ -429,24 +435,53 @@ export function CrudPage<T extends { id: number }>({
     const newFilters = { ...activeFilters };
     if (value === '' || value === null || value === undefined) {
       delete newFilters[filterKey];
+      
+      // Reset simple filter tab if we're removing a filter that matches a simple filter
+      const matchingSimpleFilter = simpleFilters.find(sf => {
+        if (sf.filterParams) {
+          // Check if this simple filter has the same key and was the active value
+          return Object.keys(sf.filterParams).includes(filterKey) && 
+                 sf.filterParams[filterKey] === activeFilters[filterKey];
+        }
+        return sf.key === filterKey;
+      });
+      
+      if (matchingSimpleFilter && activeSimpleFilter === matchingSimpleFilter.value.toString()) {
+        setActiveSimpleFilter(undefined);
+      }
     } else {
       newFilters[filterKey] = value;
     }
     
     setActiveFilters(newFilters);
     
-    // Use helper but override custom filters with the new filters
-    const params = buildNavigationParams({
+    // Build params with explicit null for removed filters
+    const overrides: Record<string, any> = {
       page: 1,
-      ...newFilters, // Override any existing custom filters with the new ones
+    };
+    
+    // Add all active filter keys with their values (or null if removed)
+    Object.keys(activeFilters).forEach(key => {
+      if (key !== '__custom_filters') {
+        overrides[key] = newFilters[key] !== undefined ? newFilters[key] : null;
+      }
     });
+    
+    // Add any new filters
+    Object.keys(newFilters).forEach(key => {
+      if (key !== '__custom_filters') {
+        overrides[key] = newFilters[key];
+      }
+    });
+    
+    const params = buildNavigationParams(overrides);
     
     router.get(baseRoute, params, {
       preserveState: true,
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [baseRoute, buildNavigationParams, activeFilters]);
+  }, [baseRoute, buildNavigationParams, activeFilters, simpleFilters, activeSimpleFilter]);
 
   const handleDynamicFilterApply = React.useCallback((filter: FilterCondition | CompoundFilter | null) => {
     // Store the applied filter to maintain state
@@ -491,6 +526,7 @@ export function CrudPage<T extends { id: number }>({
   const handleClearAllFilters = React.useCallback(() => {
     setAppliedDynamicFilter(null);
     setActiveFilters({});
+    setActiveSimpleFilter(undefined); // Reset simple filter tab when clearing all
     
     // Build clean parameters with only core navigation (no filters)
     const params: Record<string, any> = {
@@ -517,8 +553,32 @@ export function CrudPage<T extends { id: number }>({
     const overrides: Record<string, any> = { page: 1 };
     
     if (filterValue === undefined) {
-      // "All" was selected - clear simple filter-specific params but preserve everything else
-      // Don't add any specific filter parameters
+      // "All" was selected - clear all simple filter parameters
+      // Get all possible filter keys from simpleFilters
+      simpleFilters.forEach(filter => {
+        if (filter.filterParams) {
+          // Clear each parameter key
+          Object.keys(filter.filterParams).forEach(key => {
+            overrides[key] = null;
+          });
+        } else {
+          // Clear the default key
+          overrides[filter.key] = null;
+        }
+      });
+      
+      // Also update activeFilters to remove these keys
+      const newActiveFilters = { ...activeFilters };
+      simpleFilters.forEach(filter => {
+        if (filter.filterParams) {
+          Object.keys(filter.filterParams).forEach(key => {
+            delete newActiveFilters[key];
+          });
+        } else {
+          delete newActiveFilters[filter.key];
+        }
+      });
+      setActiveFilters(newActiveFilters);
     } else {
       // Find the selected filter
       const selectedFilter = simpleFilters.find(f => f.value.toString() === filterValue);
@@ -541,7 +601,7 @@ export function CrudPage<T extends { id: number }>({
       preserveScroll: true,
       only: ['data', 'filters'],
     });
-  }, [baseRoute, buildNavigationParams, simpleFilters]);
+  }, [baseRoute, buildNavigationParams, simpleFilters, activeFilters]);
 
   const handleCreate = React.useCallback(() => {
     // Reset form refs before opening create drawer
@@ -900,7 +960,7 @@ export function CrudPage<T extends { id: number }>({
         <div className="flex flex-col gap-4 min-w-0">
           {/* Search */}
           <div className="flex items-center gap-2 min-w-0">
-            <div className="relative flex-1 max-w-sm min-w-0">
+            <div className="relative flex-1 max-w-full sm:max-w-sm min-w-0">
               {isSearching ? (
                 <div className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
@@ -936,9 +996,9 @@ export function CrudPage<T extends { id: number }>({
             <Tabs 
               value={activeSimpleFilter || "all"} 
               onValueChange={(value) => handleSimpleFilterChange(value === "all" ? undefined : value)}
-              className="w-fit"
+              className="w-full sm:w-fit overflow-x-auto"
             >
-              <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 flex">
+              <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 flex min-w-fit">
                 <TabsTrigger value="all">All</TabsTrigger>
                 {simpleFilters.slice(0, 5).map((filter) => (
                   <TabsTrigger key={filter.key} value={filter.value.toString()}>
@@ -955,55 +1015,67 @@ export function CrudPage<T extends { id: number }>({
             </Tabs>
           )}
 
-          {/* Filter Panel - Use Dynamic Filter Builder if metadata available, otherwise fall back to custom filters */}
+          {/* Filter Panel - Mobile-responsive overlay on small screens */}
           {showFilters && (
             <>
-              {filterMetadata && filterMetadata.filters.length > 0 ? (
-                <DynamicFilterBuilder
-                  metadata={filterMetadata}
-                  loading={filterMetadataLoading}
-                  onApply={handleDynamicFilterApply}
-                  initialFilter={appliedDynamicFilter}
-                />
-              ) : customFilters.length > 0 ? (
-                <div className="rounded-lg border bg-card p-4 min-w-0 overflow-hidden">
-                  <div className="flex items-center justify-between mb-4 min-w-0">
-                    <h3 className="text-sm font-medium">Filters</h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFilters(false)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <FilterPanel
-                    filters={customFilters}
-                    values={activeFilters}
-                    onChange={handleFilterChange}
-                    onClear={() => {
-                      setActiveFilters({});
-                      
-                      // Build a clean URL without any filter parameters
-                      const cleanParams: Record<string, any> = {
-                        page: 1,
-                        pageSize: pageSize,
-                      };
-                      
-                      // Only include non-filter parameters from current filters
-                      if (filters?.sort) cleanParams.sort = filters.sort;
-                      if (filters?.direction) cleanParams.direction = filters.direction;
-                      if (filters?.search) cleanParams.search = filters.search;
-                      
-                      router.get(baseRoute, cleanParams, {
-                        preserveState: true,
-                        preserveScroll: true,
-                        only: ['data', 'filters'],
-                      });
-                    }}
-                  />
+              {/* Mobile overlay backdrop */}
+              <div className="fixed inset-0 bg-black/20 z-30 md:hidden" onClick={() => setShowFilters(false)} />
+              
+              {/* Filter panel - full screen on mobile, inline on desktop */}
+              <div className="fixed inset-0 z-40 md:relative md:inset-auto">
+                <div className="h-full overflow-y-auto bg-background md:bg-transparent md:h-auto">
+                  {filterMetadata && filterMetadata.filters.length > 0 ? (
+                    <div className="md:block">
+                      <DynamicFilterBuilder
+                        metadata={filterMetadata}
+                        loading={filterMetadataLoading}
+                        onApply={handleDynamicFilterApply}
+                        initialFilter={appliedDynamicFilter}
+                        onClose={() => setShowFilters(false)}
+                        className="h-full md:h-auto rounded-none md:rounded-lg border-0 md:border"
+                      />
+                    </div>
+                  ) : customFilters.length > 0 ? (
+                    <div className="h-full md:h-auto rounded-none md:rounded-lg border-0 md:border bg-card p-4 min-w-0 overflow-hidden">
+                      <div className="flex items-center justify-between mb-4 min-w-0">
+                        <h3 className="text-sm font-medium">Filters</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowFilters(false)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <FilterPanel
+                        filters={customFilters}
+                        values={activeFilters}
+                        onChange={handleFilterChange}
+                        onClear={() => {
+                          setActiveFilters({});
+                          
+                          // Build a clean URL without any filter parameters
+                          const cleanParams: Record<string, any> = {
+                            page: 1,
+                            pageSize: pageSize,
+                          };
+                          
+                          // Only include non-filter parameters from current filters
+                          if (filters?.sort) cleanParams.sort = filters.sort;
+                          if (filters?.direction) cleanParams.direction = filters.direction;
+                          if (filters?.search) cleanParams.search = filters.search;
+                          
+                          router.get(baseRoute, cleanParams, {
+                            preserveState: true,
+                            preserveScroll: true,
+                            only: ['data', 'filters'],
+                          });
+                        }}
+                      />
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
+              </div>
             </>
           )}
         </div>

@@ -166,7 +166,7 @@ export function DynamicFilterBuilder({
   return (
     <Card className={cn('w-full', className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="pb-4">
+        <CardHeader className="p-4 sm:p-6 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Filter className="h-5 w-5 text-muted-foreground" />
@@ -178,6 +178,11 @@ export function DynamicFilterBuilder({
               )}
             </div>
             <div className="flex items-center gap-2">
+              {onClose && (
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 md:hidden" onClick={onClose}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                   {isOpen ? (
@@ -192,7 +197,7 @@ export function DynamicFilterBuilder({
         </CardHeader>
         
         <CollapsibleContent>
-          <CardContent className="space-y-4">
+          <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
             {/* Root Logic Selector (when multiple conditions) */}
             {filters.length > 1 && (
               <div className="flex items-center gap-2">
@@ -269,12 +274,13 @@ export function DynamicFilterBuilder({
             {filters.length > 0 && (
               <>
                 <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleAddCondition}
+                      className="w-full sm:w-auto"
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add Condition
@@ -283,17 +289,19 @@ export function DynamicFilterBuilder({
                       variant="outline"
                       size="sm"
                       onClick={handleAddGroup}
+                      className="w-full sm:w-auto"
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add Group
                     </Button>
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full sm:w-auto">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={handleClear}
+                      className="flex-1 sm:flex-none"
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
                       Clear All
@@ -301,6 +309,7 @@ export function DynamicFilterBuilder({
                     <Button
                       size="sm"
                       onClick={handleApply}
+                      className="flex-1 sm:flex-none"
                     >
                       Apply Filters
                     </Button>
