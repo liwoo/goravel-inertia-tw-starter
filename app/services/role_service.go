@@ -13,56 +13,7 @@ import (
 
 // RoleService implements role-specific business logic using the builder pattern
 type RoleService struct {
-	baseService contracts.CrudServiceContract
-}
-
-// Implement CrudServiceContract interface by delegating to baseService
-func (s *RoleService) GetList(req contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	return s.baseService.GetList(req)
-}
-
-func (s *RoleService) GetByID(id uint) (interface{}, error) {
-	return s.baseService.GetByID(id)
-}
-
-func (s *RoleService) Create(data map[string]interface{}) (interface{}, error) {
-	return s.baseService.Create(data)
-}
-
-func (s *RoleService) Update(id uint, data map[string]interface{}) (interface{}, error) {
-	return s.baseService.Update(id, data)
-}
-
-func (s *RoleService) Delete(id uint) error {
-	return s.baseService.Delete(id)
-}
-
-func (s *RoleService) Search(query string, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	return s.baseService.Search(query, req)
-}
-
-func (s *RoleService) GetListAdvanced(req contracts.ListRequest, filters map[string]interface{}) (*contracts.PaginatedResult, error) {
-	return s.baseService.GetListAdvanced(req, filters)
-}
-
-func (s *RoleService) GetSearchableFields() []string {
-	return s.baseService.GetSearchableFields()
-}
-
-func (s *RoleService) GetSortableFields() []string {
-	return s.baseService.GetSortableFields()
-}
-
-func (s *RoleService) GetFilterableFields() []string {
-	return s.baseService.GetFilterableFields()
-}
-
-func (s *RoleService) GetValidationRules() map[string]interface{} {
-	return s.baseService.GetValidationRules()
-}
-
-func (s *RoleService) GetColumnMapping() map[string]string {
-	return s.baseService.GetColumnMapping()
+	contracts.CrudServiceContract // Embedded - automatically exposes all methods!
 }
 
 // NewRoleService creates a new role service using the builder pattern
@@ -185,7 +136,7 @@ func NewRoleService() *RoleService {
 		Build() // Returns a fully configured CrudServiceContract
 
 	roleServiceInstance := &RoleService{
-		baseService: service,
+		CrudServiceContract: service, // Set the embedded interface
 	}
 
 	// Set the actual service reference for proper method resolution
@@ -417,41 +368,4 @@ func isSystemRole(slug string) bool {
 		}
 	}
 	return false
-}
-
-// Sortable interface implementation
-
-// MapSortField maps frontend field names to database column names
-func (s *RoleService) MapSortField(frontendField string) (string, bool) {
-	// Check if the field is sortable
-	sortableFields := s.baseService.GetSortableFields()
-	for _, field := range sortableFields {
-		if field == frontendField {
-			return frontendField, true
-		}
-	}
-
-	return "", false
-}
-
-// ValidateSortField validates if a field can be sorted
-func (s *RoleService) ValidateSortField(field string) bool {
-	sortableFields := s.baseService.GetSortableFields()
-	for _, sortableField := range sortableFields {
-		if sortableField == field {
-			return true
-		}
-	}
-	return false
-}
-
-// ValidateSortDirection validates sort direction
-func (s *RoleService) ValidateSortDirection(direction string) bool {
-	upper := strings.ToUpper(direction)
-	return upper == "ASC" || upper == "DESC"
-}
-
-// GetDefaultSort returns the default sort configuration
-func (s *RoleService) GetDefaultSort() (string, string) {
-	return "name", "ASC"
 }

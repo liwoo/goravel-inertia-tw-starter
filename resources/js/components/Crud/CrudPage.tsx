@@ -894,8 +894,8 @@ export function CrudPage<T extends { id: number }>({
               <span className="hidden lg:inline ml-2 whitespace-nowrap">Refresh</span>
             </Button>
 
-            {/* Filters - show if we have custom filters OR filter metadata for dynamic filters */}
-            {(customFilters.length > 0 || (filterMetadata && filterMetadata.filters.length > 0)) && (
+            {/* Filters - show if we have custom filters OR filter metadata with filters defined */}
+            {(customFilters.length > 0 || (filterMetadata && !filterMetadataLoading && filterMetadata.filters && filterMetadata.filters.length > 0)) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -905,8 +905,8 @@ export function CrudPage<T extends { id: number }>({
                 <Filter className="h-4 w-4" />
                 <span className="hidden lg:inline ml-2 whitespace-nowrap">Filters</span>
                 {activeFilterCount > 0 && (
-                  <Badge 
-                    variant="secondary" 
+                  <Badge
+                    variant="secondary"
                     className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
                   >
                     {activeFilterCount}

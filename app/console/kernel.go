@@ -36,7 +36,6 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.MakeRepositoryCommand{},
 		&commands.MakeCrudCommand{},
 		&commands.MakeCrudE2E{},
-		&commands.MakeCrudGenericCommand{},
 		&commands.MakeSuperAdmin{},
 		commands.NewCheckRolesCommand(),
 	}

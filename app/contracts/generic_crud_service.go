@@ -199,19 +199,15 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 		}
 	}
 
-	// Apply sorting - use actualService if available, otherwise use self
-	serviceToUse := interface{}(s)
-	if s.actualService != nil {
-		serviceToUse = s.actualService
-	}
+	// Apply sorting - always use self (GenericCrudService) which has all the methods
+	// The actualService is used internally by MapSortField to get column mappings
 	facades.Log().Debug("GenericCrudService applying sort", map[string]interface{}{
 		"service":       s.tableName,
 		"sort":          req.Sort,
 		"direction":     req.Direction,
 		"actualService": s.actualService != nil,
-		"serviceToUse":  fmt.Sprintf("%T", serviceToUse),
 	})
-	query, err := s.ApplySort(query, req.Sort, req.Direction, serviceToUse)
+	query, err := s.ApplySort(query, req.Sort, req.Direction, s)
 	if err != nil {
 		facades.Log().Error("GenericCrudService sort error", map[string]interface{}{
 			"service":   s.tableName,
@@ -415,19 +411,15 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 		}
 	}
 
-	// Apply sorting - use actualService if available, otherwise use self
-	serviceToUse := interface{}(s)
-	if s.actualService != nil {
-		serviceToUse = s.actualService
-	}
+	// Apply sorting - always use self (GenericCrudService) which has all the methods
+	// The actualService is used internally by MapSortField to get column mappings
 	facades.Log().Debug("GenericCrudService applying sort", map[string]interface{}{
 		"service":       s.tableName,
 		"sort":          req.Sort,
 		"direction":     req.Direction,
 		"actualService": s.actualService != nil,
-		"serviceToUse":  fmt.Sprintf("%T", serviceToUse),
 	})
-	query, err := s.ApplySort(query, req.Sort, req.Direction, serviceToUse)
+	query, err := s.ApplySort(query, req.Sort, req.Direction, s)
 	if err != nil {
 		facades.Log().Error("GenericCrudService sort error", map[string]interface{}{
 			"service":   s.tableName,
@@ -925,11 +917,65 @@ func (s *GenericCrudService[T]) ValidateSortField(field string) bool {
 }
 
 func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool) {
-	// By default, we assume frontend fields map directly to database fields
-	// Override this in specific services if needed
+	facades.Log().Debug("MapSortField called", map[string]interface{}{
+		"service":        s.tableName,
+		"frontendField":  frontendField,
+		"actualService":  s.actualService != nil,
+		"sortableFields": s.sortFields,
+	})
+
+	// Get the column mapping from the actual service if available
+	var mapping map[string]string
+	if s.actualService != nil {
+		if mappingProvider, ok := s.actualService.(interface {
+			GetColumnMapping() map[string]string
+		}); ok {
+			mapping = mappingProvider.GetColumnMapping()
+			facades.Log().Debug("Got column mapping", map[string]interface{}{
+				"service": s.tableName,
+				"mapping": mapping,
+			})
+		}
+	}
+
+	// If we have a mapping, check if this field has a mapped name
+	if mapping != nil {
+		if dbField, exists := mapping[frontendField]; exists {
+			facades.Log().Debug("Found field in mapping", map[string]interface{}{
+				"service":       s.tableName,
+				"frontendField": frontendField,
+				"dbField":       dbField,
+			})
+			// Check if the mapped field is sortable
+			if s.ValidateSortField(dbField) {
+				facades.Log().Debug("Mapped field is sortable", map[string]interface{}{
+					"service": s.tableName,
+					"dbField": dbField,
+				})
+				return dbField, true
+			}
+			facades.Log().Warning("Mapped field is NOT sortable", map[string]interface{}{
+				"service":        s.tableName,
+				"dbField":        dbField,
+				"sortableFields": s.sortFields,
+			})
+		}
+	}
+
+	// If no mapping exists or field wasn't in mapping, check if the field itself is sortable
 	if s.ValidateSortField(frontendField) {
+		facades.Log().Debug("Frontend field is directly sortable", map[string]interface{}{
+			"service":       s.tableName,
+			"frontendField": frontendField,
+		})
 		return frontendField, true
 	}
+
+	facades.Log().Warning("Field not sortable", map[string]interface{}{
+		"service":        s.tableName,
+		"frontendField":  frontendField,
+		"sortableFields": s.sortFields,
+	})
 	return "", false
 }
 

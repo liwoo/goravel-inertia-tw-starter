@@ -76,7 +76,7 @@ func Api(router route.Router) {
 
 		// User management routes (super admin only)
 		protectedRouter.Get("/users", userController.Index)
-		protectedRouter.Get("/users/filters", userController.GetFilters)
+		protectedRouter.Get("/users/filters", userController.FilterMetadata)
 		protectedRouter.Get("/users/{id}", userController.Show)
 		protectedRouter.Post("/users", userController.Store)
 		protectedRouter.Put("/users/{id}", userController.Update)
