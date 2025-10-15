@@ -24,6 +24,8 @@ import (
 	"github.com/goravel/framework/translation"
 	"github.com/goravel/framework/validation"
 	"github.com/goravel/gin"
+	"github.com/goravel/redis"
+	"github.com/goravel/sqlite"
 
 	"players/app/providers"
 )
@@ -93,6 +95,8 @@ func init() {
 			&log.ServiceProvider{},
 			&console.ServiceProvider{},
 			&database.ServiceProvider{},
+			&sqlite.ServiceProvider{},
+			&redis.ServiceProvider{},
 			&cache.ServiceProvider{},
 			&http.ServiceProvider{},
 			&route.ServiceProvider{},

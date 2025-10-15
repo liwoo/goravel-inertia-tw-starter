@@ -302,16 +302,16 @@ func (s *BookService) GetBookStatistics() (map[string]interface{}, error) {
 	}
 
 	// Get total books (excluding soft deleted)
-	facades.Orm().Query().Model(&models.Book{}).Where("deleted_at IS NULL").Count(&stats.TotalBooks)
+	stats.TotalBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("deleted_at IS NULL").Count()
 
 	// Get available books
-	facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "AVAILABLE").Count(&stats.AvailableBooks)
+	stats.AvailableBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "AVAILABLE").Count()
 
 	// Get borrowed books
-	facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "BORROWED").Count(&stats.BorrowedBooks)
+	stats.BorrowedBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "BORROWED").Count()
 
 	// Get maintenance books
-	facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "MAINTENANCE").Count(&stats.MaintenanceBooks)
+	stats.MaintenanceBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "MAINTENANCE").Count()
 
 	// Get total value
 	facades.Orm().Query().Model(&models.Book{}).

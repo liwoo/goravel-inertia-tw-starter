@@ -56,7 +56,6 @@ func TestJWTWorkaround(t *testing.T) {
 	}
 
 	// Count total users
-	var count int64
-	facades.Orm().Query().Model(&models.User{}).Count(&count)
+	count, err := facades.Orm().Query().Model(&models.User{}).Count()
 	t.Logf("Total users in database: %d", count)
 }

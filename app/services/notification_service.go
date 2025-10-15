@@ -57,8 +57,7 @@ func (s *NotificationService) GetUserNotifications(userID uint, request contract
 	query = query.Order(orderClause)
 
 	// Get total count
-	var total int64
-	query.Model(&models.Notification{}).Count(&total)
+	total, _ := query.Model(&models.Notification{}).Count()
 
 	// Apply pagination
 	offset := (request.Page - 1) * request.PageSize
@@ -250,11 +249,9 @@ func (s *NotificationService) DismissAllNotifications(userID uint) error {
 
 // GetUnreadNotificationCount returns unread notification count for a user
 func (s *NotificationService) GetUnreadNotificationCount(userID uint) (int64, error) {
-	var count int64
-	err := facades.Orm().Query().Model(&models.Notification{}).
+	return facades.Orm().Query().Model(&models.Notification{}).
 		Where("user_id = ? AND is_read = ? AND is_dismissed = ?", userID, false, false).
-		Count(&count)
-	return count, err
+		Count()
 }
 
 // GetNotificationCounts returns various notification counts for a user
@@ -262,37 +259,37 @@ func (s *NotificationService) GetNotificationCounts(userID uint) (map[string]int
 	counts := make(map[string]int64)
 
 	// Total unread
-	var unread int64
-	if err := facades.Orm().Query().Model(&models.Notification{}).
+	unread, err := facades.Orm().Query().Model(&models.Notification{}).
 		Where("user_id = ? AND is_read = ? AND is_dismissed = ?", userID, false, false).
-		Count(&unread); err != nil {
+		Count()
+	if err != nil {
 		return nil, err
 	}
 	counts["unread"] = unread
 
 	// Unread high priority
-	var unreadHigh int64
-	if err := facades.Orm().Query().Model(&models.Notification{}).
+	unreadHigh, err := facades.Orm().Query().Model(&models.Notification{}).
 		Where("user_id = ? AND is_read = ? AND is_dismissed = ? AND priority = ?", userID, false, false, "high").
-		Count(&unreadHigh); err != nil {
+		Count()
+	if err != nil {
 		return nil, err
 	}
 	counts["unread_high"] = unreadHigh
 
 	// Unread messages
-	var unreadMessages int64
-	if err := facades.Orm().Query().Model(&models.Notification{}).
+	unreadMessages, err := facades.Orm().Query().Model(&models.Notification{}).
 		Where("user_id = ? AND is_read = ? AND is_dismissed = ? AND type = ?", userID, false, false, "message").
-		Count(&unreadMessages); err != nil {
+		Count()
+	if err != nil {
 		return nil, err
 	}
 	counts["unread_messages"] = unreadMessages
 
 	// Unread mentions
-	var unreadMentions int64
-	if err := facades.Orm().Query().Model(&models.Notification{}).
+	unreadMentions, err := facades.Orm().Query().Model(&models.Notification{}).
 		Where("user_id = ? AND is_read = ? AND is_dismissed = ? AND type = ?", userID, false, false, "mention").
-		Count(&unreadMentions); err != nil {
+		Count()
+	if err != nil {
 		return nil, err
 	}
 	counts["unread_mentions"] = unreadMentions

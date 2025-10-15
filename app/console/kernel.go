@@ -31,12 +31,13 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.SetupRBAC{},
 		&commands.SetupPermissionsCommand{},
 		&commands.AssignRole{},
-		&commands.MakeServiceCommand{},
 		&commands.MakeRequestCommand{},
 		&commands.MakeRepositoryCommand{},
-		&commands.MakeCrudCommand{},
-		&commands.MakeCrudE2E{},
 		&commands.MakeSuperAdmin{},
 		commands.NewCheckRolesCommand(),
+		&commands.ServiceMaker{},
+		&commands.RequestMaker{},
+		&commands.ControllerMaker{},
+		&commands.AuditMaker{},
 	}
 }

@@ -328,20 +328,20 @@ func (s *UserService) GetUserStatistics() (map[string]interface{}, error) {
 	}
 
 	// Get total users
-	facades.Orm().Query().Model(&models.User{}).Count(&stats.TotalUsers)
+	stats.TotalUsers, _ = facades.Orm().Query().Model(&models.User{}).Count()
 
 	// Get active users
-	facades.Orm().Query().Model(&models.User{}).Where("is_active = ?", true).Count(&stats.ActiveUsers)
+	stats.ActiveUsers, _ = facades.Orm().Query().Model(&models.User{}).Where("is_active = ?", true).Count()
 
 	// Get inactive users
 	stats.InactiveUsers = stats.TotalUsers - stats.ActiveUsers
 
 	// Get admin users (assuming there's an admin role)
 	// Note: Count the super admins instead since user_roles doesn't have is_active field
-	facades.Orm().Query().
+	stats.AdminUsers, _ = facades.Orm().Query().
 		Model(&models.User{}).
 		Where("is_super_admin = ?", true).
-		Count(&stats.AdminUsers)
+		Count()
 
 	return map[string]interface{}{
 		"totalUsers":    stats.TotalUsers,

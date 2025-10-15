@@ -28,31 +28,24 @@ func (sh *ScopeHelper) GetUserScope(ctx http.Context, service ServiceRegistry, a
 	// Special case for nil context in tests - assume super admin for the test to pass
 	if ctx == nil {
 		// This is for test compatibility - in production, nil context should never happen
-		fmt.Printf("DEBUG ScopeHelper: Nil context provided (test mode), returning ScopeByAll\n")
 		return ScopeByAll
 	}
 
 	user := sh.permissionHelper.GetAuthenticatedUser(ctx)
 	if user == nil {
-		fmt.Printf("DEBUG ScopeHelper: No authenticated user\n")
 		return ScopeNone
 	}
 
 	// Super admins always have full scope
-	fmt.Printf("DEBUG ScopeHelper: User ID=%d, Email=%s, IsSuperAdmin=%v\n", user.ID, user.Email, user.IsSuperAdmin)
-	fmt.Printf("DEBUG ScopeHelper: Checking IsSuperAdminUser() = %v\n", user.IsSuperAdminUser())
 	if user.IsSuperAdminUser() {
-		fmt.Printf("DEBUG ScopeHelper: User is super admin, returning ScopeByAll\n")
 		return ScopeByAll
 	}
 
 	// Build permission strings to check
 	basePermission := fmt.Sprintf("%s_%s", service, action)
-	fmt.Printf("DEBUG ScopeHelper: Checking permission scope for user %s (ID=%d), base permission: %s\n", user.Email, user.ID, basePermission)
 
 	// Check user's permissions from most to least restrictive
 	userPermissions := sh.permissionHelper.GetUserPermissions(ctx)
-	fmt.Printf("DEBUG ScopeHelper: User permissions: %v\n", userPermissions)
 
 	// Check for scoped permissions
 	permByMe := fmt.Sprintf("%s_by_me", basePermission)
@@ -60,20 +53,16 @@ func (sh *ScopeHelper) GetUserScope(ctx http.Context, service ServiceRegistry, a
 	permByAll := fmt.Sprintf("%s_by_all", basePermission)
 
 	if sh.hasPermission(userPermissions, permByMe) {
-		fmt.Printf("DEBUG ScopeHelper: User has %s, returning ScopeByMe\n", permByMe)
 		return ScopeByMe
 	}
 	if sh.hasPermission(userPermissions, permByRole) {
-		fmt.Printf("DEBUG ScopeHelper: User has %s, returning ScopeByMyRole\n", permByRole)
 		return ScopeByMyRole
 	}
 	if sh.hasPermission(userPermissions, permByAll) ||
 		sh.hasPermission(userPermissions, basePermission) {
-		fmt.Printf("DEBUG ScopeHelper: User has %s or %s, returning ScopeByAll\n", permByAll, basePermission)
 		return ScopeByAll
 	}
 
-	fmt.Printf("DEBUG ScopeHelper: No matching permissions found, returning ScopeNone\n")
 	return ScopeNone
 }
 
@@ -86,13 +75,9 @@ func (sh *ScopeHelper) ApplyScopeToQuery(ctx http.Context, query orm.Query, serv
 		return query, fmt.Errorf("no authenticated user")
 	}
 
-	fmt.Printf("DEBUG ApplyScopeToQuery: service=%s, action=%s, scope=%s, userField=%s, userID=%d\n",
-		service, action, scope, userIDField, user.ID)
-
 	switch scope {
 	case ScopeByAll:
 		// No additional filtering needed
-		fmt.Printf("DEBUG ApplyScopeToQuery: ScopeByAll - no filtering applied\n")
 		return query, nil
 
 	case ScopeByMyRole:

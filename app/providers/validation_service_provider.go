@@ -71,8 +71,7 @@ func (r *UniqueRule) Passes(data validation.Data, val any, options ...any) bool 
 	}
 
 	// Check if record exists
-	var count int64
-	query.Count(&count)
+	count, _ := query.Count()
 
 	return count == 0
 }

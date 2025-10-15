@@ -69,16 +69,6 @@ func NewGenericCrudService[T any](resourceName string, primaryKey string) *Gener
 
 // GetList retrieves paginated list of resources
 func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, error) {
-	facades.Log().Debug("GenericCrudService.GetList called", map[string]interface{}{
-		"service":           s.tableName,
-		"page":              req.Page,
-		"pageSize":          req.PageSize,
-		"sort":              req.Sort,
-		"direction":         req.Direction,
-		"filters":           req.Filters,
-		"actualService":     s.actualService != nil,
-		"actualServiceType": fmt.Sprintf("%T", s.actualService),
-	})
 
 	// Validate and sanitize request
 	if err := s.ValidateListRequest(&req); err != nil {
@@ -101,19 +91,7 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 	}
 
 	// Apply permission-based scope filtering if enabled and context is available
-	facades.Log().Info("Checking scope filtering", map[string]interface{}{
-		"enableScopeFiltering": s.enableScopeFiltering,
-		"hasContext":           req.Context != nil,
-		"service":              s.tableName,
-		"serviceRegistry":      s.serviceRegistry,
-	})
 	if s.enableScopeFiltering && req.Context != nil {
-		facades.Log().Info("Applying scope filter", map[string]interface{}{
-			"service":         s.tableName,
-			"userField":       s.scopeUserField,
-			"hasContext":      req.Context != nil,
-			"serviceRegistry": s.serviceRegistry,
-		})
 		var err error
 		query, err = s.applyScopeFilter(req.Context, query, auth.PermissionRead)
 		if err != nil {
@@ -124,12 +102,6 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 			// Continue without scope filtering rather than failing the request
 		}
 	} else {
-		facades.Log().Info("Scope filtering not applied", map[string]interface{}{
-			"enableScopeFiltering": s.enableScopeFiltering,
-			"hasContext":           req.Context != nil,
-			"service":              s.tableName,
-			"serviceRegistry":      s.serviceRegistry,
-		})
 	}
 
 	// Apply search
@@ -161,12 +133,6 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 		// Apply field mapping to remaining filters
 		mappedFilters := s.applyFieldMapping(req.Filters)
 
-		facades.Log().Info("Applying filters", map[string]interface{}{
-			"service":          s.tableName,
-			"originalFilters":  req.Filters,
-			"mappedFilters":    mappedFilters,
-			"filterableFields": s.filterFields,
-		})
 		if s.customFilters != nil {
 			query = s.customFilters(query, mappedFilters)
 		} else {
@@ -183,11 +149,6 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 						}
 					}
 
-					facades.Log().Info("Applying filter", map[string]interface{}{
-						"field": field,
-						"value": value,
-						"type":  fmt.Sprintf("%T", value),
-					})
 					query = query.Where(field+" = ?", value)
 				} else {
 					facades.Log().Warning("Invalid filter field", map[string]interface{}{
@@ -201,12 +162,6 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 
 	// Apply sorting - always use self (GenericCrudService) which has all the methods
 	// The actualService is used internally by MapSortField to get column mappings
-	facades.Log().Debug("GenericCrudService applying sort", map[string]interface{}{
-		"service":       s.tableName,
-		"sort":          req.Sort,
-		"direction":     req.Direction,
-		"actualService": s.actualService != nil,
-	})
 	query, err := s.ApplySort(query, req.Sort, req.Direction, s)
 	if err != nil {
 		facades.Log().Error("GenericCrudService sort error", map[string]interface{}{
@@ -283,24 +238,17 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 
 	// Apply preserved custom filters to count query
 	if preservedCustomFilters != nil {
-		facades.Log().Debug("Applying custom filters to count query", map[string]interface{}{
-			"service": s.tableName,
-			"filters": preservedCustomFilters,
-		})
 		countQuery = s.applyCustomFilters(countQuery, preservedCustomFilters)
 	}
 
-	if err := countQuery.Count(&total); err != nil {
+	total, err = countQuery.Count()
+	if err != nil {
 		facades.Log().Error("Count query failed", map[string]interface{}{
 			"service": s.tableName,
 			"error":   err.Error(),
 		})
 		return nil, err
 	}
-	facades.Log().Info("Count query completed", map[string]interface{}{
-		"service": s.tableName,
-		"total":   total,
-	})
 
 	// Apply pagination at database level
 	offset := (req.Page - 1) * req.PageSize
@@ -308,13 +256,6 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 
 	// Get paginated items
 	var items []T
-	facades.Log().Info("About to execute query Find", map[string]interface{}{
-		"service":   s.tableName,
-		"offset":    offset,
-		"limit":     req.PageSize,
-		"sort":      req.Sort,
-		"direction": req.Direction,
-	})
 
 	// Note: SQL query will be logged by GORM if logging is enabled
 
@@ -325,10 +266,6 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 		})
 		return nil, err
 	}
-	facades.Log().Info("Query Find completed", map[string]interface{}{
-		"service":    s.tableName,
-		"itemsCount": len(items),
-	})
 
 	// Convert items to interface slice
 	data := make([]interface{}, len(items))
@@ -413,12 +350,6 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 
 	// Apply sorting - always use self (GenericCrudService) which has all the methods
 	// The actualService is used internally by MapSortField to get column mappings
-	facades.Log().Debug("GenericCrudService applying sort", map[string]interface{}{
-		"service":       s.tableName,
-		"sort":          req.Sort,
-		"direction":     req.Direction,
-		"actualService": s.actualService != nil,
-	})
 	query, err := s.ApplySort(query, req.Sort, req.Direction, s)
 	if err != nil {
 		facades.Log().Error("GenericCrudService sort error", map[string]interface{}{
@@ -469,17 +400,14 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 		}
 	}
 
-	if err := countQuery.Count(&total); err != nil {
+	total, err = countQuery.Count()
+	if err != nil {
 		facades.Log().Error("Count query failed", map[string]interface{}{
 			"service": s.tableName,
 			"error":   err.Error(),
 		})
 		return nil, err
 	}
-	facades.Log().Info("Count query completed", map[string]interface{}{
-		"service": s.tableName,
-		"total":   total,
-	})
 
 	// Apply pagination at database level
 	offset := (req.Page - 1) * req.PageSize
@@ -487,13 +415,6 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 
 	// Get paginated items
 	var items []T
-	facades.Log().Info("About to execute query Find", map[string]interface{}{
-		"service":   s.tableName,
-		"offset":    offset,
-		"limit":     req.PageSize,
-		"sort":      req.Sort,
-		"direction": req.Direction,
-	})
 
 	// Note: SQL query will be logged by GORM if logging is enabled
 
@@ -504,10 +425,6 @@ func (s *GenericCrudService[T]) GetListAdvanced(req ListRequest, filters map[str
 		})
 		return nil, err
 	}
-	facades.Log().Info("Query Find completed", map[string]interface{}{
-		"service":    s.tableName,
-		"itemsCount": len(items),
-	})
 
 	// Convert items to interface slice
 	data := make([]interface{}, len(items))
@@ -917,12 +834,6 @@ func (s *GenericCrudService[T]) ValidateSortField(field string) bool {
 }
 
 func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool) {
-	facades.Log().Debug("MapSortField called", map[string]interface{}{
-		"service":        s.tableName,
-		"frontendField":  frontendField,
-		"actualService":  s.actualService != nil,
-		"sortableFields": s.sortFields,
-	})
 
 	// Get the column mapping from the actual service if available
 	var mapping map[string]string
@@ -931,27 +842,14 @@ func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool
 			GetColumnMapping() map[string]string
 		}); ok {
 			mapping = mappingProvider.GetColumnMapping()
-			facades.Log().Debug("Got column mapping", map[string]interface{}{
-				"service": s.tableName,
-				"mapping": mapping,
-			})
 		}
 	}
 
 	// If we have a mapping, check if this field has a mapped name
 	if mapping != nil {
 		if dbField, exists := mapping[frontendField]; exists {
-			facades.Log().Debug("Found field in mapping", map[string]interface{}{
-				"service":       s.tableName,
-				"frontendField": frontendField,
-				"dbField":       dbField,
-			})
 			// Check if the mapped field is sortable
 			if s.ValidateSortField(dbField) {
-				facades.Log().Debug("Mapped field is sortable", map[string]interface{}{
-					"service": s.tableName,
-					"dbField": dbField,
-				})
 				return dbField, true
 			}
 			facades.Log().Warning("Mapped field is NOT sortable", map[string]interface{}{
@@ -964,10 +862,6 @@ func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool
 
 	// If no mapping exists or field wasn't in mapping, check if the field itself is sortable
 	if s.ValidateSortField(frontendField) {
-		facades.Log().Debug("Frontend field is directly sortable", map[string]interface{}{
-			"service":       s.tableName,
-			"frontendField": frontendField,
-		})
 		return frontendField, true
 	}
 
@@ -1230,10 +1124,6 @@ func (s *GenericCrudService[T]) setFieldsRecursivelyHelper(modelValue reflect.Va
 		// Handle embedded structs
 		if field.Anonymous && fieldValue.Kind() == reflect.Struct {
 			// Log embedded struct processing
-			facades.Log().Debug("Processing embedded struct", map[string]interface{}{
-				"structType": field.Type.String(),
-				"structName": field.Name,
-			})
 
 			// Recursively set fields in embedded struct
 			if err := s.setFieldsRecursivelyHelper(fieldValue, data); err != nil {
@@ -1261,12 +1151,6 @@ func (s *GenericCrudService[T]) setFieldsRecursivelyHelper(modelValue reflect.Va
 		// Check if we have data for this field
 		if value, exists := data[fieldName]; exists && fieldValue.CanSet() {
 			// Log field setting for debugging
-			facades.Log().Debug("Setting field via reflection", map[string]interface{}{
-				"fieldName": fieldName,
-				"fieldType": fieldValue.Type().String(),
-				"valueType": fmt.Sprintf("%T", value),
-				"value":     value,
-			})
 
 			// Handle different types of values
 			if value == nil {
@@ -1312,18 +1196,10 @@ func (s *GenericCrudService[T]) setFieldsRecursivelyHelper(modelValue reflect.Va
 
 // applyCustomFilters applies custom filter conditions to a query
 func (s *GenericCrudService[T]) applyCustomFilters(query orm.Query, customFilters interface{}) orm.Query {
-	facades.Log().Debug("Applying custom filters", map[string]interface{}{
-		"service":    s.tableName,
-		"filterType": fmt.Sprintf("%T", customFilters),
-	})
 
 	switch filter := customFilters.(type) {
 	case *FilterCondition:
 		sql, args := filter.ToSQL()
-		facades.Log().Debug("Applying FilterCondition", map[string]interface{}{
-			"sql":  sql,
-			"args": args,
-		})
 		if sql != "" {
 			// Use Where with raw SQL instead of WhereRaw
 			query = query.Where(sql, args...)
@@ -1331,10 +1207,6 @@ func (s *GenericCrudService[T]) applyCustomFilters(query orm.Query, customFilter
 
 	case *CompoundFilter:
 		sql, args := filter.ToSQL()
-		facades.Log().Debug("Applying CompoundFilter", map[string]interface{}{
-			"sql":  sql,
-			"args": args,
-		})
 		if sql != "" {
 			// Use Where with raw SQL instead of WhereRaw
 			query = query.Where(sql, args...)
@@ -1366,12 +1238,6 @@ func (s *GenericCrudService[T]) applyFieldMapping(data map[string]interface{}) m
 		return data
 	}
 
-	facades.Log().Debug("GenericCrudService applyFieldMapping", map[string]interface{}{
-		"service":      s.tableName,
-		"mapping":      mapping,
-		"originalData": data,
-	})
-
 	// Apply mapping
 	result := make(map[string]interface{})
 	for key, value := range data {
@@ -1396,21 +1262,11 @@ func (s *GenericCrudService[T]) applyFieldMapping(data map[string]interface{}) m
 			} else {
 				result[mappedKey] = value
 			}
-			facades.Log().Debug("Field mapped", map[string]interface{}{
-				"from":  key,
-				"to":    mappedKey,
-				"value": value,
-			})
 		} else {
 			// Keep unmapped fields as-is
 			result[key] = value
 		}
 	}
-
-	facades.Log().Debug("GenericCrudService applyFieldMapping result", map[string]interface{}{
-		"service":    s.tableName,
-		"mappedData": result,
-	})
 
 	return result
 }

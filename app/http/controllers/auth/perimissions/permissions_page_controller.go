@@ -1,8 +1,6 @@
 package perimissions
 
 import (
-	"time"
-
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"players/app/auth"
@@ -46,13 +44,10 @@ func NewPermissionsPageController() *PermissionsPageController {
 
 // buildRoleStatistics builds statistics for the roles page
 func buildRoleStatistics() (map[string]interface{}, error) {
-	var totalRoles, activeRoles, inactiveRoles int64
-	var totalUsersWithRoles int64
-
-	facades.Orm().Query().Model(&models.Role{}).Count(&totalRoles)
-	facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", true).Count(&activeRoles)
-	facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", false).Count(&inactiveRoles)
-	facades.Orm().Query().Model(&models.UserRole{}).Where("is_active = ?", true).Count(&totalUsersWithRoles)
+	totalRoles, _ := facades.Orm().Query().Model(&models.Role{}).Count()
+	activeRoles, _ := facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", true).Count()
+	inactiveRoles, _ := facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", false).Count()
+	totalUsersWithRoles, _ := facades.Orm().Query().Model(&models.UserRole{}).Where("is_active = ?", true).Count()
 
 	return map[string]interface{}{
 		"total_roles":            int(totalRoles),
@@ -65,11 +60,6 @@ func buildRoleStatistics() (map[string]interface{}, error) {
 // Index GET /admin/permissions - Roles list page
 // The generic page controller handles everything for us
 func (c *PermissionsPageController) Index(ctx http.Context) http.Response {
-	facades.Log().Debug("PermissionsPageController.Index called", map[string]interface{}{
-		"url":    ctx.Request().Url(),
-		"method": ctx.Request().Method(),
-		"query":  ctx.Request().Queries(),
-	})
 	return c.GenericPageController.Index(ctx)
 }
 
@@ -77,12 +67,6 @@ func (c *PermissionsPageController) Index(ctx http.Context) http.Response {
 func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Response {
 	// Debug logging
 	roleID := ctx.Request().Route("id")
-	facades.Log().Info("=== ROLE PERMISSIONS PAGE LOADED ===", map[string]interface{}{
-		"role_id": roleID,
-		"url":     ctx.Request().Url(),
-		"method":  ctx.Request().Method(),
-		"time":    time.Now().Format("15:04:05"),
-	})
 
 	// Super-admin only check
 	permHelper := auth.GetPermissionHelper()
@@ -158,13 +142,6 @@ func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Respo
 		With("Permission").
 		Find(&rolePermissions)
 
-	facades.Log().Info("LOADING PERMISSIONS FOR ROLE", map[string]interface{}{
-		"role_id":          role.ID,
-		"role_name":        role.Name,
-		"permission_count": len(rolePermissions),
-		"time":             time.Now().Format("15:04:05"),
-	})
-
 	currentPermissions := make(map[string]bool)
 	for _, rp := range rolePermissions {
 		if rp.Permission.ID > 0 && rp.Permission.IsActive {
@@ -176,11 +153,6 @@ func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Respo
 			}
 			permissionKey := rp.Permission.Slug + "_" + scope
 			currentPermissions[permissionKey] = true
-			facades.Log().Debug("Loaded permission for UI", map[string]interface{}{
-				"permission": rp.Permission.Slug,
-				"scope":      scope,
-				"key":        permissionKey,
-			})
 		}
 	}
 
@@ -192,13 +164,6 @@ func (c *PermissionsPageController) RolePermissions(ctx http.Context) http.Respo
 	for key := range currentPermissions {
 		permissionKeys = append(permissionKeys, key)
 	}
-
-	facades.Log().Debug("=== Sending permissions to frontend ===", map[string]interface{}{
-		"role_id":        role.ID,
-		"role_name":      role.Name,
-		"totalCount":     len(currentPermissions),
-		"permissionKeys": permissionKeys,
-	})
 
 	return inertia.Render(ctx, "Permissions/RolePermissions", map[string]interface{}{
 		"role":               role,

@@ -171,26 +171,27 @@ func (s *ScopedFilteringTestSuite) createTestBooks() {
 
 // Test database queries that demonstrate scope filtering
 func (s *ScopedFilteringTestSuite) TestScopeFilteringQueries() {
-	var count int64
-
 	// 1. Admin scope (by_all) - sees all books
-	facades.Orm().Query().Model(&models.Book{}).Count(&count)
+	count, _ := facades.Orm().Query().Model(&models.Book{}).Count()
 	s.T().Logf("Total books in database: %d", count)
 	s.Equal(int64(10), count, "Admin with by_all should see all 10 books")
 
 	// 2. Editor scope (by_my_role) - sees books created by users with editor role
 	// Get all user IDs with editor role
 	var editorUserIDs []uint
-	facades.Orm().Query().Table("user_roles").
+	err := facades.Orm().Query().Table("user_roles").
 		Where("role_id = ? AND is_active = ?", s.editorRole.ID, true).
 		Pluck("user_id", &editorUserIDs)
+	if err != nil {
+		return
+	}
 	s.T().Logf("Editor role ID: %d, Editor user IDs: %v", s.editorRole.ID, editorUserIDs)
 
 	// Count books created by editors
 	if len(editorUserIDs) > 0 {
-		facades.Orm().Query().Model(&models.Book{}).
+		count, _ = facades.Orm().Query().Model(&models.Book{}).
 			Where("created_by IN ?", editorUserIDs).
-			Count(&count)
+			Count()
 	} else {
 		count = 0
 	}
@@ -198,27 +199,27 @@ func (s *ScopedFilteringTestSuite) TestScopeFilteringQueries() {
 	s.Equal(int64(4), count, "Editor with by_my_role should see 4 books (2 from each editor)")
 
 	// 3. Member scope (by_me) - sees only their own books
-	facades.Orm().Query().Model(&models.Book{}).
+	count, _ = facades.Orm().Query().Model(&models.Book{}).
 		Where("created_by = ?", s.member1.ID).
-		Count(&count)
+		Count()
 	s.Equal(int64(2), count, "Member with by_me should see only their 2 books")
 }
 
 // Test the actual SQL patterns used by scope filtering
 func (s *ScopedFilteringTestSuite) TestScopeFilteringPatterns() {
 	// Test getting users with the same role
-	var roleUserCount int64
 
 	// For editor role
-	facades.Orm().Query().Table("user_roles").
+	roleUserCount, _ := facades.Orm().Query().Table("user_roles").
 		Where("role_id = ? AND is_active = ?", s.editorRole.ID, true).
-		Count(&roleUserCount)
+		Count()
+
 	s.Equal(int64(2), roleUserCount, "Should have 2 users with editor role")
 
 	// For member role
-	facades.Orm().Query().Table("user_roles").
+	roleUserCount, _ = facades.Orm().Query().Table("user_roles").
 		Where("role_id = ? AND is_active = ?", s.memberRole.ID, true).
-		Count(&roleUserCount)
+		Count()
 	s.Equal(int64(2), roleUserCount, "Should have 2 users with member role")
 }
 
