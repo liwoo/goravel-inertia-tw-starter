@@ -8,7 +8,7 @@ import {
     FileIcon,
     FileTextIcon,
     HelpCircleIcon,
-    LayoutDashboardIcon,
+    LayoutDashboardIcon, PercentSquareIcon, PersonStandingIcon,
     SettingsIcon,
     ShieldIcon,
     UsersIcon,
@@ -63,6 +63,13 @@ export const navigationConfig: NavigationConfig = {
             url: "/admin/books",
             icon: BookIcon,
             requiredService: "books",
+            requiredAction: "read" as const,
+        },
+        {
+            title: "Lenders",
+            url: "/admin/lenders",
+            icon: PersonStandingIcon,
+            requiredService: "lenders",
             requiredAction: "read" as const,
         },
 

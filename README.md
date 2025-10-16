@@ -635,22 +635,30 @@ go run . artisan seed
 go run . artisan seed --seeder=rbac
 ```
 
-### CRUD Scaffolding
+### CRUD Scaffolding (In Order)
 ```bash
-# Generate complete CRUD resource (recommended)
-go run . artisan make:svc lender --model=Lender       # Service with model introspection
-go run . artisan make:req lender --model=Lender       # Create/Update request validators
-go run . artisan make:ctrl lender --model=Lender      # Controller with permissions
+# 1. Database Setup
+go run . artisan make:migration create_lenders_table   # Create table migration
+go run . artisan migrate                                # Run migration
+go run . artisan make:audit lenders                    # Add audit fields (optional)
+go run . artisan migrate                                # Run audit migration
 
-# Add audit fields to existing table
-go run . artisan make:audit lenders                      # Adds all audit fields (including created_by)
-go run . artisan make:audit lenders --without-created-by # Skip created_by if already exists
+# 2. Backend Generation
+go run . artisan make:model-from-table --table=lenders --model=Lender  # Model from DB
+go run . artisan make:svc --svc=Lender                                 # Service
+# (Add to permission_constants.go, then run permissions:setup)
+go run . artisan make:req --model=Lender --resource=Lender             # Request validators
+go run . artisan make:api-ctrl --controller=Lender                     # API controller
+# (Register routes in routes/api.go)
 
-# Legacy: Generate individual components
-go run . artisan make:model ModelName
-go run . artisan make:service ServiceName
-go run . artisan make:request RequestName
-go run . artisan make:repository RepositoryName
+# 3. Optional: Documentation & Tests
+go run . artisan make:swagger-docs --controller=Lender  # Swagger docs (optional)
+go run . artisan make:crud-test --svc=lender            # API tests (optional)
+
+# 4. Frontend Generation
+go run . artisan make:page-ctrl --controller=Lender     # Page controller
+go run . artisan make:ui --page=Lender --request=Lender # Complete UI hierarchy
+# (Register page route in routes/web.go and add to navigation.ts)
 ```
 
 ### Permission Management
@@ -707,37 +715,120 @@ function MyComponent() {
 
 ## 🧪 Development Workflow
 
-### 1. Creating a New CRUD Resource
+### 1. Creating a New CRUD Resource (Complete Workflow)
 
 ```bash
-# Step 1: Create and define your model
-go run . artisan make:model Feature
-# Edit app/models/feature.go and add your fields
+# =========================================
+# BACKEND SETUP (Database → API)
+# =========================================
 
-# Step 2: Create and run migration
-go run . artisan make:migration create_features_table
-# Edit the migration file
+# Step 1: Generate database migration
+go run . artisan make:migration create_lenders_table
+# Edit database/migrations/TIMESTAMP_create_lenders_table.go
+
+# Step 2: Run the migration
 go run . artisan migrate
 
-# Step 3: Scaffold complete CRUD resource
-go run . artisan make:svc feature --model=Feature      # Service
-go run . artisan make:req feature --model=Feature      # Request validators
-go run . artisan make:ctrl feature --model=Feature     # Controller
+# Step 3: Generate audit fields migration (optional but recommended)
+go run . artisan make:audit lenders
+# This adds created_by, updated_by, deleted_by, ip_address, user_agent
 
-# Step 4: Register permissions
+# Step 4: Run audit migration
+go run . artisan migrate
+
+# Step 5: Generate model from database table
+go run . artisan make:model-from-table --table=lenders --model=Lender
+# Creates app/models/lender.go with fields matching database schema
+
+# Step 6: Generate service from model
+go run . artisan make:svc --svc=Lender
+# Creates app/services/lender_service.go with CRUD operations
+
+# Step 7: Add service to permission constants
 # Edit app/auth/permission_constants.go and add:
-# ServiceFeatures ServiceRegistry = "features"
+# ServiceLenders ServiceRegistry = "lenders"
+
+# Step 8: Sync permissions to database
 go run . artisan permissions:setup
 
-# Step 5: Register routes
-# Follow instructions printed by make:ctrl command
-# Edit routes/api.go
+# Step 9: Generate request validators from model
+go run . artisan make:req --model=Lender --resource=Lender
+# Creates app/http/requests/lender_create_request.go
+# Creates app/http/requests/lender_update_request.go
 
-# Step 6: Restart servers
-# Ctrl+C to stop both terminals, then restart:
+# Step 10: Generate API controller
+go run . artisan make:api-ctrl --controller=Lender
+# Creates app/http/controllers/lenders/lender_api_controller.go
+
+# Step 11: Register API endpoints
+# Edit routes/api.go and add the routes (instructions provided by make:api-ctrl)
+
+# Step 12: Generate Swagger docs (OPTIONAL)
+go run . artisan make:swagger-docs --controller=Lender
+
+# Step 13: Generate API tests (OPTIONAL)
+go run . artisan make:crud-test --svc=lender
+
+# =========================================
+# FRONTEND SETUP (UI Generation)
+# =========================================
+
+# Step 14: Generate page controller
+go run . artisan make:page-ctrl --controller=Lender
+# Creates app/http/controllers/lenders/lender_page_controller.go
+
+# Step 15: Generate complete UI hierarchy
+go run . artisan make:ui --page=Lender --request=Lender
+# Creates:
+# - resources/js/Pages/Lender/Index.tsx
+# - resources/js/Pages/Lender/sections/*.tsx (6 files)
+# - resources/js/types/lender.ts
+
+# Step 16: Register admin page endpoint
+# Edit routes/web.go and add:
+# lendersPageController := lenders.NewLenderPageController()
+# router.Get("/admin/lenders", lendersPageController.Index)
+
+# Step 17: Add navigation menu item
+# Edit resources/js/config/navigation.ts and add:
+# {
+#   title: "Lenders",
+#   url: "/admin/lenders",
+#   icon: Users, // Import from lucide-react
+#   requiredService: "lenders",
+#   requiredAction: "read" as const,
+# }
+
+# =========================================
+# RESTART & TEST
+# =========================================
+
+# Restart both servers
 # Terminal 1: air (or go run .)
 # Terminal 2: npm run dev
+
+# Visit: http://localhost:3500/admin/lenders
 ```
+
+#### Quick Reference Order
+
+1. **make:migration** → Create table schema
+2. **migrate** → Apply migration
+3. **make:audit** → Add audit fields (optional)
+4. **migrate** → Apply audit migration
+5. **make:model-from-table** → Generate model from DB
+6. **make:svc** → Generate service
+7. **Add to permission_constants.go** → Register service
+8. **permissions:setup** → Sync to database
+9. **make:req** → Generate request validators
+10. **make:api-ctrl** → Generate API controller
+11. **Register in routes/api.go** → Add API endpoints
+12. **make:swagger-docs** → Generate docs (optional)
+13. **make:crud-test** → Generate tests (optional)
+14. **make:page-ctrl** → Generate page controller
+15. **make:ui** → Generate UI files
+16. **Register in routes/web.go** → Add page route
+17. **Add to navigation.ts** → Add menu item
 
 ### 2. Managing Permissions
 

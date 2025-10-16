@@ -42,5 +42,7 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.SwaggerGenerator{},
 		&commands.SwaggerDocsMaker{},
 		&commands.CrudTestMaker{},
+		&commands.PageControllerMaker{},
+		&commands.UIMaker{},
 	}
 }

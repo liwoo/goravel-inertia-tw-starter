@@ -16,8 +16,8 @@ type LenderCreateRequest struct {
 // Rules defines validation rules for lender creation
 func (r *LenderCreateRequest) Rules(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name":  "required|string|max:255",
-		"email": "required|string|max:255",
+		"name":  "required",
+		"email": "required",
 	}
 }
 
@@ -64,11 +64,19 @@ func (r *LenderCreateRequest) PassedValidation(ctx http.Context) error {
 func (r *LenderCreateRequest) ToCreateData() map[string]interface{} {
 	//TODO: make the return object strongly typed if possible
 	data := map[string]interface{}{
-		"name":    r.Name,
-		"email":   r.Email,
-		"phone":   r.Phone,
-		"address": r.Address,
-		"gender":  r.Gender,
+		"name":  r.Name,
+		"email": r.Email,
+	}
+
+	// Only include optional fields if they have values
+	if r.Phone != nil && *r.Phone != "" {
+		data["phone"] = r.Phone
+	}
+	if r.Address != nil && *r.Address != "" {
+		data["address"] = r.Address
+	}
+	if r.Gender != nil && *r.Gender != "" {
+		data["gender"] = r.Gender
 	}
 
 	return data

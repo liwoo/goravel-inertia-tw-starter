@@ -66,16 +66,10 @@ func (c *SearchController) GlobalSearch(ctx http.Context) http.Response {
 		results = append(results, userResults...)
 	}
 
-	// Search Roles if user has permission
-	if permHelper.CheckServicePermission(ctx, auth.ServiceRoles, auth.PermissionRead) {
-		roleResults := c.searchRoles(query)
-		results = append(results, roleResults...)
-	}
-
-	// Search Permissions if user has permission
-	if permHelper.CheckServicePermission(ctx, auth.ServicePermissions, auth.PermissionRead) {
-		permissionResults := c.searchPermissions(query)
-		results = append(results, permissionResults...)
+	// Search Lenders if user has permission
+	if permHelper.CheckServicePermission(ctx, auth.ServiceLenders, auth.PermissionRead) {
+		lenderResults := c.searchLenders(query)
+		results = append(results, lenderResults...)
 	}
 
 	return ctx.Response().Json(http.StatusOK, SearchResponse{
@@ -150,58 +144,34 @@ func (c *SearchController) searchUsers(query string) []SearchResult {
 	return results
 }
 
-// searchRoles performs fuzzy search on roles
-func (c *SearchController) searchRoles(query string) []SearchResult {
-	var roles []models.Role
+// searchLenders performs fuzzy search on lenders
+func (c *SearchController) searchLenders(query string) []SearchResult {
+	var lenders []models.Lender
 	results := []SearchResult{}
 
 	searchPattern := "%" + query + "%"
 
-	// Search in name, slug, and description
+	// Search in name, email, and phone
 	facades.Orm().Query().
-		Where("is_active = ?", true).
-		Where("(name COLLATE NOCASE LIKE ? OR slug COLLATE NOCASE LIKE ? OR description COLLATE NOCASE LIKE ?)",
-			searchPattern, searchPattern, searchPattern).
+		Where("name COLLATE NOCASE LIKE ?", searchPattern).
+		OrWhere("email COLLATE NOCASE LIKE ?", searchPattern).
+		OrWhere("phone COLLATE NOCASE LIKE ?", searchPattern).
 		Order("name ASC").
 		Limit(10).
-		Find(&roles)
+		Find(&lenders)
 
-	for _, role := range roles {
+	for _, lender := range lenders {
+		subtitle := lender.Email
+		if lender.Phone != nil && *lender.Phone != "" {
+			subtitle = fmt.Sprintf("%s • %s", lender.Email, *lender.Phone)
+		}
+
 		results = append(results, SearchResult{
-			ID:       role.ID,
-			Title:    role.Name,
-			Subtitle: role.Description,
-			Type:     "role",
-			URL:      fmt.Sprintf("/admin/permissions?search=%s", query),
-		})
-	}
-
-	return results
-}
-
-// searchPermissions performs fuzzy search on permissions
-func (c *SearchController) searchPermissions(query string) []SearchResult {
-	var permissions []models.Permission
-	results := []SearchResult{}
-
-	searchPattern := "%" + query + "%"
-
-	// Search in name, slug, and description
-	facades.Orm().Query().
-		Where("is_active = ?", true).
-		Where("(name COLLATE NOCASE LIKE ? OR slug COLLATE NOCASE LIKE ? OR description COLLATE NOCASE LIKE ?)",
-			searchPattern, searchPattern, searchPattern).
-		Order("name ASC").
-		Limit(10).
-		Find(&permissions)
-
-	for _, permission := range permissions {
-		results = append(results, SearchResult{
-			ID:       permission.ID,
-			Title:    permission.Name,
-			Subtitle: permission.Description,
-			Type:     "permission",
-			URL:      fmt.Sprintf("/admin/permissions?search=%s", query),
+			ID:       lender.ID,
+			Title:    lender.Name,
+			Subtitle: subtitle,
+			Type:     "lender",
+			URL:      fmt.Sprintf("/admin/lenders?search=%s", query),
 		})
 	}
 

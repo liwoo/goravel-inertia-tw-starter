@@ -10,6 +10,7 @@ import (
 	"players/app/http/controllers/auth/perimissions"
 	"players/app/http/controllers/auth/users"
 	"players/app/http/controllers/books"
+	"players/app/http/controllers/lenders"
 	inertiaHelper "players/app/http/inertia"
 	"players/app/http/middleware"
 )
@@ -24,6 +25,7 @@ func Web() {
 	booksPageController := books.NewBooksPageController()
 	permissionsPageController := perimissions.NewPermissionsPageController()
 	userPageController := users.NewUserPageController()
+	lendersPageController := lenders.NewLenderPageController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
@@ -62,6 +64,9 @@ func Web() {
 
 		// Books management page
 		router.Get("/admin/books", booksPageController.Index)
+
+		// Lenders management page
+		router.Get("/admin/lenders", lendersPageController.Index)
 
 		// Permissions/Role management pages
 		router.Get("/admin/permissions", permissionsPageController.Index)

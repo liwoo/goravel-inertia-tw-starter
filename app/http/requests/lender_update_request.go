@@ -20,11 +20,11 @@ func (r *LenderUpdateRequest) Rules(ctx http.Context) map[string]string {
 
 	// Only validate Name if provided
 	if r.Name != nil {
-		rules["name"] = "required|string|max:255"
+		rules["name"] = "required"
 	}
 	// Only validate Email if provided
 	if r.Email != nil {
-		rules["email"] = "required|string|max:255"
+		rules["email"] = "required"
 	}
 
 	// If no rules were added, add a dummy rule to prevent empty rules error
