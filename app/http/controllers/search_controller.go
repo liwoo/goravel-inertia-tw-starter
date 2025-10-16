@@ -5,9 +5,10 @@ import (
 	"strings"
 
 	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 	"players/app/auth"
+	"players/app/contracts"
 	"players/app/models"
+	"players/app/services"
 )
 
 type SearchController struct{}
@@ -78,101 +79,110 @@ func (c *SearchController) GlobalSearch(ctx http.Context) http.Response {
 	})
 }
 
-// searchBooks performs fuzzy search on books
+// searchBooks performs fuzzy search on books using the BookService
 func (c *SearchController) searchBooks(query string) []SearchResult {
-	var books []models.Book
 	results := []SearchResult{}
 
-	// Build query for case-insensitive search
-	searchPattern := "%" + query + "%"
+	bookService := services.NewBookService()
 
-	// Search in title, author, isbn, and description
-	// Using COLLATE NOCASE for SQLite compatibility
-	facades.Orm().Query().
-		Where("title COLLATE NOCASE LIKE ?", searchPattern).
-		OrWhere("author COLLATE NOCASE LIKE ?", searchPattern).
-		OrWhere("isbn COLLATE NOCASE LIKE ?", searchPattern).
-		OrWhere("description COLLATE NOCASE LIKE ?", searchPattern).
-		Order("title ASC").
-		Limit(10).
-		Find(&books)
+	// Use the service's search functionality
+	paginatedResult, err := bookService.Search(query, contracts.ListRequest{
+		Page:     1,
+		PageSize: 10,
+	})
 
-	for _, book := range books {
-		// Highlight matching parts in the subtitle
-		subtitle := book.Author
-		if book.Status != "" {
-			subtitle = fmt.Sprintf("%s • %s", book.Author, book.Status)
+	if err != nil || paginatedResult == nil {
+		return results
+	}
+
+	// Convert service results to search results
+	// Note: Data contains values, not pointers
+	for _, item := range paginatedResult.Data {
+		if book, ok := item.(models.Book); ok {
+			subtitle := book.Author
+			if book.Status != "" {
+				subtitle = fmt.Sprintf("%s • %s", book.Author, book.Status)
+			}
+
+			results = append(results, SearchResult{
+				ID:       book.ID,
+				Title:    book.Title,
+				Subtitle: subtitle,
+				Type:     "book",
+				URL:      fmt.Sprintf("/admin/books?search=%s", query),
+			})
 		}
-
-		results = append(results, SearchResult{
-			ID:       book.ID,
-			Title:    book.Title,
-			Subtitle: subtitle,
-			Type:     "book",
-			URL:      fmt.Sprintf("/admin/books?search=%s", query),
-		})
 	}
 
 	return results
 }
 
-// searchUsers performs fuzzy search on users
+// searchUsers performs fuzzy search on users using the UserService
 func (c *SearchController) searchUsers(query string) []SearchResult {
-	var users []models.User
 	results := []SearchResult{}
 
-	searchPattern := "%" + query + "%"
+	userService := services.NewUserService()
 
-	// Search in name and email
-	facades.Orm().Query().
-		Where("name COLLATE NOCASE LIKE ?", searchPattern).
-		OrWhere("email COLLATE NOCASE LIKE ?", searchPattern).
-		Order("name ASC").
-		Limit(10).
-		Find(&users)
+	// Use the service's search functionality
+	paginatedResult, err := userService.Search(query, contracts.ListRequest{
+		Page:     1,
+		PageSize: 10,
+	})
 
-	for _, user := range users {
-		results = append(results, SearchResult{
-			ID:       user.ID,
-			Title:    user.Name,
-			Subtitle: user.Email,
-			Type:     "user",
-			URL:      fmt.Sprintf("/admin/users?search=%s", query),
-		})
+	if err != nil || paginatedResult == nil {
+		return results
+	}
+
+	// Convert service results to search results
+	// Note: Data contains values, not pointers
+	for _, item := range paginatedResult.Data {
+		if user, ok := item.(models.User); ok {
+			results = append(results, SearchResult{
+				ID:       user.ID,
+				Title:    user.Name,
+				Subtitle: user.Email,
+				Type:     "user",
+				URL:      fmt.Sprintf("/admin/users?search=%s", query),
+			})
+		}
 	}
 
 	return results
 }
 
-// searchLenders performs fuzzy search on lenders
+// searchLenders performs fuzzy search on lenders using the LenderService
 func (c *SearchController) searchLenders(query string) []SearchResult {
-	var lenders []models.Lender
 	results := []SearchResult{}
 
-	searchPattern := "%" + query + "%"
+	lenderService := services.NewLenderService()
 
-	// Search in name, email, and phone
-	facades.Orm().Query().
-		Where("name COLLATE NOCASE LIKE ?", searchPattern).
-		OrWhere("email COLLATE NOCASE LIKE ?", searchPattern).
-		OrWhere("phone COLLATE NOCASE LIKE ?", searchPattern).
-		Order("name ASC").
-		Limit(10).
-		Find(&lenders)
+	// Use the service's search functionality
+	paginatedResult, err := lenderService.Search(query, contracts.ListRequest{
+		Page:     1,
+		PageSize: 10,
+	})
 
-	for _, lender := range lenders {
-		subtitle := lender.Email
-		if lender.Phone != nil && *lender.Phone != "" {
-			subtitle = fmt.Sprintf("%s • %s", lender.Email, *lender.Phone)
+	if err != nil || paginatedResult == nil {
+		return results
+	}
+
+	// Convert service results to search results
+	// Note: Data contains values, not pointers
+	for _, item := range paginatedResult.Data {
+		if lender, ok := item.(models.Lender); ok {
+			subtitle := lender.Email
+			if lender.Phone != nil && *lender.Phone != "" {
+				subtitle = fmt.Sprintf("%s • %s", lender.Email, *lender.Phone)
+			}
+
+			results = append(results, SearchResult{
+				ID:       lender.ID,
+				Title:    lender.Name,
+				Subtitle: subtitle,
+				Type:     "lender",
+				URL:      fmt.Sprintf("/admin/lenders?search=%s", query),
+			})
 		}
-
-		results = append(results, SearchResult{
-			ID:       lender.ID,
-			Title:    lender.Name,
-			Subtitle: subtitle,
-			Type:     "lender",
-			URL:      fmt.Sprintf("/admin/lenders?search=%s", query),
-		})
 	}
 
 	return results

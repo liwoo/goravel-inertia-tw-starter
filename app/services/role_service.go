@@ -178,21 +178,9 @@ func (s *RoleService) GetActiveRoles(req contracts.ListRequest) (*contracts.Pagi
 
 // AssignPermissions assigns permissions to a role
 func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint, scopes map[uint]string) error {
-	// Get the role
-	roleInterface, err := s.GetByID(roleID)
-	if err != nil {
-		return fmt.Errorf("role not found: %v", err)
-	}
-
-	role, ok := roleInterface.(*models.Role)
-	if !ok {
-		return errors.New("invalid role type")
-	}
-
-	// Check if it's a system role
-	if isSystemRole(role.Slug) {
-		return errors.New("cannot modify permissions for system roles")
-	}
+	// Note: We allow modifying permissions for all roles including system roles
+	// Super admins should be able to customize all roles
+	// The UI/controller layer handles super admin authorization
 
 	// Begin transaction
 	tx, err := facades.Orm().Query().Begin()

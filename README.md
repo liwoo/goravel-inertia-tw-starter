@@ -748,7 +748,24 @@ go run . artisan make:svc --svc=Lender
 # Edit app/auth/permission_constants.go and add:
 # ServiceLenders ServiceRegistry = "lenders"
 
-# Step 8: Sync permissions to database
+# Step 8: Enable scope filtering for the new service
+# Edit app/contracts/service_builder.go
+# In the WithScopeFiltering() method, add "lenders" to the serviceMap (around line 111):
+# serviceMap := map[string]auth.ServiceRegistry{
+#     "books":       "books",
+#     "users":       "users",
+#     "roles":       "roles",
+#     "permissions": "permissions",
+#     "lenders":     "lenders",  // <-- Add this
+# }
+
+# Step 9: Add model to scoped permission helper
+# Edit app/auth/scoped_permission_helper.go
+# Add Lender case to both isResourceCreatedBy() and isResourceCreatedByRoleLevel() methods:
+# case *models.Lender:
+#     return r.CreatedBy != nil && *r.CreatedBy == userID
+
+# Step 10: Sync permissions to database
 go run . artisan permissions:setup
 
 # Step 9: Generate request validators from model
@@ -800,6 +817,61 @@ go run . artisan make:ui --page=Lender --request=Lender
 # }
 
 # =========================================
+# OPTIONAL: ADD TO GLOBAL SEARCH (CMD+K)
+# =========================================
+
+# Step 18: Add search method to SearchController
+# Edit app/http/controllers/search_controller.go
+# 1. Add search check in GlobalSearch method (around line 70):
+#    if permHelper.CheckServicePermission(ctx, auth.ServiceLenders, auth.PermissionRead) {
+#        lenderResults := c.searchLenders(query)
+#        results = append(results, lenderResults...)
+#    }
+#
+# 2. Add search method at the end of the file:
+#    func (c *SearchController) searchLenders(query string) []SearchResult {
+#        results := []SearchResult{}
+#        lenderService := services.NewLenderService()
+#        paginatedResult, err := lenderService.Search(query, contracts.ListRequest{
+#            Page: 1, PageSize: 10,
+#        })
+#        if err != nil || paginatedResult == nil {
+#            return results
+#        }
+#        for _, item := range paginatedResult.Data {
+#            if lender, ok := item.(models.Lender); ok {
+#                results = append(results, SearchResult{
+#                    ID: lender.ID,
+#                    Title: lender.Name,
+#                    Subtitle: lender.Email,
+#                    Type: "lender",
+#                    URL: fmt.Sprintf("/admin/lenders?search=%s", query),
+#                })
+#            }
+#        }
+#        return results
+#    }
+
+# Step 19: Add search config to frontend
+# Edit resources/js/config/search_config.tsx
+# 1. Add to SearchEntityType (line 19):
+#    export type SearchEntityType = 'book' | 'user' | 'lender';
+#
+# 2. Add to SEARCH_ENTITIES array (around line 64):
+#    {
+#      type: 'lender',
+#      label: 'Lenders',
+#      icon: <Landmark className="h-4 w-4" />,  // Import Landmark from lucide-react
+#      permissionService: 'lenders',
+#      permissionAction: 'read' as const,
+#      colors: {
+#        light: 'bg-orange-100 text-orange-800',
+#        dark: 'dark:bg-orange-900/30 dark:text-orange-400',
+#      },
+#      urlPrefix: '/admin/lenders',
+#    },
+
+# =========================================
 # RESTART & TEST
 # =========================================
 
@@ -829,6 +901,8 @@ go run . artisan make:ui --page=Lender --request=Lender
 15. **make:ui** → Generate UI files
 16. **Register in routes/web.go** → Add page route
 17. **Add to navigation.ts** → Add menu item
+18. **Update search_controller.go** → Add to global search (optional)
+19. **Update search_config.tsx** → Add search frontend config (optional)
 
 ### 2. Managing Permissions
 

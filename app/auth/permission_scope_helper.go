@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
 )
 
 // Additional scope constants for the helper
@@ -52,17 +53,43 @@ func (sh *ScopeHelper) GetUserScope(ctx http.Context, service ServiceRegistry, a
 	permByRole := fmt.Sprintf("%s_by_my_role", basePermission)
 	permByAll := fmt.Sprintf("%s_by_all", basePermission)
 
+	facades.Log().Info("GetUserScope checking permissions", map[string]interface{}{
+		"service":         service,
+		"action":          action,
+		"basePermission":  basePermission,
+		"userPermissions": userPermissions,
+		"checkingByMe":    permByMe,
+		"checkingByRole":  permByRole,
+		"checkingByAll":   permByAll,
+	})
+
 	if sh.hasPermission(userPermissions, permByMe) {
+		facades.Log().Info("Found permission with ScopeByMe", map[string]interface{}{
+			"permission": permByMe,
+		})
 		return ScopeByMe
 	}
 	if sh.hasPermission(userPermissions, permByRole) {
+		facades.Log().Info("Found permission with ScopeByMyRole", map[string]interface{}{
+			"permission": permByRole,
+		})
 		return ScopeByMyRole
 	}
 	if sh.hasPermission(userPermissions, permByAll) ||
 		sh.hasPermission(userPermissions, basePermission) {
+		facades.Log().Info("Found permission with ScopeByAll", map[string]interface{}{
+			"permissionByAll":   permByAll,
+			"basePermission":    basePermission,
+			"hasPermByAll":      sh.hasPermission(userPermissions, permByAll),
+			"hasBasePermission": sh.hasPermission(userPermissions, basePermission),
+		})
 		return ScopeByAll
 	}
 
+	facades.Log().Info("No matching permission found - returning ScopeNone", map[string]interface{}{
+		"service": service,
+		"action":  action,
+	})
 	return ScopeNone
 }
 
@@ -75,15 +102,30 @@ func (sh *ScopeHelper) ApplyScopeToQuery(ctx http.Context, query orm.Query, serv
 		return query, fmt.Errorf("no authenticated user")
 	}
 
+	facades.Log().Info("ApplyScopeToQuery called", map[string]interface{}{
+		"service":     service,
+		"action":      action,
+		"userIDField": userIDField,
+		"scope":       scope,
+		"userID":      user.ID,
+		"userEmail":   user.Email,
+	})
+
 	switch scope {
 	case ScopeByAll:
 		// No additional filtering needed
+		facades.Log().Info("Applying ScopeByAll - no filtering", map[string]interface{}{
+			"service": service,
+		})
 		return query, nil
 
 	case ScopeByMyRole:
 		// Filter by user's role
 		if len(user.Roles) == 0 {
 			// User has no roles, return empty result
+			facades.Log().Info("User has no roles - returning empty result", map[string]interface{}{
+				"userID": user.ID,
+			})
 			return query.Where("1 = 0"), nil
 		}
 
@@ -106,14 +148,25 @@ func (sh *ScopeHelper) ApplyScopeToQuery(ctx http.Context, query orm.Query, serv
 
 		// Filter by users who have the same roles
 		whereClause := fmt.Sprintf("%s IN (SELECT DISTINCT user_id FROM user_roles WHERE role_id IN (%s) AND is_active = true)", userIDField, roleIDsStr)
+		facades.Log().Info("Applying ScopeByMyRole filter", map[string]interface{}{
+			"whereClause": whereClause,
+		})
 		return query.Where(whereClause), nil
 
 	case ScopeByMe:
 		// Filter by current user only
+		facades.Log().Info("Applying ScopeByMe filter", map[string]interface{}{
+			"userIDField": userIDField,
+			"userID":      user.ID,
+			"filter":      fmt.Sprintf("%s = %d", userIDField, user.ID),
+		})
 		return query.Where(userIDField+" = ?", user.ID), nil
 
 	case ScopeNone:
 		// No access - return empty result
+		facades.Log().Info("Applying ScopeNone - returning empty result", map[string]interface{}{
+			"service": service,
+		})
 		return query.Where("1 = 0"), nil
 
 	default:

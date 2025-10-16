@@ -108,6 +108,7 @@ func (b *ServiceBuilderComplete[T]) WithScopeFiltering(serviceRegistry string, u
 		"users":       "users",
 		"roles":       "roles",
 		"permissions": "permissions",
+		"lenders":     "lenders",
 	}
 
 	if registry, ok := serviceMap[serviceRegistry]; ok {

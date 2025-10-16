@@ -60,7 +60,6 @@ export default function LenderIndex({
             title="lenders"
             resourceName="lenders"
             columns={isMobile ? lenderColumnsMobile : lenderColumns}
-            customFilters={lenderFilters}
             paginationConfig={meta?.pagination}
             createForm={LenderCreateForm}
             editForm={LenderEditForm}

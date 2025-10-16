@@ -69,18 +69,9 @@ export default function BooksIndex({
   permissions,
   meta
 }: BooksIndexProps) {
-  console.log('Books permissions from backend:', permissions);
-  console.log('Current user info:', (window as any).Inertia?.page?.props?.auth?.user);
   const isMobile = useIsMobile();
   
-  // Debug logging
-  console.log('BooksIndex - data:', data);
-  console.log('BooksIndex - filters:', filters);
-  console.log('BooksIndex - filters.status:', filters?.status);
-  console.log('BooksIndex - filters.filters:', filters?.filters);
-  console.log('BooksIndex - stats:', stats);
-  console.log('BooksIndex - permissions:', permissions);
-  
+
   // Dialog states
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -165,41 +156,6 @@ export default function BooksIndex({
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         {/* Statistics Cards */}
         {renderStatsCards(stats, bookStatsConfigs)}
-
-
-        {/* Top Authors */}
-        {stats?.topAuthors && stats.topAuthors.length > 0 && (
-          <div className="px-4 lg:px-6">
-            <Card className="bg-gradient-to-br from-primary/5 to-card shadow-xs">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-base">
-                <Users className="h-5 w-5" />
-                <span>Top Authors</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {stats.topAuthors.slice(0, 5).map((author, index) => (
-                  <Badge
-                    key={index}
-                    variant="outline"
-                    className="cursor-pointer hover:bg-blue-50"
-                    onClick={() => {
-                      router.get('/admin/books', { ...filters, author: author.name }, {
-                        preserveState: true,
-                        preserveScroll: true,
-                        only: ['data', 'filters', 'stats'],
-                      });
-                    }}
-                  >
-                    {author.name} ({author.count})
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-            </Card>
-          </div>
-        )}
 
 
         {/* Main CRUD Component */}

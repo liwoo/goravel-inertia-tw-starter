@@ -28,9 +28,6 @@ const (
 	ServiceUsers       ServiceRegistry = "users"
 	ServiceRoles       ServiceRegistry = "roles"
 	ServicePermissions ServiceRegistry = "permissions"
-	ServiceReports     ServiceRegistry = "reports"
-	ServiceSystem      ServiceRegistry = "system"
-	ServiceProducts    ServiceRegistry = "products"
 	ServiceLenders     ServiceRegistry = "lenders"
 )
 
@@ -56,9 +53,6 @@ func GetAllServiceRegistries() []ServiceRegistry {
 		ServiceUsers,
 		ServiceRoles,
 		ServicePermissions,
-		ServiceReports,
-		ServiceSystem,
-		ServiceProducts,
 		ServiceLenders,
 	}
 }
@@ -79,10 +73,6 @@ func GetServiceDisplayName(service ServiceRegistry) string {
 		return "Role Management"
 	case ServicePermissions:
 		return "Permission Management"
-	case ServiceReports:
-		return "Reports & Analytics"
-	case ServiceSystem:
-		return "System Administration"
 	case ServiceLenders:
 		return "Lender Management"
 	default:
