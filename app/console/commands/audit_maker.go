@@ -101,6 +101,7 @@ func (r *AuditMaker) Handle(ctx console.Context) error {
 	}
 	ctx.Line("  - updated_by (UnsignedBigInteger, nullable)")
 	ctx.Line("  - deleted_by (UnsignedBigInteger, nullable)")
+	ctx.Line("  - deleted_at (Timestamp, nullable)")
 	ctx.Line("  - ip_address (String, 45 chars, nullable)")
 	ctx.Line("  - user_agent (Text, nullable)")
 	ctx.NewLine()
@@ -159,6 +160,7 @@ func (r *%s) Up() error {
 	return facades.Schema().Table("%s", func(table schema.Blueprint) {
 %s		table.UnsignedBigInteger("updated_by").Nullable().Comment("User who last updated this %s")
 		table.UnsignedBigInteger("deleted_by").Nullable().Comment("User who deleted this %s")
+		table.Timestamp("deleted_at").Nullable().Comment("Timestamp when this %s was deleted")
 		table.String("ip_address", 45).Nullable().Comment("IP address from where the action was performed")
 		table.Text("user_agent").Nullable().Comment("User agent from where the action was performed")
 
@@ -167,6 +169,7 @@ func (r *%s) Up() error {
 
 %s		table.Index("updated_by")
 		table.Index("deleted_by")
+		table.Index("deleted_at")
 	})
 }
 
@@ -178,9 +181,11 @@ func (r *%s) Down() error {
 
 %s		table.DropIndex("updated_by")
 		table.DropIndex("deleted_by")
+		table.DropIndex("deleted_at")
 
 %s		table.DropColumn("updated_by")
 		table.DropColumn("deleted_by")
+		table.DropColumn("deleted_at")
 		table.DropColumn("ip_address")
 		table.DropColumn("user_agent")
 	})
@@ -189,7 +194,7 @@ func (r *%s) Down() error {
 		structName,
 		structName, timestamp, migrationName,
 		structName, tableName,
-		createdBySection, singularName, singularName,
+		createdBySection, singularName, singularName, singularName,
 		createdByForeignSection,
 		createdByIndexSection,
 		structName, tableName,

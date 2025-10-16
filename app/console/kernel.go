@@ -39,5 +39,8 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.RequestMaker{},
 		&commands.ControllerMaker{},
 		&commands.AuditMaker{},
+		&commands.SwaggerGenerator{},
+		&commands.SwaggerDocsMaker{},
+		&commands.CrudTestMaker{},
 	}
 }

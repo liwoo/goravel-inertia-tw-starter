@@ -1,7 +1,9 @@
 package feature
 
 import (
+	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
+	"players/app/models"
 	"players/tests"
 	"testing"
 )
@@ -26,5 +28,13 @@ func (s *LenderTestSuite) TearDownTest() {
 }
 
 func (s *LenderTestSuite) TestIndex() {
+	//test that we can create a Lender Model
+	lender := models.Lender{
+		Name:  "John Doe",
+		Email: "john.doe@example.com",
+	}
+
+	err := facades.Orm().Query().Create(&lender)
+	s.NoError(err)
 
 }

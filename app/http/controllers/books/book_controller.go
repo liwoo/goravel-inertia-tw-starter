@@ -80,6 +80,128 @@ func NewBookController() *BookController {
 	return controller
 }
 
+// ============================================================================
+// CRUD Methods with Swagger annotations
+// ============================================================================
+
+// Index godoc
+// @Summary      List all books
+// @Description  Get paginated list of books with filtering, sorting, and search
+// @Tags         books
+// @Accept       json
+// @Produce      json
+// @Param        page      query  int     false  "Page number" default(1)
+// @Param        pageSize  query  int     false  "Items per page" default(20) Enums(5, 10, 20, 30, 50, 100)
+// @Param        search    query  string  false  "Search query"
+// @Param        sort      query  string  false  "Sort field"
+// @Param        direction query  string  false  "Sort direction" Enums(ASC, DESC)
+// @Success      200  {object}  contracts.ResponseFormat{data=contracts.PaginatedResponse{data=[]models.Book}}
+// @Failure      400  {object}  contracts.ResponseFormat
+// @Failure      403  {object}  contracts.ResponseFormat
+// @Router       /books [get]
+func (c *BookController) Index(ctx http.Context) http.Response {
+	return c.CrudController.Index(ctx)
+}
+
+// Show godoc
+// @Summary      Get book by ID
+// @Description  Retrieve a specific book
+// @Tags         books
+// @Accept       json
+// @Produce      json
+// @Param        id  path  int  true  "Book ID"
+// @Success      200  {object}  contracts.ResponseFormat{data=models.Book}
+// @Failure      400  {object}  contracts.ResponseFormat
+// @Failure      403  {object}  contracts.ResponseFormat
+// @Failure      404  {object}  contracts.ResponseFormat
+// @Router       /books/{id} [get]
+func (c *BookController) Show(ctx http.Context) http.Response {
+	return c.CrudController.Show(ctx)
+}
+
+// Store godoc
+// @Summary      Create a new book
+// @Description  Create a book with validation
+// @Tags         books
+// @Accept       json
+// @Produce      json
+// @Param        book  body  requests.BookCreateRequest  true  "book data"
+// @Success      201  {object}  contracts.ResponseFormat{data=models.Book}
+// @Failure      400  {object}  contracts.ResponseFormat
+// @Failure      403  {object}  contracts.ResponseFormat
+// @Failure      422  {object}  contracts.ResponseFormat
+// @Security     BearerAuth
+// @Router       /books [post]
+func (c *BookController) Store(ctx http.Context) http.Response {
+	return c.CrudController.Store(ctx)
+}
+
+// Update godoc
+// @Summary      Update a book
+// @Description  Update an existing book
+// @Tags         books
+// @Accept       json
+// @Produce      json
+// @Param        id    path  int  true  "Book ID"
+// @Param        book  body  requests.BookUpdateRequest  true  "book data"
+// @Success      200  {object}  contracts.ResponseFormat{data=models.Book}
+// @Failure      400  {object}  contracts.ResponseFormat
+// @Failure      403  {object}  contracts.ResponseFormat
+// @Failure      404  {object}  contracts.ResponseFormat
+// @Failure      422  {object}  contracts.ResponseFormat
+// @Security     BearerAuth
+// @Router       /books/{id} [put]
+func (c *BookController) Update(ctx http.Context) http.Response {
+	return c.CrudController.Update(ctx)
+}
+
+// Delete godoc
+// @Summary      Delete a book
+// @Description  Delete a book by ID
+// @Tags         books
+// @Accept       json
+// @Produce      json
+// @Param        id  path  int  true  "Book ID"
+// @Success      204  "Book deleted"
+// @Failure      400  {object}  contracts.ResponseFormat
+// @Failure      403  {object}  contracts.ResponseFormat
+// @Failure      404  {object}  contracts.ResponseFormat
+// @Security     BearerAuth
+// @Router       /books/{id} [delete]
+func (c *BookController) Delete(ctx http.Context) http.Response {
+	return c.CrudController.Delete(ctx)
+}
+
+// Search godoc
+// @Summary      Search books
+// @Description  Full-text search for books
+// @Tags         books
+// @Accept       json
+// @Produce      json
+// @Param        q         query  string  true   "Search query (min 2 chars)"
+// @Param        page      query  int     false  "Page number"
+// @Param        pageSize  query  int     false  "Items per page"
+// @Success      200  {object}  contracts.ResponseFormat{data=contracts.PaginatedResponse{data=[]models.Book}}
+// @Failure      400  {object}  contracts.ResponseFormat
+// @Failure      403  {object}  contracts.ResponseFormat
+// @Router       /books/search [get]
+func (c *BookController) Search(ctx http.Context) http.Response {
+	return c.CrudController.Search(ctx)
+}
+
+// FilterMetadata godoc
+// @Summary      Get book filter metadata
+// @Description  Returns available filters for books
+// @Tags         books
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  contracts.ResponseFormat
+// @Failure      403  {object}  contracts.ResponseFormat
+// @Router       /books/filters [get]
+func (c *BookController) FilterMetadata(ctx http.Context) http.Response {
+	return c.CrudController.FilterMetadata(ctx)
+}
+
 // Borrow POST /api/books/{id}/borrow - Borrow a book
 func (c *BookController) Borrow(ctx http.Context) http.Response {
 	// Get book ID from URL

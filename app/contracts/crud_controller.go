@@ -96,7 +96,8 @@ func (b *CrudControllerBuilder[T, C, U, readyToBuild]) Build() *CrudController[T
 // CRUD OPERATIONS
 // ============================================================================
 
-// Index GET /resources
+// Index handles listing resources with pagination, filtering, sorting, and search
+// Swagger annotations should be added in concrete controller wrapper methods
 func (c *CrudController[T, C, U]) Index(ctx http.Context) http.Response {
 	// Run before hook if set
 	if c.beforeIndex != nil {
@@ -129,7 +130,8 @@ func (c *CrudController[T, C, U]) Index(ctx http.Context) http.Response {
 	return c.SuccessResponse(ctx, response, c.resourceName+" list retrieved successfully")
 }
 
-// Show GET /resources/{id}
+// Show handles retrieving a single resource by ID
+// Swagger annotations should be added in concrete controller wrapper methods
 func (c *CrudController[T, C, U]) Show(ctx http.Context) http.Response {
 	// Validate ID parameter
 	id, err := c.ValidateID(ctx, "id")
@@ -160,7 +162,8 @@ func (c *CrudController[T, C, U]) Show(ctx http.Context) http.Response {
 	return c.SuccessResponse(ctx, resource, c.resourceName+" retrieved successfully")
 }
 
-// Store POST /resources
+// Store handles creating a new resource with validation
+// Swagger annotations should be added in concrete controller wrapper methods
 func (c *CrudController[T, C, U]) Store(ctx http.Context) http.Response {
 	// Authorization check
 	if err := c.CheckAuth(ctx, "create", nil); err != nil {
@@ -256,7 +259,8 @@ func (c *CrudController[T, C, U]) Store(ctx http.Context) http.Response {
 	return c.ResourceCreatedResponse(ctx, resource, c.resourceName)
 }
 
-// Update PUT /resources/{id}
+// Update handles updating an existing resource
+// Swagger annotations should be added in concrete controller wrapper methods
 func (c *CrudController[T, C, U]) Update(ctx http.Context) http.Response {
 	// Validate ID parameter
 	id, err := c.ValidateID(ctx, "id")
@@ -366,7 +370,8 @@ func (c *CrudController[T, C, U]) Update(ctx http.Context) http.Response {
 	return c.ResourceUpdatedResponse(ctx, updatedResource, c.resourceName)
 }
 
-// Delete DELETE /resources/{id}
+// Delete handles deleting a resource by ID
+// Swagger annotations should be added in concrete controller wrapper methods
 func (c *CrudController[T, C, U]) Delete(ctx http.Context) http.Response {
 	// Validate ID parameter
 	id, err := c.ValidateID(ctx, "id")
@@ -403,7 +408,8 @@ func (c *CrudController[T, C, U]) Delete(ctx http.Context) http.Response {
 	return c.ResourceDeletedResponse(ctx, c.resourceName, id)
 }
 
-// Search GET /resources/search
+// Search handles full-text search with pagination
+// Swagger annotations should be added in concrete controller wrapper methods
 func (c *CrudController[T, C, U]) Search(ctx http.Context) http.Response {
 	// Run before hook if set
 	query := ctx.Request().Query("q")
@@ -454,7 +460,8 @@ func (c *CrudController[T, C, U]) Search(ctx http.Context) http.Response {
 	return c.SuccessResponse(ctx, response, "Search completed successfully")
 }
 
-// FilterMetadata GET /resources/filters
+// FilterMetadata returns available filters, searchable and sortable fields
+// Swagger annotations should be added in concrete controller wrapper methods
 func (c *CrudController[T, C, U]) FilterMetadata(ctx http.Context) http.Response {
 	// Authorization check
 	if err := c.CheckAuth(ctx, "viewAny", nil); err != nil {

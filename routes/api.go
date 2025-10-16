@@ -9,6 +9,7 @@ import (
 	"players/app/http/controllers/auth/roles"
 	"players/app/http/controllers/auth/users"
 	"players/app/http/controllers/books"
+	"players/app/http/controllers/lenders"
 	"players/app/http/controllers/messages"
 
 	"players/app/http/middleware"
@@ -34,8 +35,21 @@ func Api(router route.Router) {
 	searchController := controllers.NewSearchController()
 	messageController := messages.NewMessageController()
 	notificationController := messages.NewNotificationController()
+	lenderController := lenders.NewLenderController()
+	swaggerController := controllers.NewSwaggerController()
+
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
+
+	// Swagger API documentation routes (public access)
+	router.Prefix("swagger").Group(func(swaggerRouter route.Router) {
+		swaggerRouter.Get("/", swaggerController.ServeSwagger)
+		swaggerRouter.Get("/{any}", swaggerController.ServeSwagger)
+	})
+	router.Prefix("docs").Group(func(docsRouter route.Router) {
+		docsRouter.Get("/swagger.json", swaggerController.ServeSwaggerJSON)
+		docsRouter.Get("/swagger.yaml", swaggerController.ServeSwaggerYAML)
+	})
 
 	// Book resource routes (with optional auth for scoped permissions)
 	router.Middleware(optionalAuth).Group(func(optionalAuthRouter route.Router) {
@@ -46,6 +60,13 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/books/isbn/{isbn}", bookController.GetByISBN)
 		optionalAuthRouter.Get("/books/author/{author}", bookController.GetByAuthor)
 		optionalAuthRouter.Get("/books/{id}", bookController.Show) // Must be last to avoid conflicts
+
+		//lenders
+		optionalAuthRouter.Get("/lenders", lenderController.Index)
+		optionalAuthRouter.Get("/lenders/search", lenderController.Search)
+		optionalAuthRouter.Get("/lenders/filters", lenderController.FilterMetadata)
+		optionalAuthRouter.Get("/lenders/{id}", lenderController.Show)
+
 	})
 
 	// Protected routes (require authentication)
@@ -57,10 +78,16 @@ func Api(router route.Router) {
 		protectedRouter.Post("/books", bookController.Store)
 		protectedRouter.Put("/books/{id}", bookController.Update)
 		protectedRouter.Delete("/books/{id}", bookController.Delete)
+
 		// Custom endpoints
 		protectedRouter.Post("/books/{id}/borrow", bookController.Borrow)
 		protectedRouter.Post("/books/{id}/return", bookController.Return)
 		protectedRouter.Get("/books/statistics", bookController.Statistics)
+
+		// Lender routes
+		protectedRouter.Post("/lenders", lenderController.Store)
+		protectedRouter.Put("/lenders/{id}", lenderController.Update)
+		protectedRouter.Delete("/lenders/{id}", lenderController.Delete)
 
 		// Role management routes
 		protectedRouter.Get("/roles", rolesController.Index)
