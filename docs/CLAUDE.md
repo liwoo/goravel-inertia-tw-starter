@@ -1,6 +1,6 @@
 # Goravel Blog Application - Codebase Analysis
 
-This is a **Goravel-based blog application** with a React frontend. Here's the summary:
+This is a **Goravel-based** application with a React frontend. Here's the summary:
 
 ## Architecture
 - **Backend**: Go with Goravel framework (Laravel-inspired for Go)
@@ -32,6 +32,8 @@ This is a **Goravel-based blog application** with a React frontend. Here's the s
 - **Admin Dashboard**: Sidebar navigation with collapsible menu
 - **Responsive Design**: Mobile-friendly layouts
 - **Type Safety**: Full TypeScript integration
+- **Scoped Permissions**: Fine-grained access to CRUD Actions based on who owns the resource
+- **Role-Based Access Control**: Assign permissions to roles
 
 ## Current State
 - Basic user authentication system operational
