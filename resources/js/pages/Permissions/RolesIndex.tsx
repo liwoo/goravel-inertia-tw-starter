@@ -113,7 +113,6 @@ export default function RolesIndex({
           route="/admin/permissions"
           columns={isMobile ? roleColumnsMobile : roleColumns}
           actions={additionalActions}
-          customFilters={roleFilters}
           simpleFilters={simpleFilters}
           pageActions={pageActions}
           createForm={CreateFormWithData}

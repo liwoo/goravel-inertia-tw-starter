@@ -31,7 +31,8 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20250723000000AddScopeToRolePermissionsTable{},
 		&migrations.UpdateBooksPublishedAtToDatetime{},
 		&migrations.RestoreBookPublishedDates{},
-		// &migrations.EnsureSingleActiveRolePerUser20250723100000{}, // Already applied
+		&migrations.M20251015211802CreateLenders{},
+		&migrations.M20251015225803AddAuditFieldsToLendersTable{},
 	}
 }
 

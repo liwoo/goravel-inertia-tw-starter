@@ -94,11 +94,11 @@ type BaseAuditableModel struct {
 
 	// Audit fields
 	CreatedBy *uint  `gorm:"index" json:"created_by,omitempty"`
-	Creator   *User  `gorm:"foreignKey:CreatedBy" json:"creator,omitempty"`
+	Creator   *User  `gorm:"foreignKey:CreatedBy" json:"creator,omitempty" swaggerignore:"true"`
 	UpdatedBy *uint  `gorm:"index" json:"updated_by,omitempty"`
-	Updater   *User  `gorm:"foreignKey:UpdatedBy" json:"updater,omitempty"`
+	Updater   *User  `gorm:"foreignKey:UpdatedBy" json:"updater,omitempty" swaggerignore:"true"`
 	DeletedBy *uint  `gorm:"index" json:"deleted_by,omitempty"`
-	Deleter   *User  `gorm:"foreignKey:DeletedBy" json:"deleter,omitempty"`
+	Deleter   *User  `gorm:"foreignKey:DeletedBy" json:"deleter,omitempty" swaggerignore:"true"`
 	IPAddress string `gorm:"type:varchar(45)" json:"ip_address,omitempty"`
 	UserAgent string `gorm:"type:text" json:"user_agent,omitempty"`
 }

@@ -126,11 +126,10 @@ func (s *PermissionsService) GetPermissionMatrix() (*PermissionMatrixData, error
 // AssignPermissionToRole assigns a permission to a role
 func (s *PermissionsService) AssignPermissionToRole(roleID, permissionID uint) error {
 	// Check if assignment already exists
-	var count int64
-	err := facades.Orm().Query().
+	count, err := facades.Orm().Query().
 		Table("role_permissions").
 		Where("role_id = ? AND permission_id = ?", roleID, permissionID).
-		Count(&count)
+		Count()
 	if err != nil {
 		return fmt.Errorf("failed to check existing assignment: %w", err)
 	}

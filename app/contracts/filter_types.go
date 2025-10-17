@@ -174,15 +174,18 @@ type FilterDefinition struct {
 }
 
 // NewFilterDefinition creates a new filter definition
-func NewFilterDefinition(field, label string, filterType FilterType, operators []FilterOperator) FilterDefinition {
-	if len(operators) == 0 {
-		operators = GetOperatorsForType(filterType)
+func NewFilterDefinition(field, label string, filterType FilterType, enumValues *[]string) FilterDefinition {
+	operators := GetOperatorsForType(filterType)
+	var finalEnumValues []string
+	if enumValues != nil {
+		finalEnumValues = *enumValues
 	}
 	return FilterDefinition{
-		Field:     field,
-		Label:     label,
-		Type:      filterType,
-		Operators: operators,
+		Field:      field,
+		Label:      label,
+		Type:       filterType,
+		Operators:  operators,
+		EnumValues: finalEnumValues,
 	}
 }
 

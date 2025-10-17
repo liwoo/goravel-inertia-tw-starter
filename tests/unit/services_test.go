@@ -36,35 +36,36 @@ func TestBookServiceFieldMapping(t *testing.T) {
 	}
 }
 
-// Test BookService sort validation
+// Test BookService sort validation through public interface
 func TestBookServiceSortValidation(t *testing.T) {
 	bookService := services.NewBookService()
 
-	// Test field validation
-	validFields := []string{"title", "author", "published_at", "created_at", "updated_at"}
-	for _, field := range validFields {
-		assert.True(t, bookService.ValidateSortField(field), "Field %s should be valid", field)
-	}
+	// Test that sortable fields are exposed
+	sortableFields := bookService.GetSortableFields()
+	assert.Contains(t, sortableFields, "title")
+	assert.Contains(t, sortableFields, "author")
+	assert.Contains(t, sortableFields, "published_at")
+	assert.Contains(t, sortableFields, "created_at")
+	assert.Contains(t, sortableFields, "updated_at")
 
-	// Test invalid fields
-	assert.False(t, bookService.ValidateSortField("invalid_field"))
+	// MapSortField is in the public interface
+	field, ok := bookService.MapSortField("title")
+	assert.True(t, ok)
+	assert.Equal(t, "title", field)
 
-	// Test direction validation
-	assert.True(t, bookService.ValidateSortDirection("ASC"))
-	assert.True(t, bookService.ValidateSortDirection("asc"))
-	assert.True(t, bookService.ValidateSortDirection("DESC"))
-	assert.True(t, bookService.ValidateSortDirection("desc"))
-	assert.False(t, bookService.ValidateSortDirection("invalid"))
-
-	// Test default sort
-	field, dir := bookService.GetDefaultSort()
-	assert.Equal(t, "created_at", field)
-	assert.Equal(t, "DESC", dir)
+	// Invalid field should not map
+	_, ok = bookService.MapSortField("invalid_field")
+	assert.False(t, ok)
 }
 
-// Test RoleService functionality
+// Test RoleService functionality through public interface
 func TestRoleServiceMethods(t *testing.T) {
 	roleService := services.NewRoleService()
+
+	// Test that sortable fields are exposed
+	sortableFields := roleService.GetSortableFields()
+	assert.Contains(t, sortableFields, "name")
+	assert.Contains(t, sortableFields, "created_at")
 
 	// Test sort field mapping (RoleService doesn't have special mapping)
 	field, ok := roleService.MapSortField("name")
@@ -73,29 +74,24 @@ func TestRoleServiceMethods(t *testing.T) {
 
 	field, ok = roleService.MapSortField("invalid")
 	assert.False(t, ok)
-
-	// Test default sort
-	defaultField, defaultDir := roleService.GetDefaultSort()
-	assert.Equal(t, "name", defaultField)
-	assert.Equal(t, "ASC", defaultDir)
 }
 
-// Test UserService functionality
+// Test UserService functionality through public interface
 func TestUserServiceMethods(t *testing.T) {
 	userService := services.NewUserService()
+
+	// Test that sortable fields are exposed
+	sortableFields := userService.GetSortableFields()
+	assert.Contains(t, sortableFields, "name")
+	assert.Contains(t, sortableFields, "email")
+	assert.Contains(t, sortableFields, "created_at")
 
 	// Test field mapping
 	field, ok := userService.MapSortField("createdAt")
 	assert.True(t, ok)
 	assert.Equal(t, "created_at", field)
 
-	// Test sort validation
-	assert.True(t, userService.ValidateSortField("name"))
-	assert.True(t, userService.ValidateSortField("email"))
-	assert.True(t, userService.ValidateSortField("created_at"))
-
-	// Test default sort
-	defaultField, defaultDir := userService.GetDefaultSort()
-	assert.Equal(t, "created_at", defaultField)
-	assert.Equal(t, "DESC", defaultDir)
+	// Invalid field should not map
+	_, ok = userService.MapSortField("invalid_field")
+	assert.False(t, ok)
 }

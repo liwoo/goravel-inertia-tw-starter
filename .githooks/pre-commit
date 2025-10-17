@@ -31,7 +31,8 @@ fi
 # 2. Run go mod tidy
 echo -e "${YELLOW}Running go mod tidy...${NC}"
 go mod tidy
-if [ -n "$(git status --porcelain go.mod go.sum)" ]; then
+# Check if go mod tidy created unstaged changes (not including already staged changes)
+if ! git diff --quiet go.mod go.sum; then
     echo -e "${RED}go.mod or go.sum was modified by go mod tidy${NC}"
     echo -e "${YELLOW}Please add the changes and commit again.${NC}"
     exit 1

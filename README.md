@@ -342,23 +342,252 @@ The application features a powerful permission system:
 - **Server-Side Enforcement**: All controllers enforce permissions
 - **Permission Matrix UI**: Visual role-permission management at `/admin/permissions`
 
-### CRUD Generator
+### CRUD Resource Scaffolding
 
-Generate complete CRUD systems with one command:
+The application includes three powerful code generation commands that scaffold complete CRUD resources based on your models:
+
+#### Quick Scaffolding Workflow
 
 ```bash
-# Generate full CRUD for a Product resource
-go run . artisan make:crud-e2e Product
+# 1. Create your model
+go run . artisan make:model Lender
 
-# This creates:
-# - Model with soft deletes
-# - Migration with indexes
-# - Service with contracts
-# - Controllers (API + Page)
-# - Request validation
-# - TypeScript types
-# - React components
-# - Permissions
+# 2. Generate service with model introspection
+go run . artisan make:svc lender --model=Lender
+
+# 3. Generate request validation classes
+go run . artisan make:req lender --model=Lender
+
+# 4. Generate controller with permission integration
+go run . artisan make:ctrl lender --model=Lender
+
+# 5. Complete setup
+# - Add service to app/auth/permission_constants.go
+# - Run: go run . artisan permissions:setup
+# - Add routes to routes/api.go (instructions provided by make:ctrl)
+```
+
+#### Command Reference
+
+##### `make:svc` - Service Generator
+
+Generates a complete CRUD service based on your model with automatic field introspection.
+
+```bash
+# Basic usage
+go run . artisan make:svc lender --model=Lender
+
+# Flags
+--model, -m    Model name to introspect (required)
+```
+
+**What it generates:**
+- Service file in `app/services/` with builder pattern configuration
+- Auto-detected search, sort, and filter fields from model
+- Validation rules inferred from field types
+- Scope filtering and soft delete support
+- Commented GetFilterDefinitions() template for custom filters
+
+**After generation:**
+1. Add service constant to `app/auth/permission_constants.go`:
+   ```go
+   const (
+       ServiceLenders ServiceRegistry = "lenders"  // Add this
+   )
+   ```
+2. Run `go run . artisan permissions:setup` to sync permissions to database
+
+##### `make:req` - Request Validation Generator
+
+Generates Create and Update request validation classes based on your model.
+
+```bash
+# Basic usage
+go run . artisan make:req lender --model=Lender
+
+# Flags
+--model, -m    Model name to introspect (required)
+```
+
+**What it generates:**
+- Create request in `app/http/requests/` with non-pointer fields
+- Update request with pointer fields for optional updates
+- Validation rules based on field types
+- Human-readable validation messages
+- ToCreateData() and ToUpdateData() helper methods
+
+**Field type handling:**
+- Required fields (Create): Uses field type as-is from model
+- Optional fields (Update): All fields become pointers for partial updates
+- Already-pointer fields: Preserved as pointers in both requests
+
+##### `make:ctrl` - Controller Generator
+
+Generates a CRUD controller with permission-based authorization.
+
+```bash
+# Basic usage
+go run . artisan make:ctrl lender --model=Lender
+
+# Flags
+--model, -m    Model name to introspect (required)
+```
+
+##### `make:audit` - Audit Fields Migration Generator
+
+Generates a migration to add audit fields to an existing table.
+
+```bash
+# Basic usage (adds all audit fields including created_by)
+go run . artisan make:audit lenders
+
+# Exclude created_by field (if table already has it)
+go run . artisan make:audit lenders --without-created-by
+
+# Flags
+--table, -t                Table name to add audit fields to
+--without-created-by, -w   Exclude created_by field (default: false)
+```
+
+**What it generates:**
+- Migration file in `database/migrations/`
+- Automatically registers in `database/kernel.go`
+- Adds all audit fields by default: `created_by`, `updated_by`, `deleted_by`, `ip_address`, `user_agent`
+- Foreign key constraints to `users` table
+- Indexes on audit fields for performance
+- Complete `Down()` method for rollback
+
+**Audit fields added (by default):**
+- `created_by`: User who created the record
+- `updated_by`: User who last updated the record
+- `deleted_by`: User who soft-deleted the record
+- `ip_address`: IP address from where the action was performed (45 chars for IPv6)
+- `user_agent`: Browser/client user agent string
+
+**After generation:**
+```bash
+# Run the migration
+go run . artisan migrate
+
+# To rollback
+go run . artisan migrate:rollback
+```
+
+#### Controller Route Registration
+
+After running `make:ctrl`, register routes in `routes/api.go` (detailed instructions provided):
+```go
+// 1. Import the controller
+import "players/app/http/controllers/lenders"
+
+// 2. Initialize controller
+lenderController := lenders.NewLenderController()
+
+// 3. Add optional auth routes (for public/scoped access - use for non-sensitive data)
+router.Middleware(optionalAuth).Group(func(optionalAuthRouter route.Router) {
+    optionalAuthRouter.Get("/lenders", lenderController.Index)
+    optionalAuthRouter.Get("/lenders/search", lenderController.Search)
+    optionalAuthRouter.Get("/lenders/filters", lenderController.FilterMetadata)
+    optionalAuthRouter.Get("/lenders/{id}", lenderController.Show)
+})
+
+// 4. Add protected routes (always require authentication)
+router.Middleware(jwtAuth).Group(func(protectedRouter route.Router) {
+    protectedRouter.Post("/lenders", lenderController.Store)
+    protectedRouter.Put("/lenders/{id}", lenderController.Update)
+    protectedRouter.Delete("/lenders/{id}", lenderController.Delete)
+})
+```
+
+**Middleware patterns:**
+- **`optionalAuth`**: Allows public access but identifies authenticated users. Use for resources that support anonymous viewing with scoped results (e.g., books - anonymous users see all, authenticated users see filtered by permissions)
+- **`jwtAuth`**: Requires authentication - blocks request if no valid token. Always use for write operations and sensitive data
+- **Sensitive resources** (e.g., users): Use `jwtAuth` for ALL routes, including GET endpoints
+
+#### Complete Example: Scaffolding a Lender Resource
+
+```bash
+# Step 1: Create the model
+go run . artisan make:model Lender
+
+# Edit app/models/lender.go
+# package models
+#
+# import (
+#     "github.com/goravel/framework/database/orm"
+# )
+#
+# type Lender struct {
+#     orm.Model
+#     orm.SoftDeletes
+#
+#     FirstName      string  `json:"first_name" db:"first_name"`
+#     LastName       string  `json:"last_name" db:"last_name"`
+#     Phone          *string `json:"phone" db:"phone"`  // Optional
+#     Email          string  `json:"email" db:"email"`
+#     Address        *string `json:"address" db:"address"`  // Optional
+#     IdentityNumber *string `json:"identity_number" db:"identity_number"`  // Optional
+# }
+
+# Step 2: Create migration
+go run . artisan make:migration create_lenders_table
+
+# Edit database/migrations/TIMESTAMP_create_lenders_table.go and run
+go run . artisan migrate
+
+# Step 3: Generate service with model introspection
+go run . artisan make:svc lender --model=Lender
+# ✓ Creates app/services/lender_service.go
+# ✓ Auto-detects all fields from model
+# ✓ Configures search, sort, filter fields
+# ✓ Adds soft delete support
+
+# Step 4: Register service permissions
+# Edit app/auth/permission_constants.go
+# Add: ServiceLenders ServiceRegistry = "lenders"
+
+# Sync permissions to database
+go run . artisan permissions:setup
+
+# Step 5: Generate request validation classes
+go run . artisan make:req lender --model=Lender
+# ✓ Creates app/http/requests/lender_create_request.go
+# ✓ Creates app/http/requests/lender_update_request.go
+# ✓ Proper pointer handling for optional fields
+
+# Step 6: Generate controller
+go run . artisan make:ctrl lender --model=Lender
+# ✓ Creates app/http/controllers/lenders/lender_controller.go
+# ✓ Provides route registration instructions
+
+# Step 7: Register routes
+# Follow the instructions printed by make:ctrl command
+# Edit routes/api.go and add the controller routes
+
+# Step 8: Test your new CRUD resource
+# Start servers and visit http://localhost:3500/api/lenders
+```
+
+#### Model Introspection Features
+
+The scaffolding commands use Go AST parsing to intelligently analyze your models:
+
+- **Field Detection**: Automatically extracts all struct fields
+- **Type Inference**: Understands basic types (string, int, bool, etc.) and pointers
+- **Tag Parsing**: Reads `json`, `db`, and `form` tags for field configuration
+- **Soft Deletes**: Detects `orm.SoftDeletes` and configures service accordingly
+- **Optional Fields**: Identifies pointer fields as optional (nullable in database)
+- **Validation Rules**: Generates sensible validation rules based on field types
+
+#### Legacy Commands
+
+Individual component generators are still available for fine-grained control:
+
+```bash
+go run . artisan make:model ModelName
+go run . artisan make:service ServiceName
+go run . artisan make:repository RepositoryName
+go run . artisan make:request RequestName
 ```
 
 ### Authentication & Authorization
@@ -406,17 +635,30 @@ go run . artisan seed
 go run . artisan seed --seeder=rbac
 ```
 
-### CRUD Generation
+### CRUD Scaffolding (In Order)
 ```bash
-# Generate complete CRUD system
-go run . artisan make:crud-e2e ResourceName
+# 1. Database Setup
+go run . artisan make:migration create_lenders_table   # Create table migration
+go run . artisan migrate                                # Run migration
+go run . artisan make:audit lenders                    # Add audit fields (optional)
+go run . artisan migrate                                # Run audit migration
 
-# Generate individual components
-go run . artisan make:model ModelName
-go run . artisan make:service ServiceName
-go run . artisan make:controller ControllerName
-go run . artisan make:request RequestName
-go run . artisan make:repository RepositoryName
+# 2. Backend Generation
+go run . artisan make:model-from-table --table=lenders --model=Lender  # Model from DB
+go run . artisan make:svc --svc=Lender                                 # Service
+# (Add to permission_constants.go, then run permissions:setup)
+go run . artisan make:req --model=Lender --resource=Lender             # Request validators
+go run . artisan make:api-ctrl --controller=Lender                     # API controller
+# (Register routes in routes/api.go)
+
+# 3. Optional: Documentation & Tests
+go run . artisan make:swagger-docs --controller=Lender  # Swagger docs (optional)
+go run . artisan make:crud-test --svc=lender            # API tests (optional)
+
+# 4. Frontend Generation
+go run . artisan make:page-ctrl --controller=Lender     # Page controller
+go run . artisan make:ui --page=Lender --request=Lender # Complete UI hierarchy
+# (Register page route in routes/web.go and add to navigation.ts)
 ```
 
 ### Permission Management
@@ -473,21 +715,194 @@ function MyComponent() {
 
 ## 🧪 Development Workflow
 
-### 1. Creating a New Feature
+### 1. Creating a New CRUD Resource (Complete Workflow)
 
 ```bash
-# Generate CRUD for your feature
-go run . artisan make:crud-e2e Feature
+# =========================================
+# BACKEND SETUP (Database → API)
+# =========================================
 
-# Run migrations
+# Step 1: Generate database migration
+go run . artisan make:migration create_lenders_table
+# Edit database/migrations/TIMESTAMP_create_lenders_table.go
+
+# Step 2: Run the migration
 go run . artisan migrate
 
-# Seed permissions
-go run . artisan seed --seeder=rbac
+# Step 3: Generate audit fields migration (optional but recommended)
+go run . artisan make:audit lenders
+# This adds created_by, updated_by, deleted_by, ip_address, user_agent
 
-# Restart servers
-# Ctrl+C to stop, then restart both backend and frontend
+# Step 4: Run audit migration
+go run . artisan migrate
+
+# Step 5: Generate model from database table
+go run . artisan make:model-from-table --table=lenders --model=Lender
+# Creates app/models/lender.go with fields matching database schema
+
+# Step 6: Generate service from model
+go run . artisan make:svc --svc=Lender
+# Creates app/services/lender_service.go with CRUD operations
+
+# Step 7: Add service to permission constants
+# Edit app/auth/permission_constants.go and add:
+# ServiceLenders ServiceRegistry = "lenders"
+
+# Step 8: Enable scope filtering for the new service
+# Edit app/contracts/service_builder.go
+# In the WithScopeFiltering() method, add "lenders" to the serviceMap (around line 111):
+# serviceMap := map[string]auth.ServiceRegistry{
+#     "books":       "books",
+#     "users":       "users",
+#     "roles":       "roles",
+#     "permissions": "permissions",
+#     "lenders":     "lenders",  // <-- Add this
+# }
+
+# Step 9: Add model to scoped permission helper
+# Edit app/auth/scoped_permission_helper.go
+# Add Lender case to both isResourceCreatedBy() and isResourceCreatedByRoleLevel() methods:
+# case *models.Lender:
+#     return r.CreatedBy != nil && *r.CreatedBy == userID
+
+# Step 10: Sync permissions to database
+go run . artisan permissions:setup
+
+# Step 9: Generate request validators from model
+go run . artisan make:req --model=Lender --resource=Lender
+# Creates app/http/requests/lender_create_request.go
+# Creates app/http/requests/lender_update_request.go
+
+# Step 10: Generate API controller
+go run . artisan make:api-ctrl --controller=Lender
+# Creates app/http/controllers/lenders/lender_api_controller.go
+
+# Step 11: Register API endpoints
+# Edit routes/api.go and add the routes (instructions provided by make:api-ctrl)
+
+# Step 12: Generate Swagger docs (OPTIONAL)
+go run . artisan make:swagger-docs --controller=Lender
+
+# Step 13: Generate API tests (OPTIONAL)
+go run . artisan make:crud-test --svc=lender
+
+# =========================================
+# FRONTEND SETUP (UI Generation)
+# =========================================
+
+# Step 14: Generate page controller
+go run . artisan make:page-ctrl --controller=Lender
+# Creates app/http/controllers/lenders/lender_page_controller.go
+
+# Step 15: Generate complete UI hierarchy
+go run . artisan make:ui --page=Lender --request=Lender
+# Creates:
+# - resources/js/Pages/Lender/Index.tsx
+# - resources/js/Pages/Lender/sections/*.tsx (6 files)
+# - resources/js/types/lender.ts
+
+# Step 16: Register admin page endpoint
+# Edit routes/web.go and add:
+# lendersPageController := lenders.NewLenderPageController()
+# router.Get("/admin/lenders", lendersPageController.Index)
+
+# Step 17: Add navigation menu item
+# Edit resources/js/config/navigation.ts and add:
+# {
+#   title: "Lenders",
+#   url: "/admin/lenders",
+#   icon: Users, // Import from lucide-react
+#   requiredService: "lenders",
+#   requiredAction: "read" as const,
+# }
+
+# =========================================
+# OPTIONAL: ADD TO GLOBAL SEARCH (CMD+K)
+# =========================================
+
+# Step 18: Add search method to SearchController
+# Edit app/http/controllers/search_controller.go
+# 1. Add search check in GlobalSearch method (around line 70):
+#    if permHelper.CheckServicePermission(ctx, auth.ServiceLenders, auth.PermissionRead) {
+#        lenderResults := c.searchLenders(query)
+#        results = append(results, lenderResults...)
+#    }
+#
+# 2. Add search method at the end of the file:
+#    func (c *SearchController) searchLenders(query string) []SearchResult {
+#        results := []SearchResult{}
+#        lenderService := services.NewLenderService()
+#        paginatedResult, err := lenderService.Search(query, contracts.ListRequest{
+#            Page: 1, PageSize: 10,
+#        })
+#        if err != nil || paginatedResult == nil {
+#            return results
+#        }
+#        for _, item := range paginatedResult.Data {
+#            if lender, ok := item.(models.Lender); ok {
+#                results = append(results, SearchResult{
+#                    ID: lender.ID,
+#                    Title: lender.Name,
+#                    Subtitle: lender.Email,
+#                    Type: "lender",
+#                    URL: fmt.Sprintf("/admin/lenders?search=%s", query),
+#                })
+#            }
+#        }
+#        return results
+#    }
+
+# Step 19: Add search config to frontend
+# Edit resources/js/config/search_config.tsx
+# 1. Add to SearchEntityType (line 19):
+#    export type SearchEntityType = 'book' | 'user' | 'lender';
+#
+# 2. Add to SEARCH_ENTITIES array (around line 64):
+#    {
+#      type: 'lender',
+#      label: 'Lenders',
+#      icon: <Landmark className="h-4 w-4" />,  // Import Landmark from lucide-react
+#      permissionService: 'lenders',
+#      permissionAction: 'read' as const,
+#      colors: {
+#        light: 'bg-orange-100 text-orange-800',
+#        dark: 'dark:bg-orange-900/30 dark:text-orange-400',
+#      },
+#      urlPrefix: '/admin/lenders',
+#    },
+
+# =========================================
+# RESTART & TEST
+# =========================================
+
+# Restart both servers
+# Terminal 1: air (or go run .)
+# Terminal 2: npm run dev
+
+# Visit: http://localhost:3500/admin/lenders
 ```
+
+#### Quick Reference Order
+
+1. **make:migration** → Create table schema
+2. **migrate** → Apply migration
+3. **make:audit** → Add audit fields (optional)
+4. **migrate** → Apply audit migration
+5. **make:model-from-table** → Generate model from DB
+6. **make:svc** → Generate service
+7. **Add to permission_constants.go** → Register service
+8. **permissions:setup** → Sync to database
+9. **make:req** → Generate request validators
+10. **make:api-ctrl** → Generate API controller
+11. **Register in routes/api.go** → Add API endpoints
+12. **make:swagger-docs** → Generate docs (optional)
+13. **make:crud-test** → Generate tests (optional)
+14. **make:page-ctrl** → Generate page controller
+15. **make:ui** → Generate UI files
+16. **Register in routes/web.go** → Add page route
+17. **Add to navigation.ts** → Add menu item
+18. **Update search_controller.go** → Add to global search (optional)
+19. **Update search_config.tsx** → Add search frontend config (optional)
 
 ### 2. Managing Permissions
 
@@ -606,6 +1021,7 @@ if err := ctx.Request().Bind(&request); err != nil {
 
 Detailed documentation available in the `docs/` directory:
 
+- **[CRUD Resource Scaffolding](#crud-resource-scaffolding)** - Quick-start guide for `make:svc`, `make:req`, `make:ctrl` commands
 - [Permission System Guide](docs/PERMISSION_SYSTEM_GUIDE.md) - Complete permission system documentation
 - [CRUD E2E Guide](docs/CRUD_E2E_GUIDE.md) - Step-by-step CRUD implementation
 - [Artisan Commands](docs/ARTISAN_COMMANDS.md) - All available commands

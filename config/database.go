@@ -1,7 +1,9 @@
 package config
 
 import (
+	"github.com/goravel/framework/contracts/database/driver"
 	"github.com/goravel/framework/facades"
+	sqlitefacades "github.com/goravel/sqlite/facades"
 )
 
 func init() {
@@ -42,6 +44,9 @@ func init() {
 				"database": config.Env("DB_DATABASE", "forge"),
 				"prefix":   "",
 				"singular": false,
+				"via": func() (driver.Driver, error) {
+					return sqlitefacades.Sqlite("sqlite")
+				},
 			},
 			"sqlserver": map[string]any{
 				"driver":   "sqlserver",
@@ -99,10 +104,8 @@ func init() {
 		// This table keeps track of all the migrations that have already run for
 		// your application. Using this information, we can determine which of
 		// the migrations on disk haven't actually been run in the database.
-		// Available Drivers: "default", "sql"
 		"migrations": map[string]any{
-			"driver": "default",
-			"table":  "migrations",
+			"table": "migrations",
 		},
 
 		// Redis Databases

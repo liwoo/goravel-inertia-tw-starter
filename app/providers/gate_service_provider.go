@@ -125,32 +125,35 @@ func (receiver *GateServiceProvider) registerUserGates() {
 
 // registerSystemGates registers all system-level permissions
 func (receiver *GateServiceProvider) registerSystemGates() {
-	gateHelper := helpers.NewGateHelper()
+	// TODO: Re-enable these gates once ServiceSystem and ServiceReports are registered in permission_constants.go
+	/*
+		gateHelper := helpers.NewGateHelper()
 
-	gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceSystem, auth.PermissionManage), func(ctx http.Context, user interface{}) access.Response {
-		// Only super-admins can manage system
-		return gateHelper.RoleBasedAccess("ADMIN")(ctx, user)
-	})
+		gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceSystem, auth.PermissionManage), func(ctx http.Context, user interface{}) access.Response {
+			// Only super-admins can manage system
+			return gateHelper.RoleBasedAccess("ADMIN")(ctx, user)
+		})
 
-	gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceSystem, "backup"), func(ctx http.Context, user interface{}) access.Response {
-		// Only super-admins can backup system
-		return gateHelper.RoleBasedAccess("ADMIN")(ctx, user)
-	})
+		gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceSystem, "backup"), func(ctx http.Context, user interface{}) access.Response {
+			// Only super-admins can backup system
+			return gateHelper.RoleBasedAccess("ADMIN")(ctx, user)
+		})
 
-	gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceSystem, "configure"), func(ctx http.Context, user interface{}) access.Response {
-		// Only super-admins can configure system
-		return gateHelper.RoleBasedAccess("ADMIN")(ctx, user)
-	})
+		gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceSystem, "configure"), func(ctx http.Context, user interface{}) access.Response {
+			// Only super-admins can configure system
+			return gateHelper.RoleBasedAccess("ADMIN")(ctx, user)
+		})
 
-	gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceReports, auth.PermissionView), func(ctx http.Context, user interface{}) access.Response {
-		// Librarians and admins can view reports
-		return gateHelper.RoleBasedAccess("ADMIN", "LIBRARIAN")(ctx, user)
-	})
+		gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceReports, auth.PermissionView), func(ctx http.Context, user interface{}) access.Response {
+			// Librarians and admins can view reports
+			return gateHelper.RoleBasedAccess("ADMIN", "LIBRARIAN")(ctx, user)
+		})
 
-	gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceReports, auth.PermissionExport), func(ctx http.Context, user interface{}) access.Response {
-		// Librarians and admins can export reports
-		return gateHelper.RoleBasedAccess("ADMIN", "LIBRARIAN")(ctx, user)
-	})
+		gateHelper.RegisterGate(auth.BuildPermissionSlug(auth.ServiceReports, auth.PermissionExport), func(ctx http.Context, user interface{}) access.Response {
+			// Librarians and admins can export reports
+			return gateHelper.RoleBasedAccess("ADMIN", "LIBRARIAN")(ctx, user)
+		})
+	*/
 }
 
 // registerBookOperationGates registers gates for book-specific operations

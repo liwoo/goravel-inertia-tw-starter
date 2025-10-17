@@ -84,10 +84,9 @@ func (c *PermissionsController) Assign(ctx http.Context) http.Response {
 	}
 
 	// Check if permission is already assigned
-	var count int64
-	facades.Orm().Query().Model(&models.RolePermission{}).
+	count, _ := facades.Orm().Query().Model(&models.RolePermission{}).
 		Where("role_id = ? AND permission_id = ?", roleID, permission.ID).
-		Count(&count)
+		Count()
 
 	if count > 0 {
 		return ctx.Response().Json(http.StatusConflict, map[string]string{

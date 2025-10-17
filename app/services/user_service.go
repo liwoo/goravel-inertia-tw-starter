@@ -3,7 +3,6 @@ package services
 import (
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/goravel/framework/facades"
 	"players/app/auth"
@@ -13,8 +12,7 @@ import (
 
 // UserService implements user-specific business logic using the builder pattern
 type UserService struct {
-	contracts.CrudServiceContract // Embedded interface - inherits all methods
-	baseService                   contracts.CrudServiceContract
+	contracts.CrudServiceContract // Embedded - automatically exposes all methods!
 }
 
 // NewUserService creates a new user service using the builder pattern
@@ -158,7 +156,6 @@ func NewUserService() *UserService {
 		Build() // Returns a fully configured CrudServiceContract
 
 	userService.CrudServiceContract = service
-	userService.baseService = service
 
 	// Set the actual service reference for proper method resolution
 	contracts.SetActualServiceHelper(service, userService, "UserService")
@@ -331,20 +328,20 @@ func (s *UserService) GetUserStatistics() (map[string]interface{}, error) {
 	}
 
 	// Get total users
-	facades.Orm().Query().Model(&models.User{}).Count(&stats.TotalUsers)
+	stats.TotalUsers, _ = facades.Orm().Query().Model(&models.User{}).Count()
 
 	// Get active users
-	facades.Orm().Query().Model(&models.User{}).Where("is_active = ?", true).Count(&stats.ActiveUsers)
+	stats.ActiveUsers, _ = facades.Orm().Query().Model(&models.User{}).Where("is_active = ?", true).Count()
 
 	// Get inactive users
 	stats.InactiveUsers = stats.TotalUsers - stats.ActiveUsers
 
 	// Get admin users (assuming there's an admin role)
 	// Note: Count the super admins instead since user_roles doesn't have is_active field
-	facades.Orm().Query().
+	stats.AdminUsers, _ = facades.Orm().Query().
 		Model(&models.User{}).
 		Where("is_super_admin = ?", true).
-		Count(&stats.AdminUsers)
+		Count()
 
 	return map[string]interface{}{
 		"totalUsers":    stats.TotalUsers,
@@ -362,54 +359,6 @@ func (s *UserService) GetColumnMapping() map[string]string {
 	return mapping
 }
 
-// Sortable interface implementation
-
-// MapSortField maps frontend field names to database column names
-func (s *UserService) MapSortField(frontendField string) (string, bool) {
-	// First check column mapping
-	mapping := s.GetColumnMapping()
-	if mappedField, ok := mapping[frontendField]; ok {
-		// Verify the mapped field is sortable
-		sortableFields := s.baseService.GetSortableFields()
-		for _, field := range sortableFields {
-			if field == mappedField {
-				return mappedField, true
-			}
-		}
-	}
-
-	// Check if the field is directly sortable
-	sortableFields := s.baseService.GetSortableFields()
-	for _, field := range sortableFields {
-		if field == frontendField {
-			return frontendField, true
-		}
-	}
-	return "", false
-}
-
-// ValidateSortField validates if a field can be sorted
-func (s *UserService) ValidateSortField(field string) bool {
-	sortableFields := s.baseService.GetSortableFields()
-	for _, sortableField := range sortableFields {
-		if sortableField == field {
-			return true
-		}
-	}
-	return false
-}
-
-// ValidateSortDirection validates sort direction
-func (s *UserService) ValidateSortDirection(direction string) bool {
-	upper := strings.ToUpper(direction)
-	return upper == "ASC" || upper == "DESC"
-}
-
-// GetDefaultSort returns the default sort configuration
-func (s *UserService) GetDefaultSort() (string, string) {
-	return "created_at", "DESC"
-}
-
 // Create creates a new user with manual validation to work around Goravel's max/min bug
 func (s *UserService) Create(data map[string]interface{}) (interface{}, error) {
 	// Manual validation for string length (workaround for Goravel bug)
@@ -417,8 +366,8 @@ func (s *UserService) Create(data map[string]interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	// Call the base Create method
-	return s.baseService.Create(data)
+	// Call the embedded service's Create method
+	return s.CrudServiceContract.Create(data)
 }
 
 // Update updates a user with manual validation to work around Goravel's max/min bug
@@ -428,8 +377,46 @@ func (s *UserService) Update(id uint, data map[string]interface{}) (interface{},
 		return nil, err
 	}
 
-	// Call the base Update method
-	return s.baseService.Update(id, data)
+	// Call the embedded service's Update method
+	return s.CrudServiceContract.Update(id, data)
+}
+
+// GetFilterDefinitions returns filter definitions for the users resource
+func (s *UserService) GetFilterDefinitions() []contracts.FilterDefinition {
+	return []contracts.FilterDefinition{
+		// Name filter - uses all string operators automatically
+		contracts.NewFilterDefinition(
+			"name",
+			"Name",
+			contracts.FilterTypeString,
+			nil, // Will use GetOperatorsForType(FilterTypeString)
+		),
+		// Email filter - uses all string operators automatically
+		contracts.NewFilterDefinition(
+			"email",
+			"Email",
+			contracts.FilterTypeString,
+			nil, // Will use GetOperatorsForType(FilterTypeString)
+		),
+		// Status filter - uses all enum operators automatically
+		contracts.NewFilterDefinition(
+			"status",
+			"Status",
+			contracts.FilterTypeEnum,
+			&[]string{
+				"ACTIVE",
+				"INACTIVE",
+				"PENDING",
+			},
+		),
+		// Created date filter - uses all datetime operators automatically
+		contracts.NewFilterDefinition(
+			"created_at",
+			"Created Date",
+			contracts.FilterTypeDateTime,
+			nil, // Will use GetOperatorsForType(FilterTypeDateTime)
+		),
+	}
 }
 
 // validateUserData manually validates user data to work around Goravel's max/min validation bug

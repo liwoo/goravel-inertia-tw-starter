@@ -25,7 +25,7 @@ func (r *BookCreateRequest) Rules(ctx http.Context) map[string]string {
 	rules := map[string]string{
 		"title":  "required",
 		"author": "required",
-		"isbn":   "required",
+		"isbn":   "required|max_len:20",
 		"price":  fmt.Sprintf("required|%s", fmt.Sprintf(contracts.MinValue, 0)),
 		"status": "in:AVAILABLE,BORROWED,MAINTENANCE,RESERVED",
 	}

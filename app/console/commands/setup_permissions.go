@@ -51,7 +51,7 @@ func (receiver *SetupPermissionsCommand) Handle(ctx console.Context) error {
 				Where("slug = ?", permissionSlug).
 				First(&existingPermission)
 
-			if err == nil {
+			if err == nil && existingPermission.ID > 0 {
 				// Permission already exists
 				permissionsSkipped++
 				continue

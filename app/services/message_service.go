@@ -212,11 +212,9 @@ func (s *MessageService) GetUnreadMessages(userID uint, req contracts.ListReques
 
 // GetUnreadCount gets the count of unread messages
 func (s *MessageService) GetUnreadCount(userID uint) (int64, error) {
-	var count int64
-	err := facades.Orm().Query().Model(&models.Message{}).
+	return facades.Orm().Query().Model(&models.Message{}).
 		Where("recipient_id = ? AND read_at IS NULL", userID).
-		Count(&count)
-	return count, err
+		Count()
 }
 
 // GetThreadMessages retrieves all messages in a thread
@@ -367,11 +365,10 @@ func (s *MessageService) GetConversations(userID uint) ([]interface{}, error) {
 		}
 
 		// Get unread count
-		var unreadCount int64
-		facades.Orm().Query().Model(&models.Message{}).
+		unreadCount, _ := facades.Orm().Query().Model(&models.Message{}).
 			Where("sender_id = ? AND recipient_id = ? AND status = ? AND deleted_at IS NULL",
 				conv.UserID, userID, models.MessageStatusSent).
-			Count(&unreadCount)
+			Count()
 
 		// Build conversation object
 		conversation := map[string]interface{}{
@@ -410,8 +407,8 @@ func (s *MessageService) GetConversation(user1ID uint, user2ID uint, req contrac
 		Order("created_at DESC")
 
 	// Apply pagination manually
-	var total int64
-	if err := query.Count(&total); err != nil {
+	total, err := query.Count()
+	if err != nil {
 		return nil, err
 	}
 

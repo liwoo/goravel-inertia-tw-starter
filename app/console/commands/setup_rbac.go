@@ -58,17 +58,15 @@ func (receiver *SetupRBAC) Handle(ctx console.Context) error {
 	ctx.Info("==================")
 
 	// Count roles and permissions
-	var roleCount, permissionCount int64
-	facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", true).Count(&roleCount)
-	facades.Orm().Query().Model(&models.Permission{}).Where("is_active = ?", true).Count(&permissionCount)
+	roleCount, _ := facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", true).Count()
+	permissionCount, _ := facades.Orm().Query().Model(&models.Permission{}).Where("is_active = ?", true).Count()
 
 	ctx.Info(fmt.Sprintf("• Roles created: %d", roleCount))
 	ctx.Info(fmt.Sprintf("• Permissions created: %d", permissionCount))
 
 	// Count users by role
-	var adminCount, userCount int64
-	facades.Orm().Query().Model(&models.User{}).Where("role = ?", "ADMIN").Count(&adminCount)
-	facades.Orm().Query().Model(&models.User{}).Where("role = ?", "USER").Count(&userCount)
+	adminCount, _ := facades.Orm().Query().Model(&models.User{}).Where("role = ?", "ADMIN").Count()
+	userCount, _ := facades.Orm().Query().Model(&models.User{}).Where("role = ?", "USER").Count()
 
 	ctx.Info(fmt.Sprintf("• Admin users: %d (upgraded to super-admin)", adminCount))
 	ctx.Info(fmt.Sprintf("• Regular users: %d (upgraded to member)", userCount))

@@ -1,14 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { router } from '@inertiajs/react';
-import { 
-  Search, 
-  BookOpen, 
-  Users, 
-  Shield,
-  FileText,
+import {
+  Search,
   ChevronRight,
   Command,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -22,12 +18,18 @@ import { cn } from '@/lib/utils';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import axios from '@/lib/axios';
+import {
+  SEARCH_ENTITIES,
+  getEntityColors,
+  getEntityIcon,
+  type SearchEntityType,
+} from '@/config/search_config';
 
 interface SearchResult {
   id: number;
   title: string;
   subtitle?: string;
-  type: 'book' | 'user' | 'role' | 'permission';
+  type: SearchEntityType;
   url: string;
 }
 
@@ -47,22 +49,9 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
   // Define available search categories based on permissions
   const searchableEntities = React.useMemo(() => {
-    const entities = [];
-    
-    if (canPerformAction('books', 'read')) {
-      entities.push({ type: 'book', label: 'Books', icon: <BookOpen className="h-4 w-4" /> });
-    }
-    
-    if (canPerformAction('users', 'read')) {
-      entities.push({ type: 'user', label: 'Users', icon: <Users className="h-4 w-4" /> });
-    }
-    
-    if (canPerformAction('roles', 'read') || canPerformAction('permissions', 'read')) {
-      entities.push({ type: 'role', label: 'Roles', icon: <Shield className="h-4 w-4" /> });
-      entities.push({ type: 'permission', label: 'Permissions', icon: <Shield className="h-4 w-4" /> });
-    }
-    
-    return entities;
+    return SEARCH_ENTITIES.filter(entity =>
+      canPerformAction(entity.permissionService, entity.permissionAction)
+    );
   }, [canPerformAction]);
 
   // Real search function using API
@@ -142,33 +131,11 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, results, selectedIndex, onClose]);
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'book':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'user':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-      case 'role':
-      case 'permission':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'book':
-        return <BookOpen className="h-4 w-4" />;
-      case 'user':
-        return <Users className="h-4 w-4" />;
-      case 'role':
-      case 'permission':
-        return <Shield className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
-  };
+  // Generate search placeholder dynamically from available entities
+  const searchPlaceholder = React.useMemo(() => {
+    const labels = searchableEntities.map(e => e.label.toLowerCase()).slice(0, 3);
+    return `Search for ${labels.join(', ')}...`;
+  }, [searchableEntities]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -176,7 +143,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         <div className="flex items-center border-b px-4 py-3">
           <Search className="mr-3 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Search for books, users, roles..."
+            placeholder={searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 border-0 bg-transparent p-0 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0"
@@ -210,7 +177,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                     variant="secondary"
                     className="cursor-pointer"
                     onClick={() => {
-                      router.visit(`/admin/${entity.type}s?search=${encodeURIComponent(searchTerm)}`);
+                      router.visit(`${entity.urlPrefix}?search=${encodeURIComponent(searchTerm)}`);
                       onClose();
                     }}
                   >
@@ -239,7 +206,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                      {getTypeIcon(result.type)}
+                      {getEntityIcon(result.type)}
                     </div>
                     <div className="flex flex-col">
                       <span className="font-medium">{result.title}</span>
@@ -251,7 +218,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className={cn("text-xs", getTypeColor(result.type))}>
+                    <Badge variant="secondary" className={cn("text-xs", getEntityColors(result.type))}>
                       {result.type}
                     </Badge>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -272,7 +239,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
                     key={entity.type}
                     className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-accent"
                     onClick={() => {
-                      router.visit(`/admin/${entity.type}s`);
+                      router.visit(entity.urlPrefix);
                       onClose();
                     }}
                   >

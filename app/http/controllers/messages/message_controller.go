@@ -7,59 +7,65 @@ import (
 	"github.com/goravel/framework/facades"
 	"players/app/auth"
 	"players/app/contracts"
+	"players/app/http/requests"
 	"players/app/models"
 	"players/app/services"
 )
 
-// MessageController - Simplified version using generic CRUD controller
+// MessageController handles messaging endpoints
 type MessageController struct {
-	*contracts.GenericCrudController[models.Message, interface{}, interface{}]
+	*contracts.CrudController[models.Message, *requests.MessageCreateRequest, *requests.MessageUpdateRequest]
 	messageService *services.MessageService
 }
 
-// NewMessageController creates a new simplified message controller
+// NewMessageController creates a new message controller
 func NewMessageController() *MessageController {
 	messageService := services.NewMessageService()
 
-	// Create the generic controller - using interface{} for request types since messages have custom handling
-	genericController := contracts.NewGenericCrudController[models.Message, interface{}, interface{}](
+	// Build controller with compile-time enforcement
+	crudController := contracts.NewCrudController[models.Message, *requests.MessageCreateRequest, *requests.MessageUpdateRequest](
 		"message",
 		messageService,
-	)
+	).
+		WithAuthChecker(func(ctx http.Context, action string, resource interface{}) error {
+			permHelper := auth.GetPermissionHelper()
+			user := permHelper.GetAuthenticatedUser(ctx)
+			if user == nil {
+				return fmt.Errorf("authentication required")
+			}
 
-	controller := &MessageController{
-		GenericCrudController: genericController,
-		messageService:        messageService,
-	}
-
-	// Configure authorization - all message operations require authentication
-	genericController.SetAuthCheck(func(ctx http.Context, action string, resource interface{}) error {
-		permHelper := auth.GetPermissionHelper()
-		user := permHelper.GetAuthenticatedUser(ctx)
-		if user == nil {
-			return fmt.Errorf("authentication required")
-		}
-
-		// For viewing/updating/deleting, check if user is sender or recipient
-		if action == "view" || action == "update" || action == "delete" {
-			if msg, ok := resource.(*models.Message); ok {
-				if msg.SenderID != user.ID && (msg.RecipientID == nil || *msg.RecipientID != user.ID) {
-					return fmt.Errorf("unauthorized to access this message")
+			// For viewing/updating/deleting, check if user is sender or recipient
+			if action == "view" || action == "update" || action == "delete" {
+				if msg, ok := resource.(*models.Message); ok {
+					if msg.SenderID != user.ID && (msg.RecipientID == nil || *msg.RecipientID != user.ID) {
+						return fmt.Errorf("unauthorized to access this message")
+					}
 				}
 			}
-		}
 
+			return nil
+		}).
+		Build()
+
+	controller := &MessageController{
+		CrudController: crudController,
+		messageService: messageService,
+	}
+
+	// Override beforeStore to set sender_id from authenticated user
+	controller.SetBeforeStore(func(ctx http.Context, data map[string]interface{}) error {
+		permHelper := auth.GetPermissionHelper()
+		user := permHelper.GetAuthenticatedUser(ctx)
+		if user != nil {
+			data["sender_id"] = user.ID
+		}
 		return nil
 	})
 
-	// Override Index to show user's inbox by default
-	genericController.SetBeforeIndex(func(ctx http.Context) error {
-		// This will be handled in custom GetInbox method
-		return fmt.Errorf("use /messages/inbox endpoint instead")
+	// Prevent direct use of Index - messages should use GetInbox
+	controller.SetBeforeIndex(func(ctx http.Context) error {
+		return fmt.Errorf("use /messages/conversations or /messages/inbox endpoints instead")
 	})
-
-	// Register controller
-	contracts.MustRegisterCrudController("messages", controller)
 
 	return controller
 }
@@ -465,38 +471,4 @@ func (c *MessageController) Delete(ctx http.Context) http.Response {
 	}
 
 	return c.ResourceDeletedResponse(ctx, "message", id)
-}
-
-// Contract method implementations
-func (c *MessageController) GetSearchableFields() []string {
-	return c.messageService.GetSearchableFields()
-}
-
-func (c *MessageController) GetValidationRules() map[string]interface{} {
-	return c.messageService.GetValidationRules()
-}
-
-func (c *MessageController) CheckPermission(ctx http.Context, permission string, resource interface{}) error {
-	if c.GenericCrudController.CheckAuth != nil {
-		return c.GenericCrudController.CheckAuth(ctx, permission, resource)
-	}
-	return nil
-}
-
-func (c *MessageController) GetCurrentUser(ctx http.Context) interface{} {
-	permHelper := auth.GetPermissionHelper()
-	return permHelper.GetAuthenticatedUser(ctx)
-}
-
-func (c *MessageController) RequireAuthentication(ctx http.Context) error {
-	user := c.GetCurrentUser(ctx)
-	if user == nil {
-		return fmt.Errorf("authentication required")
-	}
-	return nil
-}
-
-func (c *MessageController) BuildPermissionsMap(ctx http.Context, resourceType string) map[string]bool {
-	permHelper := auth.GetPermissionHelper()
-	return permHelper.BuildPermissionsMap(ctx, resourceType)
 }

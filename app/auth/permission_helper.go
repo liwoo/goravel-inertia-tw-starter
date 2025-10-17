@@ -195,9 +195,6 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 		"canBulkUpdate": hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionBulkUpdate)),
 		"canBulkDelete": hasPermissionWithScope(BuildPermissionSlug(ServiceRegistry(resourceType), PermissionBulkDelete)),
 
-		// Special report permissions
-		"canViewReports": hasPermissionWithScope(BuildPermissionSlug(ServiceReports, PermissionView)),
-
 		// Admin permissions (legacy)
 		"isAdmin":      user.IsAdmin(),
 		"isSuperAdmin": user.IsSuperAdminUser(),

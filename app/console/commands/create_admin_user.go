@@ -76,9 +76,7 @@ func (receiver *CreateAdminUser) Handle(ctx console.Context) error {
 	}
 
 	// Check if user already exists
-	var userCount int64
-	queryErr := facades.Orm().Query().Model(&models.User{}).Where("email = ?", email).Count(&userCount)
-
+	userCount, queryErr := facades.Orm().Query().Model(&models.User{}).Where("email = ?", email).Count()
 	if queryErr != nil {
 		ctx.Error(fmt.Sprintf("Error checking for existing user (count query): %v", queryErr))
 		return queryErr

@@ -891,15 +891,3 @@ func (c *BaseCrudController) ParseCustomFilters(filtersJSON string) (interface{}
 	// Otherwise, it's a simple filter
 	return ParseFilterQuery(filterData)
 }
-
-// GetFilterDefinitions returns filter definitions for the resource
-// This should be overridden by specific controllers
-func (c *BaseCrudController) GetFilterDefinitions() []FilterDefinition {
-	return []FilterDefinition{}
-}
-
-// GetFilterMetadata returns filter metadata for UI consumption
-func (c *BaseCrudController) GetFilterMetadata() map[string]interface{} {
-	definitions := c.GetFilterDefinitions()
-	return GenerateFilterMetadata(definitions)
-}
