@@ -80,7 +80,6 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 
 		if err != nil {
 			// Fallback to basic user info if roles loading fails
-			log.Printf("DEBUG: Error loading user roles: %v", err)
 
 			// Get permission helper to build permissions map even without roles
 			permHelper := auth.GetPermissionHelper()
@@ -109,11 +108,6 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 				"permissions": allPermissions,
 			}
 		} else {
-			log.Printf("DEBUG: User %d loaded with %d roles", userWithRoles.ID, len(userWithRoles.Roles))
-			for _, role := range userWithRoles.Roles {
-				log.Printf("DEBUG: User has role: %s (active: %t)", role.Slug, role.IsActive)
-			}
-
 			// Get permission helper to build permissions map
 			permHelper := auth.GetPermissionHelper()
 
@@ -142,7 +136,6 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 
 			// Get user's actual permissions from their roles
 			userPermissions := permHelper.GetUserPermissions(ctx)
-			log.Printf("DEBUG: User permissions loaded: %v", userPermissions)
 
 			sharedProps["auth"] = map[string]interface{}{
 				"user": map[string]interface{}{
@@ -184,10 +177,6 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 		"url":       requestURL,
 		"version":   Version,
 	}
-
-	// Debug logging
-	log.Printf("DEBUG: Inertia page data - component: %s, url: %s, version: %s", component, requestURL, Version)
-	log.Printf("DEBUG: Props keys: %v", getMapKeys(finalProps))
 
 	// Check if this is an Inertia request
 	if ctx.Request().Header("X-Inertia", "") == "true" {

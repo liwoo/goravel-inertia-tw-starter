@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
@@ -14,52 +13,7 @@ import (
 
 // BookService implements book-specific business logic using the builder pattern
 type BookService struct {
-	baseService contracts.CrudServiceContract
-}
-
-// Implement CrudServiceContract interface by delegating to baseService
-func (s *BookService) GetList(req contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	return s.baseService.GetList(req)
-}
-
-func (s *BookService) GetByID(id uint) (interface{}, error) {
-	return s.baseService.GetByID(id)
-}
-
-func (s *BookService) Create(data map[string]interface{}) (interface{}, error) {
-	return s.baseService.Create(data)
-}
-
-func (s *BookService) Update(id uint, data map[string]interface{}) (interface{}, error) {
-	return s.baseService.Update(id, data)
-}
-
-func (s *BookService) Delete(id uint) error {
-	return s.baseService.Delete(id)
-}
-
-func (s *BookService) Search(query string, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	return s.baseService.Search(query, req)
-}
-
-func (s *BookService) GetListAdvanced(req contracts.ListRequest, filters map[string]interface{}) (*contracts.PaginatedResult, error) {
-	return s.baseService.GetListAdvanced(req, filters)
-}
-
-func (s *BookService) GetSearchableFields() []string {
-	return s.baseService.GetSearchableFields()
-}
-
-func (s *BookService) GetSortableFields() []string {
-	return s.baseService.GetSortableFields()
-}
-
-func (s *BookService) GetFilterableFields() []string {
-	return s.baseService.GetFilterableFields()
-}
-
-func (s *BookService) GetValidationRules() map[string]interface{} {
-	return s.baseService.GetValidationRules()
+	contracts.CrudServiceContract // Embedded - automatically exposes all methods!
 }
 
 // NewBookService creates a new book service using the builder pattern
@@ -150,7 +104,7 @@ func NewBookService() *BookService {
 		Build() // Returns a fully configured CrudServiceContract
 
 	bookServiceInstance := &BookService{
-		baseService: service,
+		CrudServiceContract: service, // Set the embedded interface
 	}
 
 	// Set the actual service instance for proper method resolution
@@ -161,7 +115,7 @@ func NewBookService() *BookService {
 
 // Override GetColumnMapping to include book-specific mappings
 func (s *BookService) GetColumnMapping() map[string]string {
-	mapping := s.baseService.GetColumnMapping()
+	mapping := s.CrudServiceContract.GetColumnMapping()
 	// Add book-specific mappings
 	mapping["publishedAt"] = "published_at"
 	mapping["createdAt"] = "created_at"
@@ -170,58 +124,6 @@ func (s *BookService) GetColumnMapping() map[string]string {
 	mapping["author"] = "author"
 	mapping["price"] = "price"
 	return mapping
-}
-
-// Override MapSortField to handle frontend field names
-func (s *BookService) MapSortField(frontendField string) (string, bool) {
-	// Check if we have a mapping for this field
-	mapping := s.GetColumnMapping()
-
-	if dbField, exists := mapping[frontendField]; exists {
-		// Check if the mapped field is sortable
-		sortableFields := s.baseService.GetSortableFields()
-		for _, field := range sortableFields {
-			if field == dbField {
-				return dbField, true
-			}
-		}
-	}
-
-	// If no mapping exists, check if the field itself is sortable
-	sortableFields := s.baseService.GetSortableFields()
-	for _, field := range sortableFields {
-		if field == frontendField {
-			return frontendField, true
-		}
-	}
-
-	// Field is not sortable
-	return "", false
-}
-
-// ValidateSortField validates if a field can be sorted
-func (s *BookService) ValidateSortField(field string) bool {
-	// Check if the field is in our sortable fields list
-	sortableFields := s.baseService.GetSortableFields()
-	for _, sortableField := range sortableFields {
-		if sortableField == field {
-			return true
-		}
-	}
-	return false
-}
-
-// ValidateSortDirection validates sort direction
-func (s *BookService) ValidateSortDirection(direction string) bool {
-	// Standard validation for ASC/DESC (case insensitive)
-	upper := strings.ToUpper(direction)
-	return upper == "ASC" || upper == "DESC"
-}
-
-// GetDefaultSort returns the default sort configuration
-func (s *BookService) GetDefaultSort() (string, string) {
-	// Return default sort: created_at DESC
-	return "created_at", "DESC"
 }
 
 // Book-specific methods beyond basic CRUD
@@ -346,19 +248,17 @@ func (s *BookService) GetFilterDefinitions() []contracts.FilterDefinition {
 			contracts.FilterTypeString,
 			nil, // Will use GetOperatorsForType(FilterTypeString)
 		),
-		// Status filter - uses all enum operators automatically
-		{
-			Field:     "status",
-			Label:     "Status",
-			Type:      contracts.FilterTypeEnum,
-			Operators: nil, // Will use GetOperatorsForType(FilterTypeEnum)
-			EnumValues: []string{
+		contracts.NewFilterDefinition(
+			"status",
+			"Book Status",
+			contracts.FilterTypeEnum,
+			&[]string{
 				"AVAILABLE",
 				"BORROWED",
 				"MAINTENANCE",
 				"RESERVED",
 			},
-		},
+		),
 		// Price filter - uses all number operators automatically
 		contracts.NewFilterDefinition(
 			"price",
@@ -402,16 +302,16 @@ func (s *BookService) GetBookStatistics() (map[string]interface{}, error) {
 	}
 
 	// Get total books (excluding soft deleted)
-	facades.Orm().Query().Model(&models.Book{}).Where("deleted_at IS NULL").Count(&stats.TotalBooks)
+	stats.TotalBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("deleted_at IS NULL").Count()
 
 	// Get available books
-	facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "AVAILABLE").Count(&stats.AvailableBooks)
+	stats.AvailableBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "AVAILABLE").Count()
 
 	// Get borrowed books
-	facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "BORROWED").Count(&stats.BorrowedBooks)
+	stats.BorrowedBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "BORROWED").Count()
 
 	// Get maintenance books
-	facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "MAINTENANCE").Count(&stats.MaintenanceBooks)
+	stats.MaintenanceBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "MAINTENANCE").Count()
 
 	// Get total value
 	facades.Orm().Query().Model(&models.Book{}).

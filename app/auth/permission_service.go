@@ -308,8 +308,10 @@ func (s *PermissionService) GrantPermissionToRole(roleSlug, permissionSlug strin
 	}
 
 	// Check if already granted
-	var count int64
-	facades.Orm().Query().Model(&models.RolePermission{}).Where("role_id = ? AND permission_id = ?", role.ID, permission.ID).Count(&count)
+	count, err := facades.Orm().Query().Model(&models.RolePermission{}).Where("role_id = ? AND permission_id = ?", role.ID, permission.ID).Count()
+	if err != nil {
+		return fmt.Errorf("failed to check existing permission: %w", err)
+	}
 	if count > 0 {
 		return fmt.Errorf("permission already granted to role")
 	}

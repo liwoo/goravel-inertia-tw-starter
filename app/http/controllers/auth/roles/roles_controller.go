@@ -14,7 +14,7 @@ import (
 
 // RolesController handles API endpoints for role management
 type RolesController struct {
-	*contracts.StaticEnforcedController[models.Role, *requests.RoleCreateRequest, *requests.RoleUpdateRequest]
+	*contracts.CrudController[models.Role, *requests.RoleCreateRequest, *requests.RoleUpdateRequest]
 	roleService *services.RoleService
 }
 
@@ -25,12 +25,10 @@ func NewRolesController() *RolesController {
 
 	// Build controller with compile-time enforcement
 	// The builder pattern ensures all required steps are completed
-	staticController := contracts.NewStaticControllerBuilder[models.Role, *requests.RoleCreateRequest, *requests.RoleUpdateRequest](
+	crudController := contracts.NewCrudController[models.Role, *requests.RoleCreateRequest, *requests.RoleUpdateRequest](
 		"role",
 		roleService,
 	).
-		ValidateCreateRequest().
-		ValidateUpdateRequest().
 		WithAuthChecker(func(ctx http.Context, action string, resource interface{}) error {
 			scopedHelper := auth.GetScopedPermissionHelper()
 
@@ -62,8 +60,8 @@ func NewRolesController() *RolesController {
 		Build()
 
 	controller := &RolesController{
-		StaticEnforcedController: staticController,
-		roleService:              roleService,
+		CrudController: crudController,
+		roleService:    roleService,
 	}
 
 	// Set custom hooks for handling permissions

@@ -103,7 +103,5 @@ func (f *FilterBuilder) Build() orm.Query {
 
 // Count returns the count for the current query conditions
 func (f *FilterBuilder) Count() (int64, error) {
-	var count int64
-	err := f.query.Count(&count)
-	return count, err
+	return f.query.Count()
 }

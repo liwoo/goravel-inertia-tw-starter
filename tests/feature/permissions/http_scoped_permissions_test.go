@@ -555,8 +555,8 @@ func (s *HTTPScopedPermissionsTestSuite) TestCreateBookWithPermission() {
 
 	// Test creating a book
 	now := time.Now()
-	// Generate unique ISBN to avoid conflicts
-	uniqueISBN := fmt.Sprintf("CREATE%d%d", now.Unix(), author.ID)
+	// Generate unique ISBN to avoid conflicts (keep it under 20 chars)
+	uniqueISBN := fmt.Sprintf("CR%d", now.Unix()%10000000) // Use last 7 digits of timestamp
 	bookData := map[string]interface{}{
 		"title":        "New Book",
 		"author":       "Test Author",
@@ -564,6 +564,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestCreateBookWithPermission() {
 		"published_at": now.Format("2006-01-02 15:04:05"),
 		"description":  "A test book",
 		"price":        29.99,
+		"status":       "AVAILABLE",
 	}
 
 	jsonData, _ := json.Marshal(bookData)
@@ -872,9 +873,10 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 	bookData := map[string]interface{}{
 		"title":        "New Limited Book",
 		"author":       "Limited Author",
-		"isbn":         fmt.Sprintf("LTD-NEW-%d-%d", time.Now().Unix(), limitedUser.ID),
+		"isbn":         fmt.Sprintf("LTD%d", time.Now().Unix()%1000000), // Keep under 20 chars
 		"published_at": now.Format("2006-01-02 15:04:05"),
 		"price":        19.99,
+		"status":       "AVAILABLE",
 	}
 
 	jsonData, _ := json.Marshal(bookData)
@@ -885,7 +887,7 @@ func (s *HTTPScopedPermissionsTestSuite) TestMixedPermissionScopes() {
 	s.Equal(http.StatusCreated, resp.StatusCode)
 
 	// Test super user cannot create (no create permission)
-	bookData["isbn"] = fmt.Sprintf("SUPER-NEW-%d-%d", time.Now().Unix(), superUser.ID) // Different ISBN to avoid duplicate
+	bookData["isbn"] = fmt.Sprintf("SUP%d", time.Now().Unix()%1000000) // Different ISBN to avoid duplicate
 	jsonData, _ = json.Marshal(bookData)
 	resp, err = s.makeRequest("POST", "/api/books", bytes.NewBuffer(jsonData), superAuthCookie)
 	s.Nil(err)

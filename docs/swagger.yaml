@@ -1,0 +1,823 @@
+basePath: /api
+definitions:
+  contracts.FiltersMeta:
+    properties:
+      direction:
+        type: string
+      filters:
+        additionalProperties: true
+        type: object
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      search:
+        type: string
+      sort:
+        type: string
+    type: object
+  contracts.PaginatedResponse:
+    properties:
+      data: {}
+      filters:
+        $ref: '#/definitions/contracts.FiltersMeta'
+      meta:
+        additionalProperties: true
+        type: object
+      pagination:
+        $ref: '#/definitions/contracts.PaginationInfo'
+    type: object
+  contracts.PaginationInfo:
+    properties:
+      current_page:
+        type: integer
+      from:
+        type: integer
+      has_next:
+        type: boolean
+      has_prev:
+        type: boolean
+      last_page:
+        type: integer
+      per_page:
+        type: integer
+      to:
+        type: integer
+      total:
+        type: integer
+    type: object
+  contracts.ResponseFormat:
+    properties:
+      data: {}
+      errors: {}
+      message:
+        type: string
+      meta: {}
+      success:
+        type: boolean
+    type: object
+  github_com_goravel_framework_support_carbon.DateTime:
+    properties:
+      error: {}
+    type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+  models.Book:
+    properties:
+      author:
+        type: string
+      created_at:
+        $ref: '#/definitions/github_com_goravel_framework_support_carbon.DateTime'
+      created_by:
+        description: Audit fields
+        type: integer
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      deleted_by:
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      ip_address:
+        type: string
+      isbn:
+        type: string
+      price:
+        type: number
+      publishedAt:
+        type: string
+      status:
+        description: AVAILABLE, BORROWED, MAINTENANCE, RESERVED
+        type: string
+      tags:
+        description: Virtual field for API
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      updated_at:
+        $ref: '#/definitions/github_com_goravel_framework_support_carbon.DateTime'
+      updated_by:
+        type: integer
+      user_agent:
+        type: string
+    type: object
+  models.Lender:
+    properties:
+      address:
+        type: string
+      created_at:
+        $ref: '#/definitions/github_com_goravel_framework_support_carbon.DateTime'
+      created_by:
+        description: Audit fields
+        type: integer
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      deleted_by:
+        type: integer
+      email:
+        type: string
+      gender:
+        type: string
+      id:
+        type: integer
+      ip_address:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      updated_at:
+        $ref: '#/definitions/github_com_goravel_framework_support_carbon.DateTime'
+      updated_by:
+        type: integer
+      user_agent:
+        type: string
+    type: object
+  requests.BookCreateRequest:
+    properties:
+      author:
+        type: string
+      description:
+        type: string
+      isbn:
+        type: string
+      price:
+        type: number
+      publishedAt:
+        type: string
+      status:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  requests.BookUpdateRequest:
+    properties:
+      author:
+        type: string
+      description:
+        type: string
+      isbn:
+        type: string
+      price:
+        type: number
+      publishedAt:
+        type: string
+      status:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  requests.LenderCreateRequest:
+    properties:
+      address:
+        type: string
+      email:
+        type: string
+      gender:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+    type: object
+  requests.LenderUpdateRequest:
+    properties:
+      address:
+        type: string
+      email:
+        type: string
+      gender:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact:
+    email: support@library.com
+    name: API Support
+  description: |-
+    A comprehensive library management system API with books, lenders, users, roles, and permissions management.
+    Supports JWT authentication, role-based access control, and scoped permissions.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Library Management API
+  version: "1.0"
+paths:
+  /books:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of books with filtering, sorting, and search
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        enum:
+        - 5
+        - 10
+        - 20
+        - 30
+        - 50
+        - 100
+        in: query
+        name: pageSize
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      - description: Sort field
+        in: query
+        name: sort
+        type: string
+      - description: Sort direction
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/contracts.PaginatedResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/definitions/models.Book'
+                        type: array
+                    type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      summary: List all books
+      tags:
+      - books
+    post:
+      consumes:
+      - application/json
+      description: Create a book with validation
+      parameters:
+      - description: book data
+        in: body
+        name: book
+        required: true
+        schema:
+          $ref: '#/definitions/requests.BookCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Book'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      security:
+      - BearerAuth: []
+      summary: Create a new book
+      tags:
+      - books
+  /books/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a book by ID
+      parameters:
+      - description: Book ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Book deleted
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      security:
+      - BearerAuth: []
+      summary: Delete a book
+      tags:
+      - books
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific book
+      parameters:
+      - description: Book ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Book'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      summary: Get book by ID
+      tags:
+      - books
+    put:
+      consumes:
+      - application/json
+      description: Update an existing book
+      parameters:
+      - description: Book ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: book data
+        in: body
+        name: book
+        required: true
+        schema:
+          $ref: '#/definitions/requests.BookUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Book'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      security:
+      - BearerAuth: []
+      summary: Update a book
+      tags:
+      - books
+  /books/filters:
+    get:
+      consumes:
+      - application/json
+      description: Returns available filters for books
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      summary: Get book filter metadata
+      tags:
+      - books
+  /books/search:
+    get:
+      consumes:
+      - application/json
+      description: Full-text search for books
+      parameters:
+      - description: Search query (min 2 chars)
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/contracts.PaginatedResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/definitions/models.Book'
+                        type: array
+                    type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      summary: Search books
+      tags:
+      - books
+  /lenders:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of lenders with filtering, sorting, and search
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        enum:
+        - 5
+        - 10
+        - 20
+        - 30
+        - 50
+        - 100
+        in: query
+        name: pageSize
+        type: integer
+      - description: Search query
+        in: query
+        name: search
+        type: string
+      - description: Sort field
+        in: query
+        name: sort
+        type: string
+      - description: Sort direction
+        enum:
+        - ASC
+        - DESC
+        in: query
+        name: direction
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/contracts.PaginatedResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/definitions/models.Lender'
+                        type: array
+                    type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      summary: List all lenders
+      tags:
+      - lenders
+    post:
+      consumes:
+      - application/json
+      description: Create a lender with validation
+      parameters:
+      - description: lender data
+        in: body
+        name: lender
+        required: true
+        schema:
+          $ref: '#/definitions/requests.LenderCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Lender'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      security:
+      - BearerAuth: []
+      summary: Create a new lender
+      tags:
+      - lenders
+  /lenders/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a lender by ID
+      parameters:
+      - description: Lender ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Lender deleted
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      security:
+      - BearerAuth: []
+      summary: Delete a lender
+      tags:
+      - lenders
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific lender
+      parameters:
+      - description: Lender ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Lender'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      summary: Get lender by ID
+      tags:
+      - lenders
+    put:
+      consumes:
+      - application/json
+      description: Update an existing lender
+      parameters:
+      - description: Lender ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: lender data
+        in: body
+        name: lender
+        required: true
+        schema:
+          $ref: '#/definitions/requests.LenderUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Lender'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      security:
+      - BearerAuth: []
+      summary: Update a lender
+      tags:
+      - lenders
+  /lenders/filters:
+    get:
+      consumes:
+      - application/json
+      description: Returns available filters for lenders
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      summary: Get lender filter metadata
+      tags:
+      - lenders
+  /lenders/search:
+    get:
+      consumes:
+      - application/json
+      description: Full-text search for lenders
+      parameters:
+      - description: Search query (min 2 chars)
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/contracts.ResponseFormat'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/contracts.PaginatedResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/definitions/models.Lender'
+                        type: array
+                    type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/contracts.ResponseFormat'
+      summary: Search lenders
+      tags:
+      - lenders
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

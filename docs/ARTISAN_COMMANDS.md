@@ -73,65 +73,9 @@ go run . artisan make:repository Product  # Automatically adds "Repository" suff
 
 ---
 
-### 4. `make:crud` - Complete CRUD Generator
-
-Creates a complete CRUD resource with all components.
-
-```bash
-go run . artisan make:crud {name} [--model] [--migration] [--routes]
-```
-
-**Options:**
-- `--model` - Also create model file
-- `--migration` - Also create migration file  
-- `--routes` - Show route examples after generation
-
-**Example:**
-```bash
-# Complete CRUD with model and migration
-go run . artisan make:crud Player --model --migration --routes
-
-# CRUD without model/migration (if they already exist)
-go run . artisan make:crud Team --routes
-```
-
-**Generates:**
-- `app/models/player.go` (if --model)
-- `database/migrations/xxx_create_players_table.go` (if --migration)
-- `app/repositories/player_repository.go`
-- `app/services/player_service.go`
-- `app/http/requests/player_create_request.go`
-- `app/http/requests/player_update_request.go`
-- `app/http/controllers/player_controller.go`
-- `app/providers/player_gate_provider.go` (authorization gates)
-
 ## Usage Examples
 
-### Example 1: Creating a Product CRUD
-
-```bash
-# Generate complete Product CRUD
-go run . artisan make:crud Product --model --migration --routes
-```
-
-This creates:
-```
-app/
-├── models/product.go
-├── repositories/product_repository.go
-├── services/product_service.go
-├── http/
-│   ├── controllers/product_controller.go
-│   └── requests/
-│       ├── product_create_request.go
-│       └── product_update_request.go
-└── providers/product_gate_provider.go
-
-database/
-└── migrations/20240101000000_create_products_table.go
-```
-
-### Example 2: Creating Individual Components
+### Creating Individual Components
 
 ```bash
 # Create just a service

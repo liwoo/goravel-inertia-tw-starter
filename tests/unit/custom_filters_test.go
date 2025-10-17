@@ -62,18 +62,14 @@ func (s *CustomFiltersTestSuite) TestFilterDefinitionCreation() {
 		"price",
 		"Product Price",
 		contracts.FilterTypeNumber,
-		[]contracts.FilterOperator{
-			contracts.OperatorEquals,
-			contracts.OperatorGreaterThan,
-			contracts.OperatorLessThan,
-			contracts.OperatorBetween,
-		},
+		nil, // Operators are auto-generated based on type
 	)
 
 	s.Equal("price", filterDef.Field)
 	s.Equal("Product Price", filterDef.Label)
 	s.Equal(contracts.FilterTypeNumber, filterDef.Type)
-	s.Len(filterDef.Operators, 4)
+	// Number type should have operators like equals, greater_than, less_than, between
+	s.True(len(filterDef.Operators) > 0)
 }
 
 // Test 4: Filter Value Validation

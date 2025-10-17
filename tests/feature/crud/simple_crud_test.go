@@ -52,11 +52,11 @@ func (s *SimpleCrudTestSuite) TestBookServiceSorting() {
 	s.True(ok)
 	s.Equal("created_at", field)
 
-	// Test sorting validation
-	s.True(bookService.ValidateSortField("title"))
-	s.True(bookService.ValidateSortDirection("ASC"))
-	s.True(bookService.ValidateSortDirection("desc"))
-	s.False(bookService.ValidateSortDirection("invalid"))
+	// Test that sortable fields are exposed
+	sortableFields := bookService.GetSortableFields()
+	s.Contains(sortableFields, "title")
+	s.Contains(sortableFields, "author")
+	s.Contains(sortableFields, "created_at")
 }
 
 // Test RoleService filters
@@ -72,11 +72,13 @@ func (s *SimpleCrudTestSuite) TestRoleServiceFilters() {
 
 	roleService := services.NewRoleService()
 
-	// Test sorting methods
-	s.True(roleService.ValidateSortField("name"))
-	s.True(roleService.ValidateSortField("created_at"))
+	// Test that sortable fields are exposed
+	sortableFields := roleService.GetSortableFields()
+	s.Contains(sortableFields, "name")
+	s.Contains(sortableFields, "created_at")
 
-	defaultField, defaultDir := roleService.GetDefaultSort()
-	s.Equal("name", defaultField)
-	s.Equal("ASC", defaultDir)
+	// Test field mapping
+	field, ok := roleService.MapSortField("name")
+	s.True(ok)
+	s.Equal("name", field)
 }

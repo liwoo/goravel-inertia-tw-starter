@@ -36,13 +36,6 @@ export default function UsersIndex({
 }: UserIndexProps) {
   const isMobile = false; // useIsMobile();
   
-  // Debug logging
-  console.log('UsersIndex - data:', data);
-  console.log('UsersIndex - filters:', filters);
-  console.log('UsersIndex - stats:', stats);
-  console.log('UsersIndex - roles:', roles);
-  console.log('UsersIndex - permissions:', permissions);
-  
   // Dialog states
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);

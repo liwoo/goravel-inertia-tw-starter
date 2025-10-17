@@ -109,6 +109,8 @@ func (h *ScopedPermissionChecker) isResourceCreatedBy(resource interface{}, user
 	switch r := resource.(type) {
 	case *models.Book:
 		return r.CreatedBy != nil && *r.CreatedBy == userID
+	case *models.Lender:
+		return r.CreatedBy != nil && *r.CreatedBy == userID
 	case *models.User:
 		return r.CreatedBy != nil && *r.CreatedBy == userID
 	case *models.Role:
@@ -128,6 +130,8 @@ func (h *ScopedPermissionChecker) isResourceCreatedByRoleLevel(resource interfac
 	// Extract creator ID from resource
 	switch r := resource.(type) {
 	case *models.Book:
+		creatorID = r.CreatedBy
+	case *models.Lender:
 		creatorID = r.CreatedBy
 	case *models.User:
 		creatorID = r.CreatedBy
