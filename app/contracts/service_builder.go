@@ -242,53 +242,26 @@ func (a *crudServiceAdapter[T]) GetColumnMapping() map[string]string {
 }
 
 func (a *crudServiceAdapter[T]) MapSortField(frontendField string) (string, bool) {
-	// If there's an actual service that implements MapSortField, use it
-	if a.actualService != nil {
-		if sortable, ok := a.actualService.(interface {
-			MapSortField(string) (string, bool)
-		}); ok {
-			return sortable.MapSortField(frontendField)
-		}
-	}
+	// Directly delegate to the underlying service
+	// Don't check actualService to avoid infinite recursion when BookService embeds the adapter
 	return a.service.MapSortField(frontendField)
 }
 
 // ValidateSortField validates if a field can be sorted
 func (a *crudServiceAdapter[T]) ValidateSortField(field string) bool {
-	// If there's an actual service that implements ValidateSortField, use it
-	if a.actualService != nil {
-		if sortable, ok := a.actualService.(interface {
-			ValidateSortField(string) bool
-		}); ok {
-			return sortable.ValidateSortField(field)
-		}
-	}
+	// Directly delegate to the underlying service
 	return a.service.ValidateSortField(field)
 }
 
 // ValidateSortDirection validates sort direction
 func (a *crudServiceAdapter[T]) ValidateSortDirection(direction string) bool {
-	// If there's an actual service that implements ValidateSortDirection, use it
-	if a.actualService != nil {
-		if sortable, ok := a.actualService.(interface {
-			ValidateSortDirection(string) bool
-		}); ok {
-			return sortable.ValidateSortDirection(direction)
-		}
-	}
+	// Directly delegate to the underlying service
 	return a.service.ValidateSortDirection(direction)
 }
 
 // GetDefaultSort returns the default sort configuration
 func (a *crudServiceAdapter[T]) GetDefaultSort() (string, string) {
-	// If there's an actual service that implements GetDefaultSort, use it
-	if a.actualService != nil {
-		if sortable, ok := a.actualService.(interface {
-			GetDefaultSort() (string, string)
-		}); ok {
-			return sortable.GetDefaultSort()
-		}
-	}
+	// Directly delegate to the underlying service
 	return a.service.GetDefaultSort()
 }
 

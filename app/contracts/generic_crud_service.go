@@ -151,10 +151,12 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 
 					query = query.Where(field+" = ?", value)
 				} else {
-					facades.Log().Warning("Invalid filter field", map[string]interface{}{
-						"field":            field,
-						"filterableFields": s.filterFields,
-					})
+					if logger := facades.Log(); logger != nil {
+						logger.Warning("Invalid filter field", map[string]interface{}{
+							"field":            field,
+							"filterableFields": s.filterFields,
+						})
+					}
 				}
 			}
 		}
@@ -852,11 +854,13 @@ func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool
 			if s.ValidateSortField(dbField) {
 				return dbField, true
 			}
-			facades.Log().Warning("Mapped field is NOT sortable", map[string]interface{}{
-				"service":        s.tableName,
-				"dbField":        dbField,
-				"sortableFields": s.sortFields,
-			})
+			if logger := facades.Log(); logger != nil {
+				logger.Warning("Mapped field is NOT sortable", map[string]interface{}{
+					"service":        s.tableName,
+					"dbField":        dbField,
+					"sortableFields": s.sortFields,
+				})
+			}
 		}
 	}
 
@@ -865,11 +869,14 @@ func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool
 		return frontendField, true
 	}
 
-	facades.Log().Warning("Field not sortable", map[string]interface{}{
-		"service":        s.tableName,
-		"frontendField":  frontendField,
-		"sortableFields": s.sortFields,
-	})
+	// Log warning if logger is available (may be nil in unit tests)
+	if logger := facades.Log(); logger != nil {
+		logger.Warning("Field not sortable", map[string]interface{}{
+			"service":        s.tableName,
+			"frontendField":  frontendField,
+			"sortableFields": s.sortFields,
+		})
+	}
 	return "", false
 }
 
@@ -1213,9 +1220,11 @@ func (s *GenericCrudService[T]) applyCustomFilters(query orm.Query, customFilter
 		}
 
 	default:
-		facades.Log().Warning("Unknown custom filter type", map[string]interface{}{
-			"type": fmt.Sprintf("%T", customFilters),
-		})
+		if logger := facades.Log(); logger != nil {
+			logger.Warning("Unknown custom filter type", map[string]interface{}{
+				"type": fmt.Sprintf("%T", customFilters),
+			})
+		}
 	}
 
 	return query
@@ -1243,20 +1252,40 @@ func (s *GenericCrudService[T]) applyFieldMapping(data map[string]interface{}) m
 	for key, value := range data {
 		// Check if this field has a mapping
 		if mappedKey, exists := mapping[key]; exists {
-			// Special handling for date fields that end with _at
-			if strings.HasSuffix(mappedKey, "_at") && value != nil && value != "" {
-				if dateStr, ok := value.(string); ok {
-					// Try parsing as YYYY-MM-DD format first
-					if parsedTime, err := time.Parse("2006-01-02", dateStr); err == nil {
-						result[mappedKey] = parsedTime
-					} else if parsedTime, err := time.Parse(time.RFC3339, dateStr); err == nil {
-						// Try parsing as RFC3339 format
-						result[mappedKey] = parsedTime
-					} else {
-						// If parsing fails, set to nil
-						result[mappedKey] = nil
+			// Try to parse date-like strings for any field
+			if dateStr, ok := value.(string); ok && value != nil && value != "" {
+				// Check if the string looks like a date using common patterns
+				// This will match formats like: 2024-01-15, 2024-01-15 10:30:00, 2024-01-15T10:30:00Z, etc.
+				isDateLike := strings.Contains(dateStr, "-") && len(dateStr) >= 10 &&
+					(dateStr[0] >= '0' && dateStr[0] <= '9') // Starts with a digit
+
+				if isDateLike {
+					// Try multiple common date/datetime formats
+					formats := []string{
+						"2006-01-02 15:04:05",           // MySQL datetime format
+						"2006-01-02",                    // Date only (YYYY-MM-DD)
+						time.RFC3339,                    // ISO 8601 (2006-01-02T15:04:05Z07:00)
+						time.RFC3339Nano,                // ISO 8601 with nanoseconds
+						"2006-01-02T15:04:05",           // ISO 8601 without timezone
+						"2006-01-02 15:04:05.999999999", // MySQL datetime with microseconds
+					}
+
+					parsed := false
+					for _, format := range formats {
+						if parsedTime, err := time.Parse(format, dateStr); err == nil {
+							result[mappedKey] = parsedTime
+							parsed = true
+							break
+						}
+					}
+
+					// If all parsing attempts fail, keep the original string value
+					// The database driver might be able to handle it
+					if !parsed {
+						result[mappedKey] = value
 					}
 				} else {
+					// Not a date-like string, keep as-is
 					result[mappedKey] = value
 				}
 			} else {
