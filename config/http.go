@@ -11,7 +11,7 @@ import (
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/facades"
 	ginfacades "github.com/goravel/gin/facades"
-	inertia_http "players/app/http/inertia"
+	inertia_http "smedi-sme-db/app/http/inertia"
 )
 
 func init() {

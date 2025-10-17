@@ -8,8 +8,8 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"players/app/models"
-	"players/tests"
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/tests"
 )
 
 // This integration test demonstrates how scoped permissions work

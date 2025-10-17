@@ -4,8 +4,8 @@ import (
 	"github.com/goravel/framework/contracts/database/schema"
 	"github.com/goravel/framework/contracts/database/seeder"
 
-	"players/database/migrations"
-	"players/database/seeders"
+	"smedi-sme-db/database/migrations"
+	"smedi-sme-db/database/seeders"
 )
 
 type Kernel struct {

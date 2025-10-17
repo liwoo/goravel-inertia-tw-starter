@@ -9,7 +9,7 @@ import (
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
+	"smedi-sme-db/app/auth"
 )
 
 // GenericCrudService provides a complete CRUD service implementation with minimal code

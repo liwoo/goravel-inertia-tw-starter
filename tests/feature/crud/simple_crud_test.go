@@ -6,9 +6,9 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"players/app/models"
-	"players/app/services"
-	"players/tests"
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/app/services"
+	"smedi-sme-db/tests"
 )
 
 type SimpleCrudTestSuite struct {

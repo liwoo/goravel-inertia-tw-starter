@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"players/app/models"
+	"smedi-sme-db/app/models"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"

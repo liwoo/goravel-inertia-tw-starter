@@ -217,14 +217,14 @@ go test ./tests/unit -run TestCustomFiltersTestSuite -v
 --- PASS: TestCustomFiltersTestSuite (0.00s)
     --- PASS: All 10 test cases
 PASS
-ok      players/tests/unit      0.870s
+ok      smedi-sme-db/tests/unit      0.870s
 
 # Integration Tests
 go test ./tests/integration -run TestCustomFiltersIntegrationTestSuite -v
 --- PASS: TestCustomFiltersIntegrationTestSuite (2.30s)
     --- PASS: All 4 test cases
 PASS
-ok      players/tests/integration      2.874s
+ok      smedi-sme-db/tests/integration      2.874s
 ```
 
 ## Uncovered Areas / Future Testing

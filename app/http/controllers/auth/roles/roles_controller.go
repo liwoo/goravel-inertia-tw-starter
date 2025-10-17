@@ -5,11 +5,11 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
-	"players/app/contracts"
-	"players/app/http/requests"
-	"players/app/models"
-	"players/app/services"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/http/requests"
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/app/services"
 )
 
 // RolesController handles API endpoints for role management

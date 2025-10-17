@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"players/app/http/inertia"
+	"smedi-sme-db/app/http/inertia"
 )
 
 type DashboardController struct {

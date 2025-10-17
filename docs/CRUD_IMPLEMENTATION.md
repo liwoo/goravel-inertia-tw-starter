@@ -65,7 +65,7 @@ package models
 
 import (
     "github.com/goravel/framework/database/orm"
-    "players/app/contracts"
+    "smedi-sme-db/app/contracts"
 )
 
 type Product struct {
@@ -100,7 +100,7 @@ func (p *Product) GetFilterableFields() map[string]string {
 // app/services/product_service.go
 package services
 
-import "players/app/contracts"
+import "smedi-sme-db/app/contracts"
 
 type ProductService struct {
     *SoftDeleteService
@@ -147,8 +147,8 @@ package controllers
 
 import (
     "github.com/goravel/framework/contracts/http"
-    "players/app/http/controllers/base"
-    "players/app/services"
+    "smedi-sme-db/app/http/controllers/base"
+    "smedi-sme-db/app/services"
 )
 
 type ProductController struct {
@@ -186,7 +186,7 @@ package routes
 import (
     "github.com/goravel/framework/contracts/route"
     "github.com/goravel/framework/facades"
-    "players/app/http/controllers"
+    "smedi-sme-db/app/http/controllers"
 )
 
 func ProductRoutes() {

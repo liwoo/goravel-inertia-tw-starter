@@ -134,7 +134,7 @@ package tests
 import (
     "testing"
     "github.com/stretchr/testify/suite"
-    "players/tests"
+    "smedi-sme-db/tests"
 )
 
 type YourTestSuite struct {
@@ -478,7 +478,7 @@ go run . artisan migrate:rollback
 After running `make:ctrl`, register routes in `routes/api.go` (detailed instructions provided):
 ```go
 // 1. Import the controller
-import "players/app/http/controllers/lenders"
+import "smedi-sme-db/app/http/controllers/lenders"
 
 // 2. Initialize controller
 lenderController := lenders.NewLenderController()

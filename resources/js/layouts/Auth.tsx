@@ -12,7 +12,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         {/* Header section for the logo */}
         <div className="flex justify-between items-center mb-4 md:mb-8"> 
           <a href="/" className="flex items-center gap-2 font-medium">
-            <img src="/placeholder.svg" alt="Logo" className="h-8 w-auto" /> 
+            <img src="/images/mw-coat.svg" alt="Logo" className="h-8 w-auto" />
             {/* Optionally, add text next to logo if desired */}
             {/* <span className="text-lg font-semibold">Acme Inc.</span> */}
           </a>
@@ -20,14 +20,14 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </div>
         {/* Main content area */}
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-xs">
+          <div className="w-full max-w-sm">
             {children} {/* Page-specific form will be rendered here */}
           </div>
         </div>
       </div>
       <div className="relative hidden bg-muted lg:block">
         <img
-          src="/placeholder.svg" 
+          src="https://msmedb.trade.gov.mw/dist/media/images/backgrounds/bg-3.jpg"
           alt="Image"
           className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
         />

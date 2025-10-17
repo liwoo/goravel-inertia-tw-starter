@@ -3,16 +3,16 @@ package routes
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
-	"players/app/http/controllers"
-	"players/app/http/controllers/auth"
-	"players/app/http/controllers/auth/perimissions"
-	"players/app/http/controllers/auth/roles"
-	"players/app/http/controllers/auth/users"
-	"players/app/http/controllers/books"
-	"players/app/http/controllers/lenders"
-	"players/app/http/controllers/messages"
+	"smedi-sme-db/app/http/controllers"
+	"smedi-sme-db/app/http/controllers/auth"
+	"smedi-sme-db/app/http/controllers/auth/perimissions"
+	"smedi-sme-db/app/http/controllers/auth/roles"
+	"smedi-sme-db/app/http/controllers/auth/users"
+	"smedi-sme-db/app/http/controllers/books"
+	"smedi-sme-db/app/http/controllers/lenders"
+	"smedi-sme-db/app/http/controllers/messages"
 
-	"players/app/http/middleware"
+	"smedi-sme-db/app/http/middleware"
 )
 
 // Api defines the routes for the API.
