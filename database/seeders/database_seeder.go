@@ -16,6 +16,12 @@ func (s *DatabaseSeeder) Run() error {
 		return err
 	}
 
+	// Run the config seeder
+	configSeeder := &ConfigSeeder{}
+	if err := configSeeder.Run(); err != nil {
+		return err
+	}
+
 	// Run the book seeder
 	bookSeeder := &BookSeeder{}
 	if err := bookSeeder.Run(); err != nil {

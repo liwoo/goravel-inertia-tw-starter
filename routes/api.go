@@ -9,6 +9,7 @@ import (
 	"smedi-sme-db/app/http/controllers/auth/roles"
 	"smedi-sme-db/app/http/controllers/auth/users"
 	"smedi-sme-db/app/http/controllers/books"
+	"smedi-sme-db/app/http/controllers/configs"
 	"smedi-sme-db/app/http/controllers/lenders"
 	"smedi-sme-db/app/http/controllers/messages"
 
@@ -37,6 +38,7 @@ func Api(router route.Router) {
 	notificationController := messages.NewNotificationController()
 	lenderController := lenders.NewLenderController()
 	swaggerController := controllers.NewSwaggerController()
+	configController := configs.NewConfigController()
 
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
@@ -67,6 +69,12 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/lenders/filters", lenderController.FilterMetadata)
 		optionalAuthRouter.Get("/lenders/{id}", lenderController.Show)
 
+		//configurations
+		optionalAuthRouter.Get("/configs", configController.Index)
+		optionalAuthRouter.Get("/configs/search", configController.Search)
+		optionalAuthRouter.Get("/configs/filters", configController.FilterMetadata)
+		optionalAuthRouter.Get("/configs/{id}", configController.Show)
+
 	})
 
 	// Protected routes (require authentication)
@@ -88,6 +96,11 @@ func Api(router route.Router) {
 		protectedRouter.Post("/lenders", lenderController.Store)
 		protectedRouter.Put("/lenders/{id}", lenderController.Update)
 		protectedRouter.Delete("/lenders/{id}", lenderController.Delete)
+
+		// Configuration routes
+		protectedRouter.Post("/configs", configController.Store)
+		protectedRouter.Put("/configs/{id}", configController.Update)
+		protectedRouter.Delete("/configs/{id}", configController.Delete)
 
 		// Role management routes
 		protectedRouter.Get("/roles", rolesController.Index)

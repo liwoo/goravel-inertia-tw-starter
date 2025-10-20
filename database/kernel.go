@@ -33,6 +33,8 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.RestoreBookPublishedDates{},
 		&migrations.M20251015211802CreateLenders{},
 		&migrations.M20251015225803AddAuditFieldsToLendersTable{},
+		&migrations.M20251019163714CreateSmeConfig{},
+		&migrations.M20251019180624AddAuditFieldsToSmeConfigTable{},
 	}
 }
 
@@ -41,5 +43,6 @@ func (kernel Kernel) Seeders() []seeder.Seeder {
 		&seeders.DatabaseSeeder{},
 		&seeders.BookSeeder{},
 		&seeders.RBACSeeder{},
+		&seeders.ConfigSeeder{},
 	}
 }

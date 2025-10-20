@@ -73,6 +73,12 @@ func (c *SearchController) GlobalSearch(ctx http.Context) http.Response {
 		results = append(results, lenderResults...)
 	}
 
+	// Search Configs if user has permission
+	if permHelper.CheckServicePermission(ctx, auth.ServiceConfig, auth.PermissionRead) {
+		configResults := c.searchConfigs(query)
+		results = append(results, configResults...)
+	}
+
 	return ctx.Response().Json(http.StatusOK, SearchResponse{
 		Results: results,
 		Total:   len(results),
@@ -181,6 +187,44 @@ func (c *SearchController) searchLenders(query string) []SearchResult {
 				Subtitle: subtitle,
 				Type:     "lender",
 				URL:      fmt.Sprintf("/admin/lenders?search=%s", query),
+			})
+		}
+	}
+
+	return results
+}
+
+// searchConfigs performs fuzzy search on configs using the ConfigService
+func (c *SearchController) searchConfigs(query string) []SearchResult {
+	results := []SearchResult{}
+
+	configService := services.NewConfigService()
+
+	// Use the service's search functionality
+	paginatedResult, err := configService.Search(query, contracts.ListRequest{
+		Page:     1,
+		PageSize: 10,
+	})
+
+	if err != nil || paginatedResult == nil {
+		return results
+	}
+
+	// Convert service results to search results
+	// Note: Data contains values, not pointers
+	for _, item := range paginatedResult.Data {
+		if config, ok := item.(models.Config); ok {
+			subtitle := config.ConfigType
+			if config.Description != nil && *config.Description != "" {
+				subtitle = fmt.Sprintf("%s • %s", config.ConfigType, *config.Description)
+			}
+
+			results = append(results, SearchResult{
+				ID:       config.ID,
+				Title:    config.Name,
+				Subtitle: subtitle,
+				Type:     "config",
+				URL:      fmt.Sprintf("/admin/configs?search=%s", query),
 			})
 		}
 	}

@@ -50,8 +50,9 @@ func NewGenericCrudService[T any](resourceName string, primaryKey string) *Gener
 	var model T
 	modelType := reflect.TypeOf(model)
 
-	// Extract table name from model type
-	tableName := strings.ToLower(modelType.Name()) + "s"
+	// Use the provided resourceName as the table name
+	// This allows services to specify custom table names (e.g., "sme_config" instead of "configs")
+	tableName := resourceName
 
 	return &GenericCrudService[T]{
 		BaseCrudService:      NewBaseCrudService(resourceName, primaryKey),
@@ -655,15 +656,20 @@ func (s *GenericCrudService[T]) Delete(id uint) error {
 	}
 
 	// Delete using GORM (soft delete)
-	// First find the record, then delete it to ensure soft delete works properly
+	// Use Model() to ensure GORM uses the TableName() method from the model
 	var model T
-	if err := facades.Orm().Query().Table(s.tableName).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
-		return fmt.Errorf("failed to find %s for deletion: %w", s.tableName, err)
+	result, err := facades.Orm().Query().
+		Model(&model).
+		Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).
+		Update("deleted_at", time.Now())
+
+	if err != nil {
+		return fmt.Errorf("failed to delete %s: %w", s.tableName, err)
 	}
 
-	// Now delete the found record (this should trigger soft delete)
-	if _, err := facades.Orm().Query().Delete(&model); err != nil {
-		return fmt.Errorf("failed to delete %s: %w", s.tableName, err)
+	// Check if any row was actually deleted
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no %s found with id %d", s.tableName, id)
 	}
 
 	// Run after hook if set
