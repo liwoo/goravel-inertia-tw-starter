@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
-	"players/app/auth"
-	"players/app/http/inertia"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/http/inertia"
 )
 
 // GenericPageController provides a comprehensive base for Inertia.js page controllers

@@ -4,7 +4,7 @@ import (
 	"github.com/goravel/framework/testing"
 	"os"
 
-	"players/bootstrap"
+	"smedi-sme-db/bootstrap"
 )
 
 func init() {

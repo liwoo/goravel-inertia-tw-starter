@@ -2,7 +2,7 @@ package auth
 
 import (
 	"fmt"
-	"players/app/models" // Assuming your User model is here
+	"smedi-sme-db/app/models" // Assuming your User model is here
 	"time"
 
 	"github.com/goravel/framework/contracts/http"

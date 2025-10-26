@@ -3,6 +3,7 @@ import {
     BookIcon,
     CameraIcon,
     ClipboardListIcon,
+    CogIcon,
     DatabaseIcon,
     FileCodeIcon,
     FileIcon,
@@ -151,24 +152,11 @@ export const navigationConfig: NavigationConfig = {
     ],
     documents: [
         {
-            name: "Data Library",
-            url: "#",
-            icon: DatabaseIcon,
-            requiredService: "reports",
+            name: "Configuration",
+            url: "/admin/configs",
+            icon: CogIcon,
+            requiredService: "config",
             requiredAction: "read" as const,
-        },
-        {
-            name: "Reports",
-            url: "#",
-            icon: ClipboardListIcon,
-            requiredService: "reports", 
-            requiredAction: "read" as const,
-        },
-        {
-            name: "Word Assistant",
-            url: "#",
-            icon: FileIcon,
-            // Always accessible
         },
     ],
 }

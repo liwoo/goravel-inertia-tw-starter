@@ -2,9 +2,9 @@ package helpers
 
 import (
 	"context"
-	"players/app/auth"
-	"players/app/contracts"
-	"players/app/models"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/models"
 
 	accessImpl "github.com/goravel/framework/auth/access"
 	"github.com/goravel/framework/contracts/auth/access"

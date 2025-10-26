@@ -6,7 +6,7 @@ import (
 	"github.com/goravel/framework/facades"
 	. "net/http"
 
-	"players/app/models" // Module 'players' from go.mod
+	"smedi-sme-db/app/models" // Module 'players' from go.mod
 )
 
 // Authenticated returns a middleware handler function.

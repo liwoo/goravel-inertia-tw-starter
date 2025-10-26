@@ -99,18 +99,11 @@ export function AppSidebar({user, ...props}: AppSidebarProps) {
                 <SidebarHeader>
                     <div className="flex items-center justify-between px-3 py-2">
                         <a href="/dashboard" className="flex items-center gap-2">
-                            <img src="/placeholder.svg" alt="Logo" className="h-8 w-auto" />
+                            <img src="/images/mw-coat.svg" alt="Logo" className="h-8 w-auto" />
+                            <span className="text-lg font-semibold">MSMSE Database</span>
                         </a>
                     </div>
-                    {/* Super Admin Badge */}
-                    {checkIsSuperAdmin() && (
-                        <div className="px-3 pb-2">
-                            <div className="flex items-center gap-2 rounded-md bg-red-100 dark:bg-red-900/20 px-2 py-1 text-xs">
-                                <ShieldIcon className="h-3 w-3 text-red-600 dark:text-red-400" />
-                                <span className="text-red-700 dark:text-red-300 font-medium">Super Admin</span>
-                            </div>
-                        </div>
-                    )}
+
                 </SidebarHeader>
                 <SidebarContent>
                     <NavMain items={navigationItems.navMain}/>
@@ -134,7 +127,7 @@ export function AppSidebar({user, ...props}: AppSidebarProps) {
                 </SidebarContent>
                 <SidebarFooter>
                     {user && (
-                        <NavUser user={user}/>
+                        <NavUser user={user} isSuperAdmin={checkIsSuperAdmin()} />
                     )}
                 </SidebarFooter>
             </Sidebar>

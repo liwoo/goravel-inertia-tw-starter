@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/goravel/framework/contracts/http"
-	"players/app/contracts"
+	"smedi-sme-db/app/contracts"
 )
 
 // RoleCreateRequest represents the request structure for creating a new role

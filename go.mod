@@ -1,4 +1,4 @@
-module players
+module smedi-sme-db
 
 go 1.24.0
 

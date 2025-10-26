@@ -5,8 +5,8 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
-	"players/app/models"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/models"
 )
 
 // PermissionsController handles API endpoints for permission assignment

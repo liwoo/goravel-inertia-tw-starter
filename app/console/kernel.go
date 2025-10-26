@@ -3,7 +3,7 @@ package console
 import (
 	"github.com/goravel/framework/contracts/console"
 
-	"players/app/console/commands"
+	"smedi-sme-db/app/console/commands"
 )
 
 type Kernel struct {
