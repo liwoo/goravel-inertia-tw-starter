@@ -683,7 +683,7 @@ func (c *BooksPageController) Index(ctx http.Context) http.Response {
             "error": "Forbidden",
         })
     }
-    
+
     // Continue with rendering...
 }
 ```
@@ -706,7 +706,7 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 
 function MyComponent() {
     const { canPerformAction, isSuperAdmin } = usePermissions();
-    
+
     if (canPerformAction('books', 'create')) {
         // Show create button
     }
@@ -1045,4 +1045,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Built with [Goravel](https://www.goravel.dev/) - The Laravel-inspired Go framework
 - UI components from [shadcn/ui](https://ui.shadcn.com/)
-- Icons from [Lucide](https://lucide.dev/)
+- Icons from [Lucide Icons](https://lucide.dev/)
