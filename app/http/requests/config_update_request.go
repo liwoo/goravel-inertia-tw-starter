@@ -7,6 +7,7 @@ import (
 // ConfigUpdateRequest handles config update validation
 type ConfigUpdateRequest struct {
 	Name        *string      `form:"name" json:"name"`
+	Code        *string      `form:"code" json:"code"`
 	ConfigType  *ConfigTypes `form:"config_type" json:"config_type"`
 	Description *string      `form:"description" json:"description"`
 	ID          uint         `form:"-" json:"-"` // Set by controller
@@ -73,6 +74,10 @@ func (r *ConfigUpdateRequest) ToUpdateData() map[string]interface{} {
 	// Only include Name if provided
 	if r.Name != nil {
 		data["name"] = *r.Name
+	}
+	// Only include Code if provided
+	if r.Code != nil {
+		data["code"] = *r.Code
 	}
 	// Only include ConfigType if provided
 	if r.ConfigType != nil {

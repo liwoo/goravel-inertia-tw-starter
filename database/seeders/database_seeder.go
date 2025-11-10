@@ -28,5 +28,11 @@ func (s *DatabaseSeeder) Run() error {
 		return err
 	}
 
+	// Run the SME seeder (depends on configs)
+	smeSeeder := &SmeSeeder{}
+	if err := smeSeeder.Run(); err != nil {
+		return err
+	}
+
 	return nil
 }

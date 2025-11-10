@@ -35,6 +35,21 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251015225803AddAuditFieldsToLendersTable{},
 		&migrations.M20251019163714CreateSmeConfig{},
 		&migrations.M20251019180624AddAuditFieldsToSmeConfigTable{},
+		&migrations.M20251020052629CreateSmeTable{},
+		&migrations.M20251020063409AddAuditFieldsToSmesTable{},
+		&migrations.M20251020053512CreatePrimaryBusinessOwnerTable{},
+		&migrations.M20251020064423AddAuditFieldsToPrimaryBusinessOwnerTable{},
+		&migrations.M20251020054645CreateAdditionalBusinessMembersTable{},
+		&migrations.M20251020065231AddAuditFieldsToAdditionalBusinessMembersTable{},
+		&migrations.M20251020055631AddFkToAdditionalBusinessMembersTable{},
+		&migrations.M20251020055818AddFkToPrimaryBusinessOwnerTable{},
+		&migrations.M20251020060122CreateBusinessFormalisationTable{},
+		&migrations.M20251020070907AddAuditFieldsToBusinessFormalisationTable{},
+		&migrations.M20251020061003CreateBusinessEmployeeSummaryTable{},
+		&migrations.M20251020071158AddAuditFieldsToBusinessEmployeeSummaryTable{},
+		&migrations.M20251020064006AddJsonFieldsToSmesTable{},
+		&migrations.M20251020113904AddCascadeDeleteToSmeRelationships{},
+		&migrations.M20251020212109AddCodeToSmeConfigTable{},
 	}
 }
 
@@ -44,5 +59,6 @@ func (kernel Kernel) Seeders() []seeder.Seeder {
 		&seeders.BookSeeder{},
 		&seeders.RBACSeeder{},
 		&seeders.ConfigSeeder{},
+		&seeders.SmeSeeder{},
 	}
 }

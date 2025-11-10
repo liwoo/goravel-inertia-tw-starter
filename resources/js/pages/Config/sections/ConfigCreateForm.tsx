@@ -28,11 +28,38 @@ export const ConfigCreateForm = forwardRef<any, ConfigCreateFormProps>(({
 }, ref) => {
   const [formData, setFormData] = useState<ConfigCreateData>({
     name: '',
+    code: '',
     configType: ConfigType.Financing,
     description: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [codeManuallyEdited, setCodeManuallyEdited] = useState(false);
+
+  // Auto-generate code from name
+  const generateCode = (name: string): string => {
+    const trimmed = name.trim();
+    if (!trimmed) return '';
+
+    const words = trimmed.split(/\s+/);
+
+    if (words.length > 1) {
+      // Multiple words: take first letter of each word
+      return words.map(word => word[0].toUpperCase()).join('');
+    }
+
+    // Single word: take first 2 letters
+    return trimmed.substring(0, 2).toUpperCase();
+  };
+
+  const handleNameChange = (name: string) => {
+    setFormData({ ...formData, name });
+
+    // Auto-generate code if it hasn't been manually edited
+    if (!codeManuallyEdited) {
+      setFormData(prev => ({ ...prev, name, code: generateCode(name) }));
+    }
+  };
 
   const handleSubmit = async () => {
     // Basic validation
@@ -59,6 +86,7 @@ export const ConfigCreateForm = forwardRef<any, ConfigCreateFormProps>(({
       // Convert camelCase to snake_case for backend
       const requestData = {
         name: formData.name,
+        code: formData.code,
         config_type: formData.configType,
         description: formData.description,
       };
@@ -106,12 +134,37 @@ export const ConfigCreateForm = forwardRef<any, ConfigCreateFormProps>(({
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => handleNameChange(e.target.value)}
                   placeholder="Enter name"
                   className={errors.name ? 'border-destructive' : ''}
                 />
                 {errors.name && (
                   <p className="text-sm text-destructive">{errors.name}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-muted">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="code">Code</Label>
+                <Input
+                  id="code"
+                  value={formData.code}
+                  onChange={(e) => {
+                    setFormData({ ...formData, code: e.target.value });
+                    setCodeManuallyEdited(true);
+                  }}
+                  placeholder="Auto-generated from name"
+                  className={errors.code ? 'border-destructive' : ''}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Auto-generates from name. Edit to customize.
+                </p>
+                {errors.code && (
+                  <p className="text-sm text-destructive">{errors.code}</p>
                 )}
               </div>
             </div>

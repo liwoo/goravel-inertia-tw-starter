@@ -100,7 +100,7 @@ export function AppSidebar({user, ...props}: AppSidebarProps) {
                     <div className="flex items-center justify-between px-3 py-2">
                         <a href="/dashboard" className="flex items-center gap-2">
                             <img src="/images/mw-coat.svg" alt="Logo" className="h-8 w-auto" />
-                            <span className="text-lg font-semibold">MSMSE Database</span>
+                            <span className="text-lg font-semibold">MSME Database</span>
                         </a>
                     </div>
 

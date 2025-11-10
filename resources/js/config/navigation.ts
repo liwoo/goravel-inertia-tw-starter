@@ -1,6 +1,6 @@
 import {
     BarChartIcon,
-    BookIcon,
+    BookIcon, BuildingIcon, Calendar1Icon,
     CameraIcon,
     ClipboardListIcon,
     CogIcon,
@@ -11,7 +11,7 @@ import {
     HelpCircleIcon,
     LayoutDashboardIcon, PercentSquareIcon, PersonStandingIcon,
     SettingsIcon,
-    ShieldIcon,
+    ShieldIcon, User2Icon,
     UsersIcon,
 } from "lucide-react"
 
@@ -60,24 +60,32 @@ export const navigationConfig: NavigationConfig = {
             // Dashboard is always accessible to authenticated users
         },
         {
-            title: "Books",
-            url: "/admin/books",
-            icon: BookIcon,
-            requiredService: "books",
+            title: "SMEs",
+            url: "/admin/smes",
+            icon: User2Icon,
+            requiredService: "smes",
             requiredAction: "read" as const,
         },
         {
-            title: "Lenders",
-            url: "/admin/lenders",
-            icon: PersonStandingIcon,
+            title: "BDSPs",
+            url: "#",
+            icon: BuildingIcon,
             requiredService: "lenders",
             requiredAction: "read" as const,
         },
 
         {
-            title: "Analysis",
+            title: "Events",
             url: "#",
-            icon: BarChartIcon,
+            icon: Calendar1Icon,
+            requiredService: "reports",
+            requiredAction: "read" as const,
+        },
+
+        {
+            title: "Procurement",
+            url: "#",
+            icon: ClipboardListIcon,
             requiredService: "reports",
             requiredAction: "read" as const,
         },

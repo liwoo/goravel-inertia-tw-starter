@@ -33,6 +33,17 @@ export const configColumns: CrudColumn<Config>[] = [
     ),
   },
   {
+    key: 'code',
+    label: 'Code',
+    sortable: true,
+    className: 'w-24',
+    render: (config) => (
+      <div className="font-mono text-sm font-medium">
+        {config.code || <span className="text-muted-foreground italic">-</span>}
+      </div>
+    ),
+  },
+  {
     key: 'configType',
     label: 'Config Type',
     sortable: true,
@@ -85,7 +96,12 @@ export const configColumnsMobile: CrudColumn<Config>[] = [
 
       return (
         <div className="space-y-2">
-          <div className="font-medium text-foreground">{config.name}</div>
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-foreground">{config.name}</div>
+            {config.code && (
+              <span className="font-mono text-xs text-muted-foreground">({config.code})</span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Badge className={`${colorClass} text-xs`}>
               {configType}

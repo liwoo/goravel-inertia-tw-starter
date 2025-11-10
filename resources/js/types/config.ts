@@ -50,6 +50,7 @@ export const CONFIG_TYPE_CONFIG = {
 // Core Config interface matching the backend model
 export interface Config extends BaseModel {
   name: string;
+  code?: string;
   configType: ConfigType;
   config_type?: ConfigType; // Backend sends snake_case
   description?: string;
@@ -58,6 +59,7 @@ export interface Config extends BaseModel {
 // Config creation data (matches ConfigCreateRequest)
 export interface ConfigCreateData {
   name: string;
+  code?: string;
   configType: ConfigType;
   description?: string;
 }
@@ -65,6 +67,7 @@ export interface ConfigCreateData {
 // Config update data (matches ConfigUpdateRequest - all optional)
 export interface ConfigUpdateData {
   name?: string;
+  code?: string;
   configType?: ConfigType;
   description?: string;
 }
@@ -80,6 +83,7 @@ export interface ConfigListRequest extends ListRequest {
 // Form validation types
 export interface ConfigFormErrors {
   name?: string;
+  code?: string;
   configType?: string;
   description?: string;
   general?: string;

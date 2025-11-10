@@ -11,7 +11,7 @@ import (
 	"smedi-sme-db/app/http/controllers/auth/users"
 	"smedi-sme-db/app/http/controllers/books"
 	"smedi-sme-db/app/http/controllers/configs"
-	"smedi-sme-db/app/http/controllers/lenders"
+	"smedi-sme-db/app/http/controllers/smes"
 	inertiaHelper "smedi-sme-db/app/http/inertia"
 	"smedi-sme-db/app/http/middleware"
 )
@@ -31,8 +31,8 @@ func Web() {
 	booksPageController := books.NewBooksPageController()
 	permissionsPageController := perimissions.NewPermissionsPageController()
 	userPageController := users.NewUserPageController()
-	lendersPageController := lenders.NewLenderPageController()
 	configsPageController := configs.NewConfigPageController()
+	smesPageController := smes.NewSmePageController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
@@ -72,8 +72,8 @@ func Web() {
 		// Books management page
 		router.Get("/admin/books", booksPageController.Index)
 
-		// Lenders management page
-		router.Get("/admin/lenders", lendersPageController.Index)
+		// SMEs management page
+		router.Get("/admin/smes", smesPageController.Index)
 
 		// Configurations management page
 		router.Get("/admin/configs", configsPageController.Index)

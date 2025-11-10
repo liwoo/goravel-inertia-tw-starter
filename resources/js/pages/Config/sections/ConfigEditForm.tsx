@@ -29,6 +29,7 @@ export const ConfigEditForm = forwardRef<any, ConfigEditFormProps>(({
 }, ref) => {
   const [formData, setFormData] = useState<ConfigUpdateData>({
     name: config.name,
+    code: config.code || '',
     configType: config.configType || config.config_type,
     description: config.description || '',
   });
@@ -60,6 +61,7 @@ export const ConfigEditForm = forwardRef<any, ConfigEditFormProps>(({
       // Convert camelCase to snake_case for backend
       const requestData = {
         name: formData.name,
+        code: formData.code,
         config_type: formData.configType,
         description: formData.description,
       };
@@ -113,6 +115,25 @@ export const ConfigEditForm = forwardRef<any, ConfigEditFormProps>(({
                 />
                 {errors.name && (
                   <p className="text-sm text-destructive">{errors.name}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-muted">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="code">Code</Label>
+                <Input
+                  id="code"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  placeholder="Enter code"
+                  className={errors.code ? 'border-destructive' : ''}
+                />
+                {errors.code && (
+                  <p className="text-sm text-destructive">{errors.code}</p>
                 )}
               </div>
             </div>

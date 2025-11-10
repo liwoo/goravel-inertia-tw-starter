@@ -67,7 +67,6 @@ export default function ConfigIndex({
             title="Config Management"
             resourceName="configs"
             columns={isMobile ? configColumnsMobile : configColumns}
-            customFilters={configFilters}
             simpleFilters={simpleFilters}
             paginationConfig={meta?.pagination}
             createForm={ConfigCreateForm}

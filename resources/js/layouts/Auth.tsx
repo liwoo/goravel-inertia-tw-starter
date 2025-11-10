@@ -67,7 +67,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       </div>
       <div className="relative hidden bg-muted lg:block">
         <img
-          src="https://msmedb.trade.gov.mw/dist/media/images/backgrounds/bg-3.jpg"
+          src="/images/wallpaper.jpg"
           alt="Image"
           className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
         />

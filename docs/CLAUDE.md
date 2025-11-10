@@ -43,6 +43,103 @@ Here's the summary:
 - shadcn/ui component library with Radix UI primitives
 - Form validation handled server-side with client display
 
+## Service Layer Architecture
+
+**CRITICAL RULE: All database operations MUST be in the service layer, never in controllers.**
+
+### Layered Architecture Pattern
+
+```
+Controller → Service → Database (ORM)
+```
+
+**Controllers** should:
+- ✅ Handle HTTP requests/responses
+- ✅ Validate IDs and input params
+- ✅ Check permissions/authorization
+- ✅ Call service methods
+- ✅ Format responses
+- ❌ NEVER call `facades.Orm()` directly
+- ❌ NEVER contain business logic
+
+**Services** should:
+- ✅ Contain all business logic
+- ✅ Perform all database operations
+- ✅ Handle data transformations
+- ✅ Manage relationships and eager loading
+- ✅ Return domain objects or errors
+- ❌ NEVER access HTTP context directly
+
+### Example: Correct Pattern
+
+```go
+// ✅ CORRECT - Service contains database logic
+// app/services/sme_service.go
+func (s *SmeService) GetPrimaryBusinessOwner(smeID uint) (*models.PrimaryBusinessOwner, error) {
+	var sme models.Sme
+	err := facades.Orm().Query().
+		With("PrimaryBusinessOwner").
+		Where("id = ?", smeID).
+		First(&sme)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return sme.PrimaryBusinessOwner, nil
+}
+
+// ✅ CORRECT - Controller calls service
+// app/http/controllers/smes/sme_controller.go
+func (c *SmeController) FetchPrimaryBusinessOwner(ctx http.Context) http.Response {
+	id, err := c.ValidateID(ctx, "id")
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid SME ID", nil)
+	}
+
+	if err := c.CheckAuth(ctx, "view", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Call service layer - no database operations here!
+	owner, err := c.smeService.GetPrimaryBusinessOwner(id)
+	if err != nil {
+		return c.NotFoundResponse(ctx, "SME not found")
+	}
+
+	return c.SuccessResponse(ctx, owner, "Primary business owner retrieved successfully")
+}
+```
+
+### Example: WRONG Pattern
+
+```go
+// ❌ WRONG - Controller contains database logic
+func (c *SmeController) FetchPrimaryBusinessOwner(ctx http.Context) http.Response {
+	id, err := c.ValidateID(ctx, "id")
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid SME ID", nil)
+	}
+
+	// ❌ NEVER do this in controllers!
+	var sme models.Sme
+	err = facades.Orm().Query().
+		With("PrimaryBusinessOwner").
+		Where("id = ?", id).
+		First(&sme)
+
+	// ... rest of logic
+}
+```
+
+### Why This Matters
+
+1. **Testability**: Services can be unit tested without HTTP mocking
+2. **Reusability**: Service methods can be called from controllers, commands, jobs, etc.
+3. **Maintainability**: Business logic in one place
+4. **Single Responsibility**: Controllers handle HTTP, services handle business logic
+5. **Easier Debugging**: Clear separation makes debugging simpler
+
 ## Notable Features
 - **Dark Mode**: Persistent theme switching via context
 - **Authentication Flow**: Login redirects, protected routes, JWT cookies
