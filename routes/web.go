@@ -41,18 +41,34 @@ func Web() {
 		})
 	})
 
+	facades.Route().Post("/forgot-password", authController.ForgotPassword)
 	facades.Route().Get("/forgot-password", func(ctx http.Context) http.Response {
 		return inertiaHelper.Render(ctx, "auth/ForgotPassword", map[string]interface{}{
 			"version": support.Version,
 		})
 	})
-	facades.Route().Post("/forgot-password", authController.ForgotPassword)
+	
 	facades.Route().Get("/forgot-password-confirmation", func(ctx http.Context) http.Response {
 		return inertiaHelper.Render(ctx, "auth/ForgotPasswordConfirmation", map[string]interface{}{
 			"version": support.Version,
 		})
 	})
-	
+
+	facades.Route().Post("/reset-password", authController.ResetPassword)
+	facades.Route().Get("/reset-password", authController.ShowResetPassword)
+
+	facades.Route().Get("/invalid-token", func(ctx http.Context) http.Response {
+		return inertiaHelper.Render(ctx, "auth/InvalidToken", map[string]interface{}{
+			"version": support.Version,
+		})
+	})
+
+	facades.Route().Get("/reset-password-success", func(ctx http.Context) http.Response {
+		return inertiaHelper.Render(ctx, "auth/ResetPasswordSuccess", map[string]interface{}{
+			"version": support.Version,
+		})
+	})
+
 	//register una
 	facades.Route().Get("/una", utilController.ShowUnaPage)
 
