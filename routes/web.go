@@ -40,6 +40,19 @@ func Web() {
 			"version": support.Version,
 		})
 	})
+
+	facades.Route().Get("/forgot-password", func(ctx http.Context) http.Response {
+		return inertiaHelper.Render(ctx, "auth/ForgotPassword", map[string]interface{}{
+			"version": support.Version,
+		})
+	})
+	facades.Route().Post("/forgot-password", authController.ForgotPassword)
+	facades.Route().Get("/forgot-password-confirmation", func(ctx http.Context) http.Response {
+		return inertiaHelper.Render(ctx, "auth/ForgotPasswordConfirmation", map[string]interface{}{
+			"version": support.Version,
+		})
+	})
+	
 	//register una
 	facades.Route().Get("/una", utilController.ShowUnaPage)
 
