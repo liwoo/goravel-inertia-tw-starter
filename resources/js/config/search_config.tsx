@@ -4,6 +4,7 @@ import {
   Shield,
   FileText,
   Landmark,
+  Settings,
 } from 'lucide-react';
 
 /**
@@ -16,7 +17,7 @@ import {
  * 3. Ensure the backend search controller handles the entity type
  */
 
-export type SearchEntityType = 'book' | 'user' | 'lender';
+export type SearchEntityType = 'book' | 'user' | 'lender' | 'config';
 
 export interface SearchEntityConfig {
   type: SearchEntityType;
@@ -72,6 +73,18 @@ export const SEARCH_ENTITIES: SearchEntityConfig[] = [
       dark: 'dark:bg-orange-900/30 dark:text-orange-400',
     },
     urlPrefix: '/admin/lenders',
+  },
+  {
+    type: 'config',
+    label: 'Configs',
+    icon: <Settings className="h-4 w-4" />,
+    permissionService: 'config',
+    permissionAction: 'read' as const,
+    colors: {
+      light: 'bg-purple-100 text-purple-800',
+      dark: 'dark:bg-purple-900/30 dark:text-purple-400',
+    },
+    urlPrefix: '/admin/configs',
   },
 ];
 

@@ -8,8 +8,8 @@ import (
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 
-	"players/app/auth"
-	"players/app/models"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/models"
 )
 
 type AssignRole struct {

@@ -6,7 +6,7 @@ import (
 	"github.com/goravel/framework/contracts/foundation"
 	"github.com/goravel/framework/facades"
 	"github.com/petaki/inertia-go"
-	inertia_http "players/app/http/inertia"
+	inertia_http "smedi-sme-db/app/http/inertia"
 )
 
 // InertiaServiceProvider is responsible for setting up the Inertia.js integration

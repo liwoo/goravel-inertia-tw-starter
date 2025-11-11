@@ -3,7 +3,7 @@ package middleware
 import (
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"players/app/models"
+	"smedi-sme-db/app/models"
 	"strings"
 )
 

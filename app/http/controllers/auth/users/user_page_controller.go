@@ -3,9 +3,9 @@ package users
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
-	"players/app/contracts"
-	"players/app/services"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/services"
 )
 
 // UserPageController handles the users page

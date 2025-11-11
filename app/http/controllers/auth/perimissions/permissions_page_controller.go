@@ -3,11 +3,11 @@ package perimissions
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
-	"players/app/contracts"
-	"players/app/http/inertia"
-	"players/app/models"
-	"players/app/services"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/http/inertia"
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/app/services"
 )
 
 // PermissionsPageController handles Inertia.js page rendering for permission matrix

@@ -2,12 +2,16 @@ package auth
 
 import (
 	"fmt"
-	"players/app/models" // Assuming your User model is here
+	"smedi-sme-db/app/models" // Assuming your User model is here
 	"time"
 
+	inertiaHelper "smedi-sme-db/app/http/inertia"
+
+	"github.com/google/uuid"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support"
 )
 
 type AuthController struct {
@@ -132,4 +136,275 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 
 	return ctx.Response().Redirect(http.StatusFound, "/")
 
+}
+
+// ForgotPasswordRequest defines the structure for forgot password requests.
+type ForgotPasswordRequest struct {
+	Email string `form:"email" json:"email"`
+}
+
+func (r *ForgotPasswordRequest) Authorize(ctx http.Context) error {
+	return nil
+}
+
+func (r *ForgotPasswordRequest) Rules(ctx http.Context) map[string]string {
+	return map[string]string{
+		"email": "required|email",
+	}
+}
+
+func (r *ForgotPasswordRequest) Messages(ctx http.Context) map[string]string {
+	return map[string]string{
+		"email.required": "Email is required.",
+		"email.email":    "Please provide a valid email address.",
+	}
+}
+
+// ForgotPassword handles sending a password reset link (logs to console)
+func (r *AuthController) ForgotPassword(ctx http.Context) http.Response {
+	var req ForgotPasswordRequest
+	errors, err := ctx.Request().ValidateRequest(&req)
+	if err != nil {
+		return ctx.Response().Status(http.StatusInternalServerError).Json(http.Json{
+			"message": "Error validating request: " + err.Error(),
+		})
+	}
+	if errors != nil {
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(errors.All())
+	}
+
+	// Find user by email (do not reveal if not found)
+	var user models.User
+	userExists := facades.Orm().Query().Where("email", req.Email).First(&user) == nil
+
+	if userExists {
+		// Generate a reset token and expiration (1 hour from now)
+		token := uuid.NewString()
+		expires := time.Now().Add(1 * time.Hour)
+
+		// Store token and expiration time in Redis: key = "reset_token:<email>", value = token, expires in 1 hour
+		cacheKey := fmt.Sprintf("reset_token:%s", req.Email)
+		facades.Cache().Put(cacheKey, token, time.Hour)
+
+		// Build base URL from env vars
+		appURL := facades.Config().GetString("app.url", "http://localhost")
+		appPort := facades.Config().GetString("app.port", "3000")
+		baseURL := appURL
+		if appPort != "80" && appPort != "443" && appPort != "" {
+			baseURL = fmt.Sprintf("%s:%s", appURL, appPort)
+		}
+		resetLink := fmt.Sprintf("%s/reset-password?token=%s&email=%s", baseURL, token, req.Email)
+		facades.Log().Info(fmt.Sprintf("Password reset link for %s (expires %s): %s", req.Email, expires.Format(time.RFC3339), resetLink))
+		fmt.Printf("Password reset link for %s (expires %s): %s\n", req.Email, expires.Format(time.RFC3339), resetLink)
+	}
+
+	// Always return success (do not reveal if email exists)
+	return ctx.Response().Redirect(http.StatusFound, "/forgot-password-confirmation")
+}
+
+// ShowResetPassword displays the reset password page with token validation
+func (r *AuthController) ShowResetPassword(ctx http.Context) http.Response {
+	// Get token and email from query parameters
+	token := ctx.Request().Query("token", "")
+	email := ctx.Request().Query("email", "")
+
+	// Basic validation
+	if token == "" || email == "" {
+		return ctx.Response().Redirect(http.StatusFound, "/invalid-token")
+	}
+
+	// Validate token format (should be a valid UUID)
+	if _, err := uuid.Parse(token); err != nil {
+		return ctx.Response().Redirect(http.StatusFound, "/invalid-token")
+	}
+
+	// Check if token exists in Redis
+	cacheKey := fmt.Sprintf("reset_token:%s", email)
+	cachedValue := facades.Cache().Get(cacheKey, nil)
+
+	if cachedValue == nil {
+		return ctx.Response().Redirect(http.StatusFound, "/invalid-token")
+	}
+
+	// Validate cached token
+	var redisToken string
+	if tokenStr, ok := cachedValue.(string); ok {
+		redisToken = tokenStr
+	} else {
+		return ctx.Response().Redirect(http.StatusFound, "/invalid-token")
+	}
+
+	// Compare tokens
+	if redisToken != token {
+		return ctx.Response().Redirect(http.StatusFound, "/invalid-token")
+	}
+
+	// Token is valid, show the reset password page
+	return inertiaHelper.Render(ctx, "auth/ResetPassword", map[string]interface{}{
+		"version": support.Version,
+		"token":   token,
+		"email":   email,
+	})
+}
+
+// ResetPasswordRequest defines the structure for reset password requests.
+type ResetPasswordRequest struct {
+	Email                string `form:"email" json:"email"`
+	Token                string `form:"token" json:"token"`
+	Password             string `form:"password" json:"password"`
+	PasswordConfirmation string `form:"password_confirmation" json:"password_confirmation"`
+}
+
+func (r *ResetPasswordRequest) Authorize(ctx http.Context) error {
+	return nil
+}
+
+func (r *ResetPasswordRequest) Rules(ctx http.Context) map[string]string {
+	return map[string]string{
+		"email":                 "required|email",
+		"token":                 "required",
+		"password":              "required|min:8",
+		"password_confirmation": "required",
+	}
+}
+
+func (r *ResetPasswordRequest) Messages(ctx http.Context) map[string]string {
+	return map[string]string{
+		"email.required":                 "Email is required.",
+		"email.email":                    "Please provide a valid email address.",
+		"token.required":                 "Reset token is required.",
+		"password.required":              "Password is required.",
+		"password.min":                   "Password must be at least 8 characters.",
+		"password_confirmation.required": "Please confirm your password.",
+		"password_confirmation.same":     "Passwords do not match.",
+	}
+}
+
+// ResetPassword handles the password reset logic
+func (r *AuthController) ResetPassword(ctx http.Context) http.Response {
+
+	var req ResetPasswordRequest
+
+	// Explicitly bind JSON data from Inertia request
+	if err := ctx.Request().Bind(&req); err != nil {
+		facades.Log().Error(fmt.Sprintf("Bind error: %v", err))
+		return ctx.Response().Status(http.StatusBadRequest).Json(http.Json{
+			"message": "Error binding request data: " + err.Error(),
+		})
+	}
+
+	// Manual validation since we've already consumed the request body with Bind()
+	validationErrors := make(map[string]string)
+
+	// Validate email
+	if req.Email == "" {
+		validationErrors["email"] = "Email is required."
+	}
+
+	// Validate token
+	if req.Token == "" {
+		validationErrors["token"] = "Reset token is required."
+	}
+
+	// Validate password
+	if req.Password == "" {
+		validationErrors["password"] = "Password is required."
+	} else if len(req.Password) < 8 {
+		validationErrors["password"] = "Password must be at least 8 characters."
+	}
+
+	// Validate password confirmation
+	if req.PasswordConfirmation == "" {
+		validationErrors["password_confirmation"] = "Please confirm your password."
+	}
+
+	// If there are validation errors, return them
+	if len(validationErrors) > 0 {
+		facades.Log().Error(fmt.Sprintf("Validation failed with errors: %v", validationErrors))
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(validationErrors)
+	}
+
+	// Manual password confirmation check
+	if req.Password != req.PasswordConfirmation {
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(http.Json{
+			"password_confirmation": "Passwords do not match.",
+		})
+	}
+
+	// Check token in Redis
+	cacheKey := fmt.Sprintf("reset_token:%s", req.Email)
+
+	// Getting the token from cache
+	cachedValue := facades.Cache().Get(cacheKey, nil)
+
+	// Enhanced token validation
+	if cachedValue == nil {
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(http.Json{
+			"token": "Invalid or expired reset token.",
+		})
+	}
+
+	// Check if token exists and convert to string safely
+	var redisToken string
+	if tokenStr, ok := cachedValue.(string); ok {
+		redisToken = tokenStr
+	} else {
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(http.Json{
+			"token": "Invalid or expired reset token.",
+		})
+	}
+
+	// Validate token format (should be a valid UUID)
+	if _, err := uuid.Parse(redisToken); err != nil {
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(http.Json{
+			"token": "Invalid token format.",
+		})
+	}
+
+	if _, err := uuid.Parse(req.Token); err != nil {
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(http.Json{
+			"token": "Invalid token format.",
+		})
+	}
+
+	// Compare tokens
+	if redisToken != req.Token {
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(http.Json{
+			"token": "Invalid or expired reset token.",
+		})
+	}
+
+	// Token is valid, delete it from Redis
+	if ok := facades.Cache().Forget(cacheKey); !ok {
+		facades.Log().Warning("Failed to delete reset token from cache")
+	}
+
+	// Find user by email
+	var user models.User
+	if err := facades.Orm().Query().Where("email", req.Email).First(&user); err != nil {
+		return ctx.Response().Status(http.StatusUnprocessableEntity).Json(http.Json{
+			"email": "Invalid email address.",
+		})
+	}
+
+	// Update password
+	hashedPassword, err := facades.Hash().Make(req.Password)
+	if err != nil {
+		return ctx.Response().Status(http.StatusInternalServerError).Json(http.Json{
+			"message": "Failed to hash password.",
+		})
+	}
+
+	// Use direct update instead of Save to avoid potential model validation issues
+	_, err = facades.Orm().Query().Model(&models.User{}).Where("email = ?", req.Email).Update(map[string]interface{}{
+		"password": hashedPassword,
+	})
+	if err != nil {
+		return ctx.Response().Status(http.StatusInternalServerError).Json(http.Json{
+			"message": "Failed to update password.",
+		})
+	}
+
+	// Redirect to success page instead of returning JSON
+	return ctx.Response().Redirect(http.StatusSeeOther, "/reset-password-success")
 }

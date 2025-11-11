@@ -1,4 +1,4 @@
-module players
+module smedi-sme-db
 
 go 1.24.0
 
@@ -6,6 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/gin-gonic/gin v1.11.0
+	github.com/go-faker/faker/v4 v4.7.0
 	github.com/google/uuid v1.6.0
 	github.com/goravel/framework v1.16.3
 	github.com/goravel/gin v1.4.0

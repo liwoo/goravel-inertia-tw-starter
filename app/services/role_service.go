@@ -7,8 +7,8 @@ import (
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
-	"players/app/contracts"
-	"players/app/models"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/models"
 )
 
 // RoleService implements role-specific business logic using the builder pattern

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/goravel/framework/facades"
-	"players/app/contracts"
-	"players/app/models"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/models"
 )
 
 type NotificationService struct {
