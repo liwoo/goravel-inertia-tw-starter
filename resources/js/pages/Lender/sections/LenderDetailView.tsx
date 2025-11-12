@@ -24,7 +24,7 @@ export function LenderDetailView({
     <div className="space-y-6">
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">Lender Information</h3>
+          <h3 className="text-lg font-semibold mb-4 text-foreground">View The Lender</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-muted">

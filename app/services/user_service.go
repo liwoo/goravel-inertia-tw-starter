@@ -5,9 +5,9 @@ import (
 	"regexp"
 
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
-	"players/app/contracts"
-	"players/app/models"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/models"
 )
 
 // UserService implements user-specific business logic using the builder pattern

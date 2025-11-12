@@ -1,18 +1,22 @@
 package routes
 
 import (
+	"smedi-sme-db/app/http/controllers"
+	"smedi-sme-db/app/http/controllers/additional_business_members"
+	"smedi-sme-db/app/http/controllers/auth"
+	"smedi-sme-db/app/http/controllers/auth/perimissions"
+	"smedi-sme-db/app/http/controllers/auth/roles"
+	"smedi-sme-db/app/http/controllers/auth/users"
+	"smedi-sme-db/app/http/controllers/books"
+	"smedi-sme-db/app/http/controllers/configs"
+	"smedi-sme-db/app/http/controllers/messages"
+	"smedi-sme-db/app/http/controllers/primary_business_owners"
+	"smedi-sme-db/app/http/controllers/smes"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
-	"players/app/http/controllers"
-	"players/app/http/controllers/auth"
-	"players/app/http/controllers/auth/perimissions"
-	"players/app/http/controllers/auth/roles"
-	"players/app/http/controllers/auth/users"
-	"players/app/http/controllers/books"
-	"players/app/http/controllers/lenders"
-	"players/app/http/controllers/messages"
 
-	"players/app/http/middleware"
+	"smedi-sme-db/app/http/middleware"
 )
 
 // Api defines the routes for the API.
@@ -35,8 +39,11 @@ func Api(router route.Router) {
 	searchController := controllers.NewSearchController()
 	messageController := messages.NewMessageController()
 	notificationController := messages.NewNotificationController()
-	lenderController := lenders.NewLenderController()
 	swaggerController := controllers.NewSwaggerController()
+	configController := configs.NewConfigController()
+	smeController := smes.NewSmeController()
+	primaryBusinessOwnerController := primary_business_owners.NewPrimaryBusinessOwnerController()
+	additionalBusinessMemberController := additional_business_members.NewAdditionalBusinessMemberController()
 
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
@@ -61,11 +68,33 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/books/author/{author}", bookController.GetByAuthor)
 		optionalAuthRouter.Get("/books/{id}", bookController.Show) // Must be last to avoid conflicts
 
-		//lenders
-		optionalAuthRouter.Get("/lenders", lenderController.Index)
-		optionalAuthRouter.Get("/lenders/search", lenderController.Search)
-		optionalAuthRouter.Get("/lenders/filters", lenderController.FilterMetadata)
-		optionalAuthRouter.Get("/lenders/{id}", lenderController.Show)
+		//configurations
+		optionalAuthRouter.Get("/configs", configController.Index)
+		optionalAuthRouter.Get("/configs/search", configController.Search)
+		optionalAuthRouter.Get("/configs/filters", configController.FilterMetadata)
+		optionalAuthRouter.Get("/configs/{id}", configController.Show)
+
+		//smes
+		optionalAuthRouter.Get("/smes", smeController.Index)
+		optionalAuthRouter.Get("/smes/search", smeController.Search)
+		optionalAuthRouter.Get("/smes/filters", smeController.FilterMetadata)
+		optionalAuthRouter.Get("/smes/{id}", smeController.Show)
+		optionalAuthRouter.Get("/smes/{id}/primary_business_owner", smeController.FetchPrimaryBusinessOwner)
+		optionalAuthRouter.Get("/smes/{id}/additional_business_members", smeController.FetchAdditionalBusinessMembers)
+		optionalAuthRouter.Get("/smes/{id}/business_formalisation", smeController.FetchBusinessFormalisation)
+		optionalAuthRouter.Get("/smes/{id}/business_employee_summary", smeController.FetchBusinessEmployeeSummary)
+
+		//primary business owners
+		optionalAuthRouter.Get("/primary_business_owners", primaryBusinessOwnerController.Index)
+		optionalAuthRouter.Get("/primary_business_owners/search", primaryBusinessOwnerController.Search)
+		optionalAuthRouter.Get("/primary_business_owners/filters", primaryBusinessOwnerController.FilterMetadata)
+		optionalAuthRouter.Get("/primary_business_owners/{id}", primaryBusinessOwnerController.Show)
+
+		//additional business members
+		optionalAuthRouter.Get("/additional_business_members", additionalBusinessMemberController.Index)
+		optionalAuthRouter.Get("/additional_business_members/search", additionalBusinessMemberController.Search)
+		optionalAuthRouter.Get("/additional_business_members/filters", additionalBusinessMemberController.FilterMetadata)
+		optionalAuthRouter.Get("/additional_business_members/{id}", additionalBusinessMemberController.Show)
 
 	})
 
@@ -84,10 +113,25 @@ func Api(router route.Router) {
 		protectedRouter.Post("/books/{id}/return", bookController.Return)
 		protectedRouter.Get("/books/statistics", bookController.Statistics)
 
-		// Lender routes
-		protectedRouter.Post("/lenders", lenderController.Store)
-		protectedRouter.Put("/lenders/{id}", lenderController.Update)
-		protectedRouter.Delete("/lenders/{id}", lenderController.Delete)
+		// Configuration routes
+		protectedRouter.Post("/configs", configController.Store)
+		protectedRouter.Put("/configs/{id}", configController.Update)
+		protectedRouter.Delete("/configs/{id}", configController.Delete)
+
+		// SME routes
+		protectedRouter.Post("/smes", smeController.Store)
+		protectedRouter.Put("/smes/{id}", smeController.Update)
+		protectedRouter.Delete("/smes/{id}", smeController.Delete)
+
+		// Primary Business Owner routes
+		protectedRouter.Post("/primary_business_owners", primaryBusinessOwnerController.Store)
+		protectedRouter.Put("/primary_business_owners/{id}", primaryBusinessOwnerController.Update)
+		protectedRouter.Delete("/primary_business_owners/{id}", primaryBusinessOwnerController.Delete)
+
+		// Additional Business Member routes
+		protectedRouter.Post("/additional_business_members", additionalBusinessMemberController.Store)
+		protectedRouter.Put("/additional_business_members/{id}", additionalBusinessMemberController.Update)
+		protectedRouter.Delete("/additional_business_members/{id}", additionalBusinessMemberController.Delete)
 
 		// Role management routes
 		protectedRouter.Get("/roles", rolesController.Index)
@@ -156,6 +200,12 @@ func Api(router route.Router) {
 	// This Prefix("auth") group will also be relative to the router passed in.
 	// If called from RouteServiceProvider's /api group, this becomes /api/auth
 	router.Prefix("auth").Group(func(authRouter route.Router) {
+		passwordAttemptsController := auth.NewPasswordAttemptsController()
+
+		// Password attempts status endpoints (public, no auth required)
+		authRouter.Get("/password-attempts/status", passwordAttemptsController.CheckStatus)
+		authRouter.Get("/password-attempts/remaining", passwordAttemptsController.GetRemainingAttempts)
+
 		authRouter.Post("/login", apiAuthController.Login)
 		authRouter.Middleware(jwtAuth).Post("/logout", apiAuthController.Logout)
 		authRouter.Middleware(jwtAuth).Get("/me", apiAuthController.Me)

@@ -5,17 +5,23 @@ import (
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support"
-	"players/app/http/controllers"
-	"players/app/http/controllers/auth"
-	"players/app/http/controllers/auth/perimissions"
-	"players/app/http/controllers/auth/users"
-	"players/app/http/controllers/books"
-	"players/app/http/controllers/lenders"
-	inertiaHelper "players/app/http/inertia"
-	"players/app/http/middleware"
+	"smedi-sme-db/app/http/controllers"
+	"smedi-sme-db/app/http/controllers/auth"
+	"smedi-sme-db/app/http/controllers/auth/perimissions"
+	"smedi-sme-db/app/http/controllers/auth/users"
+	"smedi-sme-db/app/http/controllers/books"
+	"smedi-sme-db/app/http/controllers/configs"
+	"smedi-sme-db/app/http/controllers/smes"
+	inertiaHelper "smedi-sme-db/app/http/inertia"
+	"smedi-sme-db/app/http/middleware"
 )
 
 func Web() {
+	// Serve static files from the public directory
+	facades.Route().Static("/images", "./public/images")
+	facades.Route().Static("/css", "./public/css")
+	facades.Route().Static("/js", "./public/js")
+
 	// Register the Inertia middleware globally
 	facades.Route().GlobalMiddleware(inertiaMiddleware)
 
@@ -25,7 +31,8 @@ func Web() {
 	booksPageController := books.NewBooksPageController()
 	permissionsPageController := perimissions.NewPermissionsPageController()
 	userPageController := users.NewUserPageController()
-	lendersPageController := lenders.NewLenderPageController()
+	configsPageController := configs.NewConfigPageController()
+	smesPageController := smes.NewSmePageController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
@@ -65,8 +72,11 @@ func Web() {
 		// Books management page
 		router.Get("/admin/books", booksPageController.Index)
 
-		// Lenders management page
-		router.Get("/admin/lenders", lendersPageController.Index)
+		// SMEs management page
+		router.Get("/admin/smes", smesPageController.Index)
+
+		// Configurations management page
+		router.Get("/admin/configs", configsPageController.Index)
 
 		// Permissions/Role management pages
 		router.Get("/admin/permissions", permissionsPageController.Index)

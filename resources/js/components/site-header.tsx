@@ -48,10 +48,10 @@ export function SiteHeader({title}: { title: string }) {
                 </span>
               )}
             </Button>
-            
+
             {/* Notifications */}
             <NotificationDrawer />
-            
+
             {/* Theme Toggle */}
             <ThemeToggleIcon />
           </div>

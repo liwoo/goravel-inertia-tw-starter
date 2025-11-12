@@ -313,8 +313,8 @@ func (r *ServiceMaker) generateServiceContent(serviceName, packageName string, m
 	content := fmt.Sprintf(`package %s
 
 import (
-	"players/app/contracts"
-	"players/app/models"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/models"
 )
 
 // %s implements business logic for %s using the builder pattern

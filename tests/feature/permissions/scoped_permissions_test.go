@@ -6,9 +6,9 @@ import (
 
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
-	"players/app/auth"
-	"players/app/models"
-	"players/tests"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/tests"
 )
 
 type ScopedPermissionsTestSuite struct {

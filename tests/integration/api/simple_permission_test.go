@@ -2,7 +2,7 @@ package integration
 
 import (
 	"github.com/stretchr/testify/assert"
-	"players/app/models"
+	"smedi-sme-db/app/models"
 	"strings"
 	"testing"
 )

@@ -2,7 +2,7 @@ package contracts
 
 import (
 	"github.com/goravel/framework/contracts/database/orm"
-	"players/app/auth"
+	"smedi-sme-db/app/auth"
 )
 
 // ServiceBuilder uses a step-by-step builder pattern to ensure all required fields are set

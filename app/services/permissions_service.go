@@ -2,9 +2,9 @@ package services
 
 import (
 	"fmt"
-	"players/app/contracts"
-	"players/app/helpers"
-	"players/app/models"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/helpers"
+	"smedi-sme-db/app/models"
 	"strings"
 
 	"github.com/goravel/framework/facades"

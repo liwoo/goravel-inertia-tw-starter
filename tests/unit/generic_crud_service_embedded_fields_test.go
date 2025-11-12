@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"players/app/models"
+	"smedi-sme-db/app/models"
 )
 
 // TestReflectionWithEmbeddedStructs tests the reflection logic that handles embedded structs

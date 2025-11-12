@@ -2,8 +2,10 @@ package auth
 
 import (
 	"fmt"
-	"players/app/models" // Assuming your User model is here
+	"smedi-sme-db/app/models" // Assuming your User model is here
 	"time"
+
+	"smedi-sme-db/app/services"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"
@@ -11,11 +13,13 @@ import (
 )
 
 type AuthController struct {
-	// Dependencies can be injected here
+	passwordAttemptsService *services.PasswordAttemptsService
 }
 
 func NewAuthController() *AuthController {
-	return &AuthController{}
+	return &AuthController{
+		passwordAttemptsService: services.NewPasswordAttemptsService(),
+	}
 }
 
 // LoginRequest defines the structure for login requests.
@@ -76,6 +80,15 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
 
+	// Check if account is locked before attempting login
+	locked, unlockTime := r.passwordAttemptsService.CheckLocked(loginRequest.Email)
+	if locked {
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"general": fmt.Sprintf("Account is locked due to too many failed login attempts. Please try again after %s", unlockTime.Format("15:04:05 MST")),
+		})
+		return ctx.Response().Redirect(http.StatusFound, "/login")
+	}
+
 	var user models.User
 	// Find user by email
 	if err := facades.Orm().Query().Where("email", loginRequest.Email).First(&user); err != nil {
@@ -88,12 +101,34 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 	// Check password
 	if !facades.Hash().Check(loginRequest.Password, user.Password) {
+		// Record failed attempt
+		count, shouldWarn := r.passwordAttemptsService.RecordFailedAttempt(loginRequest.Email)
+
+		// Check if account was just locked
+		locked, unlockTime := r.passwordAttemptsService.CheckLocked(loginRequest.Email)
+		if locked {
+			ctx.Request().Session().Flash("errors", map[string]interface{}{
+				"general": fmt.Sprintf("Account has been locked due to too many failed login attempts. Please try again after %s", unlockTime.Format("15:04:05 MST")),
+			})
+			return ctx.Response().Redirect(http.StatusFound, "/login")
+		}
+
+		// Prepare error message
+		errorMsg := "Password is incorrect"
+		if shouldWarn {
+			errorMsg = "Password is incorrect. Warning: One more failed attempt will lock your account."
+		}
+
 		// Flash field-specific error
 		ctx.Request().Session().Flash("errors", map[string]interface{}{
-			"password": "Password is incorrect",
+			"password": errorMsg,
 		})
+		ctx.Request().Session().Flash("attempt_count", count)
 		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
+
+	// Clear password attempts on successful login
+	r.passwordAttemptsService.ClearAttempts(loginRequest.Email)
 
 	// Log the user in and get the token
 	token, err := facades.Auth(ctx).Login(&user)
