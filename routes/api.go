@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/route"
 	"smedi-sme-db/app/http/controllers"
 	"smedi-sme-db/app/http/controllers/additional_business_members"
 	"smedi-sme-db/app/http/controllers/auth"
@@ -14,6 +12,9 @@ import (
 	"smedi-sme-db/app/http/controllers/messages"
 	"smedi-sme-db/app/http/controllers/primary_business_owners"
 	"smedi-sme-db/app/http/controllers/smes"
+
+	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/route"
 
 	"smedi-sme-db/app/http/middleware"
 )
@@ -199,6 +200,12 @@ func Api(router route.Router) {
 	// This Prefix("auth") group will also be relative to the router passed in.
 	// If called from RouteServiceProvider's /api group, this becomes /api/auth
 	router.Prefix("auth").Group(func(authRouter route.Router) {
+		passwordAttemptsController := auth.NewPasswordAttemptsController()
+
+		// Password attempts status endpoints (public, no auth required)
+		authRouter.Get("/password-attempts/status", passwordAttemptsController.CheckStatus)
+		authRouter.Get("/password-attempts/remaining", passwordAttemptsController.GetRemainingAttempts)
+
 		authRouter.Post("/login", apiAuthController.Login)
 		authRouter.Middleware(jwtAuth).Post("/logout", apiAuthController.Logout)
 		authRouter.Middleware(jwtAuth).Get("/me", apiAuthController.Me)

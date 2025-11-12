@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { useForm, usePage } from '@inertiajs/react';
 import React from 'react';
 import { toast } from "sonner";
+import { AlertCircle } from "lucide-react";
 
 export function LoginForm({
   className,
@@ -53,8 +54,9 @@ export function LoginForm({
 
       {/* Display general errors */}
       {page.props.errors?.general && (
-        <div className="text-sm text-red-500 text-center bg-red-50 p-2 rounded">
-          {page.props.errors.general}
+        <div className="flex items-center gap-3 text-sm bg-red-500 text-white dark:bg-red-900/50 dark:text-red-200 p-3 rounded-md">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <span className="flex-1">{page.props.errors.general}</span>
         </div>
       )}
 
