@@ -29,6 +29,7 @@ const (
 	ServiceRoles                      ServiceRegistry = "roles"
 	ServicePermissions                ServiceRegistry = "permissions"
 	ServiceLenders                    ServiceRegistry = "lenders"
+	ServiceBDSPs                      ServiceRegistry = "bdsps"
 	ServiceConfig                     ServiceRegistry = "config"
 	ServiceSMEs                       ServiceRegistry = "smes"
 	ServicePrimaryBusinessOwners      ServiceRegistry = "primary_business_owners"
@@ -59,6 +60,7 @@ func GetAllServiceRegistries() []ServiceRegistry {
 		ServicePermissions,
 		ServiceLenders,
 		ServiceConfig,
+		ServiceBDSPs,
 		ServiceSMEs,
 		ServicePrimaryBusinessOwners,
 		ServiceAdditionalBusinessMembers,
@@ -85,6 +87,8 @@ func GetServiceDisplayName(service ServiceRegistry) string {
 		return "Lender Management"
 	case ServiceConfig:
 		return "Configuration Management"
+	case ServiceBDSPs:
+		return "BDSP Management"
 	case ServiceSMEs:
 		return "SME Management"
 	case ServicePrimaryBusinessOwners:
@@ -183,6 +187,16 @@ func GetServiceActions(service ServiceRegistry) []CorePermissionAction {
 			PermissionRead,
 			PermissionUpdate,
 			PermissionDelete,
+			PermissionView,
+			PermissionManage,
+		}
+	case ServiceBDSPs:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionExport,
 			PermissionView,
 			PermissionManage,
 		}

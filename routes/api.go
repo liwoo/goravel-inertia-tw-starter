@@ -14,6 +14,7 @@ import (
 	"smedi-sme-db/app/http/controllers/messages"
 	"smedi-sme-db/app/http/controllers/primary_business_owners"
 	"smedi-sme-db/app/http/controllers/smes"
+	"smedi-sme-db/app/http/controllers/bdsps"
 
 	"smedi-sme-db/app/http/middleware"
 )
@@ -40,6 +41,7 @@ func Api(router route.Router) {
 	notificationController := messages.NewNotificationController()
 	swaggerController := controllers.NewSwaggerController()
 	configController := configs.NewConfigController()
+	bdspController := bdsps.NewBdspController()
 	smeController := smes.NewSmeController()
 	primaryBusinessOwnerController := primary_business_owners.NewPrimaryBusinessOwnerController()
 	additionalBusinessMemberController := additional_business_members.NewAdditionalBusinessMemberController()
@@ -72,6 +74,12 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/configs/search", configController.Search)
 		optionalAuthRouter.Get("/configs/filters", configController.FilterMetadata)
 		optionalAuthRouter.Get("/configs/{id}", configController.Show)
+
+		//bdsps
+		optionalAuthRouter.Get("/bdsps", bdspController.Index)
+		optionalAuthRouter.Get("/bdsps/search", bdspController.Search)
+		optionalAuthRouter.Get("/bdsps/filters", bdspController.FilterMetadata)
+		optionalAuthRouter.Get("/bdsps/{id}", bdspController.Show)
 
 		//smes
 		optionalAuthRouter.Get("/smes", smeController.Index)
@@ -116,6 +124,11 @@ func Api(router route.Router) {
 		protectedRouter.Post("/configs", configController.Store)
 		protectedRouter.Put("/configs/{id}", configController.Update)
 		protectedRouter.Delete("/configs/{id}", configController.Delete)
+
+		// BDSP routes
+		protectedRouter.Post("/bdsps", bdspController.Store)
+		protectedRouter.Put("/bdsps/{id}", bdspController.Update)
+		protectedRouter.Delete("/bdsps/{id}", bdspController.Delete)
 
 		// SME routes
 		protectedRouter.Post("/smes", smeController.Store)
