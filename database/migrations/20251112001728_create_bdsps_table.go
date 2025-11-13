@@ -18,6 +18,23 @@ func (r *M20251112001728CreateBdspsTable) Up() error {
 		return facades.Schema().Create("bdsps", func(table schema.Blueprint) {
 			table.ID()
 			table.TimestampsTz()
+
+			// Basic Information
+			table.String("name")
+			table.String("postal_address").Nullable()
+			table.String("physical_address").Nullable()
+
+			// Registration Status
+			table.String("registration_status")
+
+			// Product Types - stored as JSON
+			table.Text("product_types_json").Nullable()
+
+			// Service List - stored as JSON
+			table.Text("service_list_json").Nullable()
+
+			// Associated Partners - stored as JSON
+			table.Text("associated_partners_json").Nullable()
 		})
 	}
 

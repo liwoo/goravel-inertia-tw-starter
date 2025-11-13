@@ -16,6 +16,7 @@ import (
 
 	"smedi-sme-db/app/models"
 	"smedi-sme-db/tests"
+	"smedi-sme-db/tests/helpers"
 )
 
 type APIScopedPermissionsTestSuite struct {
@@ -54,7 +55,10 @@ func (s *APIScopedPermissionsTestSuite) SetupSuite() {
 }
 
 func (s *APIScopedPermissionsTestSuite) SetupTest() {
+	// Use RefreshDatabase but ensure we clean up properly
 	s.RefreshDatabase()
+	// Additional cleanup to ensure clean state
+	helpers.CleanTestDatabase()
 	s.setupTestData()
 	s.startTestServer()
 	s.loginAllUsers()
