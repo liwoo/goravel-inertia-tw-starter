@@ -33,6 +33,7 @@ const (
 	ServiceSMEs                       ServiceRegistry = "smes"
 	ServicePrimaryBusinessOwners      ServiceRegistry = "primary_business_owners"
 	ServiceAdditionalBusinessMembers  ServiceRegistry = "additional_business_members"
+	ServiceBdsps                      ServiceRegistry = "bdsps"
 )
 
 // GetAllCorePermissionActions returns all core permission actions
@@ -62,6 +63,7 @@ func GetAllServiceRegistries() []ServiceRegistry {
 		ServiceSMEs,
 		ServicePrimaryBusinessOwners,
 		ServiceAdditionalBusinessMembers,
+		ServiceBdsps,
 	}
 }
 
@@ -91,6 +93,8 @@ func GetServiceDisplayName(service ServiceRegistry) string {
 		return "Primary Business Owner Management"
 	case ServiceAdditionalBusinessMembers:
 		return "Additional Business Members Management"
+	case ServiceBdsps:
+		return "BDSP Management"
 	default:
 		return string(service)
 	}
@@ -206,6 +210,14 @@ func GetServiceActions(service ServiceRegistry) []CorePermissionAction {
 			PermissionManage,
 		}
 	case ServiceAdditionalBusinessMembers:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+		}
+	case ServiceBdsps:
 		return []CorePermissionAction{
 			PermissionCreate,
 			PermissionRead,

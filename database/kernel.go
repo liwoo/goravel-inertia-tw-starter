@@ -1,11 +1,11 @@
 package database
 
 import (
-	"github.com/goravel/framework/contracts/database/schema"
-	"github.com/goravel/framework/contracts/database/seeder"
-
 	"smedi-sme-db/database/migrations"
 	"smedi-sme-db/database/seeders"
+
+	"github.com/goravel/framework/contracts/database/schema"
+	"github.com/goravel/framework/contracts/database/seeder"
 )
 
 type Kernel struct {
@@ -50,9 +50,10 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251020064006AddJsonFieldsToSmesTable{},
 		&migrations.M20251020113904AddCascadeDeleteToSmeRelationships{},
 		&migrations.M20251020212109AddCodeToSmeConfigTable{},
+		&migrations.M20251118210300CreateBdspsTable{},
+		&migrations.M20251119090154AddAuditFieldsToBdspsTable{},
 	}
 }
-
 func (kernel Kernel) Seeders() []seeder.Seeder {
 	return []seeder.Seeder{
 		&seeders.DatabaseSeeder{},

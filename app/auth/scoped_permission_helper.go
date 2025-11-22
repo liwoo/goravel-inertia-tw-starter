@@ -2,9 +2,10 @@ package auth
 
 import (
 	"fmt"
+	"smedi-sme-db/app/models"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
 )
 
 // ScopedPermissionChecker extends PermissionHelper with scope-aware permission checking
@@ -111,6 +112,8 @@ func (h *ScopedPermissionChecker) isResourceCreatedBy(resource interface{}, user
 		return r.CreatedBy != nil && *r.CreatedBy == userID
 	case *models.Lender:
 		return r.CreatedBy != nil && *r.CreatedBy == userID
+	case *models.Bdsp:
+		return r.CreatedBy != nil && *r.CreatedBy == userID
 	case *models.User:
 		return r.CreatedBy != nil && *r.CreatedBy == userID
 	case *models.Role:
@@ -132,6 +135,8 @@ func (h *ScopedPermissionChecker) isResourceCreatedByRoleLevel(resource interfac
 	case *models.Book:
 		creatorID = r.CreatedBy
 	case *models.Lender:
+		creatorID = r.CreatedBy
+	case *models.Bdsp:
 		creatorID = r.CreatedBy
 	case *models.User:
 		creatorID = r.CreatedBy

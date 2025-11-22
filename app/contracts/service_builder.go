@@ -1,8 +1,9 @@
 package contracts
 
 import (
-	"github.com/goravel/framework/contracts/database/orm"
 	"smedi-sme-db/app/auth"
+
+	"github.com/goravel/framework/contracts/database/orm"
 )
 
 // ServiceBuilder uses a step-by-step builder pattern to ensure all required fields are set
@@ -109,6 +110,7 @@ func (b *ServiceBuilderComplete[T]) WithScopeFiltering(serviceRegistry string, u
 		"roles":       "roles",
 		"permissions": "permissions",
 		"lenders":     "lenders",
+		"bdsps":       "bdsps",
 	}
 
 	if registry, ok := serviceMap[serviceRegistry]; ok {
