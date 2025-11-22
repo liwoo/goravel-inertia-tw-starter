@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"smedi-sme-db/app/contracts"
 	"smedi-sme-db/app/models"
 )
@@ -28,7 +29,39 @@ func NewBdspService() *BdspService {
 		}).
 		WithDefaultSort("created_at", "DESC").     // Default sorting when none specified
 		WithScopeFiltering("bdsps", "created_by"). // Enable permission-based filtering
+		WithBeforeUpdate(func(id uint, data map[string]interface{}) error {
+			if partners, ok := data["partners"]; ok {
+				if partnersSlice, ok := partners.([]interface{}); ok {
+					bytes, err := json.Marshal(partnersSlice)
+					if err == nil {
+						data["partners_json"] = string(bytes)
+					}
+				}
+				delete(data, "partners")
+			}
 
+			if productTypes, ok := data["product_types"]; ok {
+				if productTypesSlice, ok := productTypes.([]interface{}); ok {
+					bytes, err := json.Marshal(productTypesSlice)
+					if err == nil {
+						data["product_types_json"] = string(bytes)
+					}
+				}
+				delete(data, "product_types")
+			}
+
+			if serviceList, ok := data["service_list"]; ok {
+				if serviceListSlice, ok := serviceList.([]interface{}); ok {
+					bytes, err := json.Marshal(serviceListSlice)
+					if err == nil {
+						data["service_list_json"] = string(bytes)
+					}
+				}
+				delete(data, "service_list")
+			}
+
+			return nil
+		}).
 		Build() // Returns a fully configured CrudServiceContract
 
 	bdspServiceInstance := &BdspService{
