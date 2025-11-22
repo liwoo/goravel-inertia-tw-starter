@@ -22,7 +22,11 @@ func NewBdspPageController() *BdspPageController {
 			PageComponent:     "Bdsp/Index",
 			Service:           bdspService,
 			ServiceIdentifier: auth.ServiceBdsps,
-			StatsEnabled:      false,
+			StatsEnabled:      true,
+			StatsBuilder: func(controller *contracts.GenericPageController) map[string]interface{} {
+				stats, _ := bdspService.GetBdspStatistics()
+				return stats
+			},
 		}),
 		bdspService: bdspService,
 	}

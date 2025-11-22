@@ -202,6 +202,21 @@ func (c *BdspController) FilterMetadata(ctx http.Context) http.Response {
 	return c.CrudController.FilterMetadata(ctx)
 }
 
+// Statistics GET /api/bdsps/statistics - Get bdsp statistics
+func (c *BdspController) Statistics(ctx http.Context) http.Response {
+	// Check permissions
+	if err := c.CheckAuth(ctx, "viewAny", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Get statistics
+	stats, err := c.bdspService.GetBdspStatistics()
+	if err != nil {
+		return c.InternalErrorResponse(ctx, "Failed to retrieve statistics")
+	}
+
+	return c.SuccessResponse(ctx, stats, "Statistics retrieved successfully")
+}
 
 // Add custom domain-specific methods below this line
 // Examples:

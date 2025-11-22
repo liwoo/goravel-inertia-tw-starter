@@ -62,6 +62,9 @@ export interface BdspFormErrors {
 
 // Bdsp statistics (if provided by backend)
 export interface BdspStats {
-  totalbdsps: number;
-  // Add your custom stats here
+  totalBdsps: number;
+  pendingBdsps: number;
+  activeBdsps: number;
+  rejectedBdsps: number;
+  suspendedBdsps: number;
 }
