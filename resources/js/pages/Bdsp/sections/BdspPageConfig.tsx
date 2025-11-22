@@ -55,10 +55,15 @@ export const getBdspPageActions = (
   permissions: any,
   handlers: {
     onImport?: () => void;
-    onExport?: () => void;
+    onExport: () => void;
   }
 ): PageActionConfig[] => [
-    // TODO: Configure your page actions here
+    {
+      key: 'export',
+      label: 'Export',
+      icon: <Download className="h-4 w-4" />,
+      handler: handlers.onExport,
+    },
   ];
 
 /**

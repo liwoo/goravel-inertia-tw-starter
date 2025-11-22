@@ -14,11 +14,13 @@ import {
   bdspColumns,
   bdspColumnsMobile,
   bdspFilters,
-  bdspStatsConfigs
+  bdspStatsConfigs,
+  getBdspPageActions
 } from './sections';
 import { useIsMobile } from '@/hooks/use-mobile';
 import Admin from '@/layouts/Admin';
-import { renderStatsCards } from '@/lib/crud-page-utils';
+import { renderStatsCards, createPageActions } from '@/lib/crud-page-utils';
+import { BdspExportDialog, BdspExportOptions } from '@/components/Bdsp/BdspActions';
 
 // Props interface for the Bdsp Index page
 interface BdspIndexProps {
@@ -48,9 +50,31 @@ export default function BdspIndex({
 }: BdspIndexProps) {
   const isMobile = useIsMobile();
 
+  const [showExportDialog, setShowExportDialog] = useState(false);
+
   const handleRefresh = () => {
     router.reload({ only: ['data', 'stats'] });
   };
+
+  // Handle export
+  const handleExport = async (options: BdspExportOptions) => {
+    const params = new URLSearchParams({
+      format: options.format,
+      ...(options.fields && { fields: options.fields.join(',') }),
+      ...(options.includeStats && { includeStats: 'true' }),
+      ...Object.fromEntries(
+        Object.entries(filters.filters || {}).map(([key, value]) => [key, String(value)])
+      ),
+    });
+
+    window.open(`/api/bdsps/export?${params.toString()}`);
+  };
+
+  const pageActions = createPageActions(
+    getBdspPageActions(permissions, {
+      onExport: () => setShowExportDialog(true),
+    })
+  );
 
   return (
     <Admin title={"Bdsp"}>
@@ -69,6 +93,7 @@ export default function BdspIndex({
             resourceName="bdsps"
             columns={isMobile ? bdspColumnsMobile : bdspColumns}
             customFilters={bdspFilters}
+            pageActions={pageActions}
             paginationConfig={meta?.pagination}
             createForm={BdspCreateForm}
             editForm={BdspEditForm}
@@ -80,6 +105,15 @@ export default function BdspIndex({
             canView={true}
           />
         </div>
+
+        {/* Action Dialogs */}
+        {showExportDialog && (
+          <BdspExportDialog
+            onClose={() => setShowExportDialog(false)}
+            onExport={handleExport}
+            totalItems={data.total}
+          />
+        )}
       </div>
     </Admin>
   );
