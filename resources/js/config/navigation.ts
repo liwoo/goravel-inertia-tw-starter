@@ -68,9 +68,9 @@ export const navigationConfig: NavigationConfig = {
         },
         {
             title: "BDSPs",
-            url: "#",
+            url: "/admin/bdsps",
             icon: BuildingIcon,
-            requiredService: "lenders",
+            requiredService: "bdsps",
             requiredAction: "read" as const,
         },
 

@@ -14,6 +14,7 @@ import (
 	"smedi-sme-db/app/http/controllers/messages"
 	"smedi-sme-db/app/http/controllers/primary_business_owners"
 	"smedi-sme-db/app/http/controllers/smes"
+	"smedi-sme-db/app/http/controllers/bdsps"
 
 	"smedi-sme-db/app/http/middleware"
 )
@@ -43,6 +44,7 @@ func Api(router route.Router) {
 	smeController := smes.NewSmeController()
 	primaryBusinessOwnerController := primary_business_owners.NewPrimaryBusinessOwnerController()
 	additionalBusinessMemberController := additional_business_members.NewAdditionalBusinessMemberController()
+	bdspController := bdsps.NewBdspController()
 
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
@@ -95,6 +97,11 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/additional_business_members/filters", additionalBusinessMemberController.FilterMetadata)
 		optionalAuthRouter.Get("/additional_business_members/{id}", additionalBusinessMemberController.Show)
 
+		//bdsp
+		optionalAuthRouter.Get("/bdsps", bdspController.Index)
+		optionalAuthRouter.Get("/bdsps/search", bdspController.Search)
+		optionalAuthRouter.Get("/bdsps/filters", bdspController.FilterMetadata)
+		optionalAuthRouter.Get("/bdsps/{id}", bdspController.Show)
 	})
 
 	// Protected routes (require authentication)
@@ -131,6 +138,11 @@ func Api(router route.Router) {
 		protectedRouter.Post("/additional_business_members", additionalBusinessMemberController.Store)
 		protectedRouter.Put("/additional_business_members/{id}", additionalBusinessMemberController.Update)
 		protectedRouter.Delete("/additional_business_members/{id}", additionalBusinessMemberController.Delete)
+
+		//bdsp
+		protectedRouter.Post("/bdsps", bdspController.Store)
+		protectedRouter.Put("/bdsps/{id}", bdspController.Update)
+		protectedRouter.Delete("/bdsps/{id}", bdspController.Delete)
 
 		// Role management routes
 		protectedRouter.Get("/roles", rolesController.Index)
