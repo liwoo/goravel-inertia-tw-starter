@@ -1,19 +1,21 @@
 package routes
 
 import (
-	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/route"
-	"github.com/goravel/framework/facades"
-	"github.com/goravel/framework/support"
 	"smedi-sme-db/app/http/controllers"
 	"smedi-sme-db/app/http/controllers/auth"
 	"smedi-sme-db/app/http/controllers/auth/perimissions"
 	"smedi-sme-db/app/http/controllers/auth/users"
+	"smedi-sme-db/app/http/controllers/bdsps"
 	"smedi-sme-db/app/http/controllers/books"
 	"smedi-sme-db/app/http/controllers/configs"
 	"smedi-sme-db/app/http/controllers/smes"
 	inertiaHelper "smedi-sme-db/app/http/inertia"
 	"smedi-sme-db/app/http/middleware"
+
+	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/route"
+	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support"
 )
 
 func Web() {
@@ -33,6 +35,7 @@ func Web() {
 	userPageController := users.NewUserPageController()
 	configsPageController := configs.NewConfigPageController()
 	smesPageController := smes.NewSmePageController()
+	bdspsPageController := bdsps.NewBdspPageController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
@@ -74,6 +77,9 @@ func Web() {
 
 		// SMEs management page
 		router.Get("/admin/smes", smesPageController.Index)
+
+		// BDSPs management page
+		router.Get("/admin/bdsps", bdspsPageController.Index)
 
 		// Configurations management page
 		router.Get("/admin/configs", configsPageController.Index)

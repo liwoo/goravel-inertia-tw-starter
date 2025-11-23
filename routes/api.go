@@ -9,6 +9,7 @@ import (
 	"smedi-sme-db/app/http/controllers/auth/perimissions"
 	"smedi-sme-db/app/http/controllers/auth/roles"
 	"smedi-sme-db/app/http/controllers/auth/users"
+	"smedi-sme-db/app/http/controllers/bdsps"
 	"smedi-sme-db/app/http/controllers/books"
 	"smedi-sme-db/app/http/controllers/business_formalisations"
 	"smedi-sme-db/app/http/controllers/configs"
@@ -49,6 +50,7 @@ func Api(router route.Router) {
 	businessFormalisationController := business_formalisations.NewBusinessFormalisationController()
 	eventController := events.NewEventController()
 	procurementNoticeController := procurement_notices.NewProcurementNoticeController()
+	bdspController := bdsps.NewBdspController()
 
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
@@ -117,6 +119,11 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/procurement-notices/filters", procurementNoticeController.FilterMetadata)
 		optionalAuthRouter.Get("/procurement-notices/{id}", procurementNoticeController.Show)
 
+		//bdsp
+		optionalAuthRouter.Get("/bdsps", bdspController.Index)
+		optionalAuthRouter.Get("/bdsps/search", bdspController.Search)
+		optionalAuthRouter.Get("/bdsps/filters", bdspController.FilterMetadata)
+		optionalAuthRouter.Get("/bdsps/{id}", bdspController.Show)
 	})
 
 	// Protected routes (require authentication)
@@ -168,6 +175,11 @@ func Api(router route.Router) {
 		protectedRouter.Post("/procurement-notices", procurementNoticeController.Store)
 		protectedRouter.Put("/procurement-notices/{id}", procurementNoticeController.Update)
 		protectedRouter.Delete("/procurement-notices/{id}", procurementNoticeController.Delete)
+
+		//bdsp
+		protectedRouter.Post("/bdsps", bdspController.Store)
+		protectedRouter.Put("/bdsps/{id}", bdspController.Update)
+		protectedRouter.Delete("/bdsps/{id}", bdspController.Delete)
 
 		// Role management routes
 		protectedRouter.Get("/roles", rolesController.Index)

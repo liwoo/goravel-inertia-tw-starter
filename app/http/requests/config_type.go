@@ -10,4 +10,6 @@ const (
 	ConfigTypeSectors             = "Sectors"
 	ConfigTypeRegistrationStatus  = "Registration Status"
 	ConfigTypeDevelopmentPartners = "Development Partners"
+	ConfigTypeProductTypes        = "Product Types"
+	ConfigTypeAssociatedPartners  = "Associated Partners"
 )

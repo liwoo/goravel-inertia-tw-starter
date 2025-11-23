@@ -14,11 +14,11 @@ import {
   useReactTable,
   Row,
 } from '@tanstack/react-table';
-import { 
-  ChevronUp, 
-  ChevronDown, 
-  ChevronsUpDown, 
-  FileX, 
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  FileX,
   MoreVertical,
   ChevronLeft,
   ChevronRight,
@@ -125,8 +125,8 @@ const createColumnDef = <T extends { id: number }>(
   accessorKey: column.key,
   id: column.key,
   header: ({ column: tanColumn }) => (
-    <DataTableColumnHeader 
-      column={tanColumn} 
+    <DataTableColumnHeader
+      column={tanColumn}
       title={column.label}
       className={column.className}
       onSort={onSort}
@@ -136,8 +136,8 @@ const createColumnDef = <T extends { id: number }>(
     const item = row.original;
     return (
       <div className={cn('text-sm', column.className)}>
-        {column.render ? 
-          column.render(item) : 
+        {column.render ?
+          column.render(item) :
           String((item as any)[column.key] || '-')
         }
       </div>
@@ -159,7 +159,7 @@ const createActionsColumn = <T extends { id: number }>(
   header: () => <span className="sr-only">Actions</span>,
   cell: ({ row }) => {
     const item = row.original;
-    
+
     const handleActionClick = (action: CrudAction<T>, item: T) => {
       if (action.confirm) {
         const message = action.confirmMessage || `Are you sure you want to ${action.label.toLowerCase()}?`;
@@ -189,7 +189,7 @@ const createActionsColumn = <T extends { id: number }>(
           {actions.map((action, actionIndex) => {
             const isDisabled = action.disabled?.(item) || false;
             const isDestructive = action.key === 'delete' || action.className?.includes('destructive');
-            
+
             return (
               <React.Fragment key={action.key}>
                 {actionIndex > 0 && actions[actionIndex - 1]?.key !== 'delete' && action.key === 'delete' && (
@@ -466,7 +466,7 @@ export function CrudDataTable<T extends { id: number }>({
   React.useEffect(() => {
     const selectedRows = table.getFilteredSelectedRowModel().rows
     const newSelectedIds = selectedRows.map(row => row.original.id)
-    
+
     // Only update if there's a difference to avoid infinite loops
     if (JSON.stringify(newSelectedIds.sort()) !== JSON.stringify(selectedIds.sort())) {
       onSelectionChange(newSelectedIds)
@@ -507,77 +507,77 @@ export function CrudDataTable<T extends { id: number }>({
             </div>
           </div>
         )}
-        
+
         <div className="rounded-md border overflow-hidden">
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <Table className="w-full min-w-full">
-            <TableHeader className="bg-muted/50 sticky top-0 z-10">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead 
-                        key={header.id}
-                        className={cn(
-                          'px-2 py-3 text-left whitespace-nowrap bg-muted/50 border-b',
-                          header.id === 'select' && 'w-12 min-w-[3rem]',
-                          header.id === 'actions' && 'w-16 min-w-[4rem] sticky right-0 z-20 bg-muted/50 border-l',
-                          // Add min-width for other columns to prevent them from being too narrow
-                          header.id !== 'select' && header.id !== 'actions' && 'min-w-[8rem]'
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
+              <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead
+                          key={header.id}
+                          className={cn(
+                            'px-2 py-3 text-left whitespace-nowrap bg-muted/50 border-b',
+                            header.id === 'select' && 'w-12 min-w-[3rem]',
+                            header.id === 'actions' && 'w-16 min-w-[4rem] sticky right-0 z-20 bg-muted/50 border-l',
+                            // Add min-width for other columns to prevent them from being too narrow
+                            header.id !== 'select' && header.id !== 'actions' && 'min-w-[8rem]'
+                          )}
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
                               header.column.columnDef.header,
                               header.getContext()
                             )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                    className="hover:bg-muted/50"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell 
-                        key={cell.id}
-                        className={cn(
-                          'px-2 py-3 whitespace-nowrap',
-                          cell.column.id === 'actions' && 'text-right sticky right-0 z-20 bg-background border-l',
-                          cell.column.id === 'select' && 'w-12',
-                          // Add consistent padding and prevent text wrapping
-                        )}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
+                        </TableHead>
+                      )
+                    })}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={tableColumns.length}
-                    className="h-32 text-center"
-                  >
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                      <FileX className="h-8 w-8 text-muted-foreground/50" />
-                      <p className="text-sm text-muted-foreground">{emptyMessage}</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                      className="hover:bg-muted/50"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            'px-2 py-3 whitespace-nowrap',
+                            cell.column.id === 'actions' && 'text-right sticky right-0 z-20 bg-background border-l',
+                            cell.column.id === 'select' && 'w-12',
+                            // Add consistent padding and prevent text wrapping
+                          )}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={tableColumns.length}
+                      className="h-32 text-center"
+                    >
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <FileX className="h-8 w-8 text-muted-foreground/50" />
+                        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
             </Table>
           </div>
         </div>

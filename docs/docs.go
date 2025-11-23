@@ -22,6 +22,485 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/bdsps": {
+            "get": {
+                "description": "Get paginated list of bdsps with filtering, sorting, and search",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bdsps"
+                ],
+                "summary": "List all bdsps",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            5,
+                            10,
+                            20,
+                            30,
+                            50,
+                            100
+                        ],
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "description": "Sort direction",
+                        "name": "direction",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/contracts.ResponseFormat"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/contracts.PaginatedResponse"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "data": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/models.Bdsp"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a bdsp with validation",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bdsps"
+                ],
+                "summary": "Create a new bdsp",
+                "parameters": [
+                    {
+                        "description": "bdsp data",
+                        "name": "bdsp",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.BdspCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/contracts.ResponseFormat"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Bdsp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    }
+                }
+            }
+        },
+        "/bdsps/filters": {
+            "get": {
+                "description": "Returns available filters for bdsps",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bdsps"
+                ],
+                "summary": "Get bdsp filter metadata",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    }
+                }
+            }
+        },
+        "/bdsps/search": {
+            "get": {
+                "description": "Full-text search for bdsps",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bdsps"
+                ],
+                "summary": "Search bdsps",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query (min 2 chars)",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/contracts.ResponseFormat"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/contracts.PaginatedResponse"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "data": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/models.Bdsp"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    }
+                }
+            }
+        },
+        "/bdsps/{id}": {
+            "get": {
+                "description": "Retrieve a specific bdsp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bdsps"
+                ],
+                "summary": "Get bdsp by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Bdsp ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/contracts.ResponseFormat"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Bdsp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing bdsp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bdsps"
+                ],
+                "summary": "Update a bdsp",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Bdsp ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "bdsp data",
+                        "name": "bdsp",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.BdspUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/contracts.ResponseFormat"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Bdsp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a bdsp by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bdsps"
+                ],
+                "summary": "Delete a bdsp",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Bdsp ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Bdsp deleted"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/contracts.ResponseFormat"
+                        }
+                    }
+                }
+            }
+        },
         "/books": {
             "get": {
                 "description": "Get paginated list of books with filtering, sorting, and search",
@@ -1083,6 +1562,83 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Bdsp": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "$ref": "#/definitions/github_com_goravel_framework_support_carbon.DateTime"
+                },
+                "created_by": {
+                    "description": "Audit fields",
+                    "type": "integer"
+                },
+                "deleted_at": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "deleted_by": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "partners": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "physical_address": {
+                    "type": "string"
+                },
+                "postal_address": {
+                    "type": "string"
+                },
+                "product_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "registration_status": {
+                    "type": "string"
+                },
+                "service_list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.BdspService"
+                    }
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/github_com_goravel_framework_support_carbon.DateTime"
+                },
+                "updated_by": {
+                    "type": "integer"
+                },
+                "user_agent": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.BdspService": {
+            "type": "object",
+            "properties": {
+                "cost": {
+                    "type": "number"
+                },
+                "duration": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Book": {
             "type": "object",
             "properties": {
@@ -1190,6 +1746,76 @@ const docTemplate = `{
                 },
                 "user_agent": {
                     "type": "string"
+                }
+            }
+        },
+        "requests.BdspCreateRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "partners": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "physical_address": {
+                    "type": "string"
+                },
+                "postal_address": {
+                    "type": "string"
+                },
+                "product_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "registration_status": {
+                    "type": "string"
+                },
+                "service_list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.BdspService"
+                    }
+                }
+            }
+        },
+        "requests.BdspUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "partners": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "physical_address": {
+                    "type": "string"
+                },
+                "postal_address": {
+                    "type": "string"
+                },
+                "product_types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "registration_status": {
+                    "type": "string"
+                },
+                "service_list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.BdspService"
+                    }
                 }
             }
         },
