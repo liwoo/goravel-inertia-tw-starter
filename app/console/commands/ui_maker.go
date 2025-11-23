@@ -83,9 +83,16 @@ func (receiver *UIMaker) Handle(ctx console.Context) error {
 		}
 	}
 
-	// Generate TypeScript type file
+	// Generate TypeScript type file using enhanced type generator
 	typePath := filepath.Join("resources", "js", "types", fmt.Sprintf("%s.ts", strings.ToLower(pageName)))
-	if err := os.WriteFile(typePath, []byte(receiver.generateTypeContent(pageName, pluralPage, fields)), 0644); err != nil {
+	typeContent, err := receiver.generateEnhancedTypeContent(ctx, pageName, pluralPage, requestName, fields)
+	if err != nil {
+		ctx.Warning(fmt.Sprintf("Could not generate enhanced types: %v", err))
+		ctx.Info("Falling back to basic type generation...")
+		typeContent = receiver.generateTypeContent(pageName, pluralPage, fields)
+	}
+
+	if err := os.WriteFile(typePath, []byte(typeContent), 0644); err != nil {
 		return fmt.Errorf("failed to write type file: %v", err)
 	}
 	ctx.Success(fmt.Sprintf("✓ Generated type file: %s", typePath))
@@ -388,4 +395,110 @@ func (receiver *UIMaker) humanize(name string) string {
 		result.WriteRune(r)
 	}
 	return result.String()
+}
+
+// generateEnhancedTypeContent generates TypeScript types using the enhanced type generator
+func (receiver *UIMaker) generateEnhancedTypeContent(ctx console.Context, pageName, pluralPage, requestName string, fields []Field) (string, error) {
+	gen := &EnhancedTypeGenerator{}
+
+	// Find the request file
+	createRequestPath := filepath.Join("app", "http", "requests", fmt.Sprintf("%s_create_request.go", strings.ToLower(requestName)))
+	if _, err := os.Stat(createRequestPath); os.IsNotExist(err) {
+		createRequestPath = filepath.Join("app", "http", "requests", fmt.Sprintf("%s_request.go", strings.ToLower(requestName)))
+	}
+
+	// Parse the request struct
+	requestFields, err := gen.ParseRequestStruct(createRequestPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse request struct: %w", err)
+	}
+
+	// Scan for enums in the requests directory
+	enumsDir := filepath.Join("app", "http", "requests")
+	allEnums, err := gen.ScanDirectoryForEnums(enumsDir)
+	if err != nil {
+		ctx.Warning(fmt.Sprintf("Could not scan for enums: %v", err))
+		allEnums = []GoEnum{}
+	}
+
+	// Build the TypeScript content
+	var sb strings.Builder
+
+	// Add header comment
+	sb.WriteString(fmt.Sprintf("// TypeScript interfaces for %s entities and operations\n", pageName))
+	sb.WriteString("import { BaseModel, PaginatedResult, ListRequest } from './crud';\n\n")
+
+	// Generate enum types if found
+	if len(allEnums) > 0 {
+		sb.WriteString("// Enum types\n")
+		for _, enum := range allEnums {
+			sb.WriteString(gen.GenerateEnumTypeScript(enum))
+			sb.WriteString("\n")
+		}
+	}
+
+	// Generate the main interface from request fields
+	sb.WriteString(fmt.Sprintf("// Core %s interface matching the backend model\n", pageName))
+	sb.WriteString(fmt.Sprintf("export interface %s extends BaseModel {\n", pageName))
+	for _, field := range requestFields {
+		jsonName := field.JSONTag
+		if jsonName == "" {
+			jsonName = gen.toJSONName(field.Name)
+		}
+		optional := ""
+		if !field.IsRequired {
+			optional = "?"
+		}
+		sb.WriteString(fmt.Sprintf("  %s%s: %s;\n", jsonName, optional, field.TSType))
+	}
+	sb.WriteString("}\n\n")
+
+	// Generate CreateData interface
+	sb.WriteString(fmt.Sprintf("// %s creation data (matches %sCreateRequest)\n", pageName, pageName))
+	sb.WriteString(gen.GenerateTypeScriptInterface(pageName+"CreateData", requestFields))
+	sb.WriteString("\n")
+
+	// Generate UpdateData interface (all fields optional)
+	sb.WriteString(fmt.Sprintf("// %s update data (matches %sUpdateRequest - all optional)\n", pageName, pageName))
+	sb.WriteString(fmt.Sprintf("export interface %sUpdateData {\n", pageName))
+	for _, field := range requestFields {
+		jsonName := field.JSONTag
+		if jsonName == "" {
+			jsonName = gen.toJSONName(field.Name)
+		}
+		sb.WriteString(fmt.Sprintf("  %s?: %s;\n", jsonName, field.TSType))
+	}
+	sb.WriteString("}\n\n")
+
+	// Generate list response interface
+	sb.WriteString(fmt.Sprintf("// %s list response (matches service GetList response)\n", pageName))
+	sb.WriteString(fmt.Sprintf("export interface %sListResponse extends PaginatedResult<%s> {}\n\n", pageName, pageName))
+
+	// Generate list request interface
+	sb.WriteString(fmt.Sprintf("// %s list request (extends base ListRequest with %s-specific filters)\n", pageName, strings.ToLower(pageName)))
+	sb.WriteString(fmt.Sprintf("export interface %sListRequest extends ListRequest {\n", pageName))
+	sb.WriteString("  // Add your custom filters here\n")
+	sb.WriteString("}\n\n")
+
+	// Generate form errors interface
+	sb.WriteString("// Form validation types\n")
+	sb.WriteString(fmt.Sprintf("export interface %sFormErrors {\n", pageName))
+	for _, field := range requestFields {
+		jsonName := field.JSONTag
+		if jsonName == "" {
+			jsonName = gen.toJSONName(field.Name)
+		}
+		sb.WriteString(fmt.Sprintf("  %s?: string;\n", jsonName))
+	}
+	sb.WriteString("  general?: string;\n")
+	sb.WriteString("}\n\n")
+
+	// Generate stats interface
+	sb.WriteString(fmt.Sprintf("// %s statistics (if provided by backend)\n", pageName))
+	sb.WriteString(fmt.Sprintf("export interface %sStats {\n", pageName))
+	sb.WriteString(fmt.Sprintf("  total%s: number;\n", pluralPage))
+	sb.WriteString("  // Add your custom stats here\n")
+	sb.WriteString("}\n")
+
+	return sb.String(), nil
 }

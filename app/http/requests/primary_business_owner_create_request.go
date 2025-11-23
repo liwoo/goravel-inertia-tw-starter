@@ -1,7 +1,10 @@
 package requests
 
 import (
+	"fmt"
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/support/carbon"
+	"github.com/goravel/framework/support/str"
 )
 
 // PrimaryBusinessOwnerCreateRequest handles primary_business_owner creation validation
@@ -11,7 +14,7 @@ type PrimaryBusinessOwnerCreateRequest struct {
 	OtherNames             *string `form:"other_names" json:"other_names"`
 	Nationality            string  `form:"nationality" json:"nationality"`
 	NationalIdNumber       string  `form:"national_id_number" json:"national_id_number"`
-	DateOfBirth            *string `form:"date_of_birth" json:"date_of_birth"`
+	DateOfBirth            string  `form:"date_of_birth" json:"date_of_birth"`
 	Gender                 string  `form:"gender" json:"gender"`
 	EducationLevel         string  `form:"education_level" json:"education_level"`
 	MalawianStatus         string  `form:"malawian_status" json:"malawian_status"`
@@ -38,7 +41,7 @@ func (r *PrimaryBusinessOwnerCreateRequest) Rules(ctx http.Context) map[string]s
 		"other_names":              "max_len:100",
 		"nationality":              "required|max_len:100",
 		"national_id_number":       "required|max_len:50",
-		"date_of_birth":            "required|date",
+		"date_of_birth":            "required",
 		"gender":                   "required|max_len:20",
 		"education_level":          "required|max_len:50",
 		"malawian_status":          "required|max_len:50",
@@ -115,8 +118,7 @@ func (r *PrimaryBusinessOwnerCreateRequest) Authorize(ctx http.Context) error {
 
 // PrepareForValidation allows modification of input before validation
 func (r *PrimaryBusinessOwnerCreateRequest) PrepareForValidation(ctx http.Context) error {
-	// TODO: Add data preparation logic
-	// Example: Normalize, trim, or set default values
+	fmt.Printf("PrepareForValidation - DateOfBirth: %T %+v\n", r.DateOfBirth, r.DateOfBirth)
 	return nil
 }
 
@@ -128,14 +130,15 @@ func (r *PrimaryBusinessOwnerCreateRequest) PassedValidation(ctx http.Context) e
 
 // ToCreateData converts the request to create data map
 func (r *PrimaryBusinessOwnerCreateRequest) ToCreateData() map[string]interface{} {
+
 	data := map[string]interface{}{
 		"first_name":               r.FirstName,
 		"last_name":                r.LastName,
 		"other_names":              r.OtherNames,
 		"nationality":              r.Nationality,
+		"date_of_birth":            carbon.DateTime{Carbon: carbon.Now()}, // Convert to YYYY-MM-DD string
 		"national_id_number":       r.NationalIdNumber,
-		"date_of_birth":            r.DateOfBirth,
-		"gender":                   r.Gender,
+		"gender":                   str.Of(r.Gender).Upper().String(),
 		"education_level":          r.EducationLevel,
 		"malawian_status":          r.MalawianStatus,
 		"has_special_needs":        r.HasSpecialNeeds,
@@ -150,7 +153,7 @@ func (r *PrimaryBusinessOwnerCreateRequest) ToCreateData() map[string]interface{
 		"alt_contact_name":         r.AltContactName,
 		"alt_contact_relationship": r.AltContactRelationship,
 		"alt_contact_phone":        r.AltContactPhone,
-		"sme_id":                   r.SmeID,
+		"sme_id":                   uint(r.SmeID),
 	}
 
 	return data

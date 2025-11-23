@@ -44,6 +44,7 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.CrudTestMaker{},
 		&commands.PageControllerMaker{},
 		&commands.UIMaker{},
+		&commands.EnumGenerator{},
 		&commands.MakeApp{},
 	}
 }

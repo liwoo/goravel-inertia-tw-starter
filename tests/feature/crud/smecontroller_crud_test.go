@@ -58,7 +58,17 @@ func (s *SmeControllerCRUDTestSuite) TearDownSuite() {
 }
 
 func (s *SmeControllerCRUDTestSuite) SetupTest() {
-	// Clean database
+	// Clean any existing test data first (in case previous test failed to clean up)
+	if orm := facades.Orm(); orm != nil {
+		// Delete child records first to respect foreign key constraints
+		orm.Query().Exec("DELETE FROM primary_business_owner")
+		orm.Query().Exec("DELETE FROM additional_business_members")
+		orm.Query().Exec("DELETE FROM business_formalisation")
+		orm.Query().Exec("DELETE FROM business_employee_summary")
+		orm.Query().Exec("DELETE FROM smes")
+	}
+
+	// Refresh database (runs migrations)
 	s.RefreshDatabase()
 
 	// Create test user with permissions
@@ -66,11 +76,22 @@ func (s *SmeControllerCRUDTestSuite) SetupTest() {
 }
 
 func (s *SmeControllerCRUDTestSuite) TearDownTest() {
-	// Clean up test data
+	// Clean up test data in the correct order (respecting foreign key constraints)
 	if orm := facades.Orm(); orm != nil {
+		// First delete child records that reference smes
+		orm.Query().Exec("DELETE FROM primary_business_owner")
+		orm.Query().Exec("DELETE FROM additional_business_members")
+		orm.Query().Exec("DELETE FROM business_formalisation")
+		orm.Query().Exec("DELETE FROM business_employee_summary")
+
+		// Now we can safely delete smes
 		orm.Query().Exec("DELETE FROM smes")
-		orm.Query().Exec("DELETE FROM users WHERE email = 'smetest@example.com'")
+
+		// Clean up user-related records
 		orm.Query().Exec("DELETE FROM user_roles")
+		orm.Query().Exec("DELETE FROM users WHERE email = 'smetest@example.com'")
+
+		// Clean up permissions and roles
 		orm.Query().Exec("DELETE FROM role_permissions")
 		orm.Query().Exec("DELETE FROM roles WHERE slug = 'sme_admin'")
 		orm.Query().Exec("DELETE FROM permissions WHERE slug LIKE 'smes_%'")
@@ -1330,8 +1351,8 @@ func (s *SmeControllerCRUDTestSuite) TestUBIGeneration() {
 	s.NotNil(data["usme_number"], "UBI should be generated as usme_number")
 	ubi := data["usme_number"].(string)
 
-	// Verify UBI format: MW-YYYY-DD-CT-NNNNNN-C (DD is now 2-letter code)
-	s.Regexp(`^MW-\d{4}-[A-Z]{2}-M[1-4]-\d{6}-\d$`, ubi, "UBI should match expected format")
+	// Verify UBI format: MW-YYYY-DD-CT-NNNNNN-C (DD and CT are now 2-letter codes)
+	s.Regexp(`^MW-\d{4}-[A-Z]{2}-[A-Z]{2}-\d{6}-\d$`, ubi, "UBI should match expected format")
 
 	// Verify components
 	parts := strings.Split(ubi, "-")
@@ -1346,8 +1367,8 @@ func (s *SmeControllerCRUDTestSuite) TestUBIGeneration() {
 	// District code should be LI for Lilongwe
 	s.Equal("LI", parts[2], "District code for Lilongwe should be LI")
 
-	// Category should be M1 for Micro
-	s.Equal("M1", parts[3], "Category should be M1 for Micro business")
+	// Category should be MI for Micro (first 2 letters of "Micro")
+	s.Equal("MI", parts[3], "Category should be MI for Micro business")
 
 	// Sequential number should be 6 digits
 	s.Len(parts[4], 6, "Sequential number should be 6 digits")
@@ -1393,14 +1414,19 @@ func (s *SmeControllerCRUDTestSuite) TestUBIDistrictCodes() {
 
 func (s *SmeControllerCRUDTestSuite) TestUBIBusinessCategories() {
 	// Test that different business categories get correct codes
+	// Category codes are now dynamic based on the first 2 letters of the category name
 	testCases := []struct {
 		category     string
 		expectedCode string
 	}{
-		{"Micro", "M1"},
-		{"Small", "M2"},
-		{"Medium", "M3"},
-		{"Large", "M4"},
+		{"Micro", "MI"},                // First 2 letters: MI
+		{"Small", "SM"},                // First 2 letters: SM
+		{"Medium", "ME"},               // First 2 letters: ME
+		{"Large", "LA"},                // First 2 letters: LA
+		{"Micro Enterprise", "ME"},     // First letters of first 2 words: M + E = ME
+		{"Small Business", "SB"},       // First letters of first 2 words: S + B = SB
+		{"Medium Enterprise", "ME"},    // First letters of first 2 words: M + E = ME
+		{"Social Enterprise", "SE"},    // First letters of first 2 words: S + E = SE
 	}
 
 	for _, tc := range testCases {
@@ -1409,7 +1435,7 @@ func (s *SmeControllerCRUDTestSuite) TestUBIBusinessCategories() {
 			"business_category":            tc.category,
 			"sector":                       "Services",
 			"contact_phone":                "+265999CAT",
-			"contact_email":                fmt.Sprintf("cat-%s@test.mw", strings.ToLower(tc.category)),
+			"contact_email":                fmt.Sprintf("cat-%s@test.mw", strings.ToLower(strings.ReplaceAll(tc.category, " ", ""))),
 			"district":                     "Lilongwe",
 			"business_improvement_aspects": []string{"Operations"},
 			"business_accessed_financing":  []string{"Grants"},

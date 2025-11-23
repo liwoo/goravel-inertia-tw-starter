@@ -136,8 +136,6 @@ func (r *SmeCreateRequest) ToCreateData() map[string]interface{} {
 		// region is inferred from district
 		"district":                     r.District,
 		"traditional_authority":        r.TraditionalAuthority,
-		"ip_address":                   r.IpAddress,
-		"user_agent":                   r.UserAgent,
 		"business_improvement_aspects": r.BusinessImprovementAspects,
 		"business_accessed_financing":  r.BusinessAccessedFinancing,
 	}

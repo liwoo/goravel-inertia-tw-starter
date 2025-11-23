@@ -50,6 +50,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251020064006AddJsonFieldsToSmesTable{},
 		&migrations.M20251020113904AddCascadeDeleteToSmeRelationships{},
 		&migrations.M20251020212109AddCodeToSmeConfigTable{},
+		&migrations.M20251111212220FixSmeConfigIndexDropOrder{},
 	}
 }
 

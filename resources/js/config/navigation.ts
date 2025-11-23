@@ -9,7 +9,7 @@ import {
     FileIcon,
     FileTextIcon,
     HelpCircleIcon,
-    LayoutDashboardIcon, PercentSquareIcon, PersonStandingIcon,
+    LayoutDashboardIcon, NotebookTabsIcon, NotepadText, PercentSquareIcon, PersonStandingIcon,
     SettingsIcon,
     ShieldIcon, User2Icon,
     UsersIcon,
@@ -160,9 +160,16 @@ export const navigationConfig: NavigationConfig = {
     ],
     documents: [
         {
-            name: "Configuration",
+            name: "Configurations",
             url: "/admin/configs",
             icon: CogIcon,
+            requiredService: "config",
+            requiredAction: "read" as const,
+        },
+        {
+            name: "Applications",
+            url: "#",
+            icon: NotebookTabsIcon,
             requiredService: "config",
             requiredAction: "read" as const,
         },

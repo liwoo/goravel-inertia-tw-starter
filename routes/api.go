@@ -84,10 +84,10 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/smes/{id}/business_employee_summary", smeController.FetchBusinessEmployeeSummary)
 
 		//primary business owners
-		optionalAuthRouter.Get("/primary_business_owners", primaryBusinessOwnerController.Index)
-		optionalAuthRouter.Get("/primary_business_owners/search", primaryBusinessOwnerController.Search)
-		optionalAuthRouter.Get("/primary_business_owners/filters", primaryBusinessOwnerController.FilterMetadata)
-		optionalAuthRouter.Get("/primary_business_owners/{id}", primaryBusinessOwnerController.Show)
+		optionalAuthRouter.Get("/primary-business-owners", primaryBusinessOwnerController.Index)
+		optionalAuthRouter.Get("/primary-business-owners/search", primaryBusinessOwnerController.Search)
+		optionalAuthRouter.Get("/primary-business-owners/filters", primaryBusinessOwnerController.FilterMetadata)
+		optionalAuthRouter.Get("/primary-business-owners/{id}", primaryBusinessOwnerController.Show)
 
 		//additional business members
 		optionalAuthRouter.Get("/additional_business_members", additionalBusinessMemberController.Index)
@@ -123,9 +123,9 @@ func Api(router route.Router) {
 		protectedRouter.Delete("/smes/{id}", smeController.Delete)
 
 		// Primary Business Owner routes
-		protectedRouter.Post("/primary_business_owners", primaryBusinessOwnerController.Store)
-		protectedRouter.Put("/primary_business_owners/{id}", primaryBusinessOwnerController.Update)
-		protectedRouter.Delete("/primary_business_owners/{id}", primaryBusinessOwnerController.Delete)
+		protectedRouter.Post("/primary-business-owners", primaryBusinessOwnerController.Store)
+		protectedRouter.Put("/primary-business-owners/{id}", primaryBusinessOwnerController.Update)
+		protectedRouter.Delete("/primary-business-owners/{id}", primaryBusinessOwnerController.Delete)
 
 		// Additional Business Member routes
 		protectedRouter.Post("/additional_business_members", additionalBusinessMemberController.Store)

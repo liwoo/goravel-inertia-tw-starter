@@ -306,6 +306,18 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
     });
   };
 
+  const removeSmeOnRelationshipError = (smeId: number) => {
+    // Implement logic to remove SME if there is a relationship error
+    // This could involve calling an API endpoint to delete the SME by ID
+    axios.delete(`/api/smes/${smeId}`)
+      .then(() => {
+        console.log(`SME with ID ${smeId} removed due to relationship error.`);
+      })
+      .catch((error) => {
+        console.error(`Failed to remove SME with ID ${smeId}:`, error);
+      });
+  }
+
   const addMember = () => {
     if (newMember.firstName && newMember.lastName && newMember.nationalIdNumber && newMember.phoneNumber) {
       const newMembersList = [...additionalMembers, newMember];
@@ -373,14 +385,16 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
 
       if (!smeResponse.ok) {
         const errorData = await smeResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create SME');
+        onError?.(errorData);
+        return;
       }
 
       const smeData = await smeResponse.json();
       const smeId = smeData.data.id;
 
+
       // Step 2: Create Primary Business Owner
-      const primaryOwnerResponse = await fetch('/api/primary_business_owners', {
+      const primaryOwnerResponse = await fetch('/api/primary-business-owners', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -395,7 +409,9 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
 
       if (!primaryOwnerResponse.ok) {
         const errorData = await primaryOwnerResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create Primary Business Owner');
+        onError?.(errorData);
+        removeSmeOnRelationshipError(smeId);
+        return;
       }
 
       // Step 3: Create Additional Business Members (if any)
@@ -986,6 +1002,7 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
                       value={primaryOwner.dateOfBirth}
                       onChange={(e) => setPrimaryOwner({ ...primaryOwner, dateOfBirth: e.target.value })}
                       className={errors.dateOfBirth ? 'border-destructive' : ''}
+                      required
                     />
                     {errors.dateOfBirth && <p className="text-sm text-destructive">{errors.dateOfBirth}</p>}
                   </div>
