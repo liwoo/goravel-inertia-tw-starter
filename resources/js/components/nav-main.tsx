@@ -1,6 +1,6 @@
 import { MailIcon, PlusCircleIcon, Command, type LucideIcon } from "lucide-react"
 // @ts-ignore
-import { Link, router } from '@inertiajs/react'
+import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect } from 'react'
 
 import { Button } from "@/components/ui/button"
@@ -29,6 +29,19 @@ export function NavMain({
     icon?: LucideIcon
   }[]
 }) {
+  const { url } = usePage();
+
+  // Check if a menu item is active based on current URL
+  const isActive = (itemUrl: string) => {
+    // Handle exact match for dashboard
+    if (itemUrl === '/dashboard') {
+      return url === '/dashboard';
+    }
+    // For other routes, check if current URL starts with the item URL
+    // This handles /admin/smes, /admin/smes/1, /admin/smes/create, etc.
+    return url.startsWith(itemUrl);
+  };
+
   // Keyboard shortcuts for navigation items (Cmd/Ctrl + 1-9)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -88,22 +101,29 @@ export function NavMain({
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarMenu>
-          {items.map((item, index) => (
-            <SidebarMenuItem key={item.title}>
-              <Link href={item.url}>
-              <SidebarMenuButton tooltip={item.title} className="group">
-                {item.icon && <item.icon />}
-                <span>{item.title}</span>
-                {index < 9 && (
-                  <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-data-[collapsible=icon]:hidden">
-                    <Command className="h-3 w-3" />
-                    {index + 1}
-                  </kbd>
-                )}
-              </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
+          {items.map((item, index) => {
+            const active = isActive(item.url);
+            return (
+              <SidebarMenuItem key={item.title}>
+                <Link href={item.url}>
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    className="group"
+                    isActive={active}
+                  >
+                    {item.icon && <item.icon />}
+                    <span>{item.title}</span>
+                    {index < 9 && (
+                      <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-data-[collapsible=icon]:hidden">
+                        <Command className="h-3 w-3" />
+                        {index + 1}
+                      </kbd>
+                    )}
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

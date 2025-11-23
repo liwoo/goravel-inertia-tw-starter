@@ -50,17 +50,14 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251020064006AddJsonFieldsToSmesTable{},
 		&migrations.M20251020113904AddCascadeDeleteToSmeRelationships{},
 		&migrations.M20251020212109AddCodeToSmeConfigTable{},
-<<<<<<< HEAD
 		&migrations.M20251111212220FixSmeConfigIndexDropOrder{},
 		&migrations.M20251123031832AddGenderToAdditionalBusinessMembersTable{},
 		&migrations.M20251123050933CreateEventsTable{},
 		&migrations.M20251123051707AddAuditFieldsToEventsTable{},
 		&migrations.M20251123124316CreateProcurementNoticesTable{},
 		&migrations.M20251123130451AddAuditFieldsToProcurementNoticesTable{},
-=======
 		&migrations.M20251118210300CreateBdspsTable{},
 		&migrations.M20251119090154AddAuditFieldsToBdspsTable{},
->>>>>>> e8e80b035946b49742ba2a37a1c2c613156948bd
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {
