@@ -10,9 +10,12 @@ import (
 	"smedi-sme-db/app/http/controllers/auth/roles"
 	"smedi-sme-db/app/http/controllers/auth/users"
 	"smedi-sme-db/app/http/controllers/books"
+	"smedi-sme-db/app/http/controllers/business_formalisations"
 	"smedi-sme-db/app/http/controllers/configs"
+	"smedi-sme-db/app/http/controllers/events"
 	"smedi-sme-db/app/http/controllers/messages"
 	"smedi-sme-db/app/http/controllers/primary_business_owners"
+	"smedi-sme-db/app/http/controllers/procurement_notices"
 	"smedi-sme-db/app/http/controllers/smes"
 
 	"smedi-sme-db/app/http/middleware"
@@ -43,6 +46,9 @@ func Api(router route.Router) {
 	smeController := smes.NewSmeController()
 	primaryBusinessOwnerController := primary_business_owners.NewPrimaryBusinessOwnerController()
 	additionalBusinessMemberController := additional_business_members.NewAdditionalBusinessMemberController()
+	businessFormalisationController := business_formalisations.NewBusinessFormalisationController()
+	eventController := events.NewEventController()
+	procurementNoticeController := procurement_notices.NewProcurementNoticeController()
 
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
@@ -95,6 +101,22 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/additional_business_members/filters", additionalBusinessMemberController.FilterMetadata)
 		optionalAuthRouter.Get("/additional_business_members/{id}", additionalBusinessMemberController.Show)
 
+		//business formalisation
+		optionalAuthRouter.Get("/business-formalisations", businessFormalisationController.Index)
+		optionalAuthRouter.Get("/business-formalisations/search", businessFormalisationController.Search)
+		optionalAuthRouter.Get("/business-formalisations/{id}", businessFormalisationController.Show)
+
+		//events
+		optionalAuthRouter.Get("/events", eventController.Index)
+		optionalAuthRouter.Get("/events/search", eventController.Search)
+		optionalAuthRouter.Get("/events/{id}", eventController.Show)
+
+		//procurement notices
+		optionalAuthRouter.Get("/procurement-notices", procurementNoticeController.Index)
+		optionalAuthRouter.Get("/procurement-notices/search", procurementNoticeController.Search)
+		optionalAuthRouter.Get("/procurement-notices/filters", procurementNoticeController.FilterMetadata)
+		optionalAuthRouter.Get("/procurement-notices/{id}", procurementNoticeController.Show)
+
 	})
 
 	// Protected routes (require authentication)
@@ -131,6 +153,21 @@ func Api(router route.Router) {
 		protectedRouter.Post("/additional_business_members", additionalBusinessMemberController.Store)
 		protectedRouter.Put("/additional_business_members/{id}", additionalBusinessMemberController.Update)
 		protectedRouter.Delete("/additional_business_members/{id}", additionalBusinessMemberController.Delete)
+
+		// Business Formalisation routes
+		protectedRouter.Post("/business-formalisations", businessFormalisationController.Store)
+		protectedRouter.Put("/business-formalisations/{id}", businessFormalisationController.Update)
+		protectedRouter.Delete("/business-formalisations/{id}", businessFormalisationController.Delete)
+
+		// Event routes
+		protectedRouter.Post("/events", eventController.Store)
+		protectedRouter.Put("/events/{id}", eventController.Update)
+		protectedRouter.Delete("/events/{id}", eventController.Delete)
+
+		// Procurement Notice routes
+		protectedRouter.Post("/procurement-notices", procurementNoticeController.Store)
+		protectedRouter.Put("/procurement-notices/{id}", procurementNoticeController.Update)
+		protectedRouter.Delete("/procurement-notices/{id}", procurementNoticeController.Delete)
 
 		// Role management routes
 		protectedRouter.Get("/roles", rolesController.Index)

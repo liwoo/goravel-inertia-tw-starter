@@ -1,6 +1,10 @@
 package requests
 
 import (
+	"errors"
+	"smedi-sme-db/app/helpers"
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
 )
 
@@ -106,14 +110,51 @@ func (r *SmeCreateRequest) Authorize(ctx http.Context) error {
 
 // PrepareForValidation allows modification of input before validation
 func (r *SmeCreateRequest) PrepareForValidation(ctx http.Context) error {
-	// TODO: Add data preparation logic
-	// Example: Normalize, trim, or set default values
+	validator := helpers.NewMalawiValidator()
+
+	// Format phone number to standard +265 format
+	if r.ContactPhone != "" {
+		r.ContactPhone = validator.FormatPhoneNumber(r.ContactPhone)
+	}
+
+	// Format business registration number if provided
+	if r.RegistrationNumber != nil && *r.RegistrationNumber != "" {
+		formatted := validator.FormatBusinessRegistration(*r.RegistrationNumber)
+		r.RegistrationNumber = &formatted
+	}
+
+	// Trim and standardize TIN if provided
+	if r.TaxIdentificationNumber != nil && *r.TaxIdentificationNumber != "" {
+		trimmed := strings.TrimSpace(*r.TaxIdentificationNumber)
+		r.TaxIdentificationNumber = &trimmed
+	}
+
 	return nil
 }
 
 // PassedValidation is called after validation passes
 func (r *SmeCreateRequest) PassedValidation(ctx http.Context) error {
-	// TODO: Add post-validation logic if needed
+	validator := helpers.NewMalawiValidator()
+
+	// Validate phone number format
+	if !validator.ValidatePhoneNumber(r.ContactPhone) {
+		return errors.New("contact phone must be a valid Malawian phone number (+265 followed by 9 digits)")
+	}
+
+	// Validate business registration if provided
+	if r.RegistrationNumber != nil && *r.RegistrationNumber != "" {
+		if !validator.ValidateBusinessRegistration(*r.RegistrationNumber) {
+			return errors.New("registration number must be in format BRNR-XXXXXX (e.g., BRNR-EP5CWE3)")
+		}
+	}
+
+	// Validate TIN if provided
+	if r.TaxIdentificationNumber != nil && *r.TaxIdentificationNumber != "" {
+		if !validator.ValidateTIN(*r.TaxIdentificationNumber) {
+			return errors.New("tax identification number must be exactly 8 digits (e.g., 70543634)")
+		}
+	}
+
 	return nil
 }
 

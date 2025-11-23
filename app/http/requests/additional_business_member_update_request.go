@@ -1,7 +1,9 @@
 package requests
 
 import (
+	"errors"
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/support/carbon"
 )
 
 // AdditionalBusinessMemberUpdateRequest handles additional_business_member update validation
@@ -9,6 +11,7 @@ type AdditionalBusinessMemberUpdateRequest struct {
 	FirstName        *string `form:"first_name" json:"first_name"`
 	LastName         *string `form:"last_name" json:"last_name"`
 	OtherNames       *string `form:"other_names" json:"other_names"`
+	Gender           *string `form:"gender" json:"gender"`
 	Nationality      *string `form:"nationality" json:"nationality"`
 	NationalIdNumber *string `form:"national_id_number" json:"national_id_number"`
 	DateOfBirth      *string `form:"date_of_birth" json:"date_of_birth"`
@@ -45,8 +48,10 @@ func (r *AdditionalBusinessMemberUpdateRequest) Rules(ctx http.Context) map[stri
 		rules["national_id_number"] = "required|max_len:50"
 	}
 	// Only validate DateOfBirth if provided
+	// Note: date_of_birth validation removed because the 'date' validator doesn't work with *string
+	// Date parsing/validation happens in ToUpdateData() method instead
 	if r.DateOfBirth != nil {
-		rules["date_of_birth"] = "date"
+		// Skip validation - will be validated during parsing
 	}
 	// Only validate Email if provided
 	if r.Email != nil {
@@ -119,8 +124,14 @@ func (r *AdditionalBusinessMemberUpdateRequest) Authorize(ctx http.Context) erro
 
 // PrepareForValidation allows modification of input before validation
 func (r *AdditionalBusinessMemberUpdateRequest) PrepareForValidation(ctx http.Context) error {
-	// TODO: Add data preparation logic for updates
-	// Example: Normalize data if provided
+	// Validate date_of_birth format if provided
+	if r.DateOfBirth != nil && *r.DateOfBirth != "" {
+		parsedDate := carbon.Parse(*r.DateOfBirth)
+		if parsedDate.Error != nil {
+			// Return a validation error that will be caught by the framework
+			return errors.New("date_of_birth: Date of Birth must be a valid date")
+		}
+	}
 	return nil
 }
 
@@ -145,6 +156,10 @@ func (r *AdditionalBusinessMemberUpdateRequest) ToUpdateData() map[string]interf
 	if r.OtherNames != nil {
 		data["other_names"] = *r.OtherNames
 	}
+	// Only include Gender if provided
+	if r.Gender != nil {
+		data["gender"] = *r.Gender
+	}
 	// Only include Nationality if provided
 	if r.Nationality != nil {
 		data["nationality"] = *r.Nationality
@@ -153,9 +168,20 @@ func (r *AdditionalBusinessMemberUpdateRequest) ToUpdateData() map[string]interf
 	if r.NationalIdNumber != nil {
 		data["national_id_number"] = *r.NationalIdNumber
 	}
-	// Only include DateOfBirth if provided
+	// Only include DateOfBirth if provided and convert to carbon.DateTime
 	if r.DateOfBirth != nil {
-		data["date_of_birth"] = *r.DateOfBirth
+		if *r.DateOfBirth != "" {
+			parsedDate := carbon.Parse(*r.DateOfBirth)
+			if parsedDate.Error == nil {
+				data["date_of_birth"] = carbon.NewDateTime(parsedDate)
+			} else {
+				// If parsing fails, set to nil
+				data["date_of_birth"] = nil
+			}
+		} else {
+			// Empty string means clear the date
+			data["date_of_birth"] = nil
+		}
 	}
 	// Only include Email if provided
 	if r.Email != nil {

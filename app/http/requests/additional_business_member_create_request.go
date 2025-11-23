@@ -1,7 +1,9 @@
 package requests
 
 import (
+	"errors"
 	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/support/carbon"
 )
 
 // AdditionalBusinessMemberCreateRequest handles additional_business_member creation validation
@@ -9,6 +11,7 @@ type AdditionalBusinessMemberCreateRequest struct {
 	FirstName        string  `form:"first_name" json:"first_name"`
 	LastName         string  `form:"last_name" json:"last_name"`
 	OtherNames       *string `form:"other_names" json:"other_names"`
+	Gender           *string `form:"gender" json:"gender"`
 	Nationality      string  `form:"nationality" json:"nationality"`
 	NationalIdNumber string  `form:"national_id_number" json:"national_id_number"`
 	DateOfBirth      *string `form:"date_of_birth" json:"date_of_birth"`
@@ -27,12 +30,13 @@ func (r *AdditionalBusinessMemberCreateRequest) Rules(ctx http.Context) map[stri
 		"other_names":        "max_len:100",
 		"nationality":        "required|max_len:100",
 		"national_id_number": "required|max_len:50",
-		"date_of_birth":      "date",
-		"email":              "email|max_len:100",
-		"phone_number":       "required|max_len:20",
-		"is_intern":          "boolean",
-		"is_part_time":       "boolean",
-		"sme_id":             "required|numeric",
+		// Note: date_of_birth validation removed because the 'date' validator doesn't work with *string
+		// Date parsing/validation happens in ToCreateData() method instead
+		"email":       "email|max_len:100",
+		"phone_number": "required|max_len:20",
+		"is_intern":   "boolean",
+		"is_part_time": "boolean",
+		"sme_id":      "required|numeric",
 	}
 }
 
@@ -78,8 +82,14 @@ func (r *AdditionalBusinessMemberCreateRequest) Authorize(ctx http.Context) erro
 
 // PrepareForValidation allows modification of input before validation
 func (r *AdditionalBusinessMemberCreateRequest) PrepareForValidation(ctx http.Context) error {
-	// TODO: Add data preparation logic
-	// Example: Normalize, trim, or set default values
+	// Validate date_of_birth format if provided
+	if r.DateOfBirth != nil && *r.DateOfBirth != "" {
+		parsedDate := carbon.Parse(*r.DateOfBirth)
+		if parsedDate.Error != nil {
+			// Return a validation error that will be caught by the framework
+			return errors.New("date_of_birth: Date of Birth must be a valid date")
+		}
+	}
 	return nil
 }
 
@@ -95,14 +105,26 @@ func (r *AdditionalBusinessMemberCreateRequest) ToCreateData() map[string]interf
 		"first_name":         r.FirstName,
 		"last_name":          r.LastName,
 		"other_names":        r.OtherNames,
+		"gender":             r.Gender,
 		"nationality":        r.Nationality,
 		"national_id_number": r.NationalIdNumber,
-		"date_of_birth":      r.DateOfBirth,
 		"email":              r.Email,
 		"phone_number":       r.PhoneNumber,
 		"is_intern":          r.IsIntern,
 		"is_part_time":       r.IsPartTime,
 		"sme_id":             r.SmeId,
+	}
+
+	// Convert date_of_birth string to carbon.DateTime if provided
+	if r.DateOfBirth != nil && *r.DateOfBirth != "" {
+		parsedDate := carbon.Parse(*r.DateOfBirth)
+		if parsedDate.Error == nil {
+			data["date_of_birth"] = carbon.NewDateTime(parsedDate)
+		} else {
+			data["date_of_birth"] = nil
+		}
+	} else {
+		data["date_of_birth"] = nil
 	}
 
 	return data

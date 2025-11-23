@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import {
   Calendar, FileText, User, FolderOpen, Phone, Mail, MapPin,
-  Building2, Globe, Users, Briefcase, CheckCircle2, XCircle, DollarSign
+  Building2, Globe, Users, Briefcase, CheckCircle2, XCircle, DollarSign,
+  TrendingUp, Shield, CreditCard, Award
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CrudDetailViewProps } from '@/types/crud';
 import { Sme } from '@/types/sme';
+import { BusinessFormalisation } from '@/types/business_formalisation';
 import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { EmptyState } from '@/components/EmptyState';
 
 export function SmeDetailView({
   item: sme,
@@ -20,7 +24,7 @@ export function SmeDetailView({
   const [primaryOwner, setPrimaryOwner] = useState<any>(null);
   const [additionalMembers, setAdditionalMembers] = useState<any[]>([]);
   const [employeeSummary, setEmployeeSummary] = useState<any>(null);
-  const [formalisation, setFormalisation] = useState<any>(null);
+  const [formalisation, setFormalisation] = useState<BusinessFormalisation | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,15 +64,10 @@ export function SmeDetailView({
     });
   };
 
-  const DetailRow = ({ icon: Icon, label, value }: { icon: any; label: string; value: any }) => (
-    <div className="flex items-start gap-3">
-      <div className="p-2 rounded-lg bg-muted">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </div>
-      <div className="flex-1 space-y-1">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="font-medium text-foreground">{value || '-'}</p>
-      </div>
+  const DetailRow = ({ label, value }: { label: string; value: any }) => (
+    <div className="space-y-1">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="font-medium text-foreground">{value || '-'}</p>
     </div>
   );
 
@@ -109,14 +108,14 @@ export function SmeDetailView({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DetailRow icon={FileText} label="USME Number" value={sme.usmeNumber} />
-                <DetailRow icon={Building2} label="Business Name" value={sme.name} />
-                <DetailRow icon={FileText} label="Registration Number" value={sme.registrationNumber} />
-                <DetailRow icon={FileText} label="Tax Identification Number" value={sme.taxIdentificationNumber} />
-                <DetailRow icon={Calendar} label="Operational Since" value={formatDate(sme.operationalStartDate)} />
-                <DetailRow icon={FolderOpen} label="Business Category" value={sme.businessCategory} />
-                <DetailRow icon={Briefcase} label="Sector" value={sme.sector} />
-                <DetailRow icon={Briefcase} label="Sub Sector" value={sme.subSector} />
+                <DetailRow label="USME Number" value={sme.usmeNumber} />
+                <DetailRow label="Business Name" value={sme.name} />
+                <DetailRow label="Registration Number" value={sme.registrationNumber} />
+                <DetailRow label="Tax Identification Number" value={sme.taxIdentificationNumber} />
+                <DetailRow label="Operational Since" value={formatDate(sme.operationalStartDate)} />
+                <DetailRow label="Business Category" value={sme.businessCategory} />
+                <DetailRow label="Sector" value={sme.sector} />
+                <DetailRow label="Sub Sector" value={sme.subSector} />
               </div>
 
               <Separator />
@@ -131,9 +130,9 @@ export function SmeDetailView({
               <div className="space-y-4">
                 <h4 className="font-semibold">Contact Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DetailRow icon={Phone} label="Phone" value={sme.contactPhone} />
-                  <DetailRow icon={Mail} label="Email" value={sme.contactEmail} />
-                  <DetailRow icon={Globe} label="Website" value={sme.website} />
+                  <DetailRow label="Phone" value={sme.contactPhone} />
+                  <DetailRow label="Email" value={sme.contactEmail} />
+                  <DetailRow label="Website" value={sme.website} />
                 </div>
               </div>
 
@@ -142,11 +141,11 @@ export function SmeDetailView({
               <div className="space-y-4">
                 <h4 className="font-semibold">Location</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DetailRow icon={MapPin} label="Region" value={sme.region} />
-                  <DetailRow icon={MapPin} label="District" value={sme.district} />
-                  <DetailRow icon={MapPin} label="Traditional Authority" value={sme.traditionalAuthority} />
-                  <DetailRow icon={MapPin} label="Physical Address" value={sme.physicalAddress} />
-                  <DetailRow icon={MapPin} label="Postal Address" value={sme.postalAddress} />
+                  <DetailRow label="Region" value={sme.region} />
+                  <DetailRow label="District" value={sme.district} />
+                  <DetailRow label="Traditional Authority" value={sme.traditionalAuthority} />
+                  <DetailRow label="Physical Address" value={sme.physicalAddress} />
+                  <DetailRow label="Postal Address" value={sme.postalAddress} />
                 </div>
               </div>
 
@@ -202,23 +201,18 @@ export function SmeDetailView({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DetailRow icon={User} label="First Name" value={primaryOwner.firstName} />
-                  <DetailRow icon={User} label="Last Name" value={primaryOwner.lastName} />
-                  <DetailRow icon={User} label="Other Names" value={primaryOwner.otherNames} />
-                  <DetailRow icon={FileText} label="National ID" value={primaryOwner.nationalIdNumber} />
-                  <DetailRow icon={Globe} label="Nationality" value={primaryOwner.nationality} />
-                  <DetailRow icon={Calendar} label="Date of Birth" value={formatDate(primaryOwner.dateOfBirth)} />
-                  <DetailRow icon={User} label="Gender" value={primaryOwner.gender} />
-                  <DetailRow icon={FileText} label="Education Level" value={primaryOwner.educationLevel} />
-                  <DetailRow icon={FileText} label="Malawian Status" value={primaryOwner.malawianStatus} />
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm text-muted-foreground">Special Needs</p>
-                      <BooleanBadge value={primaryOwner.hasSpecialNeeds} />
-                    </div>
+                  <DetailRow label="First Name" value={primaryOwner.firstName} />
+                  <DetailRow label="Last Name" value={primaryOwner.lastName} />
+                  <DetailRow label="Other Names" value={primaryOwner.otherNames} />
+                  <DetailRow label="National ID" value={primaryOwner.nationalIdNumber} />
+                  <DetailRow label="Nationality" value={primaryOwner.nationality} />
+                  <DetailRow label="Date of Birth" value={formatDate(primaryOwner.dateOfBirth)} />
+                  <DetailRow label="Gender" value={primaryOwner.gender} />
+                  <DetailRow label="Education Level" value={primaryOwner.educationLevel} />
+                  <DetailRow label="Malawian Status" value={primaryOwner.malawianStatus} />
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Special Needs</p>
+                    <BooleanBadge value={primaryOwner.hasSpecialNeeds} />
                   </div>
                 </div>
 
@@ -227,9 +221,9 @@ export function SmeDetailView({
                 <div className="space-y-4">
                   <h4 className="font-semibold">Contact Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DetailRow icon={Phone} label="Phone Number" value={primaryOwner.phoneNumber} />
-                    <DetailRow icon={Phone} label="Landline" value={primaryOwner.landlineNumber} />
-                    <DetailRow icon={Mail} label="Email" value={primaryOwner.email} />
+                    <DetailRow label="Phone Number" value={primaryOwner.phoneNumber} />
+                    <DetailRow label="Landline" value={primaryOwner.landlineNumber} />
+                    <DetailRow label="Email" value={primaryOwner.email} />
                   </div>
                 </div>
 
@@ -238,11 +232,11 @@ export function SmeDetailView({
                 <div className="space-y-4">
                   <h4 className="font-semibold">Location</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DetailRow icon={MapPin} label="Region" value={primaryOwner.region} />
-                    <DetailRow icon={MapPin} label="District" value={primaryOwner.district} />
-                    <DetailRow icon={MapPin} label="Traditional Authority" value={primaryOwner.traditionalAuthority} />
-                    <DetailRow icon={MapPin} label="Physical Address" value={primaryOwner.physicalAddress} />
-                    <DetailRow icon={MapPin} label="Postal Address" value={primaryOwner.postalAddress} />
+                    <DetailRow label="Region" value={primaryOwner.region} />
+                    <DetailRow label="District" value={primaryOwner.district} />
+                    <DetailRow label="Traditional Authority" value={primaryOwner.traditionalAuthority} />
+                    <DetailRow label="Physical Address" value={primaryOwner.physicalAddress} />
+                    <DetailRow label="Postal Address" value={primaryOwner.postalAddress} />
                   </div>
                 </div>
 
@@ -251,19 +245,19 @@ export function SmeDetailView({
                 <div className="space-y-4">
                   <h4 className="font-semibold">Alternative Contact</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DetailRow icon={User} label="Contact Name" value={primaryOwner.altContactName} />
-                    <DetailRow icon={User} label="Relationship" value={primaryOwner.altContactRelationship} />
-                    <DetailRow icon={Phone} label="Contact Phone" value={primaryOwner.altContactPhone} />
+                    <DetailRow label="Contact Name" value={primaryOwner.altContactName} />
+                    <DetailRow label="Relationship" value={primaryOwner.altContactRelationship} />
+                    <DetailRow label="Contact Phone" value={primaryOwner.altContactPhone} />
                   </div>
                 </div>
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent className="py-10">
-                <p className="text-center text-muted-foreground">No primary business owner information available</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={User}
+              title="No Primary Owner"
+              description="Primary business owner information has not been added yet."
+            />
           )}
         </TabsContent>
 
@@ -288,14 +282,14 @@ export function SmeDetailView({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <DetailRow icon={User} label="First Name" value={member.firstName} />
-                      <DetailRow icon={User} label="Last Name" value={member.lastName} />
-                      <DetailRow icon={User} label="Other Names" value={member.otherNames} />
-                      <DetailRow icon={FileText} label="National ID" value={member.nationalIdNumber} />
-                      <DetailRow icon={Globe} label="Nationality" value={member.nationality} />
-                      <DetailRow icon={Calendar} label="Date of Birth" value={formatDate(member.dateOfBirth)} />
-                      <DetailRow icon={Phone} label="Phone Number" value={member.phoneNumber} />
-                      <DetailRow icon={Mail} label="Email" value={member.email} />
+                      <DetailRow label="First Name" value={member.firstName} />
+                      <DetailRow label="Last Name" value={member.lastName} />
+                      <DetailRow label="Other Names" value={member.otherNames} />
+                      <DetailRow label="National ID" value={member.nationalIdNumber} />
+                      <DetailRow label="Nationality" value={member.nationality} />
+                      <DetailRow label="Date of Birth" value={formatDate(member.dateOfBirth)} />
+                      <DetailRow label="Phone Number" value={member.phoneNumber} />
+                      <DetailRow label="Email" value={member.email} />
                     </div>
 
                     <Separator />
@@ -315,11 +309,11 @@ export function SmeDetailView({
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="py-10">
-                <p className="text-center text-muted-foreground">No additional business members</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Users}
+              title="No Team Members"
+              description="No additional business members have been added yet."
+            />
           )}
         </TabsContent>
 
@@ -427,11 +421,11 @@ export function SmeDetailView({
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent className="py-10">
-                <p className="text-center text-muted-foreground">No employee summary available</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Briefcase}
+              title="No Employee Summary"
+              description="Employee summary data has not been recorded yet."
+            />
           )}
         </TabsContent>
 
@@ -444,136 +438,298 @@ export function SmeDetailView({
               </CardContent>
             </Card>
           ) : formalisation ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Business Formalisation
-                </CardTitle>
-                <CardDescription>Formal business registration and compliance status</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
+            <div className="space-y-6">
+              {/* Formalisation Score Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Award className="h-5 w-5" />
+                      Formalisation Score
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm text-muted-foreground">Has Bank Account</p>
-                      <BooleanBadge value={formalisation.hasBankAccount} />
-                    </div>
+                    <Badge variant={formalisation.formalisationScore >= 70 ? 'default' : formalisation.formalisationScore >= 40 ? 'secondary' : 'destructive'} className="text-lg px-4 py-1">
+                      {formalisation.formalisationScore || 0} / 100
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>Overall business formalisation assessment</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Progress value={formalisation.formalisationScore || 0} className="h-3" />
+                  <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                    <span>Informal</span>
+                    <span>Semi-Formal</span>
+                    <span>Formal</span>
                   </div>
+                </CardContent>
+              </Card>
 
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm text-muted-foreground">Has Tax Clarification</p>
-                      <BooleanBadge value={formalisation.hasTaxClarification} />
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm text-muted-foreground">Registered for VAT</p>
-                      <BooleanBadge value={formalisation.isRegisteredForVat} />
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm text-muted-foreground">Member of Association</p>
-                      <BooleanBadge value={formalisation.isMemberOfAssociation} />
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm text-muted-foreground">Is Affiliated</p>
-                      <BooleanBadge value={formalisation.isAffiliated} />
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm text-muted-foreground">Has Export License</p>
-                      <BooleanBadge value={formalisation.hasExportLicense} />
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm text-muted-foreground">Has Accessed BDS</p>
-                      <BooleanBadge value={formalisation.hasAccessedBds} />
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Financial Information</h4>
+              {/* Registration & Compliance Status */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Registration & Compliance Status
+                  </CardTitle>
+                  <CardDescription>Legal registration and tax compliance information</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-start gap-3">
                       <div className="p-2 rounded-lg bg-muted">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="flex-1 space-y-1">
-                        <p className="text-sm text-muted-foreground">Annual Turnover</p>
-                        <p className="font-medium text-foreground">
-                          {formalisation.annualTurnover ? `MWK ${formalisation.annualTurnover.toLocaleString()}` : '-'}
-                        </p>
+                        <p className="text-sm text-muted-foreground">Bank Account</p>
+                        <BooleanBadge
+                          value={formalisation.hasBankAccount}
+                          trueLabel="Has Account"
+                          falseLabel="No Account"
+                        />
                       </div>
                     </div>
 
                     <div className="flex items-start gap-3">
                       <div className="p-2 rounded-lg bg-muted">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <FileText className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="flex-1 space-y-1">
-                        <p className="text-sm text-muted-foreground">Estimated Value of Assets</p>
-                        <p className="font-medium text-foreground">
-                          {formalisation.estimatedValueOfAssets ? `MWK ${formalisation.estimatedValueOfAssets.toLocaleString()}` : '-'}
-                        </p>
+                        <p className="text-sm text-muted-foreground">Tax Clarification Certificate</p>
+                        <BooleanBadge
+                          value={formalisation.hasTaxClarification}
+                          trueLabel="Has Certificate"
+                          falseLabel="No Certificate"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Shield className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm text-muted-foreground">VAT Registration</p>
+                        <BooleanBadge
+                          value={formalisation.isRegisteredForVat}
+                          trueLabel="Registered"
+                          falseLabel="Not Registered"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm text-muted-foreground">Export License</p>
+                        <BooleanBadge
+                          value={formalisation.hasExportLicense}
+                          trueLabel="Has License"
+                          falseLabel="No License"
+                        />
                       </div>
                     </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <Separator />
+              {/* Business Associations & Support */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Business Associations & Support
+                  </CardTitle>
+                  <CardDescription>Membership and business development services</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm text-muted-foreground">Business Association</p>
+                        <BooleanBadge
+                          value={formalisation.isMemberOfAssociation}
+                          trueLabel="Member"
+                          falseLabel="Non-Member"
+                        />
+                      </div>
+                    </div>
 
-                <div className="bg-muted p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">Formalisation Score</span>
-                    <Badge variant="default" className="text-lg px-4 py-1">
-                      {formalisation.formalisationScore || 0}
-                    </Badge>
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm text-muted-foreground">Business Affiliation</p>
+                        <BooleanBadge
+                          value={formalisation.isAffiliated}
+                          trueLabel="Affiliated"
+                          falseLabel="Not Affiliated"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm text-muted-foreground">Business Development Services</p>
+                        <BooleanBadge
+                          value={formalisation.hasAccessedBds}
+                          trueLabel="Accessed"
+                          falseLabel="Not Accessed"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Financial Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Financial Information
+                  </CardTitle>
+                  <CardDescription>Business financial metrics and valuation</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Annual Turnover</p>
+                      </div>
+                      <p className="text-2xl font-bold text-foreground">
+                        {formalisation.annualTurnover ? `MWK ${formalisation.annualTurnover.toLocaleString()}` : 'Not Specified'}
+                      </p>
+                      {formalisation.annualTurnover && (
+                        <p className="text-xs text-muted-foreground">
+                          {formalisation.annualTurnover >= 1000000 ? 'Above MWK 1M' : 'Below MWK 1M'}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Estimated Value of Assets</p>
+                      </div>
+                      <p className="text-2xl font-bold text-foreground">
+                        {formalisation.estimatedValueOfAssets ? `MWK ${formalisation.estimatedValueOfAssets.toLocaleString()}` : 'Not Specified'}
+                      </p>
+                      {formalisation.estimatedValueOfAssets && (
+                        <p className="text-xs text-muted-foreground">
+                          {formalisation.estimatedValueOfAssets >= 5000000 ? 'High Value Assets' : formalisation.estimatedValueOfAssets >= 1000000 ? 'Medium Value Assets' : 'Low Value Assets'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Financial Metrics Summary */}
+                  {(formalisation.annualTurnover || formalisation.estimatedValueOfAssets) && (
+                    <>
+                      <Separator />
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Asset to Turnover Ratio</p>
+                          <p className="text-lg font-semibold">
+                            {formalisation.annualTurnover && formalisation.estimatedValueOfAssets
+                              ? `${(formalisation.estimatedValueOfAssets / formalisation.annualTurnover).toFixed(2)}x`
+                              : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Monthly Turnover</p>
+                          <p className="text-lg font-semibold">
+                            {formalisation.annualTurnover
+                              ? `MWK ${Math.round(formalisation.annualTurnover / 12).toLocaleString()}`
+                              : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Daily Turnover</p>
+                          <p className="text-lg font-semibold">
+                            {formalisation.annualTurnover
+                              ? `MWK ${Math.round(formalisation.annualTurnover / 365).toLocaleString()}`
+                              : '-'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Business Scale</p>
+                          <p className="text-lg font-semibold">
+                            {formalisation.annualTurnover >= 50000000 ? 'Large' :
+                             formalisation.annualTurnover >= 10000000 ? 'Medium' :
+                             formalisation.annualTurnover >= 1000000 ? 'Small' : 'Micro'}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Compliance Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Compliance Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {formalisation.hasBankAccount && (
+                      <Badge variant="outline" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Bank Account
+                      </Badge>
+                    )}
+                    {formalisation.hasTaxClarification && (
+                      <Badge variant="outline" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Tax Compliant
+                      </Badge>
+                    )}
+                    {formalisation.isRegisteredForVat && (
+                      <Badge variant="outline" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        VAT Registered
+                      </Badge>
+                    )}
+                    {formalisation.hasExportLicense && (
+                      <Badge variant="outline" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Export Ready
+                      </Badge>
+                    )}
+                    {formalisation.isMemberOfAssociation && (
+                      <Badge variant="outline" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Association Member
+                      </Badge>
+                    )}
+                    {formalisation.hasAccessedBds && (
+                      <Badge variant="outline" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        BDS Beneficiary
+                      </Badge>
+                    )}
+                    {!formalisation.hasBankAccount && !formalisation.hasTaxClarification && !formalisation.isRegisteredForVat && !formalisation.hasExportLicense && !formalisation.isMemberOfAssociation && !formalisation.hasAccessedBds && (
+                      <span className="text-sm text-muted-foreground">No compliance items completed</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           ) : (
-            <Card>
-              <CardContent className="py-10">
-                <p className="text-center text-muted-foreground">No formalisation data available</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Shield}
+              title="No Formalization Data"
+              description="Business formalization information has not been recorded yet."
+            />
           )}
         </TabsContent>
       </Tabs>

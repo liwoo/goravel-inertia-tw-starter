@@ -11,6 +11,7 @@ type AdditionalBusinessMember struct {
 	FirstName        string           `json:"first_name" db:"first_name"`
 	LastName         string           `json:"last_name" db:"last_name"`
 	OtherNames       *string          `json:"other_names" db:"other_names"`
+	Gender           *string          `json:"gender" db:"gender"`
 	Nationality      string           `json:"nationality" db:"nationality"`
 	NationalIdNumber string           `json:"national_id_number" db:"national_id_number"`
 	DateOfBirth      *carbon.DateTime `json:"date_of_birth" db:"date_of_birth"`

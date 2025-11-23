@@ -2,6 +2,9 @@ package requests
 
 import (
 	"fmt"
+	"smedi-sme-db/app/helpers"
+	"strings"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/support/carbon"
 	"github.com/goravel/framework/support/str"
@@ -118,13 +121,62 @@ func (r *PrimaryBusinessOwnerCreateRequest) Authorize(ctx http.Context) error {
 
 // PrepareForValidation allows modification of input before validation
 func (r *PrimaryBusinessOwnerCreateRequest) PrepareForValidation(ctx http.Context) error {
+	validator := helpers.NewMalawiValidator()
+
+	// Format phone number to standard +265 format
+	if r.PhoneNumber != "" {
+		r.PhoneNumber = validator.FormatPhoneNumber(r.PhoneNumber)
+	}
+
+	// Format landline number if provided
+	if r.LandlineNumber != nil && *r.LandlineNumber != "" {
+		formatted := validator.FormatPhoneNumber(*r.LandlineNumber)
+		r.LandlineNumber = &formatted
+	}
+
+	// Format alternative contact phone if provided
+	if r.AltContactPhone != nil && *r.AltContactPhone != "" {
+		formatted := validator.FormatPhoneNumber(*r.AltContactPhone)
+		r.AltContactPhone = &formatted
+	}
+
+	// Format National ID - uppercase and trim
+	if r.NationalIdNumber != "" {
+		r.NationalIdNumber = strings.ToUpper(strings.TrimSpace(r.NationalIdNumber))
+	}
+
 	fmt.Printf("PrepareForValidation - DateOfBirth: %T %+v\n", r.DateOfBirth, r.DateOfBirth)
 	return nil
 }
 
 // PassedValidation is called after validation passes
 func (r *PrimaryBusinessOwnerCreateRequest) PassedValidation(ctx http.Context) error {
-	// TODO: Add post-validation logic if needed
+	validator := helpers.NewMalawiValidator()
+
+	// Validate National ID format
+	if !validator.ValidateNationalID(r.NationalIdNumber) {
+		return fmt.Errorf("national ID must be exactly 8 alphanumeric characters (e.g., T6N8SARR)")
+	}
+
+	// Validate phone number format
+	if !validator.ValidatePhoneNumber(r.PhoneNumber) {
+		return fmt.Errorf("phone number must be a valid Malawian phone number (+265 followed by 9 digits)")
+	}
+
+	// Validate landline if provided
+	if r.LandlineNumber != nil && *r.LandlineNumber != "" {
+		if !validator.ValidatePhoneNumber(*r.LandlineNumber) {
+			return fmt.Errorf("landline number must be a valid Malawian phone number")
+		}
+	}
+
+	// Validate alternative contact phone if provided
+	if r.AltContactPhone != nil && *r.AltContactPhone != "" {
+		if !validator.ValidatePhoneNumber(*r.AltContactPhone) {
+			return fmt.Errorf("alternative contact phone must be a valid Malawian phone number")
+		}
+	}
+
 	return nil
 }
 

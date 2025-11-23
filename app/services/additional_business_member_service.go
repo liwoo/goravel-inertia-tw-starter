@@ -1,7 +1,11 @@
 package services
 
 import (
+	"github.com/goravel/framework/contracts/event"
+	"github.com/goravel/framework/facades"
+
 	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/events"
 	"smedi-sme-db/app/models"
 )
 
@@ -16,11 +20,12 @@ func NewAdditionalBusinessMemberService() *AdditionalBusinessMemberService {
 	service := contracts.NewServiceBuilder[models.AdditionalBusinessMember]("additional_business_members", "id").
 		WithSearchFields("first_name", "last_name", "other_names", "national_id_number", "phone_number", "email").
 		WithSortFields("id", "created_at", "updated_at", "first_name", "last_name", "date_of_birth").
-		WithFilterFields("nationality", "is_intern", "is_part_time", "sme_id").
+		WithFilterFields("nationality", "gender", "is_intern", "is_part_time", "sme_id").
 		WithValidationRules(map[string]interface{}{
 			"first_name":         "required|string|max:100",
 			"last_name":          "required|string|max:100",
 			"other_names":        "string|max:100",
+			"gender":             "string",
 			"nationality":        "required|string|max:100",
 			"national_id_number": "required|string|max:50",
 			"date_of_birth":      "date",
@@ -52,6 +57,7 @@ func (s *AdditionalBusinessMemberService) GetColumnMapping() map[string]string {
 	mapping["firstName"] = "first_name"
 	mapping["lastName"] = "last_name"
 	mapping["otherNames"] = "other_names"
+	mapping["gender"] = "gender"
 	mapping["nationalIdNumber"] = "national_id_number"
 	mapping["dateOfBirth"] = "date_of_birth"
 	mapping["phoneNumber"] = "phone_number"
@@ -117,3 +123,70 @@ func (s *AdditionalBusinessMemberService) GetFilterDefinitions() []contracts.Fil
 }
 
 // Add domain-specific methods below this line
+
+// Create overrides the base Create method to fire AdditionalBusinessMemberCreated event
+func (s *AdditionalBusinessMemberService) Create(data map[string]interface{}) (interface{}, error) {
+	// Call the base Create method
+	result, err := s.CrudServiceContract.Create(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fire the AdditionalBusinessMemberCreated event
+	if member, ok := result.(*models.AdditionalBusinessMember); ok {
+		if err := facades.Event().Job(&events.AdditionalBusinessMemberCreated{}, []event.Arg{
+			{Type: "int", Value: member.SmeId},
+		}).Dispatch(); err != nil {
+			facades.Log().Warningf("Failed to dispatch AdditionalBusinessMemberCreated event: %v", err)
+		}
+	}
+
+	return result, nil
+}
+
+// Update overrides the base Update method to fire AdditionalBusinessMemberUpdated event
+func (s *AdditionalBusinessMemberService) Update(id uint, data map[string]interface{}) (interface{}, error) {
+	// Call the base Update method
+	result, err := s.CrudServiceContract.Update(id, data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fire the AdditionalBusinessMemberUpdated event
+	if member, ok := result.(*models.AdditionalBusinessMember); ok {
+		if err := facades.Event().Job(&events.AdditionalBusinessMemberUpdated{}, []event.Arg{
+			{Type: "int", Value: member.SmeId},
+		}).Dispatch(); err != nil {
+			facades.Log().Warningf("Failed to dispatch AdditionalBusinessMemberUpdated event: %v", err)
+		}
+	}
+
+	return result, nil
+}
+
+// Delete overrides the base Delete method to fire AdditionalBusinessMemberDeleted event
+func (s *AdditionalBusinessMemberService) Delete(id uint) error {
+	// Get the member before delete
+	memberInterface, err := s.CrudServiceContract.GetByID(id)
+	if err != nil {
+		return err
+	}
+	member, _ := memberInterface.(*models.AdditionalBusinessMember)
+
+	// Call the base Delete method
+	err = s.CrudServiceContract.Delete(id)
+	if err != nil {
+		return err
+	}
+
+	// Fire the AdditionalBusinessMemberDeleted event
+	if member != nil {
+		if err := facades.Event().Job(&events.AdditionalBusinessMemberDeleted{}, []event.Arg{
+			{Type: "int", Value: member.SmeId},
+		}).Dispatch(); err != nil {
+			facades.Log().Warningf("Failed to dispatch AdditionalBusinessMemberDeleted event: %v", err)
+		}
+	}
+
+	return nil
+}

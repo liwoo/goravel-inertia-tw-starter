@@ -103,7 +103,44 @@ func NewSmeService() *SmeService {
 
 			return nil
 		}).
-		WithBeforeUpdate(func(id uint, data map[string]interface{}) error { // Handle JSON array fields
+		WithBeforeUpdate(func(id uint, data map[string]interface{}) error { // Handle JSON array fields and generate USME if missing
+			// Check if SME exists and has a usme_number
+			var existingSme models.Sme
+			err := facades.Orm().Query().Where("id = ?", id).First(&existingSme)
+			if err == nil && existingSme.UsmeNumber == "" {
+				// Generate USME number if missing
+				// Need to merge existing data with update data for generation
+				mergedData := make(map[string]interface{})
+
+				// Copy essential fields from existing record
+				if existingSme.District != nil {
+					mergedData["district"] = *existingSme.District
+				}
+				if existingSme.Region != nil {
+					mergedData["region"] = *existingSme.Region
+				}
+				mergedData["business_category"] = existingSme.BusinessCategory
+
+				// Override with any new values from update data
+				if district, exists := data["district"]; exists {
+					mergedData["district"] = district
+				}
+				if region, exists := data["region"]; exists {
+					mergedData["region"] = region
+				}
+				if category, exists := data["business_category"]; exists {
+					mergedData["business_category"] = category
+				}
+
+				// Generate UBI
+				ubi, err := generateUBI(mergedData)
+				if err != nil {
+					facades.Log().Warning("Failed to generate USME number during update", map[string]interface{}{"error": err.Error(), "sme_id": id})
+				} else {
+					data["usme_number"] = ubi
+				}
+			}
+
 			// Handle business_improvement_aspects array to JSON conversion
 			if aspects, exists := data["business_improvement_aspects"]; exists && aspects != nil {
 				if aspectsArray, ok := aspects.([]interface{}); ok && len(aspectsArray) > 0 {
