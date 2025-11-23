@@ -33,13 +33,10 @@ const (
 	ServiceSMEs                       ServiceRegistry = "smes"
 	ServicePrimaryBusinessOwners      ServiceRegistry = "primary_business_owners"
 	ServiceAdditionalBusinessMembers  ServiceRegistry = "additional_business_members"
-<<<<<<< HEAD
 	ServiceBusinessFormalisation      ServiceRegistry = "business_formalisation"
 	ServiceEvents                     ServiceRegistry = "events"
 	ServiceProcurementNotices         ServiceRegistry = "procurement_notices"
-=======
 	ServiceBdsps                      ServiceRegistry = "bdsps"
->>>>>>> e8e80b035946b49742ba2a37a1c2c613156948bd
 )
 
 // GetAllCorePermissionActions returns all core permission actions
@@ -69,13 +66,10 @@ func GetAllServiceRegistries() []ServiceRegistry {
 		ServiceSMEs,
 		ServicePrimaryBusinessOwners,
 		ServiceAdditionalBusinessMembers,
-<<<<<<< HEAD
 		ServiceBusinessFormalisation,
 		ServiceEvents,
 		ServiceProcurementNotices,
-=======
 		ServiceBdsps,
->>>>>>> e8e80b035946b49742ba2a37a1c2c613156948bd
 	}
 }
 
@@ -105,17 +99,14 @@ func GetServiceDisplayName(service ServiceRegistry) string {
 		return "Primary Business Owner Management"
 	case ServiceAdditionalBusinessMembers:
 		return "Additional Business Members Management"
-<<<<<<< HEAD
 	case ServiceBusinessFormalisation:
 		return "Business Formalisation Management"
 	case ServiceEvents:
 		return "Events Management"
 	case ServiceProcurementNotices:
 		return "Procurement Notices Management"
-=======
 	case ServiceBdsps:
 		return "BDSP Management"
->>>>>>> e8e80b035946b49742ba2a37a1c2c613156948bd
 	default:
 		return string(service)
 	}
@@ -238,11 +229,7 @@ func GetServiceActions(service ServiceRegistry) []CorePermissionAction {
 			PermissionDelete,
 			PermissionView,
 		}
-<<<<<<< HEAD
-	case ServiceEvents:
-=======
-	case ServiceBdsps:
->>>>>>> e8e80b035946b49742ba2a37a1c2c613156948bd
+	case ServiceBusinessFormalisation:
 		return []CorePermissionAction{
 			PermissionCreate,
 			PermissionRead,
@@ -250,7 +237,14 @@ func GetServiceActions(service ServiceRegistry) []CorePermissionAction {
 			PermissionDelete,
 			PermissionView,
 		}
-<<<<<<< HEAD
+	case ServiceEvents:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+		}
 	case ServiceProcurementNotices:
 		return []CorePermissionAction{
 			PermissionCreate,
@@ -260,8 +254,14 @@ func GetServiceActions(service ServiceRegistry) []CorePermissionAction {
 			PermissionView,
 			PermissionManage,
 		}
-=======
->>>>>>> e8e80b035946b49742ba2a37a1c2c613156948bd
+	case ServiceBdsps:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+		}
 	default:
 		return GetAllCorePermissionActions()
 	}
