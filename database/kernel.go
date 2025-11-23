@@ -61,5 +61,6 @@ func (kernel Kernel) Seeders() []seeder.Seeder {
 		&seeders.RBACSeeder{},
 		&seeders.ConfigSeeder{},
 		&seeders.SmeSeeder{},
+		&seeders.BdspSeeder{},
 	}
 }

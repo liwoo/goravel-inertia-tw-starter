@@ -3,6 +3,7 @@ import { BaseModel, PaginatedResult, ListRequest } from './crud';
 
 // Core Bdsp interface matching the backend model
 export interface Bdsp extends BaseModel {
+  ubdsp_number: string;
   name: string;
   postal_address: string;
   physical_address?: string;

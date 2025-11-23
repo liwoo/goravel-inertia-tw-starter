@@ -17,6 +17,7 @@ func (r *M20251118210300CreateBdspsTable) Up() error {
 	if !facades.Schema().HasTable("bdsps") {
 		return facades.Schema().Create("bdsps", func(table schema.Blueprint) {
 			table.ID()
+			table.String("ubdsp_number", 100)
 			table.String("name", 255)
 			table.String("postal_address", 255).Nullable()
 			table.String("physical_address", 255).Nullable()

@@ -479,7 +479,7 @@ export function CrudDataTable<T extends { id: number }>({
       onSearch(globalFilter)
     }
   }, [globalFilter, onSearch])
-  console.log(data)
+
   return (
     <div className={cn("w-full space-y-4", className)}>
       {/* Toolbar */}

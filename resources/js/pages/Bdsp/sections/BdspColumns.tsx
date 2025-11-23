@@ -9,6 +9,20 @@ import { User, MapPin, Tag, FileText } from 'lucide-react';
  */
 export const bdspColumns: CrudColumn<Bdsp>[] = [
   {
+    key: 'ubdspNumber',
+    label: 'UBDSP Number',
+    sortable: true,
+    className: 'min-w-[150px]',
+    render: (bdsp) => (
+      <div className="flex items-start gap-3">
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <p className="font-medium text-foreground">{bdsp.ubdsp_number}</p>
+        </div>
+      </div>
+    ),
+  },
+  {
     key: 'name',
     label: 'Name',
     sortable: true,
@@ -16,7 +30,6 @@ export const bdspColumns: CrudColumn<Bdsp>[] = [
     render: (bdsp) => (
       <div className="flex items-start gap-3">
         <div className="flex items-center gap-2">
-          <User className="h-3 w-3 text-muted-foreground" />
           <p className="font-medium text-foreground">{bdsp.name}</p>
         </div>
       </div>
@@ -30,7 +43,6 @@ export const bdspColumns: CrudColumn<Bdsp>[] = [
     render: (bdsp) => (
       <div className="flex items-start gap-3">
         <div className="flex items-center gap-2">
-          <MapPin className="h-3 w-3 text-muted-foreground" />
           <p className="font-medium text-foreground">{bdsp.postal_address}</p>
         </div>
       </div>

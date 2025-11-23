@@ -9,18 +9,19 @@ import (
 type Bdsp struct {
 	BaseAuditableModel
 
+	UbdspNumber        string   `json:"ubdsp_number" db:"ubdsp_number"`
 	Name               string   `json:"name" db:"name"`
 	PostalAddress      *string  `json:"postal_address" db:"postal_address_1"`
 	PhysicalAddress    *string  `json:"physical_address" db:"physical_address"`
 	RegistrationStatus *string  `json:"registration_status" db:"registration_status"`
 	PartnersJSON       string   `json:"-" db:"partners_json" gorm:"column:partners_json"`
-	Partners           []string `json:"partners" gorm:"-:all"`
+	Partners           []string `json:"partners" gorm:"-"`
 
 	ProductTypesJSON string   `json:"-" db:"product_types_json" gorm:"column:product_types_json"`
-	ProductTypes     []string `json:"product_types" gorm:"-:all"`
+	ProductTypes     []string `json:"product_types" gorm:"-"`
 
 	ServiceListJSON string        `json:"-" db:"service_list_json" gorm:"column:service_list_json"`
-	ServiceList     []BdspService `json:"service_list" gorm:"-:all"`
+	ServiceList     []BdspService `json:"service_list" gorm:"-"`
 }
 
 type BdspService struct {

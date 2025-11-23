@@ -2,8 +2,11 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"smedi-sme-db/app/contracts"
 	"smedi-sme-db/app/models"
+	"strconv"
+	"time"
 
 	"github.com/goravel/framework/facades"
 )
@@ -17,10 +20,10 @@ type BdspService struct {
 func NewBdspService() *BdspService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.Bdsp]("bdsps", "id").
-		WithSearchFields("name", "postal_address", "physical_address", "registration_status", "partners", "product_types", "service_list"). // Fields that will be searchable via the search query parameter
-		WithSortFields("id", "created_at", "updated_at", "name", "postal_address", "physical_address", "registration_status").              // Fields that can be used for sorting results
-		WithFilterFields("name", "postal_address", "physical_address", "registration_status", "partners", "product_types", "service_list"). // Fields that can be filtered on
-		WithValidationRules(map[string]interface{}{                                                                                         // Validation rules for create/update operations
+		WithSearchFields("ubdsp_number", "name", "postal_address", "physical_address", "registration_status", "partners_json", "product_types_json", "service_list_json"). // Fields that will be searchable via the search query parameter
+		WithSortFields("id", "created_at", "updated_at", "ubdsp_number", "name", "postal_address", "physical_address", "registration_status").                             // Fields that can be used for sorting results
+		WithFilterFields("ubdsp_number", "name", "postal_address", "physical_address", "registration_status", "partners_json", "product_types_json", "service_list_json"). // Fields that can be filtered on
+		WithValidationRules(map[string]interface{}{                                                                                                                        // Validation rules for create/update operations
 			"registration_status": "string|max:255",
 			"name":                "required|string|max:255",
 			"postal_address":      "required|string|max:255",
@@ -32,6 +35,14 @@ func NewBdspService() *BdspService {
 		WithDefaultSort("created_at", "DESC").     // Default sorting when none specified
 		WithScopeFiltering("bdsps", "created_by"). // Enable permission-based filtering
 		WithBeforeUpdate(func(id uint, data map[string]interface{}) error {
+			if _, exists := data["ubdsp_number"]; !exists || data["ubdsp_number"] == "" {
+				ubi, err := generateBdspUBI()
+				if err != nil {
+					return fmt.Errorf("failed to generate UBI: %w", err)
+				}
+				data["ubdsp_number"] = ubi
+			}
+
 			if partners, ok := data["partners"]; ok {
 				if partnersSlice, ok := partners.([]interface{}); ok {
 					bytes, err := json.Marshal(partnersSlice)
@@ -76,6 +87,61 @@ func NewBdspService() *BdspService {
 	return bdspServiceInstance
 }
 
+func generateBdspUBI() (string, error) {
+	// Get current year
+	year := time.Now().Year()
+
+	// Get next sequential number
+	sequentialNumber, err := getNextSequentialBdspNumber(year)
+	if err != nil {
+		return "", err
+	}
+
+	// Build UBI without check digit
+	ubiWithoutCheck := fmt.Sprintf("MW-%04d-%06d", year, sequentialNumber)
+
+	// Calculate check digit
+	checkDigit := calculateLuhnCheckDigit(ubiWithoutCheck)
+
+	// Return complete UBI
+	return fmt.Sprintf("%s-%d", ubiWithoutCheck, checkDigit), nil
+}
+
+// getNextSequentialBdspNumber gets the next sequential number for the given year, district, and category
+func getNextSequentialBdspNumber(year int) (int, error) {
+	// Query the database to find the highest sequential number for this year/district/category combination
+	var maxSequence int
+
+	// Pattern to match: MW-YYYY-
+	pattern := fmt.Sprintf("MW-%04d-%%", year)
+
+	var bdsp models.Bdsp
+	err := facades.Orm().Query().
+		Where("ubdsp_number LIKE ?", pattern).
+		Order("ubdsp_number DESC").
+		First(&bdsp)
+
+	if err != nil || bdsp.ID == 0 {
+		// No existing records, start from 1
+		return 1, nil
+	}
+
+	// Extract the sequential number from the ubdso_number
+	// Format: MW-YYYY-DD-CT-NNNNNN-C
+	parts := splitUBI(bdsp.UbdspNumber)
+	if len(parts) >= 5 {
+		var parseErr error
+		maxSequence, parseErr = strconv.Atoi(parts[4])
+		if parseErr != nil {
+			// If parsing fails, start from 1
+			return 1, nil
+		}
+	}
+
+	// Return next number
+	return maxSequence + 1, nil
+}
+
 // GetFilterDefinitions returns filter definitions for the bdsps resource
 func (s *BdspService) GetFilterDefinitions() []contracts.FilterDefinition {
 	registrationStatuses := []string{
@@ -86,6 +152,13 @@ func (s *BdspService) GetFilterDefinitions() []contracts.FilterDefinition {
 	}
 
 	return []contracts.FilterDefinition{
+		// UBDSP Number - string search
+		contracts.NewFilterDefinition(
+			"ubdsp_number",
+			"UBDSP Number",
+			contracts.FilterTypeString,
+			nil,
+		),
 		// Name - string search
 		contracts.NewFilterDefinition(
 			"name",
@@ -114,25 +187,25 @@ func (s *BdspService) GetFilterDefinitions() []contracts.FilterDefinition {
 			contracts.FilterTypeString,
 			nil,
 		),
-		// Partners - string search
+		// Partners - array search
 		contracts.NewFilterDefinition(
-			"partners",
+			"partners_json",
 			"Partners",
-			contracts.FilterTypeString,
+			contracts.FilterTypeArray,
 			nil,
 		),
-		// Product Types - string search
+		// Product Types - array search
 		contracts.NewFilterDefinition(
-			"product_types",
+			"product_types_json",
 			"Product Types",
-			contracts.FilterTypeString,
+			contracts.FilterTypeArray,
 			nil,
 		),
-		// Service List - string search
+		// Service List - array search
 		contracts.NewFilterDefinition(
-			"service_list",
+			"service_list_json",
 			"Service List",
-			contracts.FilterTypeString,
+			contracts.FilterTypeArray,
 			nil,
 		),
 		// Created Date - datetime filter

@@ -48,6 +48,8 @@ export function BdspDetailView({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <DetailRow icon={FileText} label="UBDSP Number" value={bdsp.ubdsp_number} />
+
             <DetailRow icon={User} label="Name" value={bdsp.name} />
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-muted">
