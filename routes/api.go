@@ -1,10 +1,9 @@
 package routes
 
 import (
-	"github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/contracts/route"
 	"smedi-sme-db/app/http/controllers"
 	"smedi-sme-db/app/http/controllers/additional_business_members"
+	"smedi-sme-db/app/http/controllers/applications"
 	"smedi-sme-db/app/http/controllers/auth"
 	"smedi-sme-db/app/http/controllers/auth/perimissions"
 	"smedi-sme-db/app/http/controllers/auth/roles"
@@ -18,6 +17,9 @@ import (
 	"smedi-sme-db/app/http/controllers/primary_business_owners"
 	"smedi-sme-db/app/http/controllers/procurement_notices"
 	"smedi-sme-db/app/http/controllers/smes"
+
+	"github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/contracts/route"
 
 	"smedi-sme-db/app/http/middleware"
 )
@@ -51,6 +53,7 @@ func Api(router route.Router) {
 	eventController := events.NewEventController()
 	procurementNoticeController := procurement_notices.NewProcurementNoticeController()
 	bdspController := bdsps.NewBdspController()
+	applicationController := applications.NewApplicationController()
 
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
@@ -112,6 +115,7 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/events", eventController.Index)
 		optionalAuthRouter.Get("/events/search", eventController.Search)
 		optionalAuthRouter.Get("/events/{id}", eventController.Show)
+		optionalAuthRouter.Get("/events/filters", eventController.FilterMetadata)
 
 		//procurement notices
 		optionalAuthRouter.Get("/procurement-notices", procurementNoticeController.Index)
@@ -124,6 +128,8 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/bdsps/search", bdspController.Search)
 		optionalAuthRouter.Get("/bdsps/filters", bdspController.FilterMetadata)
 		optionalAuthRouter.Get("/bdsps/{id}", bdspController.Show)
+
+		optionalAuthRouter.Post("/applications", applicationController.Store)
 	})
 
 	// Protected routes (require authentication)
@@ -180,6 +186,15 @@ func Api(router route.Router) {
 		protectedRouter.Post("/bdsps", bdspController.Store)
 		protectedRouter.Put("/bdsps/{id}", bdspController.Update)
 		protectedRouter.Delete("/bdsps/{id}", bdspController.Delete)
+
+		protectedRouter.Get("/applications", applicationController.Index)
+		protectedRouter.Get("/applications/search", applicationController.Search)
+		protectedRouter.Get("/applications/filters", applicationController.FilterMetadata)
+		protectedRouter.Get("/applications/{id}", applicationController.Show)
+		protectedRouter.Put("/applications/{id}", applicationController.Update)
+		protectedRouter.Delete("/applications/{id}", applicationController.Delete)
+		protectedRouter.Post("/applications/{id}/approve", applicationController.ApproveApplication)
+		protectedRouter.Post("/applications/{id}/reject", applicationController.RejectApplication)
 
 		// Role management routes
 		protectedRouter.Get("/roles", rolesController.Index)
