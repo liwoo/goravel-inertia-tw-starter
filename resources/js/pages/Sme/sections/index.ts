@@ -12,3 +12,11 @@ export {
   getSmePageActions,
   smeBulkActions
 } from './SmePageConfig';
+
+// Chart components
+export { SmeKpiCards } from './SmeKpiCards';
+export { SmeRegistrationTrend } from './SmeRegistrationTrend';
+export { SmeRegionChart } from './SmeRegionChart';
+export { SmeCategoryChart } from './SmeCategoryChart';
+export { SmeDistributionCharts } from './SmeDistributionCharts';
+export { SmeChartsContainer } from './SmeChartsContainer';

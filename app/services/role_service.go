@@ -26,7 +26,7 @@ func NewRoleService() *RoleService {
 		WithValidationRules(map[string]interface{}{                          // REQUIRED
 			"name":        "required|string|max:255",
 			"slug":        "required|string|max:100|unique:roles,slug",
-			"description": "string|max:500",
+			"description": "string|max:1000",
 			"is_active":   "boolean",
 		}).
 		WithRelations("Permissions", "Creator", "Updater").        // Optional

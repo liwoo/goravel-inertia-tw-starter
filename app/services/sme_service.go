@@ -642,3 +642,162 @@ func calculateLuhnCheckDigit(ubi string) int {
 	checkDigit := (10 - (sum % 10)) % 10
 	return checkDigit
 }
+
+// ============================================================================
+// SME Statistics Functions
+// ============================================================================
+
+// GetSmeStatistics returns comprehensive statistics about SMEs for dashboard KPIs and charts
+func (s *SmeService) GetSmeStatistics() (map[string]interface{}, error) {
+	now := time.Now()
+	currentMonthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	lastMonthStart := currentMonthStart.AddDate(0, -1, 0)
+	lastMonthEnd := currentMonthStart.Add(-time.Second)
+
+	// Basic counts
+	var totalSmes int64
+	var newThisMonth int64
+	var newLastMonth int64
+	var withRegistrationNumber int64
+
+	// Get total SMEs (excluding soft deleted)
+	totalSmes, _ = facades.Orm().Query().Model(&models.Sme{}).Where("deleted_at IS NULL").Count()
+
+	// Get SMEs created this month
+	newThisMonth, _ = facades.Orm().Query().Model(&models.Sme{}).
+		Where("deleted_at IS NULL").
+		Where("created_at >= ?", currentMonthStart).
+		Count()
+
+	// Get SMEs created last month
+	newLastMonth, _ = facades.Orm().Query().Model(&models.Sme{}).
+		Where("deleted_at IS NULL").
+		Where("created_at >= ? AND created_at <= ?", lastMonthStart, lastMonthEnd).
+		Count()
+
+	// Get SMEs with registration number
+	withRegistrationNumber, _ = facades.Orm().Query().Model(&models.Sme{}).
+		Where("deleted_at IS NULL").
+		Where("registration_number IS NOT NULL AND registration_number != ''").
+		Count()
+
+	// Calculate percentage with registration number
+	var registrationPercentage float64
+	if totalSmes > 0 {
+		registrationPercentage = float64(withRegistrationNumber) / float64(totalSmes) * 100
+	}
+
+	// Get registration trend data (last 6 months)
+	registrationTrend := s.getRegistrationTrend(6)
+
+	// Get distribution by region
+	regionDistribution := s.getDistributionByField("region")
+
+	// Get distribution by business category
+	categoryDistribution := s.getDistributionByField("business_category")
+
+	return map[string]interface{}{
+		"totalSmes":                 totalSmes,
+		"newThisMonth":              newThisMonth,
+		"newLastMonth":              newLastMonth,
+		"hasRegistration":           withRegistrationNumber,
+		"hasRegistrationPercentage": registrationPercentage,
+		"registrationTrend":         registrationTrend,
+		"byRegion":                  regionDistribution,
+		"byCategory":                categoryDistribution,
+	}, nil
+}
+
+// getRegistrationTrend returns SME registration counts for the last N months
+func (s *SmeService) getRegistrationTrend(months int) []map[string]interface{} {
+	now := time.Now()
+	trend := make([]map[string]interface{}, months)
+
+	// Calculate cumulative total up to 6 months ago
+	sixMonthsAgo := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -months, 0)
+	var cumulativeBase int64
+	cumulativeBase, _ = facades.Orm().Query().Model(&models.Sme{}).
+		Where("deleted_at IS NULL").
+		Where("created_at < ?", sixMonthsAgo).
+		Count()
+
+	cumulative := cumulativeBase
+
+	for i := months - 1; i >= 0; i-- {
+		// Calculate month boundaries
+		monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -i, 0)
+		monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Second)
+
+		// Get count for this month
+		var count int64
+		count, _ = facades.Orm().Query().Model(&models.Sme{}).
+			Where("deleted_at IS NULL").
+			Where("created_at >= ? AND created_at <= ?", monthStart, monthEnd).
+			Count()
+
+		cumulative += count
+
+		// Format period as "Jan 2025"
+		period := monthStart.Format("Jan 2006")
+
+		trend[months-1-i] = map[string]interface{}{
+			"period":     period,
+			"count":      count,
+			"cumulative": cumulative,
+		}
+	}
+
+	return trend
+}
+
+// getDistributionByField returns distribution data for a given field (region or business_category)
+func (s *SmeService) getDistributionByField(field string) []map[string]interface{} {
+	// Get total count for percentage calculation
+	var total int64
+	total, _ = facades.Orm().Query().Model(&models.Sme{}).Where("deleted_at IS NULL").Count()
+
+	if total == 0 {
+		return []map[string]interface{}{}
+	}
+
+	// Query for distribution - using raw SQL for GROUP BY
+	type DistributionResult struct {
+		Label string
+		Value int64
+	}
+
+	var results []DistributionResult
+
+	// Build the query based on field type
+	var query string
+	if field == "region" || field == "business_category" {
+		query = fmt.Sprintf(`
+			SELECT COALESCE(%s, 'Unknown') as label, COUNT(*) as value
+			FROM smes
+			WHERE deleted_at IS NULL
+			GROUP BY %s
+			ORDER BY value DESC
+		`, field, field)
+	} else {
+		return []map[string]interface{}{}
+	}
+
+	// Execute raw query
+	err := facades.Orm().Query().Raw(query).Scan(&results)
+	if err != nil {
+		return []map[string]interface{}{}
+	}
+
+	// Convert to response format with percentages
+	distribution := make([]map[string]interface{}, len(results))
+	for i, r := range results {
+		percentage := float64(r.Value) / float64(total) * 100
+		distribution[i] = map[string]interface{}{
+			"label":      r.Label,
+			"value":      r.Value,
+			"percentage": percentage, // Return as number, not string
+		}
+	}
+
+	return distribution
+}

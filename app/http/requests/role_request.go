@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/contracts"
 )
 
 // RoleCreateRequest represents the request structure for creating a new role
@@ -17,19 +16,20 @@ type RoleCreateRequest struct {
 // Rules defines validation rules for role creation
 func (r *RoleCreateRequest) Rules(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name":        fmt.Sprintf("%s|string|%s|%s|unique:roles,name", contracts.Required, fmt.Sprintf(contracts.MinLength, 3), fmt.Sprintf(contracts.MaxLength, 100)),
-		"description": fmt.Sprintf("string|%s", fmt.Sprintf(contracts.MaxLength, 255)),
-		"permissions": contracts.Array,
+		"name":        "required|string|min_len:3|max_len:255|unique:roles,name",
+		"description": "string|max_len:1000",
+		"permissions": "array",
 	}
 }
 
 // Messages defines custom validation messages
 func (r *RoleCreateRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name.required": "Role name is required",
-		"name.min":      "Role name must be at least 3 characters",
-		"name.max":      "Role name cannot exceed 100 characters",
-		"name.unique":   "A role with this name already exists",
+		"name.required":       "Role name is required",
+		"name.min_len":        "Role name must be at least 3 characters",
+		"name.max_len":        "Role name cannot exceed 255 characters",
+		"name.unique":         "A role with this name already exists",
+		"description.max_len": "Description cannot exceed 1000 characters",
 	}
 }
 
@@ -78,19 +78,20 @@ type RoleUpdateRequest struct {
 // Rules defines validation rules for role update
 func (r *RoleUpdateRequest) Rules(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name":        fmt.Sprintf("%s|string|%s|%s|unique:roles,name,%d", contracts.Required, fmt.Sprintf(contracts.MinLength, 3), fmt.Sprintf(contracts.MaxLength, 100), r.ID),
-		"description": fmt.Sprintf("string|%s", fmt.Sprintf(contracts.MaxLength, 255)),
-		"permissions": contracts.Array,
+		"name":        fmt.Sprintf("required|string|min_len:3|max_len:255|unique:roles,name,%d", r.ID),
+		"description": "string|max_len:1000",
+		"permissions": "array",
 	}
 }
 
 // Messages defines custom validation messages
 func (r *RoleUpdateRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name.required": "Role name is required",
-		"name.min":      "Role name must be at least 3 characters",
-		"name.max":      "Role name cannot exceed 100 characters",
-		"name.unique":   "A role with this name already exists",
+		"name.required":       "Role name is required",
+		"name.min_len":        "Role name must be at least 3 characters",
+		"name.max_len":        "Role name cannot exceed 255 characters",
+		"name.unique":         "A role with this name already exists",
+		"description.max_len": "Description cannot exceed 1000 characters",
 	}
 }
 

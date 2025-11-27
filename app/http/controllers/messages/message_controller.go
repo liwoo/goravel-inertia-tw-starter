@@ -450,6 +450,26 @@ func (c *MessageController) GetMessagableUsers(ctx http.Context) http.Response {
 	return c.SuccessResponse(ctx, paginatedResult, "Messagable users retrieved successfully")
 }
 
+// GetUnreadCount handles GET /api/messages/unread-count
+func (c *MessageController) GetUnreadCount(ctx http.Context) http.Response {
+	// Get authenticated user
+	permHelper := auth.GetPermissionHelper()
+	user := permHelper.GetAuthenticatedUser(ctx)
+	if user == nil {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Get unread count
+	unreadCount, err := c.messageService.GetUnreadCount(user.ID)
+	if err != nil {
+		return c.InternalErrorResponse(ctx, "Failed to retrieve unread count: "+err.Error())
+	}
+
+	return c.SuccessResponse(ctx, map[string]interface{}{
+		"unread_count": unreadCount,
+	}, "Unread count retrieved successfully")
+}
+
 // Override Delete to use custom delete logic
 func (c *MessageController) Delete(ctx http.Context) http.Response {
 	// Get authenticated user

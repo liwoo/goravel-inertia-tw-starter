@@ -209,9 +209,9 @@ func Api(router route.Router) {
 			messageRouter.Get("/conversations", messageController.GetConversations) // List all conversations
 			messageRouter.Get("/conversation/{userId}", messageController.GetConversation)
 			messageRouter.Put("/{id}/read", messageController.MarkAsRead)
-			messageRouter.Get("/users", messageController.GetMessagableUsers) // Now implemented
+			messageRouter.Get("/users", messageController.GetMessagableUsers)
+			messageRouter.Get("/unread-count", messageController.GetUnreadCount)
 			// messageRouter.Get("/search-users", messageController.SearchUsers) // TODO: implement
-			// messageRouter.Get("/unread-count", messageController.GetUnreadCount) // TODO: implement as endpoint
 
 			// Individual message management
 			// messageRouter.Get("/{id}", messageController.GetMessage) // TODO: use Show method

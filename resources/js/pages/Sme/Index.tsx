@@ -3,7 +3,8 @@ import { Head, router } from '@inertiajs/react';
 import {
   Sme,
   SmeListResponse,
-  SmeListRequest
+  SmeListRequest,
+  SmeStats
 } from '@/types/sme';
 import { CrudPage } from '@/components/Crud/CrudPage';
 import {
@@ -12,7 +13,8 @@ import {
   SmeDetailView,
   smeColumns,
   smeColumnsMobile,
-  smeFilters
+  smeFilters,
+  SmeChartsContainer
 } from './sections';
 import { useIsMobile } from '@/hooks/use-mobile';
 import Admin from '@/layouts/Admin';
@@ -33,13 +35,15 @@ interface SmeIndexProps {
       allowedSizes: number[];
     };
   };
+  stats?: SmeStats;
 }
 
 export default function SmeIndex({
   data,
   filters,
   permissions,
-  meta
+  meta,
+  stats
 }: SmeIndexProps) {
   const isMobile = useIsMobile();
 
@@ -52,6 +56,9 @@ export default function SmeIndex({
       <Head title="Sme - Management" />
 
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        {/* Charts and KPIs Section */}
+        {stats && <SmeChartsContainer stats={stats} />}
+
         {/* Main CRUD Component */}
         <div className="px-0">
           <CrudPage<Sme>

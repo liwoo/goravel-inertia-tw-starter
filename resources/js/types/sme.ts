@@ -112,8 +112,28 @@ export interface SmeFormErrors {
   general?: string;
 }
 
-// Sme statistics (if provided by backend)
+// Registration trend data point
+export interface RegistrationTrendPoint {
+  period: string;
+  count: number;
+  cumulative: number;
+}
+
+// Distribution data point (for region/category breakdowns)
+export interface DistributionPoint {
+  label: string;
+  value: number;
+  percentage: number;
+}
+
+// Sme statistics (for dashboard charts and KPIs)
 export interface SmeStats {
-  totalsmes: number;
-  // Add your custom stats here
+  totalSmes: number;
+  newThisMonth: number;
+  newLastMonth: number;
+  hasRegistration: number;
+  hasRegistrationPercentage: number;
+  registrationTrend: RegistrationTrendPoint[];
+  byRegion: DistributionPoint[];
+  byCategory: DistributionPoint[];
 }

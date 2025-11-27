@@ -22,7 +22,11 @@ func NewSmePageController() *SmePageController {
 			PageComponent:     "Sme/Index",
 			Service:           smeService,
 			ServiceIdentifier: auth.ServiceSMEs,
-			StatsEnabled:      false,
+			StatsEnabled:      true,
+			StatsBuilder: func(controller *contracts.GenericPageController) map[string]interface{} {
+				stats, _ := smeService.GetSmeStatistics()
+				return stats
+			},
 		}),
 		smeService: smeService,
 	}
