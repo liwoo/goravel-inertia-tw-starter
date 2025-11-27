@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
 import {
   Card,
   CardContent,
@@ -13,7 +13,6 @@ import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart";
 import { DistributionPoint } from "@/types/sme";
 
@@ -22,29 +21,50 @@ interface SmeCategoryChartProps {
   isLoading?: boolean;
 }
 
-// Chart configuration with primary theme color
-const chartConfig = {
-  value: {
-    label: "SMEs",
-    color: "hsl(var(--chart-1))",
-  },
-} satisfies ChartConfig;
+// Use subtle shade variations for bar charts (2-3 shades)
+const BAR_COLORS = [
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+];
+
+// Generate chart config dynamically from data
+const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
+  const config: ChartConfig = {
+    value: {
+      label: "SMEs",
+    },
+  };
+
+  data.forEach((item, index) => {
+    const key = item.label.toLowerCase().replace(/\s+/g, "_");
+    config[key] = {
+      label: item.label,
+      color: BAR_COLORS[index % BAR_COLORS.length],
+    };
+  });
+
+  return config;
+};
 
 export function SmeCategoryChart({ data, isLoading = false }: SmeCategoryChartProps) {
   // Transform and sort data by value descending
   const chartData = React.useMemo(() => {
     return [...data]
       .sort((a, b) => b.value - a.value)
-      .map((item) => ({
+      .map((item, index) => ({
         category: item.label,
         value: item.value,
         percentage: item.percentage,
+        fill: BAR_COLORS[index % BAR_COLORS.length],
         // Truncate long labels for X-axis display
         shortLabel: item.label.length > 15
           ? item.label.substring(0, 12) + "..."
           : item.label,
       }));
   }, [data]);
+
+  const chartConfig = React.useMemo(() => generateChartConfig(data), [data]);
 
   if (isLoading) {
     return (
@@ -121,8 +141,14 @@ export function SmeCategoryChart({ data, isLoading = false }: SmeCategoryChartPr
                 return (
                   <div className="rounded-lg border bg-background p-2 shadow-sm">
                     <div className="flex min-w-[150px] flex-col gap-1 text-xs">
-                      <div className="font-medium text-foreground">
-                        {data.category}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                          style={{ backgroundColor: data.fill }}
+                        />
+                        <span className="font-medium text-foreground">
+                          {data.category}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between text-muted-foreground">
                         <span>Count:</span>
@@ -143,10 +169,16 @@ export function SmeCategoryChart({ data, isLoading = false }: SmeCategoryChartPr
             />
             <Bar
               dataKey="value"
-              fill="var(--color-value)"
               radius={[0, 4, 4, 0]}
               maxBarSize={40}
-            />
+            >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.fill}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ChartContainer>
       </CardContent>

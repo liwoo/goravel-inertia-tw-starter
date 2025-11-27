@@ -27,11 +27,12 @@ import {
   Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DataTableProps, CrudAction, CrudColumn } from '@/types/crud';
+import { DataTableProps, CrudAction, CrudColumn, BulkAction } from '@/types/crud';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -345,6 +346,68 @@ function DataTableViewOptions<TData>({
   )
 }
 
+// Bulk Action Bar Component
+function BulkActionBar<T extends { id: number }>({
+  selectedCount,
+  totalCount,
+  bulkActions,
+  onBulkAction,
+  onClearSelection,
+}: {
+  selectedCount: number
+  totalCount: number
+  bulkActions: BulkAction[]
+  onBulkAction: (action: string, selectedIds: number[]) => void
+  onClearSelection: () => void
+  selectedIds: number[]
+}) {
+  if (selectedCount === 0) return null;
+
+  const handleActionClick = (action: BulkAction) => {
+    if (action.confirm) {
+      const message = action.confirmMessage || `Are you sure you want to ${action.label.toLowerCase()} ${selectedCount} item(s)?`;
+      if (confirm(message)) {
+        onBulkAction(action.key, []);
+      }
+    } else {
+      onBulkAction(action.key, []);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3">
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary" className="font-medium">
+          {selectedCount} selected
+        </Badge>
+        <span className="text-sm text-muted-foreground">
+          {selectedCount} of {totalCount} row(s) selected
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        {bulkActions.map((action) => (
+          <Button
+            key={action.key}
+            variant={action.variant === 'danger' ? 'destructive' : action.variant === 'warning' ? 'outline' : 'secondary'}
+            size="sm"
+            onClick={() => handleActionClick(action)}
+          >
+            {action.icon && <span className="mr-1.5">{action.icon}</span>}
+            {action.label}
+          </Button>
+        ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClearSelection}
+        >
+          Clear
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // Extended interface for modern features
 interface ModernDataTableProps<T> extends DataTableProps<T> {
   searchKey?: string
@@ -353,6 +416,8 @@ interface ModernDataTableProps<T> extends DataTableProps<T> {
   enableColumnToggle?: boolean
   enablePagination?: boolean
   onSearch?: (value: string) => void
+  bulkActions?: BulkAction[]
+  onBulkAction?: (action: string, selectedIds: number[]) => void
 }
 
 export function CrudDataTable<T extends { id: number }>({
@@ -374,6 +439,8 @@ export function CrudDataTable<T extends { id: number }>({
   enableColumnToggle = false,
   enablePagination = false,
   onSearch,
+  bulkActions = [],
+  onBulkAction,
 }: ModernDataTableProps<T>) {
   // State management
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -480,8 +547,33 @@ export function CrudDataTable<T extends { id: number }>({
     }
   }, [globalFilter, onSearch])
 
+  // Handle bulk action with selected IDs
+  const handleBulkAction = React.useCallback((action: string) => {
+    if (onBulkAction) {
+      onBulkAction(action, selectedIds);
+    }
+  }, [onBulkAction, selectedIds]);
+
+  // Clear selection handler
+  const handleClearSelection = React.useCallback(() => {
+    table.toggleAllRowsSelected(false);
+    onSelectionChange([]);
+  }, [table, onSelectionChange]);
+
   return (
     <div className={cn("w-full space-y-4", className)}>
+      {/* Bulk Action Bar */}
+      {enableSelection && bulkActions.length > 0 && selectedIds.length > 0 && (
+        <BulkActionBar
+          selectedCount={selectedIds.length}
+          totalCount={data.length}
+          bulkActions={bulkActions}
+          onBulkAction={handleBulkAction}
+          onClearSelection={handleClearSelection}
+          selectedIds={selectedIds}
+        />
+      )}
+
       {/* Toolbar */}
       {(enableSearch || enableColumnToggle) && (
         <div className="flex items-center justify-between">

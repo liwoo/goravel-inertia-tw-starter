@@ -63,7 +63,7 @@ export interface CrudPageProps<T = any> {
   // Data
   data: PaginatedResult<T>;
   filters: ListRequest;
-  
+
   // Configuration
   title: string;
   resourceName: string; // e.g., 'teams', 'players'
@@ -73,29 +73,30 @@ export interface CrudPageProps<T = any> {
   customFilters?: CrudFilter[];
   pageActions?: PageAction[];
   simpleFilters?: SimpleFilter[];
-  
+  bulkActions?: BulkAction[];
+
   // Pagination metadata (optional - will fallback to defaults if not provided)
   paginationConfig?: {
     defaultPageSize: number;
     maxPageSize: number;
     allowedSizes: number[];
   };
-  
+
   // Permissions
   canCreate?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
   canView?: boolean;
-  
+
   // Custom Components
   createForm?: React.ForwardRefExoticComponent<CrudFormProps & React.RefAttributes<any>>;
   editForm?: React.ForwardRefExoticComponent<CrudEditFormProps<T> & React.RefAttributes<any>>;
   detailView?: React.ComponentType<CrudDetailViewProps<T>>;
-  
+
   // Callbacks
   onRefresh?: () => void;
   onBulkAction?: (action: string, selectedIds: number[]) => void;
-  
+
   // Styling
   className?: string;
   tableClassName?: string;

@@ -3,6 +3,7 @@ package feature
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
@@ -12,6 +13,11 @@ import (
 	"smedi-sme-db/app/services"
 	"smedi-sme-db/tests"
 )
+
+// uniqueEmail generates a unique email address using timestamp to avoid conflicts across test runs
+func uniqueEmail(prefix string) string {
+	return fmt.Sprintf("%s_%d@example.com", prefix, time.Now().UnixNano())
+}
 
 type UserCRUDTestSuite struct {
 	suite.Suite
@@ -30,11 +36,11 @@ func (s *UserCRUDTestSuite) SetupTest() {
 	s.RefreshDatabase()
 	s.userService = services.NewUserService()
 
-	// Create admin user for tests
+	// Create admin user for tests with unique email
 	password, _ := facades.Hash().Make("password123")
 	s.adminUser = &models.User{
 		Name:         "Admin User",
-		Email:        "admin@test.com",
+		Email:        uniqueEmail("admin"),
 		Password:     password,
 		IsActive:     true,
 		IsSuperAdmin: true,
@@ -53,10 +59,11 @@ func (s *UserCRUDTestSuite) SetupTest() {
 
 func (s *UserCRUDTestSuite) TestCreateUser_ValidData_Success() {
 	// Test data that matches the UI error case
+	testEmail := uniqueEmail("test")
 	userData := map[string]interface{}{
-		"name":           "Test User",        // 9 characters
-		"email":          "test@example.com", // 16 characters
-		"password":       "12345678",         // 8 characters (minimum)
+		"name":           "Test User", // 9 characters
+		"email":          testEmail,   // unique email
+		"password":       "12345678",  // 8 characters (minimum)
 		"is_active":      true,
 		"is_super_admin": false,
 		"role_id":        float64(s.testRole.ID),
@@ -70,13 +77,13 @@ func (s *UserCRUDTestSuite) TestCreateUser_ValidData_Success() {
 	// Verify user was created
 	createdUser := result.(*models.User)
 	s.Equal("Test User", createdUser.Name)
-	s.Equal("test@example.com", createdUser.Email)
+	s.Equal(testEmail, createdUser.Email)
 	s.True(createdUser.IsActive)
 	s.False(createdUser.IsSuperAdmin)
 
 	// Verify in database
 	var dbUser models.User
-	err = facades.Orm().Query().Where("email = ?", "test@example.com").First(&dbUser)
+	err = facades.Orm().Query().Where("email = ?", testEmail).First(&dbUser)
 	s.NoError(err)
 	s.Equal("Test User", dbUser.Name)
 }
@@ -111,7 +118,7 @@ func (s *UserCRUDTestSuite) TestCreateUser_LongFieldValues_ValidationError() {
 func (s *UserCRUDTestSuite) TestCreateUser_ShortPassword_ValidationError() {
 	userData := map[string]interface{}{
 		"name":           "Test User",
-		"email":          "test@example.com",
+		"email":          uniqueEmail("shortpwd"),
 		"password":       "123", // Too short
 		"is_active":      true,
 		"is_super_admin": false,
@@ -146,10 +153,11 @@ func (s *UserCRUDTestSuite) TestCreateUser_MissingRequiredFields_ValidationError
 }
 
 func (s *UserCRUDTestSuite) TestCreateUser_DuplicateEmail_ValidationError() {
-	// First create a user
+	// First create a user with a unique email for this test
+	duplicateEmail := uniqueEmail("duplicate")
 	userData1 := map[string]interface{}{
 		"name":           "User One",
-		"email":          "duplicate@example.com",
+		"email":          duplicateEmail,
 		"password":       "12345678",
 		"is_active":      true,
 		"is_super_admin": false,
@@ -161,7 +169,7 @@ func (s *UserCRUDTestSuite) TestCreateUser_DuplicateEmail_ValidationError() {
 	// Try to create another with same email
 	userData2 := map[string]interface{}{
 		"name":           "User Two",
-		"email":          "duplicate@example.com",
+		"email":          duplicateEmail, // Same email as above
 		"password":       "12345678",
 		"is_active":      true,
 		"is_super_admin": false,
@@ -174,9 +182,10 @@ func (s *UserCRUDTestSuite) TestCreateUser_DuplicateEmail_ValidationError() {
 
 func (s *UserCRUDTestSuite) TestGetUser_ValidID_Success() {
 	// Create test user first
+	testEmail := uniqueEmail("get")
 	userData := map[string]interface{}{
 		"name":           "Get Test User",
-		"email":          "get@example.com",
+		"email":          testEmail,
 		"password":       "12345678",
 		"is_active":      true,
 		"is_super_admin": false,
@@ -193,7 +202,7 @@ func (s *UserCRUDTestSuite) TestGetUser_ValidID_Success() {
 
 	retrievedUser := retrievedResult.(*models.User)
 	s.Equal("Get Test User", retrievedUser.Name)
-	s.Equal("get@example.com", retrievedUser.Email)
+	s.Equal(testEmail, retrievedUser.Email)
 }
 
 func (s *UserCRUDTestSuite) TestGetUser_InvalidID_NotFound() {
@@ -203,9 +212,10 @@ func (s *UserCRUDTestSuite) TestGetUser_InvalidID_NotFound() {
 
 func (s *UserCRUDTestSuite) TestUpdateUser_ValidData_Success() {
 	// Create test user first
+	testEmail := uniqueEmail("update")
 	userData := map[string]interface{}{
 		"name":           "Original Name",
-		"email":          "update@example.com",
+		"email":          testEmail,
 		"password":       "12345678",
 		"is_active":      true,
 		"is_super_admin": false,
@@ -228,14 +238,14 @@ func (s *UserCRUDTestSuite) TestUpdateUser_ValidData_Success() {
 	updatedUser := updatedResult.(*models.User)
 	s.Equal("Updated Name", updatedUser.Name)
 	s.False(updatedUser.IsActive)
-	s.Equal("update@example.com", updatedUser.Email) // Should remain unchanged
+	s.Equal(testEmail, updatedUser.Email) // Should remain unchanged
 }
 
 func (s *UserCRUDTestSuite) TestDeleteUser_ValidID_Success() {
 	// Create test user first
 	userData := map[string]interface{}{
 		"name":           "Delete Me",
-		"email":          "delete@example.com",
+		"email":          uniqueEmail("delete"),
 		"password":       "12345678",
 		"is_active":      true,
 		"is_super_admin": false,
@@ -255,11 +265,12 @@ func (s *UserCRUDTestSuite) TestDeleteUser_ValidID_Success() {
 }
 
 func (s *UserCRUDTestSuite) TestListUsers_WithPagination_Success() {
-	// Create multiple test users
+	// Create multiple test users with unique emails
+	timestamp := time.Now().UnixNano()
 	for i := 0; i < 5; i++ {
 		userData := map[string]interface{}{
 			"name":           fmt.Sprintf("User %d", i+1),
-			"email":          fmt.Sprintf("user%d@example.com", i+1),
+			"email":          fmt.Sprintf("user%d_%d@example.com", i+1, timestamp),
 			"password":       "12345678",
 			"is_active":      true,
 			"is_super_admin": false,
@@ -293,7 +304,7 @@ func (s *UserCRUDTestSuite) TestListUsers_WithFilters_Success() {
 	// Create test users with different statuses
 	activeUserData := map[string]interface{}{
 		"name":           "Active User",
-		"email":          "active@example.com",
+		"email":          uniqueEmail("active"),
 		"password":       "12345678",
 		"is_active":      true,
 		"is_super_admin": false,
@@ -303,7 +314,7 @@ func (s *UserCRUDTestSuite) TestListUsers_WithFilters_Success() {
 
 	inactiveUserData := map[string]interface{}{
 		"name":           "Inactive User",
-		"email":          "inactive@example.com",
+		"email":          uniqueEmail("inactive"),
 		"password":       "12345678",
 		"is_active":      false,
 		"is_super_admin": false,
@@ -326,7 +337,7 @@ func (s *UserCRUDTestSuite) TestListUsers_WithFilters_Success() {
 
 	// Should only return inactive users
 	for _, item := range result.Data {
-		user := item.(*models.User)
+		user := item.(models.User)
 		s.False(user.IsActive, "Filtered results should only include inactive users")
 	}
 }
@@ -335,11 +346,12 @@ func (s *UserCRUDTestSuite) TestListUsers_WithFilters_Success() {
 func (s *UserCRUDTestSuite) TestCreateUser_ReproduceUIValidationError_Debug() {
 	s.T().Log("=== Reproducing UI validation error ===")
 
-	// Exact data from the UI error report
+	// Exact data from the UI error report with unique email
+	testEmail := uniqueEmail("debug")
 	userData := map[string]interface{}{
-		"name":           "Test User",        // 9 characters - should pass max:255
-		"email":          "test@example.com", // 16 characters - should pass max:255
-		"password":       "12345678",         // 8 characters - should pass min:8
+		"name":           "Test User",  // 9 characters - should pass max:255
+		"email":          testEmail,    // unique email
+		"password":       "12345678",   // 8 characters - should pass min:8
 		"is_active":      true,
 		"is_super_admin": false,
 		"role_id":        float64(s.testRole.ID),
@@ -347,7 +359,7 @@ func (s *UserCRUDTestSuite) TestCreateUser_ReproduceUIValidationError_Debug() {
 
 	s.T().Logf("Test data: %+v", userData)
 	s.T().Logf("Name length: %d", len(userData["name"].(string)))
-	s.T().Logf("Email length: %d", len(userData["email"].(string)))
+	s.T().Logf("Email length: %d", len(testEmail))
 	s.T().Logf("Password length: %d", len(userData["password"].(string)))
 
 	// This should succeed with valid data
@@ -387,7 +399,7 @@ func (s *UserCRUDTestSuite) TestCreateUser_ReproduceUIValidationError_Debug() {
 
 		createdUser := result.(*models.User)
 		s.Equal("Test User", createdUser.Name)
-		s.Equal("test@example.com", createdUser.Email)
+		s.Equal(testEmail, createdUser.Email)
 
 		s.T().Log("User created successfully - no validation bug detected")
 	}

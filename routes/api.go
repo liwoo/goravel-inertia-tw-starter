@@ -13,6 +13,7 @@ import (
 	"smedi-sme-db/app/http/controllers/business_formalisations"
 	"smedi-sme-db/app/http/controllers/configs"
 	"smedi-sme-db/app/http/controllers/events"
+	"smedi-sme-db/app/http/controllers/lenders"
 	"smedi-sme-db/app/http/controllers/messages"
 	"smedi-sme-db/app/http/controllers/primary_business_owners"
 	"smedi-sme-db/app/http/controllers/procurement_notices"
@@ -53,6 +54,7 @@ func Api(router route.Router) {
 	eventController := events.NewEventController()
 	procurementNoticeController := procurement_notices.NewProcurementNoticeController()
 	bdspController := bdsps.NewBdspController()
+	lenderController := lenders.NewLenderController()
 	applicationController := applications.NewApplicationController()
 
 	jwtAuth := middleware.JwtAuth()
@@ -129,6 +131,12 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/bdsps/filters", bdspController.FilterMetadata)
 		optionalAuthRouter.Get("/bdsps/{id}", bdspController.Show)
 
+		//lenders
+		optionalAuthRouter.Get("/lenders", lenderController.Index)
+		optionalAuthRouter.Get("/lenders/search", lenderController.Search)
+		optionalAuthRouter.Get("/lenders/filters", lenderController.FilterMetadata)
+		optionalAuthRouter.Get("/lenders/{id}", lenderController.Show)
+
 		optionalAuthRouter.Post("/applications", applicationController.Store)
 	})
 
@@ -156,6 +164,8 @@ func Api(router route.Router) {
 		protectedRouter.Post("/smes", smeController.Store)
 		protectedRouter.Put("/smes/{id}", smeController.Update)
 		protectedRouter.Delete("/smes/{id}", smeController.Delete)
+		protectedRouter.Post("/smes/bulk-deactivate", smeController.BulkDeactivate)
+		protectedRouter.Post("/smes/bulk-activate", smeController.BulkActivate)
 
 		// Primary Business Owner routes
 		protectedRouter.Post("/primary-business-owners", primaryBusinessOwnerController.Store)
@@ -186,6 +196,11 @@ func Api(router route.Router) {
 		protectedRouter.Post("/bdsps", bdspController.Store)
 		protectedRouter.Put("/bdsps/{id}", bdspController.Update)
 		protectedRouter.Delete("/bdsps/{id}", bdspController.Delete)
+
+		//lenders
+		protectedRouter.Post("/lenders", lenderController.Store)
+		protectedRouter.Put("/lenders/{id}", lenderController.Update)
+		protectedRouter.Delete("/lenders/{id}", lenderController.Delete)
 
 		protectedRouter.Get("/applications", applicationController.Index)
 		protectedRouter.Get("/applications/search", applicationController.Search)

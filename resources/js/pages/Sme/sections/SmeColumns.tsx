@@ -2,7 +2,7 @@ import React from 'react';
 import { Sme } from '@/types/sme';
 import { CrudColumn, CrudFilter } from '@/types/crud';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, CircleCheck, CircleX } from 'lucide-react';
 
 /**
  * Sme table columns configuration
@@ -28,6 +28,31 @@ export const smeColumns: CrudColumn<Sme>[] = [
     render: (sme) => (
       <div className="font-medium text-foreground">{sme.name}</div>
     ),
+  },
+  {
+    key: 'isActive',
+    label: 'Status',
+    sortable: true,
+    className: 'w-24 text-center',
+    render: (sme) => {
+      // Default to true if is_active is undefined (backward compatibility)
+      const isActive = sme.isActive ?? (sme as any).is_active ?? true;
+      return (
+        <div className="flex justify-center">
+          {isActive ? (
+            <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-600 text-xs">
+              <CircleCheck className="h-3 w-3 mr-1" />
+              Active
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="text-muted-foreground text-xs">
+              <CircleX className="h-3 w-3 mr-1" />
+              Inactive
+            </Badge>
+          )}
+        </div>
+      );
+    },
   },
   {
     key: 'businessCategory',
@@ -115,30 +140,38 @@ export const smeColumnsMobile: CrudColumn<Sme>[] = [
     key: 'combined',
     label: 'SME',
     sortable: false,
-    render: (sme) => (
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="font-medium text-foreground">{sme.name}</div>
-          {sme.registrationNumber && (
-            <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 ml-2" />
-          )}
+    render: (sme) => {
+      const isActive = sme.isActive ?? (sme as any).is_active ?? true;
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="font-medium text-foreground">{sme.name}</div>
+            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+              {!isActive && (
+                <Badge variant="secondary" className="text-xs">Inactive</Badge>
+              )}
+              {sme.registrationNumber && (
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              )}
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground font-mono">{sme.usmeNumber || (sme as any).usme_number || '-'}</div>
+          <div className="flex gap-2 flex-wrap items-center">
+            <Badge variant="secondary" className="text-xs">
+              {sme.businessCategory || (sme as any).business_category || '-'}
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {sme.sector}
+            </Badge>
+            {sme.district && (
+              <span className="text-xs text-muted-foreground">
+                {sme.district}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="text-sm text-muted-foreground font-mono">{sme.usmeNumber || (sme as any).usme_number || '-'}</div>
-        <div className="flex gap-2 flex-wrap items-center">
-          <Badge variant="secondary" className="text-xs">
-            {sme.businessCategory || (sme as any).business_category || '-'}
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            {sme.sector}
-          </Badge>
-          {sme.district && (
-            <span className="text-xs text-muted-foreground">
-              {sme.district}
-            </span>
-          )}
-        </div>
-      </div>
-    ),
+      );
+    },
   },
 ];
 

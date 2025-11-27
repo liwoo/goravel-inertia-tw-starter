@@ -11,13 +11,15 @@ import (
 
 type NotificationService struct {
 	*contracts.BaseCrudService
-	sseService *SSEService
+	sseService   *SSEService
+	cacheService *CacheService
 }
 
 func NewNotificationService() *NotificationService {
 	return &NotificationService{
 		BaseCrudService: contracts.NewBaseCrudService("notification", "id"),
 		sseService:      NewSSEService(),
+		cacheService:    GetCacheService(),
 	}
 }
 
@@ -178,10 +180,13 @@ func (s *NotificationService) MarkAsRead(notificationID, userID uint) error {
 	err := facades.Orm().Query().Save(&notification)
 
 	if err == nil {
+		// Invalidate notification counts cache
+		s.cacheService.InvalidateNotificationCounts(userID)
+
 		// Emit SSE event
 		s.sseService.NotifyNotificationRead(userID, notificationID)
 
-		// Update notification counts
+		// Update notification counts (will re-cache)
 		if counts, err := s.GetNotificationCounts(userID); err == nil {
 			s.sseService.UpdateNotificationCounts(userID, counts)
 		}
@@ -202,7 +207,10 @@ func (s *NotificationService) MarkAllAsRead(userID uint) error {
 		})
 
 	if err == nil {
-		// Update notification counts
+		// Invalidate notification counts cache
+		s.cacheService.InvalidateNotificationCounts(userID)
+
+		// Update notification counts (will re-cache)
 		if counts, err := s.GetNotificationCounts(userID); err == nil {
 			s.sseService.UpdateNotificationCounts(userID, counts)
 		}
@@ -222,10 +230,13 @@ func (s *NotificationService) DismissNotification(notificationID, userID uint) e
 	err := facades.Orm().Query().Save(&notification)
 
 	if err == nil {
+		// Invalidate notification counts cache
+		s.cacheService.InvalidateNotificationCounts(userID)
+
 		// Emit SSE event
 		s.sseService.NotifyNotificationDismissed(userID, notificationID)
 
-		// Update notification counts
+		// Update notification counts (will re-cache)
 		if counts, err := s.GetNotificationCounts(userID); err == nil {
 			s.sseService.UpdateNotificationCounts(userID, counts)
 		}
@@ -244,6 +255,12 @@ func (s *NotificationService) DismissAllNotifications(userID uint) error {
 			"is_dismissed": true,
 			"dismissed_at": now,
 		})
+
+	if err == nil {
+		// Invalidate notification counts cache
+		s.cacheService.InvalidateNotificationCounts(userID)
+	}
+
 	return err
 }
 
@@ -256,6 +273,14 @@ func (s *NotificationService) GetUnreadNotificationCount(userID uint) (int64, er
 
 // GetNotificationCounts returns various notification counts for a user
 func (s *NotificationService) GetNotificationCounts(userID uint) (map[string]int64, error) {
+	// Try to get from Redis cache first
+	if cachedCounts, found := s.cacheService.GetNotificationCounts(userID); found {
+		facades.Log().Debug("Notification counts cache hit", map[string]interface{}{
+			"user_id": userID,
+		})
+		return cachedCounts, nil
+	}
+
 	counts := make(map[string]int64)
 
 	// Total unread
@@ -293,6 +318,14 @@ func (s *NotificationService) GetNotificationCounts(userID uint) (map[string]int
 		return nil, err
 	}
 	counts["unread_mentions"] = unreadMentions
+
+	// Cache the counts in Redis
+	if err := s.cacheService.SetNotificationCounts(userID, counts); err != nil {
+		facades.Log().Warning("Failed to cache notification counts", map[string]interface{}{
+			"user_id": userID,
+			"error":   err.Error(),
+		})
+	}
 
 	return counts, nil
 }

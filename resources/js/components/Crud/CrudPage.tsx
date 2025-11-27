@@ -43,6 +43,7 @@ export function CrudPage<T extends { id: number }>({
                                                        customFilters = [],
                                                        pageActions = [],
                                                        simpleFilters = [],
+                                                       bulkActions = [],
                                                        paginationConfig,
                                                        createForm: CreateForm,
                                                        editForm: EditForm,
@@ -1057,39 +1058,6 @@ export function CrudPage<T extends { id: number }>({
                     )}
                 </div>
 
-                {/* Bulk Actions */}
-                {selectedIds.length > 0 && onBulkAction && (
-                    <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <Badge variant="secondary">
-                                {selectedIds.length} selected
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                {selectedIds.length} of {data.data.length} row(s) selected
-              </span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            {canBulkDelete && (
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={handleBulkDelete}
-                                >
-                                    <Trash2 className="h-4 w-4 mr-1"/>
-                                    Delete
-                                </Button>
-                            )}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={clearSelection}
-                            >
-                                Clear
-                            </Button>
-                        </div>
-                    </div>
-                )}
-
                 {/* Data Table */}
                 <div className="min-w-0 overflow-hidden">
                     <CrudDataTable
@@ -1111,7 +1079,9 @@ export function CrudPage<T extends { id: number }>({
                                 setSelection(ids);
                             }
                         }}
-                        enableSelection={!!onBulkAction}
+                        enableSelection={bulkActions.length > 0 || !!onBulkAction}
+                        bulkActions={bulkActions}
+                        onBulkAction={onBulkAction}
                         enableSearch={false} // We handle search externally
                         enableColumnToggle={true}
                         enablePagination={false} // We handle pagination externally

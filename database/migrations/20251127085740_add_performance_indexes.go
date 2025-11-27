@@ -105,41 +105,42 @@ func (r *M20251127085740AddPerformanceIndexes) Up() error {
 // Down Reverse the migrations.
 func (r *M20251127085740AddPerformanceIndexes) Down() error {
 	// Drop smes indexes
+	// Note: DropIndex expects just the column names - Goravel auto-generates full index name as {table}_{columns}_index
 	facades.Schema().Table("smes", func(table schema.Blueprint) {
-		table.DropIndex("smes_deleted_at_id_index")
-		table.DropIndex("smes_deleted_at_created_at_index")
-		table.DropIndex("smes_created_by_index")
-		table.DropIndex("smes_region_index")
-		table.DropIndex("smes_district_index")
-		table.DropIndex("smes_business_category_index")
+		table.DropIndex("deleted_at_id")
+		table.DropIndex("deleted_at_created_at")
+		table.DropIndex("created_by")
+		table.DropIndex("region")
+		table.DropIndex("district")
+		table.DropIndex("business_category")
 	})
 
 	// Drop users indexes
 	facades.Schema().Table("users", func(table schema.Blueprint) {
-		table.DropIndex("users_deleted_at_index")
+		table.DropIndex("deleted_at")
 	})
 
 	// Drop user_roles indexes
 	facades.Schema().Table("user_roles", func(table schema.Blueprint) {
-		table.DropIndex("user_roles_user_id_is_active_index")
-		table.DropIndex("user_roles_role_id_is_active_index")
+		table.DropIndex("user_id_is_active")
+		table.DropIndex("role_id_is_active")
 	})
 
 	// Drop roles indexes
 	facades.Schema().Table("roles", func(table schema.Blueprint) {
-		table.DropIndex("roles_deleted_at_is_active_index")
-		table.DropIndex("roles_slug_is_active_index")
+		table.DropIndex("deleted_at_is_active")
+		table.DropIndex("slug_is_active")
 	})
 
 	// Drop role_permissions indexes
 	facades.Schema().Table("role_permissions", func(table schema.Blueprint) {
-		table.DropIndex("role_permissions_role_id_is_active_index")
-		table.DropIndex("role_permissions_permission_id_is_active_index")
+		table.DropIndex("role_id_is_active")
+		table.DropIndex("permission_id_is_active")
 	})
 
 	// Drop permissions indexes
 	facades.Schema().Table("permissions", func(table schema.Blueprint) {
-		table.DropIndex("permissions_slug_is_active_index")
+		table.DropIndex("slug_is_active")
 	})
 
 	return nil

@@ -123,7 +123,7 @@ export function SmeKpiCards({ stats }: SmeKpiCardsProps) {
               {stats.hasRegistration.toLocaleString()}
             </div>
             <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-              <span>{stats.hasRegistrationPercentage}%</span>
+              <span>{typeof stats.hasRegistrationPercentage === 'number' ? stats.hasRegistrationPercentage.toFixed(1) : stats.hasRegistrationPercentage}%</span>
               <span>of total</span>
             </div>
           </div>

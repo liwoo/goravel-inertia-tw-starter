@@ -13,6 +13,7 @@ type Sme struct {
 	orm.SoftDeletes
 	UsmeNumber                string                     `json:"usme_number" db:"usme_number"`
 	Name                      string                     `json:"name" db:"name"`
+	IsActive                  bool                       `json:"is_active" db:"is_active" gorm:"default:true"`
 	RegistrationNumber        *string                    `json:"registration_number" db:"registration_number"`
 	TaxIdentificationNumber   *string                    `json:"tax_identification_number" db:"tax_identification_number"`
 	OperationalStartDate      *carbon.DateTime           `json:"operational_start_date" db:"operational_start_date"`

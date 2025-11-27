@@ -5,6 +5,7 @@ import { BaseModel, PaginatedResult, ListRequest } from './crud';
 export interface Sme extends BaseModel {
   usmeNumber: string;
   name: string;
+  isActive: boolean;
   registrationNumber?: string;
   taxIdentificationNumber?: string;
   operationalStartDate?: string;

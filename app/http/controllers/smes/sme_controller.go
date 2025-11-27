@@ -1,6 +1,8 @@
 package smes
 
 import (
+	"fmt"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"smedi-sme-db/app/auth"
@@ -188,4 +190,80 @@ func (c *SmeController) FetchBusinessEmployeeSummary(ctx http.Context) http.Resp
 	}
 
 	return c.SuccessResponse(ctx, summary, "Employee summary retrieved successfully")
+}
+
+// BulkDeactivate POST /api/smes/bulk-deactivate
+func (c *SmeController) BulkDeactivate(ctx http.Context) http.Response {
+	// Check permissions for bulk update
+	if err := c.CheckAuth(ctx, "update", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Parse request body
+	var request struct {
+		IDs []uint `json:"ids"`
+	}
+	if err := ctx.Request().Bind(&request); err != nil {
+		return c.BadRequestResponse(ctx, "Invalid request body", nil)
+	}
+
+	if len(request.IDs) == 0 {
+		return c.BadRequestResponse(ctx, "No IDs provided", nil)
+	}
+
+	// Get current user ID
+	var user models.User
+	var updatedBy *int
+	if err := facades.Auth(ctx).User(&user); err == nil && user.ID > 0 {
+		userID := int(user.ID)
+		updatedBy = &userID
+	}
+
+	// Call service layer
+	affected, err := c.smeService.BulkDeactivate(request.IDs, updatedBy)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Failed to deactivate SMEs: "+err.Error(), nil)
+	}
+
+	return c.SuccessResponse(ctx, map[string]interface{}{
+		"affected": affected,
+	}, fmt.Sprintf("%d SME(s) deactivated successfully", affected))
+}
+
+// BulkActivate POST /api/smes/bulk-activate
+func (c *SmeController) BulkActivate(ctx http.Context) http.Response {
+	// Check permissions for bulk update
+	if err := c.CheckAuth(ctx, "update", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Parse request body
+	var request struct {
+		IDs []uint `json:"ids"`
+	}
+	if err := ctx.Request().Bind(&request); err != nil {
+		return c.BadRequestResponse(ctx, "Invalid request body", nil)
+	}
+
+	if len(request.IDs) == 0 {
+		return c.BadRequestResponse(ctx, "No IDs provided", nil)
+	}
+
+	// Get current user ID
+	var user models.User
+	var updatedBy *int
+	if err := facades.Auth(ctx).User(&user); err == nil && user.ID > 0 {
+		userID := int(user.ID)
+		updatedBy = &userID
+	}
+
+	// Call service layer
+	affected, err := c.smeService.BulkActivate(request.IDs, updatedBy)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Failed to activate SMEs: "+err.Error(), nil)
+	}
+
+	return c.SuccessResponse(ctx, map[string]interface{}{
+		"affected": affected,
+	}, fmt.Sprintf("%d SME(s) activated successfully", affected))
 }

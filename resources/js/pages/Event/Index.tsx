@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { SharedData } from '@/types/app.d';
+import { Download } from 'lucide-react';
 import {
   Event,
   EventListResponse,
@@ -20,6 +22,10 @@ import Calendar from '@/components/Calendar/Calendar';
 import { CrudDrawer } from '@/components/Crud/CrudDrawer';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { ExportDialog } from '@/components/ExportDialog';
+import { ExportField, ExportOptions, ExportColumn } from '@/types/export';
+import { exportData, formatDateForExport } from '@/utils/exportUtils';
+import { PageAction } from '@/types/crud';
 
 // Props interface for the Event Index page
 interface EventIndexProps {
@@ -39,6 +45,24 @@ interface EventIndexProps {
   };
 }
 
+// Event export field definitions
+const eventExportFields: ExportField[] = [
+  { id: 'id', label: 'ID' },
+  { id: 'title', label: 'Title' },
+  { id: 'description', label: 'Description' },
+  { id: 'date', label: 'Date' },
+  { id: 'venue', label: 'Venue' },
+  { id: 'district', label: 'District' },
+  { id: 'partners', label: 'Partners' },
+  { id: 'notes', label: 'Notes' },
+  { id: 'createdAt', label: 'Date Added' },
+];
+
+// Default fields to export
+const defaultEventExportFields = [
+  'title', 'date', 'venue', 'district', 'partners'
+];
+
 export default function EventIndex({
   data,
   filters,
@@ -46,10 +70,58 @@ export default function EventIndex({
   meta
 }: EventIndexProps) {
   const isMobile = useIsMobile();
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const { props } = usePage<SharedData>();
+  const currentUser = props.auth?.user;
 
   const handleRefresh = () => {
     router.reload({ only: ['data'] });
   };
+
+  // Handle export
+  const handleExport = async (options: ExportOptions) => {
+    // Convert ExportFields to ExportColumns
+    const columns: ExportColumn[] = eventExportFields
+      .filter(f => options.fields.includes(f.id))
+      .map(f => ({
+        id: f.id,
+        label: f.label,
+        formatter: f.id === 'date' || f.id === 'createdAt'
+          ? (value: any) => formatDateForExport(value)
+          : f.id === 'partners'
+            ? (value: any) => Array.isArray(value) ? value.join(', ') : value
+            : undefined,
+        width: f.id === 'description' ? 40 : 20,
+      }));
+
+    // Prepare data for export
+    const exportRows = data.data.map(event => ({
+      ...event,
+      createdAt: event.createdAt || (event as any).created_at,
+    }));
+
+    await exportData(
+      {
+        rows: exportRows,
+        columns,
+        title: 'Events Export',
+      },
+      {
+        ...options,
+        filename: `events-export-${new Date().toISOString().split('T')[0]}`,
+      }
+    );
+  };
+
+  // Page actions including export
+  const pageActions: PageAction[] = [
+    {
+      key: 'export',
+      label: 'Export Data',
+      icon: <Download className="h-4 w-4" />,
+      handler: () => setShowExportDialog(true),
+    },
+  ];
 
   const [calendarDrawerState, setCalendarDrawerState] = useState<{
     isOpen: boolean;
@@ -131,9 +203,25 @@ export default function EventIndex({
             canEdit={permissions.canEdit}
             canDelete={permissions.canDelete}
             canView={true}
+            pageActions={pageActions}
           />
         </div>
       </div>
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        onExport={handleExport}
+        totalItems={data.data.length}
+        availableFields={eventExportFields}
+        defaultFields={defaultEventExportFields}
+        title="Export Events"
+        description={`Export ${data.data.length.toLocaleString()} event records from the current page.`}
+        showStatsOption={false}
+        defaultFilename="events-export"
+        preparedBy={currentUser?.name}
+      />
 
 
       <CrudDrawer

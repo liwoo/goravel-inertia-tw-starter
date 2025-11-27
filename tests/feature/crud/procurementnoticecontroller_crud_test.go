@@ -356,10 +356,10 @@ func (s *ProcurementNoticeControllerCRUDTestSuite) TestDeleteProcurementNotice()
 	procurementNotice.CreatedBy = &userID
 	s.Nil(facades.Orm().Query().Create(procurementNotice))
 
-	resp, result := s.makeRequest("DELETE", fmt.Sprintf("/api/procurement-notices/%d", procurementNotice.ID), nil)
+	resp, _ := s.makeRequest("DELETE", fmt.Sprintf("/api/procurement-notices/%d", procurementNotice.ID), nil)
 
-	s.Equal(http.StatusOK, resp.StatusCode)
-	s.True(result["success"].(bool))
+	// DELETE returns 204 No Content on success
+	s.Equal(http.StatusNoContent, resp.StatusCode)
 
 	// Verify soft delete
 	var deleted models.ProcurementNotice
@@ -398,18 +398,20 @@ func (s *ProcurementNoticeControllerCRUDTestSuite) TestPagination() {
 		s.Nil(facades.Orm().Query().Create(procurementNotice))
 	}
 
-	resp, result := s.makeRequest("GET", "/api/procurement-notices?page=1&per_page=10", nil)
+	resp, result := s.makeRequest("GET", "/api/procurement-notices?page=1&pageSize=10", nil)
 
 	s.Equal(http.StatusOK, resp.StatusCode)
 	s.True(result["success"].(bool))
 
-	data := result["data"].([]interface{})
+	// The response format has data nested inside result["data"]
+	dataWrapper := result["data"].(map[string]interface{})
+	data := dataWrapper["data"].([]interface{})
 	s.Equal(10, len(data))
 
-	meta := result["meta"].(map[string]interface{})
-	s.Equal(float64(15), meta["total"])
-	s.Equal(float64(1), meta["current_page"])
-	s.Equal(float64(10), meta["per_page"])
+	pagination := dataWrapper["pagination"].(map[string]interface{})
+	s.Equal(float64(15), pagination["total"])
+	s.Equal(float64(1), pagination["current_page"])
+	s.Equal(float64(10), pagination["per_page"])
 }
 
 // ============================================================================
@@ -444,15 +446,17 @@ func (s *ProcurementNoticeControllerCRUDTestSuite) TestSorting() {
 	}
 
 	// Test ascending sort
-	resp, result := s.makeRequest("GET", "/api/procurement-notices?sort=organization&order=asc", nil)
+	resp, result := s.makeRequest("GET", "/api/procurement-notices?sort=organization&direction=asc", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	data := result["data"].([]interface{})
+	dataWrapper := result["data"].(map[string]interface{})
+	data := dataWrapper["data"].([]interface{})
 	s.Equal("Alpha Ministry", data[0].(map[string]interface{})["organization"])
 
 	// Test descending sort
-	resp, result = s.makeRequest("GET", "/api/procurement-notices?sort=organization&order=desc", nil)
+	resp, result = s.makeRequest("GET", "/api/procurement-notices?sort=organization&direction=desc", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	data = result["data"].([]interface{})
+	dataWrapper = result["data"].(map[string]interface{})
+	data = dataWrapper["data"].([]interface{})
 	s.Equal("Zebra Corp", data[0].(map[string]interface{})["organization"])
 }
 
@@ -464,9 +468,9 @@ func (s *ProcurementNoticeControllerCRUDTestSuite) TestSearch() {
 	// Create procurement notices with different details
 	userID := int(s.testUser.ID)
 	testData := []struct {
-		refNo    string
-		org      string
-		details  string
+		refNo   string
+		org     string
+		details string
 	}{
 		{"SEARCH/2024/001", "Health Ministry", "Medical supplies tender"},
 		{"SEARCH/2024/002", "Education Department", "School furniture procurement"},
@@ -499,21 +503,24 @@ func (s *ProcurementNoticeControllerCRUDTestSuite) TestSearch() {
 	// Search by ref_no
 	resp, result := s.makeRequest("GET", "/api/procurement-notices?search=UNIQUE", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	data := result["data"].([]interface{})
+	dataWrapper := result["data"].(map[string]interface{})
+	data := dataWrapper["data"].([]interface{})
 	s.Equal(1, len(data))
 	s.Equal("UNIQUE/2024/003", data[0].(map[string]interface{})["ref_no"])
 
 	// Search by organization
 	resp, result = s.makeRequest("GET", "/api/procurement-notices?search=Education", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	data = result["data"].([]interface{})
+	dataWrapper = result["data"].(map[string]interface{})
+	data = dataWrapper["data"].([]interface{})
 	s.Equal(1, len(data))
 	s.Equal("Education Department", data[0].(map[string]interface{})["organization"])
 
 	// Search by details
 	resp, result = s.makeRequest("GET", "/api/procurement-notices?search=Medical", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
-	data = result["data"].([]interface{})
+	dataWrapper = result["data"].(map[string]interface{})
+	data = dataWrapper["data"].([]interface{})
 	s.Equal(1, len(data))
 	s.Contains(data[0].(map[string]interface{})["details"].(string), "Medical")
 }

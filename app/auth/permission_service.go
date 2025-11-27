@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -10,9 +11,12 @@ import (
 	"smedi-sme-db/app/models"
 )
 
+// Cache TTL for permissions
+const permissionCacheTTL = 15 * time.Minute
+
 // PermissionService handles role-based access control
 type PermissionService struct {
-	// Cache for performance
+	// In-memory cache for performance (fallback when Redis unavailable)
 	permissionCache map[string][]string
 	roleCache       map[string]*models.Role
 	cacheMutex      sync.RWMutex
@@ -343,6 +347,19 @@ func (s *PermissionService) GrantPermissionToRole(roleSlug, permissionSlug strin
 // Private helper methods
 
 func (s *PermissionService) loadUserPermissions(user *models.User) []string {
+	// Try to get from cache first
+	cacheKey := fmt.Sprintf("user:%d:permissions", user.ID)
+	if cachedJSON := facades.Cache().GetString(cacheKey, ""); cachedJSON != "" {
+		var cachedPermissions []string
+		if err := json.Unmarshal([]byte(cachedJSON), &cachedPermissions); err == nil {
+			facades.Log().Debug("Permission cache hit", map[string]interface{}{
+				"user_id":           user.ID,
+				"permissions_count": len(cachedPermissions),
+			})
+			return cachedPermissions
+		}
+	}
+
 	var permissions []string
 
 	// If user already has roles loaded, use them directly
@@ -417,6 +434,23 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	// Convert map to slice
 	for permission := range permissionMap {
 		permissions = append(permissions, permission)
+	}
+
+	// Cache the permissions
+	if len(permissions) > 0 {
+		if jsonBytes, err := json.Marshal(permissions); err == nil {
+			if err := facades.Cache().Put(cacheKey, string(jsonBytes), permissionCacheTTL); err != nil {
+				facades.Log().Warning("Failed to cache user permissions", map[string]interface{}{
+					"user_id": user.ID,
+					"error":   err.Error(),
+				})
+			} else {
+				facades.Log().Debug("Cached user permissions", map[string]interface{}{
+					"user_id":           user.ID,
+					"permissions_count": len(permissions),
+				})
+			}
+		}
 	}
 
 	return permissions
@@ -508,11 +542,19 @@ func (s *PermissionService) isResourceOwner(user *models.User, resourceType stri
 }
 
 func (s *PermissionService) clearUserCache(userID uint) {
+	// Clear in-memory cache
 	s.cacheMutex.Lock()
-	defer s.cacheMutex.Unlock()
-
 	userKey := fmt.Sprintf("user_%d", userID)
 	delete(s.permissionCache, userKey)
+	s.cacheMutex.Unlock()
+
+	// Clear cache using facades directly
+	cacheKey := fmt.Sprintf("user:%d:permissions", userID)
+	if !facades.Cache().Forget(cacheKey) {
+		facades.Log().Warning("Failed to invalidate permission cache", map[string]interface{}{
+			"user_id": userID,
+		})
+	}
 }
 
 func (s *PermissionService) refreshCache() {

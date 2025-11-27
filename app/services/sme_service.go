@@ -25,7 +25,7 @@ func NewSmeService() *SmeService {
 	service := contracts.NewServiceBuilder[models.Sme]("smes", "id").
 		WithSearchFields("usme_number", "name", "registration_number", "tax_identification_number", "business_category", "sector", "contact_email", "contact_phone", "region", "district"). // Fields that will be searchable via the search query parameter
 		WithSortFields("id", "created_at", "updated_at", "usme_number", "name", "operational_start_date", "business_category", "sector", "region", "district").                             // Fields that can be used for sorting results
-		WithFilterFields("business_category", "sector", "region", "district", "created_by").                                                                                                // Fields that can be filtered on
+		WithFilterFields("business_category", "sector", "region", "district", "created_by", "is_active").                                                                                                // Fields that can be filtered on
 		WithValidationRules(map[string]interface{}{                                                                                                                                         // Validation rules for create/update operations
 			// usme_number is omitted from validation - will be auto-generated in BeforeCreate hook if not provided
 			"name":                           "required|string|max:255",
@@ -253,6 +253,7 @@ func (s *SmeService) GetColumnMapping() map[string]string {
 	mapping["deletedBy"] = "deleted_by"
 	mapping["ipAddress"] = "ip_address"
 	mapping["userAgent"] = "user_agent"
+	mapping["isActive"] = "is_active"
 	// Note: We do NOT map business_improvement_aspects or business_accessed_financing here
 	// because they need to go through the model's BeforeSave hook which converts the arrays to JSON
 	return mapping
@@ -769,7 +770,7 @@ func (s *SmeService) getDistributionByField(field string) []map[string]interface
 
 	// Build the query based on field type
 	var query string
-	if field == "region" || field == "business_category" {
+	if field == "region" || field == "business_category" || field == "sector" {
 		query = fmt.Sprintf(`
 			SELECT COALESCE(%s, 'Unknown') as label, COUNT(*) as value
 			FROM smes
@@ -795,6 +796,104 @@ func (s *SmeService) getDistributionByField(field string) []map[string]interface
 			"label":      r.Label,
 			"value":      r.Value,
 			"percentage": percentage, // Return as number, not string
+		}
+	}
+
+	return distribution
+}
+
+// GetDistributionBySector returns SME distribution by sector field
+func (s *SmeService) GetDistributionBySector() []map[string]interface{} {
+	return s.getDistributionByField("sector")
+}
+
+// BulkUpdateStatus updates the is_active status for multiple SMEs
+func (s *SmeService) BulkUpdateStatus(ids []uint, isActive bool, updatedBy *int) (int64, error) {
+	if len(ids) == 0 {
+		return 0, errors.New("no IDs provided")
+	}
+
+	// Convert []uint to []any for WhereIn
+	anyIds := make([]any, len(ids))
+	for i, id := range ids {
+		anyIds[i] = id
+	}
+
+	// Build update data
+	updateData := map[string]interface{}{
+		"is_active": isActive,
+	}
+	if updatedBy != nil {
+		updateData["updated_by"] = *updatedBy
+	}
+
+	// Perform bulk update
+	result, err := facades.Orm().Query().Model(&models.Sme{}).
+		WhereIn("id", anyIds).
+		Update(updateData)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected, nil
+}
+
+// BulkDeactivate deactivates multiple SMEs by their IDs
+func (s *SmeService) BulkDeactivate(ids []uint, updatedBy *int) (int64, error) {
+	return s.BulkUpdateStatus(ids, false, updatedBy)
+}
+
+// BulkActivate activates multiple SMEs by their IDs
+func (s *SmeService) BulkActivate(ids []uint, updatedBy *int) (int64, error) {
+	return s.BulkUpdateStatus(ids, true, updatedBy)
+}
+
+// GetDistributionByGender returns SME distribution by primary business owner gender
+func (s *SmeService) GetDistributionByGender() []map[string]interface{} {
+	// Get total count for percentage calculation
+	// Count SMEs that have primary business owners with gender data
+	var total int64
+	query := `
+		SELECT COUNT(DISTINCT s.id)
+		FROM smes s
+		INNER JOIN primary_business_owner p ON p.sme_id = s.id
+		WHERE s.deleted_at IS NULL AND p.deleted_at IS NULL AND p.gender IS NOT NULL AND p.gender != ''
+	`
+	err := facades.Orm().Query().Raw(query).Scan(&total)
+	if err != nil || total == 0 {
+		return []map[string]interface{}{}
+	}
+
+	// Query for distribution by gender
+	type DistributionResult struct {
+		Label string
+		Value int64
+	}
+
+	var results []DistributionResult
+	genderQuery := `
+		SELECT COALESCE(p.gender, 'Unknown') as label, COUNT(*) as value
+		FROM smes s
+		INNER JOIN primary_business_owner p ON p.sme_id = s.id
+		WHERE s.deleted_at IS NULL AND p.deleted_at IS NULL
+		GROUP BY p.gender
+		ORDER BY value DESC
+	`
+
+	err = facades.Orm().Query().Raw(genderQuery).Scan(&results)
+	if err != nil {
+		return []map[string]interface{}{}
+	}
+
+	// Convert to response format with percentages
+	distribution := make([]map[string]interface{}, len(results))
+	for i, r := range results {
+		percentage := float64(r.Value) / float64(total) * 100
+		distribution[i] = map[string]interface{}{
+			"label":      r.Label,
+			"value":      r.Value,
+			"percentage": percentage,
 		}
 	}
 

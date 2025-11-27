@@ -30,6 +30,17 @@ func (s *ScopedPermissionsTestSuite) SetupTest() {
 	// Refresh database
 	s.RefreshDatabase()
 
+	// Clean up any existing test data to ensure a clean state
+	if orm := facades.Orm(); orm != nil {
+		// Delete in order respecting foreign key constraints
+		orm.Query().Exec("DELETE FROM books")
+		orm.Query().Exec("DELETE FROM role_permissions")
+		orm.Query().Exec("DELETE FROM user_roles")
+		orm.Query().Exec("DELETE FROM users")
+		orm.Query().Exec("DELETE FROM permissions")
+		orm.Query().Exec("DELETE FROM roles")
+	}
+
 	// Create test users and roles
 	s.setupTestUsers()
 	s.setupPermissions()

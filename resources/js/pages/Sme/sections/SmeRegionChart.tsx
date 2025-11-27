@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Label, Pie, PieChart } from "recharts";
+import { Cell, Label, Pie, PieChart } from "recharts";
 import {
   Card,
   CardContent,
@@ -15,7 +15,6 @@ import {
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart";
 import { DistributionPoint } from "@/types/sme";
 
@@ -24,12 +23,14 @@ interface SmeRegionChartProps {
   isLoading?: boolean;
 }
 
-// Color mapping for regions using theme chart colors
-const regionColors: Record<string, string> = {
-  Northern: "hsl(var(--chart-1))",
-  Central: "hsl(var(--chart-2))",
-  Southern: "hsl(var(--chart-3))",
-};
+// Define chart colors - using CSS variables for theme support
+const CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
 
 // Generate chart config dynamically from data
 const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
@@ -43,7 +44,7 @@ const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
     const key = item.label.toLowerCase().replace(/\s+/g, "_");
     config[key] = {
       label: item.label,
-      color: regionColors[item.label] || `hsl(var(--chart-${(index % 5) + 1}))`,
+      color: CHART_COLORS[index % CHART_COLORS.length],
     };
   });
 
@@ -51,14 +52,14 @@ const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
 };
 
 export function SmeRegionChart({ data, isLoading = false }: SmeRegionChartProps) {
-  // Transform data for Recharts
+  // Transform data for Recharts - assign colors based on index
   const chartData = React.useMemo(() => {
-    return data.map((item) => ({
+    return data.map((item, index) => ({
       region: item.label.toLowerCase().replace(/\s+/g, "_"),
       label: item.label,
       value: item.value,
       percentage: item.percentage,
-      fill: regionColors[item.label] || "hsl(var(--chart-1))",
+      fill: CHART_COLORS[index % CHART_COLORS.length],
     }));
   }, [data]);
 
@@ -145,6 +146,12 @@ export function SmeRegionChart({ data, isLoading = false }: SmeRegionChartProps)
               strokeWidth={2}
               stroke="hsl(var(--background))"
             >
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.fill}
+                />
+              ))}
               <Label
                 content={({ viewBox }) => {
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {

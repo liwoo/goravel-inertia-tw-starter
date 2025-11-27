@@ -105,11 +105,14 @@ func (s *CrudSortingTestSuite) TestBookServiceSortsByPublishedAt() {
 
 // Test that RoleService correctly sorts by name
 func (s *CrudSortingTestSuite) TestRoleServiceSortsByName() {
-	// Create test roles
+	// Clean up any leftover roles to ensure test isolation
+	facades.Orm().Query().Exec("DELETE FROM roles")
+
+	// Create test roles with names that are easy to verify in order
 	roles := []models.Role{
-		{Name: "Zebra Role", Slug: "zebra", IsActive: true},
-		{Name: "Alpha Role", Slug: "alpha", IsActive: true},
-		{Name: "Beta Role", Slug: "beta", IsActive: true},
+		{Name: "Zebra Role", Slug: "zebra_test_sort", IsActive: true},
+		{Name: "Alpha Role", Slug: "alpha_test_sort", IsActive: true},
+		{Name: "Beta Role", Slug: "beta_test_sort", IsActive: true},
 	}
 
 	for i := range roles {
@@ -121,34 +124,25 @@ func (s *CrudSortingTestSuite) TestRoleServiceSortsByName() {
 	roleService := services.NewRoleService()
 	req := contracts.ListRequest{
 		Page:      1,
-		PageSize:  10,
+		PageSize:  100, // Use larger page size to ensure we get all roles
 		Sort:      "name",
 		Direction: "asc",
 	}
 
 	result, err := roleService.GetList(req)
 	s.NoError(err)
-	s.GreaterOrEqual(result.Total, int64(3))
+	s.Equal(int64(3), result.Total)
 
-	// Check order
-	foundAlpha := false
-	foundBeta := false
-	foundZebra := false
-
-	for _, item := range result.Data {
-		role := item.(models.Role)
-		if role.Name == "Alpha Role" {
-			foundAlpha = true
-		} else if role.Name == "Beta Role" {
-			foundBeta = true
-			s.True(foundAlpha, "Alpha should come before Beta")
-		} else if role.Name == "Zebra Role" {
-			foundZebra = true
-			s.True(foundAlpha && foundBeta, "Zebra should come after Alpha and Beta")
-		}
+	// Check order - with only 3 roles, they should be in exact order: Alpha, Beta, Zebra
+	s.Len(result.Data, 3)
+	roleData := make([]models.Role, 3)
+	for i, item := range result.Data {
+		roleData[i] = item.(models.Role)
 	}
 
-	s.True(foundAlpha && foundBeta && foundZebra, "All test roles should be found")
+	s.Equal("Alpha Role", roleData[0].Name)
+	s.Equal("Beta Role", roleData[1].Name)
+	s.Equal("Zebra Role", roleData[2].Name)
 }
 
 // Test that field mapping works correctly for frontend field names

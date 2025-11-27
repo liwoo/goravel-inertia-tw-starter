@@ -14,7 +14,8 @@ import (
 // MessageService - Simplified version using generic CRUD service
 type MessageService struct {
 	*contracts.GenericCrudService[models.Message]
-	sseService *SSEService
+	sseService   *SSEService
+	cacheService *CacheService
 }
 
 // NewMessageService creates a new simplified message service
@@ -119,6 +120,7 @@ func NewMessageService() *MessageService {
 	service := &MessageService{
 		GenericCrudService: genericService,
 		sseService:         NewSSEService(),
+		cacheService:       GetCacheService(),
 	}
 
 	// Register service
@@ -145,10 +147,13 @@ func (s *MessageService) SendMessage(senderID uint, recipientID uint, content st
 
 	message := result.(*models.Message)
 
+	// Invalidate unread count cache for recipient
+	s.cacheService.InvalidateMessageUnreadCount(recipientID)
+
 	// Emit SSE events
 	s.sseService.NotifyNewMessage(senderID, recipientID, message)
 
-	// Update unread count for recipient
+	// Update unread count for recipient (will re-cache)
 	if count, err := s.GetUnreadCount(recipientID); err == nil {
 		s.sseService.UpdateUnreadCount(recipientID, count)
 	}
@@ -212,9 +217,32 @@ func (s *MessageService) GetUnreadMessages(userID uint, req contracts.ListReques
 
 // GetUnreadCount gets the count of unread messages
 func (s *MessageService) GetUnreadCount(userID uint) (int64, error) {
-	return facades.Orm().Query().Model(&models.Message{}).
+	// Try to get from cache first
+	if cachedCount, found := s.cacheService.GetMessageUnreadCount(userID); found {
+		facades.Log().Debug("Message unread count cache hit", map[string]interface{}{
+			"user_id": userID,
+			"count":   cachedCount,
+		})
+		return cachedCount, nil
+	}
+
+	// Query from database
+	count, err := facades.Orm().Query().Model(&models.Message{}).
 		Where("recipient_id = ? AND read_at IS NULL", userID).
 		Count()
+	if err != nil {
+		return 0, err
+	}
+
+	// Cache the count
+	if err := s.cacheService.SetMessageUnreadCount(userID, count); err != nil {
+		facades.Log().Warning("Failed to cache message unread count", map[string]interface{}{
+			"user_id": userID,
+			"error":   err.Error(),
+		})
+	}
+
+	return count, nil
 }
 
 // GetThreadMessages retrieves all messages in a thread
@@ -249,10 +277,13 @@ func (s *MessageService) MarkAsRead(messageID uint, userID uint) error {
 	})
 
 	if err == nil {
+		// Invalidate unread count cache
+		s.cacheService.InvalidateMessageUnreadCount(userID)
+
 		// Emit SSE events
 		s.sseService.NotifyMessageRead(message.SenderID, messageID)
 
-		// Update unread count for recipient
+		// Update unread count for recipient (will re-cache)
 		if count, err := s.GetUnreadCount(userID); err == nil {
 			s.sseService.UpdateUnreadCount(userID, count)
 		}
@@ -304,6 +335,9 @@ func (s *MessageService) DeleteMessage(messageID uint, userID uint) error {
 
 			// Update unread count if message was unread
 			if message.ReadAt == nil {
+				// Invalidate unread count cache
+				s.cacheService.InvalidateMessageUnreadCount(*message.RecipientID)
+
 				if count, err := s.GetUnreadCount(*message.RecipientID); err == nil {
 					s.sseService.UpdateUnreadCount(*message.RecipientID, count)
 				}

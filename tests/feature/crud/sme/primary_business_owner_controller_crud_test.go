@@ -188,7 +188,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) getValidPBOData(smeId uint
 		"last_name":                "Doe",
 		"other_names":              "Middle",
 		"nationality":              "Malawian",
-		"national_id_number":       "MWK12345678",
+		"national_id_number":       "T6N8SARR",
 		"date_of_birth":            "1990-01-15",
 		"gender":                   "male",
 		"education_level":          "tertiary",
@@ -220,7 +220,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestCreatePrimaryBusinessO
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "test@example.com",
-		"registration_number":          "COMP12345",
+		"registration_number":          "BRNR-PBO001",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -275,7 +275,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestCreatePrimaryBusinessO
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "validation@example.com",
-		"registration_number":          "COMP99999",
+		"registration_number":          "BRNR-PBO002",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -308,7 +308,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestGetPrimaryBusinessOwne
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "read@example.com",
-		"registration_number":          "COMP88888",
+		"registration_number":          "BRNR-PBO003",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -345,7 +345,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestUpdatePrimaryBusinessO
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "update@example.com",
-		"registration_number":          "COMP77777",
+		"registration_number":          "BRNR-PBO004",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -391,7 +391,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestDeletePrimaryBusinessO
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "delete@example.com",
-		"registration_number":          "COMP66666",
+		"registration_number":          "BRNR-PBO005",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -429,7 +429,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestListPrimaryBusinessOwn
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "list@example.com",
-		"registration_number":          "COMP55555",
+		"registration_number":          "BRNR-PBO006",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -442,7 +442,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestListPrimaryBusinessOwn
 	// Create multiple PBOs
 	for i := 0; i < 3; i++ {
 		data := s.getValidPBOData(smeID)
-		data["national_id_number"] = fmt.Sprintf("MWK1234567%d", i)
+		data["national_id_number"] = fmt.Sprintf("ABCD00%02d", i)
 		data["email"] = fmt.Sprintf("pbo%d@example.com", i)
 		data["first_name"] = fmt.Sprintf("FirstName%d", i)
 		s.makeRequest("POST", "/api/primary-business-owners", data)
@@ -472,7 +472,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestSearchPrimaryBusinessO
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "search@example.com",
-		"registration_number":          "COMP44444",
+		"registration_number":          "BRNR-PBO007",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -484,9 +484,9 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestSearchPrimaryBusinessO
 
 	// Create test data
 	testData := []map[string]interface{}{
-		{"first_name": "John", "last_name": "Doe", "national_id_number": "MWK11111111", "email": "john.doe.search@example.com"},
-		{"first_name": "Jane", "last_name": "Smith", "national_id_number": "MWK22222222", "email": "jane.smith.search@example.com"},
-		{"first_name": "John", "last_name": "Smith", "national_id_number": "MWK33333333", "email": "john.smith.search@example.com"},
+		{"first_name": "John", "last_name": "Doe", "national_id_number": "SRCH0001", "email": "john.doe.search@example.com"},
+		{"first_name": "Jane", "last_name": "Smith", "national_id_number": "SRCH0002", "email": "jane.smith.search@example.com"},
+		{"first_name": "John", "last_name": "Smith", "national_id_number": "SRCH0003", "email": "john.smith.search@example.com"},
 	}
 
 	for _, data := range testData {
@@ -532,7 +532,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestSearchPrimaryBusinessO
 	s.Equal(2, matchingSmiths, "Should find 2 PBOs with last name Smith")
 
 	// Search by national ID
-	resp, result = s.makeRequest("GET", "/api/primary-business-owners?search=MWK22222222", nil)
+	resp, result = s.makeRequest("GET", "/api/primary-business-owners?search=SRCH0002", nil)
 	s.Equal(http.StatusOK, resp.StatusCode)
 	s.True(result["success"].(bool))
 
@@ -542,13 +542,13 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestSearchPrimaryBusinessO
 	foundJane := false
 	for _, item := range items {
 		pbo := item.(map[string]interface{})
-		if nationalId, ok := pbo["national_id_number"].(string); ok && nationalId == "MWK22222222" {
+		if nationalId, ok := pbo["national_id_number"].(string); ok && nationalId == "SRCH0002" {
 			s.Equal("Jane", pbo["first_name"])
 			foundJane = true
 			break
 		}
 	}
-	s.True(foundJane, "Should find Jane with national ID MWK22222222")
+	s.True(foundJane, "Should find Jane with national ID SRCH0002")
 }
 
 // ============================================================================
@@ -563,7 +563,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestPagination() {
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "pagination@example.com",
-		"registration_number":          "COMP-PAGINATION",
+		"registration_number":          "BRNR-PAGE01",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -578,7 +578,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestPagination() {
 		data := s.getValidPBOData(smeID)
 		data["first_name"] = fmt.Sprintf("FirstName%02d", i)
 		data["last_name"] = fmt.Sprintf("LastName%02d", i)
-		data["national_id_number"] = fmt.Sprintf("MWK-PAGE-%03d", i)
+		data["national_id_number"] = fmt.Sprintf("PAGE0%03d", i)
 		data["email"] = fmt.Sprintf("pbo%02d@pagination.com", i)
 		s.makeRequest("POST", "/api/primary-business-owners", data)
 	}
@@ -642,7 +642,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestSorting() {
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "sorting@example.com",
-		"registration_number":          "COMP-SORTING",
+		"registration_number":          "BRNR-SORT01",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -666,7 +666,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestSorting() {
 		data := s.getValidPBOData(smeID)
 		data["first_name"] = name.first
 		data["last_name"] = name.last
-		data["national_id_number"] = fmt.Sprintf("MWK-SORT-%03d", i+1)
+		data["national_id_number"] = fmt.Sprintf("SORT0%03d", i+1)
 		data["email"] = fmt.Sprintf("sort%d@example.com", i)
 		s.makeRequest("POST", "/api/primary-business-owners", data)
 	}
@@ -730,7 +730,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestPaginationWithSorting(
 		"sector":                       "commerce",
 		"contact_phone":                "+265991234567",
 		"contact_email":                "combined@example.com",
-		"registration_number":          "COMP-COMBINED",
+		"registration_number":          "BRNR-COMB01",
 		"operational_start_date":       carbon.Now().Format("2006-01-02"),
 		"business_improvement_aspects": []string{"financial_management"},
 		"business_accessed_financing":  []string{"bank_loan"},
@@ -745,7 +745,7 @@ func (s *PrimaryBusinessOwnerControllerCRUDTestSuite) TestPaginationWithSorting(
 		data := s.getValidPBOData(smeID)
 		data["first_name"] = fmt.Sprintf("Person%02d", 16-i) // Reverse order
 		data["last_name"] = fmt.Sprintf("Family%02d", i)
-		data["national_id_number"] = fmt.Sprintf("MWK-COMB-%03d", i)
+		data["national_id_number"] = fmt.Sprintf("COMB0%03d", i)
 		data["email"] = fmt.Sprintf("combined%02d@example.com", i)
 		s.makeRequest("POST", "/api/primary-business-owners", data)
 	}
