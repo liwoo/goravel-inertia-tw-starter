@@ -660,24 +660,21 @@ func (s *SmeService) GetSmeStatistics() (map[string]interface{}, error) {
 	var newLastMonth int64
 	var withRegistrationNumber int64
 
-	// Get total SMEs (excluding soft deleted)
-	totalSmes, _ = facades.Orm().Query().Model(&models.Sme{}).Where("deleted_at IS NULL").Count()
+	// Get total SMEs (GORM automatically handles deleted_at IS NULL for soft delete models)
+	totalSmes, _ = facades.Orm().Query().Model(&models.Sme{}).Count()
 
 	// Get SMEs created this month
 	newThisMonth, _ = facades.Orm().Query().Model(&models.Sme{}).
-		Where("deleted_at IS NULL").
 		Where("created_at >= ?", currentMonthStart).
 		Count()
 
 	// Get SMEs created last month
 	newLastMonth, _ = facades.Orm().Query().Model(&models.Sme{}).
-		Where("deleted_at IS NULL").
 		Where("created_at >= ? AND created_at <= ?", lastMonthStart, lastMonthEnd).
 		Count()
 
 	// Get SMEs with registration number
 	withRegistrationNumber, _ = facades.Orm().Query().Model(&models.Sme{}).
-		Where("deleted_at IS NULL").
 		Where("registration_number IS NOT NULL AND registration_number != ''").
 		Count()
 
@@ -714,10 +711,10 @@ func (s *SmeService) getRegistrationTrend(months int) []map[string]interface{} {
 	trend := make([]map[string]interface{}, months)
 
 	// Calculate cumulative total up to 6 months ago
+	// GORM automatically handles deleted_at IS NULL for soft delete models
 	sixMonthsAgo := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -months, 0)
 	var cumulativeBase int64
 	cumulativeBase, _ = facades.Orm().Query().Model(&models.Sme{}).
-		Where("deleted_at IS NULL").
 		Where("created_at < ?", sixMonthsAgo).
 		Count()
 
@@ -729,9 +726,9 @@ func (s *SmeService) getRegistrationTrend(months int) []map[string]interface{} {
 		monthEnd := monthStart.AddDate(0, 1, 0).Add(-time.Second)
 
 		// Get count for this month
+		// GORM automatically handles deleted_at IS NULL for soft delete models
 		var count int64
 		count, _ = facades.Orm().Query().Model(&models.Sme{}).
-			Where("deleted_at IS NULL").
 			Where("created_at >= ? AND created_at <= ?", monthStart, monthEnd).
 			Count()
 
@@ -753,14 +750,16 @@ func (s *SmeService) getRegistrationTrend(months int) []map[string]interface{} {
 // getDistributionByField returns distribution data for a given field (region or business_category)
 func (s *SmeService) getDistributionByField(field string) []map[string]interface{} {
 	// Get total count for percentage calculation
+	// GORM automatically handles deleted_at IS NULL for soft delete models
 	var total int64
-	total, _ = facades.Orm().Query().Model(&models.Sme{}).Where("deleted_at IS NULL").Count()
+	total, _ = facades.Orm().Query().Model(&models.Sme{}).Count()
 
 	if total == 0 {
 		return []map[string]interface{}{}
 	}
 
 	// Query for distribution - using raw SQL for GROUP BY
+	// Note: Raw SQL requires manual deleted_at IS NULL since GORM doesn't auto-apply it
 	type DistributionResult struct {
 		Label string
 		Value int64

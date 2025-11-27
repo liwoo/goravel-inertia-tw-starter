@@ -228,20 +228,20 @@ func (s *BdspService) GetBdspStatistics() (map[string]interface{}, error) {
 		SuspendedBdsps int64
 	}
 
-	// Get total bdsps (excluding soft deleted)
-	stats.TotalBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Where("deleted_at IS NULL").Count()
+	// Get total bdsps (GORM automatically handles deleted_at IS NULL for soft delete models)
+	stats.TotalBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Count()
 
 	// Get pending bdsps
-	stats.PendingBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Where("registration_status = ? AND deleted_at IS NULL", models.RegistrationPending).Count()
+	stats.PendingBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Where("registration_status = ?", models.RegistrationPending).Count()
 
 	// Get active bdsps
-	stats.ActiveBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Where("registration_status = ? AND deleted_at IS NULL", models.RegistrationConfirmed).Count()
+	stats.ActiveBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Where("registration_status = ?", models.RegistrationConfirmed).Count()
 
 	// Get rejected bdsps
-	stats.RejectedBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Where("registration_status = ? AND deleted_at IS NULL", models.RegistrationRejected).Count()
+	stats.RejectedBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Where("registration_status = ?", models.RegistrationRejected).Count()
 
 	// Get suspended bdsps
-	stats.SuspendedBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Where("registration_status = ? AND deleted_at IS NULL", models.RegistrationSuspended).Count()
+	stats.SuspendedBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Where("registration_status = ?", models.RegistrationSuspended).Count()
 
 	return map[string]interface{}{
 		"totalBdsps":     stats.TotalBdsps,

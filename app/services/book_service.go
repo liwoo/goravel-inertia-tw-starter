@@ -301,21 +301,20 @@ func (s *BookService) GetBookStatistics() (map[string]interface{}, error) {
 		AveragePrice     float64
 	}
 
-	// Get total books (excluding soft deleted)
-	stats.TotalBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("deleted_at IS NULL").Count()
+	// Get total books (GORM automatically handles deleted_at IS NULL for soft delete models)
+	stats.TotalBooks, _ = facades.Orm().Query().Model(&models.Book{}).Count()
 
 	// Get available books
-	stats.AvailableBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "AVAILABLE").Count()
+	stats.AvailableBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ?", "AVAILABLE").Count()
 
 	// Get borrowed books
-	stats.BorrowedBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "BORROWED").Count()
+	stats.BorrowedBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ?", "BORROWED").Count()
 
 	// Get maintenance books
-	stats.MaintenanceBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ? AND deleted_at IS NULL", "MAINTENANCE").Count()
+	stats.MaintenanceBooks, _ = facades.Orm().Query().Model(&models.Book{}).Where("status = ?", "MAINTENANCE").Count()
 
 	// Get total value
 	facades.Orm().Query().Model(&models.Book{}).
-		Where("deleted_at IS NULL").
 		Select("COALESCE(SUM(price), 0) as total").
 		Pluck("total", &stats.TotalValue)
 

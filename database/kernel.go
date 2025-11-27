@@ -60,6 +60,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251119090154AddAuditFieldsToBdspsTable{},
 		&migrations.M20251125232825CreateApplicationsTable{},
 		&migrations.M20251126013257AddAuditFieldsToApplicationsTable{},
+		&migrations.M20251127085740AddPerformanceIndexes{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {

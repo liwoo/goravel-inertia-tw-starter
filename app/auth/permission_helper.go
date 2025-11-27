@@ -11,51 +11,22 @@ import (
 // PermissionHelper provides permission checking utilities
 type PermissionHelper struct {
 	permissionService *PermissionService
+	cache             *RequestScopedCache
 }
 
 // NewPermissionHelper creates a new permission helper
 func NewPermissionHelper() *PermissionHelper {
 	return &PermissionHelper{
 		permissionService: GetPermissionService(),
+		cache:             GetRequestScopedCache(),
 	}
 }
 
 // GetAuthenticatedUser gets the current authenticated user with roles
+// Uses request-scoped caching to prevent N+1 queries
 func (h *PermissionHelper) GetAuthenticatedUser(ctx http.Context) *models.User {
-	// Check if we have a test user context (for integration tests)
-	if ctx != nil {
-		if testUser, ok := ctx.Value("test_user").(*models.User); ok && testUser != nil {
-			// Load user with roles for consistency
-			var userWithRoles models.User
-			err := facades.Orm().Query().
-				Where("id = ?", testUser.ID).
-				With("Roles").
-				First(&userWithRoles)
-			if err == nil {
-				return &userWithRoles
-			}
-			return testUser
-		}
-	}
-
-	var user models.User
-	err := facades.Auth(ctx).User(&user)
-	if err != nil || user.ID == 0 {
-		return nil
-	}
-
-	// Load user with roles only (permissions will be loaded separately through pivot table)
-	var userWithRoles models.User
-	err = facades.Orm().Query().
-		Where("id = ?", user.ID).
-		With("Roles"). // Only preload roles, not permissions
-		First(&userWithRoles)
-
-	if err != nil {
-		return nil
-	}
-
-	return &userWithRoles
+	// Use the request-scoped cache to avoid repeated DB queries
+	return h.cache.GetCachedUser(ctx)
 }
 
 // RequireAuthentication ensures user is authenticated

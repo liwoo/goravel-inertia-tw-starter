@@ -84,9 +84,9 @@ export const navigationConfig: NavigationConfig = {
 
         {
             title: "Procurement",
-            url: "/admin/procurementnotices",
+            url: "/admin/procurement-notices",
             icon: ClipboardListIcon,
-            requiredService: "procurementnotices",
+            requiredService: "procurement_notices",
             requiredAction: "read" as const,
         },
     ],

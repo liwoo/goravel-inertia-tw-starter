@@ -45,15 +45,16 @@ func (s *PermissionService) HasPermission(user *models.User, permission string) 
 		return true
 	}
 
-	// Always load fresh permissions
+	// Use cached permissions when available (loaded once per request)
+	// Fall back to loading fresh if no cache is available
 	permissions := s.loadUserPermissions(user)
 
-	// Debug log permissions
+	// Debug log permissions (only at debug level to reduce noise)
 	facades.Log().Debug("HasPermission check", map[string]interface{}{
 		"user_id":             user.ID,
 		"email":               user.Email,
 		"checking_permission": permission,
-		"user_permissions":    permissions,
+		"permissions_count":   len(permissions),
 	})
 
 	// Check direct permission match
@@ -344,12 +345,49 @@ func (s *PermissionService) GrantPermissionToRole(roleSlug, permissionSlug strin
 func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	var permissions []string
 
-	// First, load user with roles (without permissions to avoid the many2many issue)
-	var userWithRoles models.User
+	// If user already has roles loaded, use them directly
+	// This avoids an extra query if GetAuthenticatedUser already loaded roles
+	userRoles := user.Roles
+	if len(userRoles) == 0 {
+		// Load user with roles if not already loaded
+		var userWithRoles models.User
+		err := facades.Orm().Query().
+			Where("id = ?", user.ID).
+			With("Roles").
+			First(&userWithRoles)
+
+		if err != nil {
+			return permissions
+		}
+		userRoles = userWithRoles.Roles
+	}
+
+	// Collect all active role IDs
+	roleIDs := make([]uint, 0, len(userRoles))
+	for _, role := range userRoles {
+		if role.IsActive {
+			roleIDs = append(roleIDs, role.ID)
+		}
+	}
+
+	if len(roleIDs) == 0 {
+		return permissions
+	}
+
+	// Single optimized query to get ALL permissions for ALL roles at once
+	// This replaces the N+1 pattern where we queried permissions for each role separately
+	// Convert roleIDs to interface slice for WhereIn
+	roleIDsInterface := make([]interface{}, len(roleIDs))
+	for i, id := range roleIDs {
+		roleIDsInterface[i] = id
+	}
+
+	var rolePermissions []models.RolePermission
 	err := facades.Orm().Query().
-		Where("id = ?", user.ID).
-		With("Roles").
-		First(&userWithRoles)
+		WhereIn("role_id", roleIDsInterface).
+		Where("is_active = ?", true).
+		With("Permission").
+		Find(&rolePermissions)
 
 	if err != nil {
 		return permissions
@@ -358,38 +396,21 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	// Collect all permissions from all roles through the pivot table
 	permissionMap := make(map[string]bool)
 
-	for _, role := range userWithRoles.Roles {
-		if !role.IsActive {
-			continue
-		}
-
-		// Load permissions through the pivot table to respect is_active status and scope
-		var rolePermissions []models.RolePermission
-		err := facades.Orm().Query().
-			Where("role_id = ? AND is_active = ?", role.ID, true).
-			With("Permission").
-			Find(&rolePermissions)
-
-		if err != nil {
-			continue
-		}
-
-		// Build permission slugs with scopes
-		for _, rp := range rolePermissions {
-			if rp.Permission.IsActive {
-				// Build the permission slug with scope
-				permSlug := rp.Permission.Slug
-				if rp.Scope != "" && rp.Scope != "by_all" {
-					// Include scope in the permission slug
-					permSlug = fmt.Sprintf("%s_%s", permSlug, rp.Scope)
-				} else if rp.Scope == "by_all" || rp.Scope == "" {
-					// For by_all scope, include both the base permission and the explicit scoped version
-					permissionMap[permSlug] = true
-					permissionMap[fmt.Sprintf("%s_by_all", permSlug)] = true
-					continue
-				}
+	// Build permission slugs with scopes
+	for _, rp := range rolePermissions {
+		if rp.Permission.IsActive {
+			// Build the permission slug with scope
+			permSlug := rp.Permission.Slug
+			if rp.Scope != "" && rp.Scope != "by_all" {
+				// Include scope in the permission slug
+				permSlug = fmt.Sprintf("%s_%s", permSlug, rp.Scope)
+			} else if rp.Scope == "by_all" || rp.Scope == "" {
+				// For by_all scope, include both the base permission and the explicit scoped version
 				permissionMap[permSlug] = true
+				permissionMap[fmt.Sprintf("%s_by_all", permSlug)] = true
+				continue
 			}
+			permissionMap[permSlug] = true
 		}
 	}
 
