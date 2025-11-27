@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"github.com/goravel/framework/contracts/database/schema"
 	"github.com/goravel/framework/facades"
 )
 
@@ -14,55 +13,54 @@ func (r *M20251020113904AddCascadeDeleteToSmeRelationships) Signature() string {
 
 // Up Run the migrations.
 func (r *M20251020113904AddCascadeDeleteToSmeRelationships) Up() error {
-	// Drop and recreate foreign keys with CASCADE DELETE for primary_business_owner
-	if err := facades.Schema().Table("primary_business_owner", func(table schema.Blueprint) {
-		table.DropForeign("primary_business_owner_sme_id_foreign")
-	}); err != nil {
+	// Use raw SQL for PostgreSQL compatibility
+	// Drop existing foreign keys and recreate with CASCADE DELETE
+
+	// primary_business_owner
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE primary_business_owner DROP CONSTRAINT IF EXISTS primary_business_owner_sme_id_foreign",
+	); err != nil {
+		return err
+	}
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE primary_business_owner ADD CONSTRAINT primary_business_owner_sme_id_foreign FOREIGN KEY (sme_id) REFERENCES smes(id) ON DELETE CASCADE",
+	); err != nil {
 		return err
 	}
 
-	if err := facades.Schema().Table("primary_business_owner", func(table schema.Blueprint) {
-		table.Foreign("sme_id").References("id").On("smes").CascadeOnDelete()
-	}); err != nil {
+	// additional_business_members
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE additional_business_members DROP CONSTRAINT IF EXISTS additional_business_members_sme_id_foreign",
+	); err != nil {
+		return err
+	}
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE additional_business_members ADD CONSTRAINT additional_business_members_sme_id_foreign FOREIGN KEY (sme_id) REFERENCES smes(id) ON DELETE CASCADE",
+	); err != nil {
 		return err
 	}
 
-	// Drop and recreate foreign keys with CASCADE DELETE for additional_business_members
-	if err := facades.Schema().Table("additional_business_members", func(table schema.Blueprint) {
-		table.DropForeign("additional_business_members_sme_id_foreign")
-	}); err != nil {
+	// business_formalisation
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE business_formalisation DROP CONSTRAINT IF EXISTS business_formalisation_sme_id_foreign",
+	); err != nil {
+		return err
+	}
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE business_formalisation ADD CONSTRAINT business_formalisation_sme_id_foreign FOREIGN KEY (sme_id) REFERENCES smes(id) ON DELETE CASCADE",
+	); err != nil {
 		return err
 	}
 
-	if err := facades.Schema().Table("additional_business_members", func(table schema.Blueprint) {
-		table.Foreign("sme_id").References("id").On("smes").CascadeOnDelete()
-	}); err != nil {
+	// business_employee_summary
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE business_employee_summary DROP CONSTRAINT IF EXISTS business_employee_summary_sme_id_foreign",
+	); err != nil {
 		return err
 	}
-
-	// Drop and recreate foreign keys with CASCADE DELETE for business_formalisation
-	if err := facades.Schema().Table("business_formalisation", func(table schema.Blueprint) {
-		table.DropForeign("business_formalisation_sme_id_foreign")
-	}); err != nil {
-		return err
-	}
-
-	if err := facades.Schema().Table("business_formalisation", func(table schema.Blueprint) {
-		table.Foreign("sme_id").References("id").On("smes").CascadeOnDelete()
-	}); err != nil {
-		return err
-	}
-
-	// Drop and recreate foreign keys with CASCADE DELETE for business_employee_summary
-	if err := facades.Schema().Table("business_employee_summary", func(table schema.Blueprint) {
-		table.DropForeign("business_employee_summary_sme_id_foreign")
-	}); err != nil {
-		return err
-	}
-
-	if err := facades.Schema().Table("business_employee_summary", func(table schema.Blueprint) {
-		table.Foreign("sme_id").References("id").On("smes").CascadeOnDelete()
-	}); err != nil {
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE business_employee_summary ADD CONSTRAINT business_employee_summary_sme_id_foreign FOREIGN KEY (sme_id) REFERENCES smes(id) ON DELETE CASCADE",
+	); err != nil {
 		return err
 	}
 
@@ -71,57 +69,53 @@ func (r *M20251020113904AddCascadeDeleteToSmeRelationships) Up() error {
 
 // Down Reverse the migrations.
 func (r *M20251020113904AddCascadeDeleteToSmeRelationships) Down() error {
-	// Revert back to foreign keys without CASCADE DELETE
+	// Revert back to foreign keys without CASCADE DELETE using raw SQL
 
-	// Drop CASCADE DELETE foreign keys and recreate without CASCADE for primary_business_owner
-	if err := facades.Schema().Table("primary_business_owner", func(table schema.Blueprint) {
-		table.DropForeign("primary_business_owner_sme_id_foreign")
-	}); err != nil {
+	// primary_business_owner
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE primary_business_owner DROP CONSTRAINT IF EXISTS primary_business_owner_sme_id_foreign",
+	); err != nil {
+		return err
+	}
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE primary_business_owner ADD CONSTRAINT primary_business_owner_sme_id_foreign FOREIGN KEY (sme_id) REFERENCES smes(id)",
+	); err != nil {
 		return err
 	}
 
-	if err := facades.Schema().Table("primary_business_owner", func(table schema.Blueprint) {
-		table.Foreign("sme_id").References("id").On("smes")
-	}); err != nil {
+	// additional_business_members
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE additional_business_members DROP CONSTRAINT IF EXISTS additional_business_members_sme_id_foreign",
+	); err != nil {
+		return err
+	}
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE additional_business_members ADD CONSTRAINT additional_business_members_sme_id_foreign FOREIGN KEY (sme_id) REFERENCES smes(id)",
+	); err != nil {
 		return err
 	}
 
-	// Drop CASCADE DELETE foreign keys and recreate without CASCADE for additional_business_members
-	if err := facades.Schema().Table("additional_business_members", func(table schema.Blueprint) {
-		table.DropForeign("additional_business_members_sme_id_foreign")
-	}); err != nil {
+	// business_formalisation
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE business_formalisation DROP CONSTRAINT IF EXISTS business_formalisation_sme_id_foreign",
+	); err != nil {
+		return err
+	}
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE business_formalisation ADD CONSTRAINT business_formalisation_sme_id_foreign FOREIGN KEY (sme_id) REFERENCES smes(id)",
+	); err != nil {
 		return err
 	}
 
-	if err := facades.Schema().Table("additional_business_members", func(table schema.Blueprint) {
-		table.Foreign("sme_id").References("id").On("smes")
-	}); err != nil {
+	// business_employee_summary
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE business_employee_summary DROP CONSTRAINT IF EXISTS business_employee_summary_sme_id_foreign",
+	); err != nil {
 		return err
 	}
-
-	// Drop CASCADE DELETE foreign keys and recreate without CASCADE for business_formalisation
-	if err := facades.Schema().Table("business_formalisation", func(table schema.Blueprint) {
-		table.DropForeign("business_formalisation_sme_id_foreign")
-	}); err != nil {
-		return err
-	}
-
-	if err := facades.Schema().Table("business_formalisation", func(table schema.Blueprint) {
-		table.Foreign("sme_id").References("id").On("smes")
-	}); err != nil {
-		return err
-	}
-
-	// Drop CASCADE DELETE foreign keys and recreate without CASCADE for business_employee_summary
-	if err := facades.Schema().Table("business_employee_summary", func(table schema.Blueprint) {
-		table.DropForeign("business_employee_summary_sme_id_foreign")
-	}); err != nil {
-		return err
-	}
-
-	if err := facades.Schema().Table("business_employee_summary", func(table schema.Blueprint) {
-		table.Foreign("sme_id").References("id").On("smes")
-	}); err != nil {
+	if _, err := facades.Orm().Query().Exec(
+		"ALTER TABLE business_employee_summary ADD CONSTRAINT business_employee_summary_sme_id_foreign FOREIGN KEY (sme_id) REFERENCES smes(id)",
+	); err != nil {
 		return err
 	}
 

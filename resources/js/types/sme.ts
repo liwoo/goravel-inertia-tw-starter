@@ -2,7 +2,9 @@
 import { BaseModel, PaginatedResult, ListRequest } from './crud';
 
 // Core Sme interface matching the backend model
+// Includes both camelCase (frontend) and snake_case (API response) variants
 export interface Sme extends BaseModel {
+  // CamelCase properties (canonical)
   usmeNumber: string;
   name: string;
   isActive: boolean;
@@ -18,7 +20,6 @@ export interface Sme extends BaseModel {
   physicalAddress?: string;
   postalAddress?: string;
   website?: string;
-  // region is inferred from district
   district?: string;
   traditionalAuthority?: string;
   createdBy?: number;
@@ -26,8 +27,31 @@ export interface Sme extends BaseModel {
   deletedBy?: number;
   ipAddress?: string;
   userAgent?: string;
-  businessImprovementAspects: string[]; // Array, not string
-  businessAccessedFinancing: string[]; // Array, not string
+  businessImprovementAspects: string[];
+  businessAccessedFinancing: string[];
+
+  // Snake_case variants (from API responses)
+  usme_number?: string;
+  is_active?: boolean;
+  registration_number?: string;
+  tax_identification_number?: string;
+  operational_start_date?: string;
+  business_category?: string;
+  sub_sector?: string;
+  business_description?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  physical_address?: string;
+  postal_address?: string;
+  traditional_authority?: string;
+  created_by?: number;
+  updated_by?: number;
+  deleted_by?: number;
+  ip_address?: string;
+  user_agent?: string;
+  business_improvement_aspects?: string[];
+  business_accessed_financing?: string[];
+
   // Relationships (optional, loaded via eager loading)
   primaryBusinessOwner?: any; // PrimaryBusinessOwner type
   additionalBusinessMembers?: any[]; // AdditionalBusinessMember[] type

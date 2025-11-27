@@ -62,6 +62,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251126013257AddAuditFieldsToApplicationsTable{},
 		&migrations.M20251127085740AddPerformanceIndexes{},
 		&migrations.M20251127120000AddIsActiveToSmesTable{},
+		&migrations.M20251127151630AlterPhoneColumnsSize{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {

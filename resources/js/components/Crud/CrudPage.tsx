@@ -482,7 +482,7 @@ export function CrudPage<T extends { id: number }>({
 
         if ('logic' in appliedDynamicFilter && index !== undefined) {
             // Remove specific condition from compound filter
-            const newConditions = appliedDynamicFilter.conditions.filter((_, i) => i !== index);
+            const newConditions = appliedDynamicFilter.conditions.filter((_: FilterCondition | CompoundFilter, i: number) => i !== index);
             if (newConditions.length > 1) {
                 newFilter = {...appliedDynamicFilter, conditions: newConditions};
             } else if (newConditions.length === 1) {
@@ -618,8 +618,6 @@ export function CrudPage<T extends { id: number }>({
                     setTimeout(() => {
                         router.reload({
                             only: ['data', 'filters', 'stats'],
-                            preserveState: false,
-                            preserveScroll: true
                         });
                     }, 100);
                     if (selectedIds.includes(item.id)) {
@@ -668,8 +666,6 @@ export function CrudPage<T extends { id: number }>({
         // Refresh the page data
         router.reload({
             only: ['data', 'filters', 'stats'],
-            preserveState: false,
-            preserveScroll: true
         });
     }, [closeDrawer]);
 
@@ -796,7 +792,7 @@ export function CrudPage<T extends { id: number }>({
         if (!appliedDynamicFilter) return 0;
         if ('logic' in appliedDynamicFilter) {
             // Compound filter - count all conditions
-            return appliedDynamicFilter.conditions.filter(c => !('logic' in c)).length;
+            return appliedDynamicFilter.conditions.filter((c: FilterCondition | CompoundFilter) => !('logic' in c)).length;
         }
         // Single condition
         return 1;

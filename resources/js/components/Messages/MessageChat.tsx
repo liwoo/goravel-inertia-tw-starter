@@ -19,45 +19,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useMessages } from "@/contexts/MessageContext";
+import { useMessages, MessageUser, Message, Conversation } from "@/contexts/MessageContext";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  is_active: boolean;
-  roles?: Array<{
-    id: number;
-    name: string;
-    slug: string;
-  }>;
-}
-
-interface Message {
-  id: number;
-  content: string;
-  type: string;
-  status: string;
-  sender_id: number;
-  recipient_id?: number;
-  is_edited: boolean;
-  edited_at?: string;
-  read_at?: string;
-  created_at: string;
-  updated_at: string;
-  sender?: User;
-  recipient?: User;
-  parent_message_id?: number;
-  parent_message?: Message;
-  replies?: Message[];
-}
-
-interface Conversation {
-  user: User;
-  latest_message: Message;
-  unread_count: number;
-  last_activity: string;
-}
+// Use MessageUser for compatibility
+type User = MessageUser;
 
 interface MessageChatProps {
   currentUser: User;

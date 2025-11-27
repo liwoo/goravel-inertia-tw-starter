@@ -23,14 +23,33 @@ import {
   RotateCcw,
   AlertTriangle
 } from 'lucide-react';
-import type { 
-  PermissionMatrixData, 
-  RoleWithPermissions, 
-  Permission, 
+import type {
+  PermissionMatrixData,
+  RoleWithPermissions,
+  Permission,
   PermissionGrouped,
   BulkAssignmentRequest,
   ServiceAction
 } from '@/types/permissions';
+
+// Local interfaces for the component's data structure
+interface MatrixRole {
+  id: number;
+  name: string;
+  slug: string;
+  level: number;
+  permissions: Record<string, boolean>;
+}
+
+interface MatrixService {
+  name: string;
+  slug: string;
+}
+
+interface MatrixAction {
+  name: string;
+  slug: string;
+}
 
 interface PermissionMatrixProps {
   initialData: any; // Updated to handle new service-action structure
@@ -81,24 +100,24 @@ export default function PermissionMatrix({
   }
 
   // Filter roles and services based on search - with defensive checks
-  const filteredRoles = React.useMemo(() => {
+  const filteredRoles = React.useMemo((): MatrixRole[] => {
     if (!data?.roles || !Array.isArray(data.roles)) return [];
-    return data.roles.filter(role => 
+    return data.roles.filter((role: MatrixRole) =>
       role?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       role?.slug?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [data?.roles, searchTerm]);
 
-  const filteredServices = React.useMemo(() => {
+  const filteredServices = React.useMemo((): MatrixService[] => {
     if (!data?.services || !Array.isArray(data.services)) return [];
-    return data.services.filter(service => 
+    return data.services.filter((service: MatrixService) =>
       selectedService === 'all' || service?.slug === selectedService
     );
   }, [data?.services, selectedService]);
 
-  const allServices = React.useMemo(() => {
+  const allServices = React.useMemo((): string[] => {
     if (!data?.services || !Array.isArray(data.services)) return ['all'];
-    return ['all', ...data.services.map(s => s?.slug).filter(Boolean)];
+    return ['all', ...data.services.map((s: MatrixService) => s?.slug).filter(Boolean)];
   }, [data?.services]);
 
   // Helper to check if a permission is assigned to a role using service_action format
@@ -110,7 +129,7 @@ export default function PermissionMatrix({
     }
     
     // Check if role has this permission
-    const role = data.roles.find(r => r.id === roleId);
+    const role = data.roles.find((r: MatrixRole) => r.id === roleId);
     return role?.permissions[permissionSlug] || false;
   }, [data.roles, pendingChanges]);
 
@@ -132,9 +151,9 @@ export default function PermissionMatrix({
       await onPermissionToggle(roleId, serviceSlug, action, newAssignment);
       
       // Update local data on success
-      setData(prevData => {
+      setData((prevData: any) => {
         const newData = { ...prevData };
-        const roleIndex = newData.roles.findIndex(r => r.id === roleId);
+        const roleIndex = newData.roles.findIndex((r: MatrixRole) => r.id === roleId);
         if (roleIndex !== -1) {
           newData.roles[roleIndex].permissions[permissionSlug] = newAssignment;
         }
@@ -176,8 +195,8 @@ export default function PermissionMatrix({
         return;
       }
       
-      const allPermissionSlugs = filteredServices.flatMap(service => 
-        (data.actions || []).map(action => `${service?.slug}_${action?.slug}`)
+      const allPermissionSlugs = filteredServices.flatMap((service: MatrixService) =>
+        (data.actions || []).map((action: MatrixAction) => `${service?.slug}_${action?.slug}`)
       );
 
       // TODO: Update to use new bulk assign API
@@ -236,10 +255,10 @@ export default function PermissionMatrix({
       };
     }
 
-    const totalVisibleAssignments = filteredRoles.reduce((total, role) => {
+    const totalVisibleAssignments = filteredRoles.reduce((total: number, role: MatrixRole) => {
       const rolePermissions = role?.permissions || {};
-      const visiblePermissionCount = filteredServices.reduce((count, service) => {
-        return count + (data.actions || []).filter(action => 
+      const visiblePermissionCount = filteredServices.reduce((count: number, service: MatrixService) => {
+        return count + (data.actions || []).filter((action: MatrixAction) =>
           rolePermissions[`${service?.slug}_${action?.slug}`]
         ).length;
       }, 0);
@@ -424,8 +443,8 @@ export default function PermissionMatrix({
                 </tr>
                 <tr>
                   <th className="sticky left-0 bg-background border border-border p-2"></th>
-                  {filteredServices.flatMap(service =>
-                    (data.actions || []).map(action => (
+                  {filteredServices.flatMap((service: MatrixService) =>
+                    (data.actions || []).map((action: MatrixAction) => (
                       <th key={`${service.slug}-${action.slug}`} className="border border-border p-1 text-xs text-center min-w-[80px]">
                         <div className="transform -rotate-45 origin-center whitespace-nowrap">
                           {action.name}
@@ -468,12 +487,12 @@ export default function PermissionMatrix({
                         </div>
                       </div>
                     </td>
-                    {filteredServices.flatMap(service =>
-                      (data.actions || []).map(action => {
+                    {filteredServices.flatMap((service: MatrixService) =>
+                      (data.actions || []).map((action: MatrixAction) => {
                         const isAssigned = isPermissionAssigned(role.id, service.slug, action.slug);
                         const permissionSlug = `${service.slug}_${action.slug}`;
                         const isPending = pendingChanges.has(`${role.id}-${permissionSlug}`);
-                        
+
                         return (
                           <td key={`${role.id}-${service.slug}-${action.slug}`} className="border border-border p-2 text-center">
                             <Checkbox

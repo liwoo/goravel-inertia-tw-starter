@@ -113,7 +113,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Main Content + Sidebar Row */}
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
+        <div className="flex flex-col xl:flex-row gap-6 items-start">
           {/* Main Content Area - Left Side */}
           <div className="flex-1 flex flex-col gap-6 min-w-0">
             {/* KPI Cards Row */}
@@ -128,13 +128,13 @@ const DashboardPage: React.FC = () => {
             {canViewSmeCharts && (
               <>
                 {/* First Row of Charts: Region (Donut) + Sector (Bar) */}
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-2">
                   <SmeRegionChart data={stats.byRegion} />
                   <SmeSectorChart data={stats.bySector} />
                 </div>
 
                 {/* Second Row of Charts: Category (Bar) + Gender (Donut) */}
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-2">
                   <SmeCategoryChart data={stats.byCategory} />
                   <SmeGenderChart data={stats.byGender} />
                 </div>
@@ -143,7 +143,7 @@ const DashboardPage: React.FC = () => {
           </div>
 
           {/* Right Sidebar - Widgets (top-aligned with KPI cards) */}
-          <aside className="w-full lg:w-[380px] xl:w-[420px] flex flex-col gap-4 shrink-0">
+          <aside className="w-full xl:w-[380px] 2xl:w-[420px] flex flex-col gap-4 shrink-0">
             <RecentActivitiesWidget activities={recentActivities} />
             <PermissionGate service="events" action="read">
               <UpcomingEventsWidget events={upcomingEvents} />

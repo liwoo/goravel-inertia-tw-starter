@@ -7,7 +7,7 @@ import { MessageCircle } from "lucide-react"
 import { useState } from "react"
 import { MessageSidebar } from "@/components/Messages/MessageSidebar"
 import { MessageChat } from "@/components/Messages/MessageChat"
-import { useMessages } from "@/contexts/MessageContext"
+import { useMessages, MessageUser } from "@/contexts/MessageContext"
 import { usePage } from "@inertiajs/react"
 import { SharedData } from "@/types/app"
 import {
@@ -66,13 +66,15 @@ export function SiteHeader({title}: { title: string }) {
           </DrawerHeader>
           <div className="flex h-full overflow-hidden">
             <div className="w-80 border-r">
-              <MessageSidebar user={user} />
+              {user && <MessageSidebar user={user as MessageUser} />}
             </div>
             <div className="flex-1">
-              <MessageChat 
-                currentUser={user} 
-                conversation={selectedConversation} 
-              />
+              {user && (
+                <MessageChat
+                  currentUser={user as MessageUser}
+                  conversation={selectedConversation}
+                />
+              )}
             </div>
           </div>
         </DrawerContent>

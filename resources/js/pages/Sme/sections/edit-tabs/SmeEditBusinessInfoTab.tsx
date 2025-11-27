@@ -67,37 +67,41 @@ export const SmeEditBusinessInfoTab: React.FC<SmeEditBusinessInfoTabProps> = ({
 
   const addImprovementAspect = (value?: string) => {
     const aspectToAdd = value || improvementAspect.trim();
-    if (aspectToAdd && !businessData.businessImprovementAspects.includes(aspectToAdd)) {
+    const currentAspects = businessData.businessImprovementAspects || [];
+    if (aspectToAdd && !currentAspects.includes(aspectToAdd)) {
       onChange({
         ...businessData,
-        businessImprovementAspects: [...businessData.businessImprovementAspects, aspectToAdd]
+        businessImprovementAspects: [...currentAspects, aspectToAdd]
       });
       setImprovementAspect('');
     }
   };
 
   const removeImprovementAspect = (aspectToRemove: string) => {
+    const currentAspects = businessData.businessImprovementAspects || [];
     onChange({
       ...businessData,
-      businessImprovementAspects: businessData.businessImprovementAspects.filter(a => a !== aspectToRemove)
+      businessImprovementAspects: currentAspects.filter(a => a !== aspectToRemove)
     });
   };
 
   const addFinancingSource = (value?: string) => {
     const sourceToAdd = value || financingSource.trim();
-    if (sourceToAdd && !businessData.businessAccessedFinancing.includes(sourceToAdd)) {
+    const currentSources = businessData.businessAccessedFinancing || [];
+    if (sourceToAdd && !currentSources.includes(sourceToAdd)) {
       onChange({
         ...businessData,
-        businessAccessedFinancing: [...businessData.businessAccessedFinancing, sourceToAdd]
+        businessAccessedFinancing: [...currentSources, sourceToAdd]
       });
       setFinancingSource('');
     }
   };
 
   const removeFinancingSource = (sourceToRemove: string) => {
+    const currentSources = businessData.businessAccessedFinancing || [];
     onChange({
       ...businessData,
-      businessAccessedFinancing: businessData.businessAccessedFinancing.filter(s => s !== sourceToRemove)
+      businessAccessedFinancing: currentSources.filter(s => s !== sourceToRemove)
     });
   };
 
@@ -315,8 +319,8 @@ export const SmeEditBusinessInfoTab: React.FC<SmeEditBusinessInfoTabProps> = ({
             <Popover open={improvementPopoverOpen} onOpenChange={setImprovementPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-between" type="button">
-                  {businessData.businessImprovementAspects.length > 0
-                    ? `${businessData.businessImprovementAspects.length} selected`
+                  {(businessData.businessImprovementAspects?.length || 0) > 0
+                    ? `${businessData.businessImprovementAspects?.length || 0} selected`
                     : 'Select improvement aspects...'}
                   <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -350,7 +354,7 @@ export const SmeEditBusinessInfoTab: React.FC<SmeEditBusinessInfoTabProps> = ({
                         <div key={option} className="flex items-center space-x-2">
                           <Checkbox
                             id={`improvement-${option}`}
-                            checked={businessData.businessImprovementAspects.includes(option)}
+                            checked={(businessData.businessImprovementAspects || []).includes(option)}
                             onCheckedChange={(checked) => {
                               if (checked) {
                                 addImprovementAspect(option);
@@ -372,7 +376,7 @@ export const SmeEditBusinessInfoTab: React.FC<SmeEditBusinessInfoTabProps> = ({
               <p className="text-sm text-destructive">{errors.businessImprovementAspects}</p>
             )}
             <div className="flex flex-wrap gap-2 mt-2">
-              {businessData.businessImprovementAspects.map((aspect) => (
+              {(businessData.businessImprovementAspects || []).map((aspect) => (
                 <Badge key={aspect} variant="secondary" className="gap-1">
                   {aspect}
                   <X className="h-3 w-3 cursor-pointer" onClick={() => removeImprovementAspect(aspect)} />
@@ -386,8 +390,8 @@ export const SmeEditBusinessInfoTab: React.FC<SmeEditBusinessInfoTabProps> = ({
             <Popover open={financingPopoverOpen} onOpenChange={setFinancingPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-between" type="button">
-                  {businessData.businessAccessedFinancing.length > 0
-                    ? `${businessData.businessAccessedFinancing.length} selected`
+                  {(businessData.businessAccessedFinancing?.length || 0) > 0
+                    ? `${businessData.businessAccessedFinancing?.length || 0} selected`
                     : 'Select financing sources...'}
                   <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -421,7 +425,7 @@ export const SmeEditBusinessInfoTab: React.FC<SmeEditBusinessInfoTabProps> = ({
                         <div key={option} className="flex items-center space-x-2">
                           <Checkbox
                             id={`financing-${option}`}
-                            checked={businessData.businessAccessedFinancing.includes(option)}
+                            checked={(businessData.businessAccessedFinancing || []).includes(option)}
                             onCheckedChange={(checked) => {
                               if (checked) {
                                 addFinancingSource(option);
@@ -443,7 +447,7 @@ export const SmeEditBusinessInfoTab: React.FC<SmeEditBusinessInfoTabProps> = ({
               <p className="text-sm text-destructive">{errors.businessAccessedFinancing}</p>
             )}
             <div className="flex flex-wrap gap-2 mt-2">
-              {businessData.businessAccessedFinancing.map((source) => (
+              {(businessData.businessAccessedFinancing || []).map((source) => (
                 <Badge key={source} variant="secondary" className="gap-1">
                   {source}
                   <X className="h-3 w-3 cursor-pointer" onClick={() => removeFinancingSource(source)} />

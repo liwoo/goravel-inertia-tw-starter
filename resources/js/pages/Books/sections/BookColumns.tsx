@@ -97,22 +97,25 @@ export const bookColumns: CrudColumn<Book>[] = [
     label: 'Published',
     sortable: true,
     className: 'w-32',
-    render: (book) => (
-      <div className="text-sm">
-        {(book.publishedAt || book.published_at) ? (
-          <div className="flex items-center text-muted-foreground">
-            <Calendar className="w-3 h-3 mr-1" />
-            {new Date(book.publishedAt || book.published_at).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric'
-            })}
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        )}
-      </div>
-    ),
+    render: (book) => {
+      const publishDate = book.publishedAt || book.published_at;
+      return (
+        <div className="text-sm">
+          {publishDate ? (
+            <div className="flex items-center text-muted-foreground">
+              <Calendar className="w-3 h-3 mr-1" />
+              {new Date(publishDate).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )}
+        </div>
+      );
+    },
   },
   {
     key: 'tags',

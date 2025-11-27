@@ -55,7 +55,7 @@ export function SmeDetailView({
     fetchRelatedData();
   }, [sme.id]);
 
-  const formatDate = (date: string | Date | null) => {
+  const formatDate = (date: string | Date | null | undefined) => {
     if (!date) return 'Not specified';
     return new Date(date).toLocaleDateString('en-US', {
       month: 'long',
@@ -141,7 +141,7 @@ export function SmeDetailView({
               <div className="space-y-4">
                 <h4 className="font-semibold">Location</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DetailRow label="Region" value={sme.region} />
+                  <DetailRow label="Region" value={(sme as any).region} />
                   <DetailRow label="District" value={sme.district} />
                   <DetailRow label="Traditional Authority" value={sme.traditionalAuthority} />
                   <DetailRow label="Physical Address" value={sme.physicalAddress} />

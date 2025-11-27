@@ -33,34 +33,12 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useMessages } from "@/contexts/MessageContext";
+import { useMessages, Conversation, MessageUser } from "@/contexts/MessageContext";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  is_active: boolean;
-  roles?: Array<{
-    id: number;
-    name: string;
-    slug: string;
-  }>;
-}
+// Use MessageUser as the User type for this component
+type User = MessageUser;
 
-interface Conversation {
-  user: User;
-  latest_message: {
-    id: number;
-    content: string;
-    created_at: string;
-    sender_id: number;
-    is_edited: boolean;
-  };
-  unread_count: number;
-  last_activity: string;
-}
-
-interface MessageSidebarProps extends React.ComponentProps<typeof Sidebar> {
+interface MessageSidebarProps extends Omit<React.ComponentProps<typeof Sidebar>, 'user'> {
   user: User;
   onNewMessage?: () => void;
 }
@@ -167,17 +145,21 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
 
   const handleUserSelect = (selectedUser: User) => {
     // Create a mock conversation for new message
+    const now = new Date().toISOString();
     const newConversation: Conversation = {
       user: selectedUser,
       latest_message: {
         id: 0,
         content: "",
-        created_at: new Date().toISOString(),
+        type: "direct",
+        status: "draft",
+        created_at: now,
+        updated_at: now,
         sender_id: user.id,
         is_edited: false
       },
       unread_count: 0,
-      last_activity: new Date().toISOString()
+      last_activity: now
     };
     setSelectedConversation(newConversation);
     setOpen(true);
@@ -381,7 +363,7 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <NavUser user={user} />
+          <NavUser user={user as any} isSuperAdmin={false} />
         </SidebarFooter>
       </Sidebar>
 

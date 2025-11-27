@@ -24,7 +24,7 @@ export function BookDetailView({
   onClose,
   canEdit
 }: CrudDetailViewProps<Book>) {
-  const formatDate = (date: string | Date | null) => {
+  const formatDate = (date: string | Date | null | undefined) => {
     if (!date) return 'Not specified';
     return new Date(date).toLocaleDateString('en-US', {
       month: 'long',

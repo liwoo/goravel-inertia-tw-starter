@@ -15,7 +15,7 @@ import {
 import { BusinessFormalisation } from '@/types/business_formalisation';
 import { SmeEditBusinessInfoTab } from './edit-tabs/SmeEditBusinessInfoTab';
 import { SmeEditPrimaryOwnerTab } from './edit-tabs/SmeEditPrimaryOwnerTab';
-import { SmeEditFormalizationTab } from './edit-tabs/SmeEditFormalizationTab';
+import { SmeEditFormalizationTab, FormalizationFormState } from './edit-tabs/SmeEditFormalizationTab';
 import { SmeEditAdditionalMembersTab } from './edit-tabs/SmeEditAdditionalMembersTab';
 
 interface PrimaryOwnerData {
@@ -106,7 +106,9 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
   const [primaryOwner, setPrimaryOwner] = useState<PrimaryOwnerData | undefined>(initialPrimaryOwner);
 
   // Formalization data
-  const [formalization, setFormalization] = useState<BusinessFormalisation | undefined>(initialFormalization);
+  const [formalization, setFormalization] = useState<FormalizationFormState | undefined>(
+    initialFormalization || undefined
+  );
 
   // Additional members
   const [additionalMembers, setAdditionalMembers] = useState<AdditionalMemberData[]>(initialAdditionalMembers);
@@ -133,10 +135,10 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
       newErrors.taxIdentificationNumber = VALIDATION_MESSAGES.TIN;
     }
 
-    if (businessData.businessImprovementAspects.length === 0) {
+    if (!businessData.businessImprovementAspects || businessData.businessImprovementAspects.length === 0) {
       newErrors.businessImprovementAspects = 'At least one improvement aspect is required';
     }
-    if (businessData.businessAccessedFinancing.length === 0) {
+    if (!businessData.businessAccessedFinancing || businessData.businessAccessedFinancing.length === 0) {
       newErrors.businessAccessedFinancing = 'At least one financing source is required';
     }
 

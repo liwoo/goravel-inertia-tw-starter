@@ -89,7 +89,7 @@ export function DashboardKpiCards({
 }: DashboardKpiCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCardSkeleton />
         <KpiCardSkeleton />
         <KpiCardSkeleton />
@@ -226,8 +226,8 @@ export function DashboardKpiCards({
     : cards.length === 2
     ? "grid-cols-1 sm:grid-cols-2"
     : cards.length === 3
-    ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-    : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4";
+    ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+    : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4";
 
   return (
     <div className={`grid gap-4 ${gridCols}`}>

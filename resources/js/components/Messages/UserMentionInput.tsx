@@ -21,20 +21,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { useMessages } from "@/contexts/MessageContext";
+import { useMessages, MessageUser } from "@/contexts/MessageContext";
 import { useDebounce } from "@/hooks/useDebounce";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  is_active: boolean;
-  roles?: Array<{
-    id: number;
-    name: string;
-    slug: string;
-  }>;
-}
+// Use MessageUser for compatibility
+type User = MessageUser;
 
 interface UserMentionInputProps {
   value: string;

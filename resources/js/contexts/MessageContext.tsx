@@ -5,19 +5,20 @@ import axios from '@/lib/axios';
 import { useSSE, useSSEEvent } from '@/hooks/useSSE';
 import sseManager from '@/services/sseManager';
 
-interface User {
+export interface MessageUser {
   id: number;
   name: string;
   email: string;
-  is_active: boolean;
+  is_active?: boolean;
+  role?: string;
   roles?: Array<{
     id: number;
     name: string;
-    slug: string;
+    slug?: string;
   }>;
 }
 
-interface Message {
+export interface Message {
   id: number;
   content: string;
   type: string;
@@ -29,19 +30,22 @@ interface Message {
   read_at?: string;
   created_at: string;
   updated_at: string;
-  sender?: User;
-  recipient?: User;
+  sender?: MessageUser;
+  recipient?: MessageUser;
   parent_message_id?: number;
   parent_message?: Message;
   replies?: Message[];
 }
 
-interface Conversation {
-  user: User;
+export interface Conversation {
+  user: MessageUser;
   latest_message: Message;
   unread_count: number;
   last_activity: string;
 }
+
+// Alias for internal use
+type User = MessageUser;
 
 interface ListRequest {
   page: number;

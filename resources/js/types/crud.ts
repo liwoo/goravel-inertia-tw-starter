@@ -20,6 +20,7 @@ export interface ListRequest {
   sort?: string;
   direction?: 'asc' | 'desc';
   filters?: Record<string, any>;
+  [key: string]: any; // Index signature for dynamic filter keys
 }
 
 export interface BaseModel {

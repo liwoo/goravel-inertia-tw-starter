@@ -17,6 +17,8 @@ export interface BusinessFormalisation extends BaseModel {
   createdBy?: number;
   updatedBy?: number;
   deletedBy?: number;
+  deletedAt?: string;
+  deleted_at?: string;
   ipAddress?: string;
   userAgent?: string;
 }

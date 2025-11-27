@@ -73,7 +73,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       `${basePermission}_by_me`
     ];
     
-    return scopedPermissions.some(perm => auth.user.permissions?.includes(perm)) || false;
+    return scopedPermissions.some(perm => auth.user?.permissions?.includes(perm)) || false;
   };
 
   const canPerformAction = (service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage'): boolean => {
@@ -86,7 +86,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
     // Check the permissions object for this service
     const servicePerms = auth?.permissions?.[service];
-    
+
     if (!servicePerms) {
       // Fallback to checking user's permission array with scope support
       const basePermission = `${service}_${action}`;
@@ -96,8 +96,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         `${basePermission}_by_my_role`,
         `${basePermission}_by_me`
       ];
-      
-      const hasPermission = scopedPermissions.some(perm => auth.user.permissions?.includes(perm)) || false;
+
+      const hasPermission = scopedPermissions.some(perm => auth.user?.permissions?.includes(perm)) || false;
       return hasPermission;
     }
 

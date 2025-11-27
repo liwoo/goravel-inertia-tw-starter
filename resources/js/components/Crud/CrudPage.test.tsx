@@ -107,7 +107,7 @@ describe('CrudPage', () => {
       expect(filterBadge).toBeInTheDocument();
 
       // Find and click the X button on the filter badge
-      const filterBadgeContainer = filterBadge.closest('.flex');
+      const filterBadgeContainer = filterBadge.closest('.flex') as HTMLElement;
       const removeButton = within(filterBadgeContainer!).getByRole('button');
       await user.click(removeButton);
 
@@ -354,7 +354,7 @@ describe('CrudPage', () => {
           title="Books"
           resourceName="books"
           columns={mockColumns}
-          createForm={CreateForm}
+          createForm={CreateForm as any}
         />
       );
 
@@ -377,7 +377,7 @@ describe('CrudPage', () => {
           title="Books"
           resourceName="books"
           columns={mockColumns}
-          createForm={CreateForm}
+          createForm={CreateForm as any}
         />
       );
 
@@ -400,7 +400,7 @@ describe('CrudPage', () => {
           title="Books"
           resourceName="books"
           columns={mockColumns}
-          createForm={() => <div>Create Form</div>}
+          createForm={(() => <div>Create Form</div>) as any}
           canCreate={false}
         />
       );

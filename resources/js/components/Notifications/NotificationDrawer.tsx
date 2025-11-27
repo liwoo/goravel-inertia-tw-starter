@@ -259,7 +259,7 @@ export function NotificationDrawer({ children }: NotificationDrawerProps) {
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="all" className="text-xs">
                 All
-                {counts?.total > 0 && (
+                {counts?.total != null && counts.total > 0 && (
                   <Badge variant="secondary" className="ml-1 h-4 min-w-4 text-xs px-1">
                     {counts.total}
                   </Badge>
@@ -267,7 +267,7 @@ export function NotificationDrawer({ children }: NotificationDrawerProps) {
               </TabsTrigger>
               <TabsTrigger value="unread" className="text-xs">
                 Unread
-                {counts?.unread > 0 && (
+                {counts?.unread != null && counts.unread > 0 && (
                   <Badge variant="destructive" className="ml-1 h-4 min-w-4 text-xs px-1">
                     {counts.unread}
                   </Badge>
@@ -275,7 +275,7 @@ export function NotificationDrawer({ children }: NotificationDrawerProps) {
               </TabsTrigger>
               <TabsTrigger value="messages" className="text-xs">
                 Messages
-                {counts?.unread_messages > 0 && (
+                {counts?.unread_messages != null && counts.unread_messages > 0 && (
                   <Badge variant="secondary" className="ml-1 h-4 min-w-4 text-xs px-1">
                     {counts.unread_messages}
                   </Badge>

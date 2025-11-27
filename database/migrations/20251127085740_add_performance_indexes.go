@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"github.com/goravel/framework/contracts/database/schema"
 	"github.com/goravel/framework/facades"
 )
 
@@ -12,6 +11,16 @@ func (r *M20251127085740AddPerformanceIndexes) Signature() string {
 	return "20251127085740_add_performance_indexes"
 }
 
+// createIndexIfNotExists creates an index using raw SQL with IF NOT EXISTS for PostgreSQL compatibility
+func (r *M20251127085740AddPerformanceIndexes) createIndexIfNotExists(indexName, tableName, columns string) {
+	query := "CREATE INDEX IF NOT EXISTS " + indexName + " ON " + tableName + " (" + columns + ")"
+	if _, err := facades.Orm().Query().Exec(query); err != nil {
+		facades.Log().Error("Failed to create index "+indexName, map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+}
+
 // Up Run the migrations.
 // Performance indexes to address slow queries identified in logs:
 // - SLOW SELECT * FROM smes WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 20 (217.885ms)
@@ -19,129 +28,71 @@ func (r *M20251127085740AddPerformanceIndexes) Signature() string {
 // - N+1 queries on user_roles and role_permissions
 func (r *M20251127085740AddPerformanceIndexes) Up() error {
 	// Add indexes to smes table
-	err := facades.Schema().Table("smes", func(table schema.Blueprint) {
-		// Composite index for soft delete + ordering (most common query pattern)
-		// Handles: SELECT * FROM smes WHERE deleted_at IS NULL ORDER BY id DESC
-		table.Index("deleted_at", "id")
-
-		// Index for created_at ordering (common for dashboards)
-		table.Index("deleted_at", "created_at")
-
-		// Index for created_by field (scope filtering)
-		table.Index("created_by")
-
-		// Indexes for common filter fields
-		table.Index("region")
-		table.Index("district")
-		table.Index("business_category")
-	})
-	if err != nil {
-		facades.Log().Error("Failed to add indexes to smes table", map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
+	r.createIndexIfNotExists("smes_deleted_at_id_index", "smes", "deleted_at, id")
+	r.createIndexIfNotExists("smes_deleted_at_created_at_index", "smes", "deleted_at, created_at")
+	r.createIndexIfNotExists("smes_created_by_index", "smes", "created_by")
+	r.createIndexIfNotExists("smes_region_index", "smes", "region")
+	r.createIndexIfNotExists("smes_district_index", "smes", "district")
+	r.createIndexIfNotExists("smes_business_category_index", "smes", "business_category")
 
 	// Add indexes to users table
-	err = facades.Schema().Table("users", func(table schema.Blueprint) {
-		// Index for user lookups with soft delete
-		table.Index("deleted_at")
-	})
-	if err != nil {
-		facades.Log().Error("Failed to add indexes to users table", map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
+	r.createIndexIfNotExists("users_deleted_at_index", "users", "deleted_at")
 
 	// Add indexes to user_roles table
-	err = facades.Schema().Table("user_roles", func(table schema.Blueprint) {
-		// Composite index for user role lookups
-		table.Index("user_id", "is_active")
-		table.Index("role_id", "is_active")
-	})
-	if err != nil {
-		facades.Log().Error("Failed to add indexes to user_roles table", map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
+	r.createIndexIfNotExists("user_roles_user_id_is_active_index", "user_roles", "user_id, is_active")
+	r.createIndexIfNotExists("user_roles_role_id_is_active_index", "user_roles", "role_id, is_active")
 
 	// Add indexes to roles table
-	err = facades.Schema().Table("roles", func(table schema.Blueprint) {
-		// Index for role lookups with soft delete
-		table.Index("deleted_at", "is_active")
-		table.Index("slug", "is_active")
-	})
-	if err != nil {
-		facades.Log().Error("Failed to add indexes to roles table", map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
+	r.createIndexIfNotExists("roles_deleted_at_is_active_index", "roles", "deleted_at, is_active")
+	r.createIndexIfNotExists("roles_slug_is_active_index", "roles", "slug, is_active")
 
 	// Add indexes to role_permissions table
-	err = facades.Schema().Table("role_permissions", func(table schema.Blueprint) {
-		// Composite index for role permission lookups
-		table.Index("role_id", "is_active")
-		table.Index("permission_id", "is_active")
-	})
-	if err != nil {
-		facades.Log().Error("Failed to add indexes to role_permissions table", map[string]interface{}{
-			"error": err.Error(),
-		})
-	}
+	r.createIndexIfNotExists("role_permissions_role_id_is_active_index", "role_permissions", "role_id, is_active")
+	r.createIndexIfNotExists("role_permissions_permission_id_is_active_index", "role_permissions", "permission_id, is_active")
 
 	// Add indexes to permissions table
-	err = facades.Schema().Table("permissions", func(table schema.Blueprint) {
-		// Index for permission slug lookups
-		table.Index("slug", "is_active")
-	})
-	if err != nil {
-		facades.Log().Error("Failed to add indexes to permissions table", map[string]interface{}{
+	r.createIndexIfNotExists("permissions_slug_is_active_index", "permissions", "slug, is_active")
+
+	return nil
+}
+
+// dropIndexIfExists drops an index using raw SQL with IF EXISTS for PostgreSQL compatibility
+func (r *M20251127085740AddPerformanceIndexes) dropIndexIfExists(indexName string) {
+	query := "DROP INDEX IF EXISTS " + indexName
+	if _, err := facades.Orm().Query().Exec(query); err != nil {
+		facades.Log().Error("Failed to drop index "+indexName, map[string]interface{}{
 			"error": err.Error(),
 		})
 	}
-
-	return nil
 }
 
 // Down Reverse the migrations.
 func (r *M20251127085740AddPerformanceIndexes) Down() error {
 	// Drop smes indexes
-	// Note: DropIndex expects just the column names - Goravel auto-generates full index name as {table}_{columns}_index
-	facades.Schema().Table("smes", func(table schema.Blueprint) {
-		table.DropIndex("deleted_at_id")
-		table.DropIndex("deleted_at_created_at")
-		table.DropIndex("created_by")
-		table.DropIndex("region")
-		table.DropIndex("district")
-		table.DropIndex("business_category")
-	})
+	r.dropIndexIfExists("smes_deleted_at_id_index")
+	r.dropIndexIfExists("smes_deleted_at_created_at_index")
+	r.dropIndexIfExists("smes_created_by_index")
+	r.dropIndexIfExists("smes_region_index")
+	r.dropIndexIfExists("smes_district_index")
+	r.dropIndexIfExists("smes_business_category_index")
 
 	// Drop users indexes
-	facades.Schema().Table("users", func(table schema.Blueprint) {
-		table.DropIndex("deleted_at")
-	})
+	r.dropIndexIfExists("users_deleted_at_index")
 
 	// Drop user_roles indexes
-	facades.Schema().Table("user_roles", func(table schema.Blueprint) {
-		table.DropIndex("user_id_is_active")
-		table.DropIndex("role_id_is_active")
-	})
+	r.dropIndexIfExists("user_roles_user_id_is_active_index")
+	r.dropIndexIfExists("user_roles_role_id_is_active_index")
 
 	// Drop roles indexes
-	facades.Schema().Table("roles", func(table schema.Blueprint) {
-		table.DropIndex("deleted_at_is_active")
-		table.DropIndex("slug_is_active")
-	})
+	r.dropIndexIfExists("roles_deleted_at_is_active_index")
+	r.dropIndexIfExists("roles_slug_is_active_index")
 
 	// Drop role_permissions indexes
-	facades.Schema().Table("role_permissions", func(table schema.Blueprint) {
-		table.DropIndex("role_id_is_active")
-		table.DropIndex("permission_id_is_active")
-	})
+	r.dropIndexIfExists("role_permissions_role_id_is_active_index")
+	r.dropIndexIfExists("role_permissions_permission_id_is_active_index")
 
 	// Drop permissions indexes
-	facades.Schema().Table("permissions", func(table schema.Blueprint) {
-		table.DropIndex("slug_is_active")
-	})
+	r.dropIndexIfExists("permissions_slug_is_active_index")
 
 	return nil
 }

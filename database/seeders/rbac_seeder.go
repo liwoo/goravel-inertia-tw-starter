@@ -26,14 +26,14 @@ func (s *RBACSeeder) Run() error {
 	facades.Orm().Query().Exec("DELETE FROM permissions")
 	facades.Orm().Query().Exec("DELETE FROM roles")
 
-	// Create roles directly with raw SQL
+	// Create roles directly with raw SQL (using NOW() for PostgreSQL compatibility)
 	rolesSQL := []string{
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Super Administrator', 'super-admin', 'Full system access with all permissions', 100, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Administrator', 'admin', 'Administrative access to most features', 80, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Librarian', 'librarian', 'Full book management access', 60, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Moderator', 'moderator', 'Limited administrative access', 40, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Member', 'member', 'Regular user with borrowing privileges', 20, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Guest', 'guest', 'Basic read-only access', 10, 1, datetime('now'), datetime('now'))",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Super Administrator', 'super-admin', 'Full system access with all permissions', 100, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Administrator', 'admin', 'Administrative access to most features', 80, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Librarian', 'librarian', 'Full book management access', 60, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Moderator', 'moderator', 'Limited administrative access', 40, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Member', 'member', 'Regular user with borrowing privileges', 20, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Guest', 'guest', 'Basic read-only access', 10, true, NOW(), NOW())",
 	}
 
 	for _, sql := range rolesSQL {
@@ -57,7 +57,7 @@ func (s *RBACSeeder) Run() error {
 	// Assign all permissions to super-admin role
 	_, err := facades.Orm().Query().Exec(`
 		INSERT INTO role_permissions (role_id, permission_id, is_active, created_at, updated_at)
-		SELECT r.id, p.id, 1, datetime('now'), datetime('now')
+		SELECT r.id, p.id, true, NOW(), NOW()
 		FROM roles r, permissions p
 		WHERE r.slug = 'super-admin'
 	`)
@@ -72,7 +72,7 @@ func (s *RBACSeeder) Run() error {
 	if err := facades.Orm().Query().Where("role = ?", "ADMIN").First(&adminUser); err == nil {
 		_, err = facades.Orm().Query().Exec(`
 			INSERT INTO user_roles (user_id, role_id, assigned_at, is_active, notes, created_at, updated_at)
-			SELECT ?, r.id, datetime('now'), 1, 'Assigned during RBAC seeding', datetime('now'), datetime('now')
+			SELECT $1, r.id, NOW(), true, 'Assigned during RBAC seeding', NOW(), NOW()
 			FROM roles r
 			WHERE r.slug = 'super-admin'
 		`, adminUser.ID)
@@ -159,8 +159,8 @@ func (s *RBACSeeder) createPermissions() error {
 			})
 
 			// Create using raw SQL to avoid GORM issues
-			query := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at) 
-			         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+			query := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at)
+			         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`
 
 			_, err = facades.Orm().Query().Exec(query,
 				permission.Name,
@@ -220,8 +220,8 @@ func (s *RBACSeeder) createRoles() error {
 		err := facades.Orm().Query().Where("slug = ?", role.Slug).First(&existing)
 		if err != nil {
 			// Role doesn't exist, create it using raw SQL to avoid GORM issues
-			query := `INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) 
-			         VALUES (?, ?, ?, ?, 1, datetime('now'), datetime('now'))`
+			query := `INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at)
+			         VALUES ($1, $2, $3, $4, true, NOW(), NOW())`
 
 			_, err = facades.Orm().Query().Exec(query, role.Name, role.Slug, role.Description, role.Level)
 			if err != nil {
@@ -428,8 +428,8 @@ func (s *RBACSeeder) createPermissionsFromServices() error {
 			description := fmt.Sprintf("%s %s in the system", actionName, string(service))
 
 			// Create permission using raw SQL
-			sql := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at) 
-			       VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0, datetime('now'), datetime('now'))`
+			sql := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at)
+			       VALUES ($1, $2, $3, $4, $5, $6, true, false, false, NOW(), NOW())`
 
 			_, err := facades.Orm().Query().Exec(sql, name, slug, description, string(service), string(service), string(action))
 			if err != nil {
@@ -479,8 +479,8 @@ func (s *RBACSeeder) createHardcodedPermissions() {
 	}
 
 	for _, perm := range hardcodedPermissions {
-		sql := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at) 
-		       VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0, datetime('now'), datetime('now'))`
+		sql := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at)
+		       VALUES ($1, $2, $3, $4, $5, $6, true, false, false, NOW(), NOW())`
 
 		_, err := facades.Orm().Query().Exec(sql, perm.name, perm.slug, perm.description, perm.category, perm.category, perm.action)
 		if err != nil {

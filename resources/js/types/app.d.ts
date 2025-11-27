@@ -3,6 +3,12 @@ export interface User {
     name: string
     email: string
     role: string
+    is_active?: boolean
+    roles?: Array<{
+        id: number
+        name: string
+        slug?: string
+    }>
 }
 
 export interface SharedData {
@@ -10,5 +16,6 @@ export interface SharedData {
     auth: {
         user: User | null;
     };
-    // Add other specific props for this page if any
+    // Index signature to satisfy PageProps constraint
+    [key: string]: any;
 }

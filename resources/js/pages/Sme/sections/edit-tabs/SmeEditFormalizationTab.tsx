@@ -6,9 +6,23 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { BusinessFormalisation } from '@/types/business_formalisation';
 
+// Partial type for form state that doesn't require id/smeId
+export type FormalizationFormState = Partial<BusinessFormalisation> & {
+  hasBankAccount: boolean;
+  hasTaxClarification: boolean;
+  isRegisteredForVat: boolean;
+  isMemberOfAssociation: boolean;
+  isAffiliated: boolean;
+  hasExportLicense: boolean;
+  hasAccessedBds: boolean;
+  annualTurnover: number;
+  estimatedValueOfAssets: number;
+  formalisationScore: number;
+};
+
 interface SmeEditFormalizationTabProps {
-  formalization: BusinessFormalisation | undefined;
-  onChange: (data: BusinessFormalisation) => void;
+  formalization: FormalizationFormState | BusinessFormalisation | undefined;
+  onChange: (data: FormalizationFormState) => void;
   errors: Record<string, string>;
 }
 
@@ -18,7 +32,7 @@ export const SmeEditFormalizationTab: React.FC<SmeEditFormalizationTabProps> = (
   errors
 }) => {
   // Initialize empty formalization if it doesn't exist
-  const currentFormalization = formalization || {
+  const currentFormalization: FormalizationFormState = formalization || {
     hasBankAccount: false,
     hasTaxClarification: false,
     isRegisteredForVat: false,

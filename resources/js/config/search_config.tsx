@@ -19,13 +19,15 @@ import {
 
 export type SearchEntityType = 'book' | 'user' | 'lender' | 'config';
 
+export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage';
+
 export interface SearchEntityConfig {
   type: SearchEntityType;
   label: string;
   icon: React.ReactNode;
   iconClassName?: string;
   permissionService: string; // Service name for permission check
-  permissionAction: string;  // Action name for permission check
+  permissionAction: PermissionAction;  // Action name for permission check
   colors: {
     light: string;
     dark: string;
@@ -43,7 +45,7 @@ export const SEARCH_ENTITIES: SearchEntityConfig[] = [
     label: 'Books',
     icon: <BookOpen className="h-4 w-4" />,
     permissionService: 'books',
-    permissionAction: 'read' as const,
+    permissionAction: 'read',
     colors: {
       light: 'bg-blue-100 text-blue-800',
       dark: 'dark:bg-blue-900/30 dark:text-blue-400',
@@ -55,7 +57,7 @@ export const SEARCH_ENTITIES: SearchEntityConfig[] = [
     label: 'Users',
     icon: <Users className="h-4 w-4" />,
     permissionService: 'users',
-    permissionAction: 'read' as const,
+    permissionAction: 'read',
     colors: {
       light: 'bg-green-100 text-green-800',
       dark: 'dark:bg-green-900/30 dark:text-green-400',
@@ -67,7 +69,7 @@ export const SEARCH_ENTITIES: SearchEntityConfig[] = [
     label: 'Lenders',
     icon: <Landmark className="h-4 w-4" />,
     permissionService: 'lenders',
-    permissionAction: 'read' as const,
+    permissionAction: 'read',
     colors: {
       light: 'bg-orange-100 text-orange-800',
       dark: 'dark:bg-orange-900/30 dark:text-orange-400',
@@ -79,7 +81,7 @@ export const SEARCH_ENTITIES: SearchEntityConfig[] = [
     label: 'Configs',
     icon: <Settings className="h-4 w-4" />,
     permissionService: 'config',
-    permissionAction: 'read' as const,
+    permissionAction: 'read',
     colors: {
       light: 'bg-purple-100 text-purple-800',
       dark: 'dark:bg-purple-900/30 dark:text-purple-400',
