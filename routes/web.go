@@ -2,12 +2,15 @@ package routes
 
 import (
 	"smedi-sme-db/app/http/controllers"
+	"smedi-sme-db/app/http/controllers/applications"
 	"smedi-sme-db/app/http/controllers/auth"
 	"smedi-sme-db/app/http/controllers/auth/perimissions"
 	"smedi-sme-db/app/http/controllers/auth/users"
 	"smedi-sme-db/app/http/controllers/bdsps"
 	"smedi-sme-db/app/http/controllers/books"
 	"smedi-sme-db/app/http/controllers/configs"
+	"smedi-sme-db/app/http/controllers/events"
+	"smedi-sme-db/app/http/controllers/procurementnotices"
 	"smedi-sme-db/app/http/controllers/smes"
 	inertiaHelper "smedi-sme-db/app/http/inertia"
 	"smedi-sme-db/app/http/middleware"
@@ -36,6 +39,9 @@ func Web() {
 	configsPageController := configs.NewConfigPageController()
 	smesPageController := smes.NewSmePageController()
 	bdspsPageController := bdsps.NewBdspPageController()
+	eventsPageController := events.NewEventPageController()
+	procurementnoticesPageController := procurementnotices.NewProcurementNoticePageController()
+	applicationsPageController := applications.NewApplicationPageController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
@@ -52,6 +58,9 @@ func Web() {
 			"version": support.Version,
 		})
 	})
+
+	// Public Application Page
+	facades.Route().Get("/apply", applicationsPageController.ShowPublicApply)
 
 	// Authenticated routes
 	facades.Route().Middleware(middleware.JwtAuth()).Group(func(router route.Router) {
@@ -80,6 +89,15 @@ func Web() {
 
 		// BDSPs management page
 		router.Get("/admin/bdsps", bdspsPageController.Index)
+
+		// Event management page
+		router.Get("/admin/events", eventsPageController.Index)
+
+		// Procurement Notice management page
+		router.Get("/admin/procurement-notices", procurementnoticesPageController.Index)
+
+		// Applications management page
+		router.Get("/admin/applications", applicationsPageController.Index)
 
 		// Configurations management page
 		router.Get("/admin/configs", configsPageController.Index)

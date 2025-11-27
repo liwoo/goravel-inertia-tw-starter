@@ -24,19 +24,20 @@ const (
 type ServiceRegistry string
 
 const (
-	ServiceBooks                      ServiceRegistry = "books"
-	ServiceUsers                      ServiceRegistry = "users"
-	ServiceRoles                      ServiceRegistry = "roles"
-	ServicePermissions                ServiceRegistry = "permissions"
-	ServiceLenders                    ServiceRegistry = "lenders"
-	ServiceConfig                     ServiceRegistry = "config"
-	ServiceSMEs                       ServiceRegistry = "smes"
-	ServicePrimaryBusinessOwners      ServiceRegistry = "primary_business_owners"
-	ServiceAdditionalBusinessMembers  ServiceRegistry = "additional_business_members"
-	ServiceBusinessFormalisation      ServiceRegistry = "business_formalisation"
-	ServiceEvents                     ServiceRegistry = "events"
-	ServiceProcurementNotices         ServiceRegistry = "procurement_notices"
-	ServiceBdsps                      ServiceRegistry = "bdsps"
+	ServiceBooks                     ServiceRegistry = "books"
+	ServiceUsers                     ServiceRegistry = "users"
+	ServiceRoles                     ServiceRegistry = "roles"
+	ServicePermissions               ServiceRegistry = "permissions"
+	ServiceLenders                   ServiceRegistry = "lenders"
+	ServiceConfig                    ServiceRegistry = "config"
+	ServiceSMEs                      ServiceRegistry = "smes"
+	ServicePrimaryBusinessOwners     ServiceRegistry = "primary_business_owners"
+	ServiceAdditionalBusinessMembers ServiceRegistry = "additional_business_members"
+	ServiceBusinessFormalisation     ServiceRegistry = "business_formalisation"
+	ServiceEvents                    ServiceRegistry = "events"
+	ServiceProcurementNotices        ServiceRegistry = "procurement_notices"
+	ServiceBdsps                     ServiceRegistry = "bdsps"
+	ServiceApplications              ServiceRegistry = "applications"
 )
 
 // GetAllCorePermissionActions returns all core permission actions
@@ -70,6 +71,7 @@ func GetAllServiceRegistries() []ServiceRegistry {
 		ServiceEvents,
 		ServiceProcurementNotices,
 		ServiceBdsps,
+		ServiceApplications,
 	}
 }
 
@@ -107,6 +109,8 @@ func GetServiceDisplayName(service ServiceRegistry) string {
 		return "Procurement Notices Management"
 	case ServiceBdsps:
 		return "BDSP Management"
+	case ServiceApplications:
+		return "Applications Management"
 	default:
 		return string(service)
 	}
@@ -255,6 +259,14 @@ func GetServiceActions(service ServiceRegistry) []CorePermissionAction {
 			PermissionManage,
 		}
 	case ServiceBdsps:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+		}
+	case ServiceApplications:
 		return []CorePermissionAction{
 			PermissionCreate,
 			PermissionRead,
