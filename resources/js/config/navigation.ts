@@ -76,17 +76,17 @@ export const navigationConfig: NavigationConfig = {
 
         {
             title: "Events",
-            url: "#",
+            url: "/admin/events",
             icon: Calendar1Icon,
-            requiredService: "reports",
+            requiredService: "events",
             requiredAction: "read" as const,
         },
 
         {
             title: "Procurement",
-            url: "#",
+            url: "/admin/procurementnotices",
             icon: ClipboardListIcon,
-            requiredService: "reports",
+            requiredService: "procurementnotices",
             requiredAction: "read" as const,
         },
     ],
@@ -168,9 +168,9 @@ export const navigationConfig: NavigationConfig = {
         },
         {
             name: "Applications",
-            url: "#",
+            url: "/admin/applications",
             icon: NotebookTabsIcon,
-            requiredService: "config",
+            requiredService: "applications",
             requiredAction: "read" as const,
         },
     ],
