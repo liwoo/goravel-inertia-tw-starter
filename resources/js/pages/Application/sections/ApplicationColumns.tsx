@@ -14,13 +14,8 @@ export const applicationColumns: CrudColumn<Application>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-muted">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-foreground">{application.sme}</p>
-        </div>
+      <div className="flex-1 space-y-1">
+        <p className="font-medium text-foreground">{application.sme}</p>
       </div>
     ),
   },
@@ -30,13 +25,8 @@ export const applicationColumns: CrudColumn<Application>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-muted">
-          <User className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-foreground">{application.registrant_name}</p>
-        </div>
+      <div className="flex-1 space-y-1">
+        <p className="font-medium text-foreground">{application.registrant_name}</p>
       </div>
     ),
   },
@@ -46,13 +36,8 @@ export const applicationColumns: CrudColumn<Application>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-muted">
-          <Mail className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-foreground">{application.email}</p>
-        </div>
+      <div className="flex-1 space-y-1">
+        <p className="font-medium text-foreground">{application.email}</p>
       </div>
     ),
   },
@@ -62,13 +47,8 @@ export const applicationColumns: CrudColumn<Application>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-muted">
-          <Phone className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-foreground">{application.phone}</p>
-        </div>
+      <div className="flex-1 space-y-1">
+        <p className="font-medium text-foreground">{application.phone}</p>
       </div>
     ),
   },
@@ -78,13 +58,8 @@ export const applicationColumns: CrudColumn<Application>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-muted">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-foreground">{application.sme_registration_number}</p>
-        </div>
+      <div className="flex-1 space-y-1">
+        <p className="font-medium text-foreground">{application.sme_registration_number}</p>
       </div>
     ),
   },
@@ -94,13 +69,8 @@ export const applicationColumns: CrudColumn<Application>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-muted">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-foreground">{application.sme_tax_identification_number}</p>
-        </div>
+      <div className="flex-1 space-y-1">
+        <p className="font-medium text-foreground">{application.sme_tax_identification_number}</p>
       </div>
     ),
   },
@@ -110,13 +80,8 @@ export const applicationColumns: CrudColumn<Application>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-muted">
-          <Tag className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-foreground">{application.status}</p>
-        </div>
+      <div className="flex-1 space-y-1">
+        <p className="font-medium text-foreground">{application.status}</p>
       </div>
     ),
   },

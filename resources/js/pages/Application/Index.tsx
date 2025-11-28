@@ -57,7 +57,7 @@ export default function ApplicationIndex({
           <CrudPage<Application>
             data={data}
             filters={filters}
-            title="applications"
+            title="Applications"
             resourceName="applications"
             columns={isMobile ? applicationColumnsMobile : applicationColumns}
             customFilters={applicationFilters}
