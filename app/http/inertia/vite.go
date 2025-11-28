@@ -38,8 +38,8 @@ func NewViteHelper() *ViteHelper {
 	appEnv := facades.Config().GetString("app.env", "production")
 	// Only use dev mode for local/development environments, not staging/production
 	isDev := appEnv == "local" || appEnv == "development"
-	manifestPath := facades.Config().GetString("vite.manifest_path", "public/build/manifest.json")
-	publicPath := facades.Config().GetString("vite.public_path", "/build")
+	manifestPath := facades.Config().GetString("vite.manifest_path", "public/.vite/manifest.json")
+	publicPath := facades.Config().GetString("vite.public_path", "")
 	devServerURL := facades.Config().GetString("vite.dev_server_url", "http://localhost:5173")
 
 	vh := &ViteHelper{
