@@ -22,6 +22,22 @@ import (
 )
 
 func Web() {
+	// Health check endpoint for Kubernetes probes (no middleware)
+	facades.Route().Get("/health", func(ctx http.Context) http.Response {
+		// Verify database connection with a simple query
+		var result int
+		err := facades.Orm().Query().Raw("SELECT 1").Scan(&result)
+		if err != nil {
+			return ctx.Response().Json(http.StatusServiceUnavailable, map[string]string{
+				"status": "unhealthy",
+				"error":  "database connection failed",
+			})
+		}
+		return ctx.Response().Json(http.StatusOK, map[string]string{
+			"status": "ok",
+		})
+	})
+
 	// Serve static files from the public directory
 	facades.Route().Static("/images", "./public/images")
 	facades.Route().Static("/css", "./public/css")

@@ -36,12 +36,11 @@ COPY docs ./docs
 # Build with optimizations
 # -ldflags="-w -s" strips debug info and symbol table
 # -trimpath removes file system paths from binary
-# -tags timetzdata embeds timezone data (no need for tzdata at runtime)
 ARG BUILD_DATE
 ARG VCS_REF
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} \
-    go build -a -trimpath -tags timetzdata \
+    go build -a -trimpath \
     -ldflags="-w -s -extldflags '-static' -X main.BuildDate=${BUILD_DATE} -X main.GitCommit=${VCS_REF}" \
     -o goravel-app .
 
@@ -88,9 +87,9 @@ LABEL org.opencontainers.image.title="Goravel Blog" \
       org.opencontainers.image.licenses="MIT"
 
 # Install only runtime dependencies
-# Note: tzdata not needed - embedded in binary via -tags timetzdata
 RUN apk add --no-cache \
     ca-certificates \
+    tzdata \
     curl \
     && rm -rf /var/cache/apk/*
 
