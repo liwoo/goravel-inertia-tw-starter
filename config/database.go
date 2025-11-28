@@ -38,7 +38,8 @@ func init() {
 				"timezone": "UTC",
 				"prefix":   "",
 				"singular": false,
-				"schema":   config.Env("DB_SCHEMA", "public"),
+				// Note: schema/search_path removed for PgBouncer compatibility
+				// PgBouncer doesn't support search_path in transaction pooling mode
 				"via": func() (driver.Driver, error) {
 					return postgresfacades.Postgres("postgres")
 				},

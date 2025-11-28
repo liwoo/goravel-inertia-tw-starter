@@ -67,6 +67,15 @@ app:
     persistence:
       enabled: false
 
+# Memory optimization for Go runtime
+extraEnv:
+  - name: GOMAXPROCS
+    value: "1"
+  - name: GOGC
+    value: "50"
+  - name: GOMEMLIMIT
+    value: "70MiB"
+
 healthcheck:
   enabled: true
   livenessProbe:
