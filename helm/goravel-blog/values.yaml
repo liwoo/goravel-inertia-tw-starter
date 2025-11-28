@@ -157,6 +157,7 @@ app:
   debug: false
   url: "https://smedi.example.com"
   timezone: "UTC"
+  version: ""  # Set via CI/CD from package.json, falls back to Chart.AppVersion
 
   # Database configuration (PostgreSQL via PgBouncer)
   database:

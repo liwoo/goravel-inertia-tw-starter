@@ -70,6 +70,10 @@ COPY tailwind.config.js ./
 COPY components.json ./
 COPY resources ./resources
 
+# Copy existing public directory (static images, etc.) BEFORE vite build
+# Vite will add its output to this directory
+COPY public ./public
+
 # Build frontend assets (skip tsc type-checking, just build with vite)
 # Type checking is done in CI, here we just need the production bundle
 RUN npx vite build

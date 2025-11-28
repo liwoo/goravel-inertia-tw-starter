@@ -2,6 +2,7 @@ package providers
 
 import (
 	// "html/template" // No longer needed here
+	"os"
 
 	"github.com/goravel/framework/contracts/foundation"
 	"github.com/goravel/framework/facades"
@@ -23,8 +24,11 @@ func (provider *InertiaServiceProvider) Register(app foundation.Application) {
 	// Root template path
 	rootTemplate := "resources/views/app.tmpl"
 
-	// Asset version (can be updated based on your assets)
-	version := "1.0.0"
+	// Get app version from environment (set by Helm from package.json)
+	version := os.Getenv("APP_VERSION")
+	if version == "" {
+		version = "0.0.0" // fallback for local development
+	}
 
 	facades.Log().Debug("InertiaServiceProvider: Initializing Inertia manager")
 	// Create Inertia manager
@@ -51,7 +55,8 @@ func (provider *InertiaServiceProvider) Register(app foundation.Application) {
 
 	// Share global view data
 	inertiaManager.ShareViewData("appName", facades.Config().GetString("app.name", "Goravel"))
-	facades.Log().Debug("InertiaServiceProvider: Global view data 'appName' shared")
+	inertiaManager.ShareViewData("appVersion", version)
+	facades.Log().Debug("InertiaServiceProvider: Global view data 'appName' and 'appVersion' shared")
 
 	// Register the Inertia manager as a singleton
 	facades.App().Singleton("inertia", func(app foundation.Application) (any, error) {

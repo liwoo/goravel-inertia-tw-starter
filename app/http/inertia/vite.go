@@ -97,7 +97,26 @@ func (vh *ViteHelper) devAsset(assetPath string) template.HTML {
 	if strings.HasSuffix(assetPath, ".css") {
 		return template.HTML(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, url))
 	}
-	return template.HTML(fmt.Sprintf(`<script type="module" src="%s"></script>`, url))
+
+	// For JS/TSX files, include Vite client and React Refresh preamble for HMR
+	var html strings.Builder
+
+	// Vite client for HMR
+	html.WriteString(fmt.Sprintf(`<script type="module" src="%s/@vite/client"></script>`, vh.devServerURL))
+
+	// React Refresh preamble (required before any React components load)
+	html.WriteString(fmt.Sprintf(`<script type="module">
+import RefreshRuntime from '%s/@react-refresh';
+RefreshRuntime.injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;
+window.__vite_plugin_react_preamble_installed__ = true;
+</script>`, vh.devServerURL))
+
+	// Main entry script
+	html.WriteString(fmt.Sprintf(`<script type="module" src="%s"></script>`, url))
+
+	return template.HTML(html.String())
 }
 
 // prodAsset generates HTML tags for assets in production mode (using the manifest).

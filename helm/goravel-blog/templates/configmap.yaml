@@ -11,6 +11,7 @@ data:
   APP_DEBUG: {{ .Values.app.debug | quote }}
   APP_URL: {{ .Values.app.url | quote }}
   APP_TIMEZONE: {{ .Values.app.timezone | default "UTC" | quote }}
+  APP_VERSION: {{ .Values.app.version | default .Chart.AppVersion | quote }}
 
   # Database configuration (PostgreSQL via PgBouncer)
   DB_CONNECTION: {{ .Values.app.database.connection | quote }}
