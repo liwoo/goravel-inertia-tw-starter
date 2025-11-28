@@ -1,10 +1,13 @@
 name: CD
 
 on:
-  push:
+  # Trigger after CI workflow completes successfully
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
     branches: [main, develop]
-    tags:
-      - 'v*'
+  # Manual trigger
   workflow_dispatch:
     inputs:
       environment:
@@ -40,6 +43,8 @@ jobs:
   setup:
     name: Setup Deployment
     runs-on: ubuntu-latest
+    # Only run if CI was successful (or manual trigger)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     outputs:
       environment: ${{ steps.env.outputs.environment }}
       namespace: ${{ steps.env.outputs.namespace }}
@@ -49,7 +54,14 @@ jobs:
       - name: Determine environment
         id: env
         run: |
-          if [[ "${{ github.event.inputs.environment }}" == "production" ]] || [[ "${{ github.ref }}" == refs/tags/v* ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          # Get the branch - workflow_run uses different context
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            BRANCH="${{ github.event.workflow_run.head_branch }}"
+          else
+            BRANCH="${{ github.ref }}"
+          fi
+
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]] || [[ "$BRANCH" == refs/tags/v* ]] || [[ "$BRANCH" == "main" ]] || [[ "$BRANCH" == "refs/heads/main" ]]; then
             echo "environment=production" >> $GITHUB_OUTPUT
             echo "namespace=production" >> $GITHUB_OUTPUT
             echo "values_file=values.production.yaml" >> $GITHUB_OUTPUT
@@ -62,10 +74,19 @@ jobs:
       - name: Determine image tag
         id: tag
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          # Get branch and SHA - workflow_run uses different context
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            BRANCH="${{ github.event.workflow_run.head_branch }}"
+            SHA="${{ github.event.workflow_run.head_sha }}"
           else
-            echo "tag=${{ github.ref_name }}-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+            BRANCH="${{ github.ref_name }}"
+            SHA="${{ github.sha }}"
+          fi
+
+          if [[ "$BRANCH" == refs/tags/v* ]] || [[ "$BRANCH" == v* ]]; then
+            echo "tag=${BRANCH#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${BRANCH}-${SHA::8}" >> $GITHUB_OUTPUT
           fi
 
   # =============================================================================
