@@ -10,7 +10,8 @@
 # Documentation
 *.md
 !README.md
-docs/
+docs/*.md
+docs/screenshots/
 LICENSE
 
 # Environment files (security)
