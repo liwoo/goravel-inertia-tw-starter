@@ -38,7 +38,8 @@ COPY docs ./docs
 # -trimpath removes file system paths from binary
 ARG BUILD_DATE
 ARG VCS_REF
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} \
     go build -a -trimpath \
     -ldflags="-w -s -extldflags '-static' -X main.BuildDate=${BUILD_DATE} -X main.GitCommit=${VCS_REF}" \
     -o goravel-app .
@@ -107,15 +108,16 @@ COPY --from=node-builder --chown=goravel:goravel /app/public ./public
 # Copy view templates (Go templates, not built by Node)
 COPY --chown=goravel:goravel resources/views ./resources/views
 
-# Copy database files
-COPY --chown=goravel:goravel database/migrations ./database/migrations
-COPY --chown=goravel:goravel database/seeders ./database/seeders
-
 # Create necessary directories with proper permissions
 RUN mkdir -p storage/logs storage/app/public storage/framework/cache \
-             storage/framework/sessions storage/framework/views && \
-    chown -R goravel:goravel storage && \
+             storage/framework/sessions storage/framework/views \
+             database/migrations database/seeders && \
+    chown -R goravel:goravel storage database && \
     chmod -R 755 storage
+
+# Copy database files (migrations run at deploy time, not embedded in binary)
+COPY --chown=goravel:goravel database/migrations ./database/migrations
+COPY --chown=goravel:goravel database/seeders ./database/seeders
 
 # Switch to non-root user
 USER goravel
