@@ -41,17 +41,21 @@ app:
 
   database:
     connection: "postgres"
-    host: "postgresql.data.svc.cluster.local"
+    host: "my-pgbouncer.doorbell.svc.cluster.local"
     port: 5432
-    database: "smedi_db_staging"
-    username: "smedi_staging"
+    database: "smedi_db"
+    username: "admin"
     sslmode: "disable"
+    pool:
+      max: 450
+      min: 0
 
   redis:
     enabled: true
-    host: "redis.data.svc.cluster.local"
+    host: "redis-master.data.svc.cluster.local"
     port: 6379
-    database: 1
+    database: 0
+    ttl: 86400
 
   session:
     driver: "redis"
