@@ -31,6 +31,7 @@ COPY app ./app
 COPY config ./config
 COPY routes ./routes
 COPY database ./database
+COPY docs ./docs
 
 # Build with optimizations
 # -ldflags="-w -s" strips debug info and symbol table
