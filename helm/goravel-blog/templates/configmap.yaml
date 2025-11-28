@@ -12,19 +12,26 @@ data:
   APP_URL: {{ .Values.app.url | quote }}
   APP_TIMEZONE: {{ .Values.app.timezone | default "UTC" | quote }}
 
-  # Database configuration (PostgreSQL)
+  # Database configuration (PostgreSQL via PgBouncer)
   DB_CONNECTION: {{ .Values.app.database.connection | quote }}
   DB_HOST: {{ .Values.app.database.host | quote }}
   DB_PORT: {{ .Values.app.database.port | quote }}
   DB_DATABASE: {{ .Values.app.database.database | quote }}
   DB_USERNAME: {{ .Values.app.database.username | quote }}
   DB_SSLMODE: {{ .Values.app.database.sslmode | default "disable" | quote }}
+  {{- if .Values.app.database.pool }}
+  DB_POOL_MAX: {{ .Values.app.database.pool.max | default 100 | quote }}
+  DB_POOL_MIN: {{ .Values.app.database.pool.min | default 0 | quote }}
+  {{- end }}
 
   # Redis configuration
   {{- if .Values.app.redis.enabled }}
   REDIS_HOST: {{ .Values.app.redis.host | quote }}
   REDIS_PORT: {{ .Values.app.redis.port | quote }}
   REDIS_DATABASE: {{ .Values.app.redis.database | default 0 | quote }}
+  {{- if .Values.app.redis.ttl }}
+  REDIS_TTL: {{ .Values.app.redis.ttl | quote }}
+  {{- end }}
   {{- end }}
 
   # JWT configuration

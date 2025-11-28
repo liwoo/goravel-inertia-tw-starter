@@ -147,9 +147,11 @@ jobs:
           version: ${{ env.HELM_VERSION }}
 
       - name: Configure Kubernetes credentials
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          echo "$KUBECONFIG_DATA" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
       - name: Verify cluster connection
@@ -335,9 +337,11 @@ jobs:
     if: failure()
     steps:
       - name: Configure Kubernetes credentials
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          echo "$KUBECONFIG_DATA" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
       - name: Install Helm

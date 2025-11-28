@@ -34,12 +34,6 @@ func main() {
 	// This bootstraps the framework and gets it ready for use.
 	bootstrap.Boot()
 
-	// Test logging
-	facades.Log().Info("MAIN: Application started - testing logging")
-	facades.Log().Debug("MAIN: Debug level logging test")
-	facades.Log().Error("MAIN: Error level logging test")
-
-	// Create a buffered channel to listen for OS signals
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 

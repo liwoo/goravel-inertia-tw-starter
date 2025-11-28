@@ -7,7 +7,8 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/tiyeni/smedi-database
+  # Note: Repository will be overridden by CI/CD with DOCKERHUB_USERNAME secret
+  repository: smedi/smedi-database
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
@@ -147,23 +148,27 @@ app:
   url: "https://smedi.example.com"
   timezone: "UTC"
 
-  # Database configuration (PostgreSQL)
+  # Database configuration (PostgreSQL via PgBouncer)
   database:
     connection: "postgres"
-    host: "postgresql.data.svc.cluster.local"
+    host: "my-pgbouncer.doorbell.svc.cluster.local"
     port: 5432
     database: "smedi_db"
-    username: "smedi"
-    password: ""  # Should be provided via --set or secrets
+    username: "admin"
+    password: ""  # Set via secrets: DATABASE_PASSWORD
     sslmode: "disable"
+    pool:
+      max: 450
+      min: 0
 
   # Redis configuration
   redis:
     enabled: true
-    host: "redis.data.svc.cluster.local"
+    host: "redis-master.data.svc.cluster.local"
     port: 6379
-    password: ""
+    password: ""  # Set via secrets: REDIS_PASSWORD
     database: 0
+    ttl: 86400
 
   # JWT configuration
   jwt:
