@@ -35,7 +35,9 @@ type ViteHelper struct {
 // NewViteHelper creates a new ViteHelper instance.
 // Configuration is loaded from facades.Config() with defaults.
 func NewViteHelper() *ViteHelper {
-	isDev := facades.Config().GetString("app.env", "production") != "production"
+	appEnv := facades.Config().GetString("app.env", "production")
+	// Only use dev mode for local/development environments, not staging/production
+	isDev := appEnv == "local" || appEnv == "development"
 	manifestPath := facades.Config().GetString("vite.manifest_path", "public/build/manifest.json")
 	publicPath := facades.Config().GetString("vite.public_path", "/build")
 	devServerURL := facades.Config().GetString("vite.dev_server_url", "http://localhost:5173")

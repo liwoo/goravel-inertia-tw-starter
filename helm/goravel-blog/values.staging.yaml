@@ -15,12 +15,16 @@ image:
 ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
   hosts:
     - host: smedi.dartsmw.com
       paths:
         - path: /
           pathType: Prefix
-  tls: []
+  tls:
+    - secretName: smedi-dartsmw-tls
+      hosts:
+        - smedi.dartsmw.com
 
 resources:
   limits:
@@ -50,6 +54,7 @@ app:
     port: 5432
     database: "smedi_db"
     username: "admin"
+    password: "postgrespw"
     sslmode: "disable"
     pool:
       max: 450
@@ -58,6 +63,7 @@ app:
   redis:
     enabled: true
     host: "redis-master.data.svc.cluster.local"
+    password: "ErMAXAXYYX"
     port: 6379
     database: 0
     ttl: 86400

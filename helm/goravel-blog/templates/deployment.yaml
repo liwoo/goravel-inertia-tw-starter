@@ -48,11 +48,11 @@ spec:
             - -c
             - |
               echo "Running database migrations..."
-              /app/goravel-app artisan migrate --force
+              /app/goravel-app artisan migrate
               echo "Running database seeders..."
-              /app/goravel-app artisan db:seed --force || true
+              /app/goravel-app artisan db:seed || true
               echo "Setting up RBAC..."
-              /app/goravel-app artisan rbac:setup
+              /app/goravel-app artisan rbac:setup || true
               {{- if .Values.migrations.createAdmin }}
               echo "Creating admin user..."
               /app/goravel-app artisan user:create-admin \

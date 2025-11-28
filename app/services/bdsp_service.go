@@ -180,13 +180,6 @@ func (s *BdspService) GetFilterDefinitions() []contracts.FilterDefinition {
 			contracts.FilterTypeString,
 			nil,
 		),
-		// Physical Address - string search
-		contracts.NewFilterDefinition(
-			"physical_address",
-			"Physical Address",
-			contracts.FilterTypeString,
-			nil,
-		),
 		// Partners - array search
 		contracts.NewFilterDefinition(
 			"partners_json",
