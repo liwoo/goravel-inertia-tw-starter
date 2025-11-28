@@ -74,20 +74,10 @@ jobs:
       - name: Determine image tag
         id: tag
         run: |
-          # Get branch - workflow_run uses different context
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            BRANCH="${{ github.event.workflow_run.head_branch }}"
-          else
-            BRANCH="${{ github.ref_name }}"
-          fi
-
-          # Use branch name as tag (more reliable than SHA-based tags)
-          # CI always pushes: develop, main, or version tags
-          if [[ "$BRANCH" == refs/tags/v* ]] || [[ "$BRANCH" == v* ]]; then
-            echo "tag=${BRANCH#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${BRANCH}" >> $GITHUB_OUTPUT
-          fi
+          # Use version from package.json - matches CI tagging
+          VERSION=$(curl -s "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.workflow_run.head_sha || github.sha }}/package.json" | jq -r '.version')
+          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Using image tag: ${VERSION}"
 
   # =============================================================================
   # Pre-deployment Checks
