@@ -1,11 +1,43 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
+	"os"
+
 	"github.com/goravel/framework/contracts/database/driver"
 	"github.com/goravel/framework/facades"
 	postgresfacades "github.com/goravel/postgres/facades"
 	sqlitefacades "github.com/goravel/sqlite/facades"
 )
+
+// getPostgresDSN constructs a PostgreSQL DSN with PgBouncer-compatible settings.
+// Adds default_query_exec_mode=simple_protocol to disable prepared statement caching.
+func getPostgresDSN() string {
+	host := os.Getenv("DB_HOST")
+	if host == "" {
+		return "" // Return empty to let goravel/postgres build default DSN
+	}
+
+	port := os.Getenv("DB_PORT")
+	if port == "" {
+		port = "5432"
+	}
+	database := os.Getenv("DB_DATABASE")
+	username := os.Getenv("DB_USERNAME")
+	password := os.Getenv("DB_PASSWORD")
+	sslmode := os.Getenv("DB_SSLMODE")
+	if sslmode == "" {
+		sslmode = "disable"
+	}
+
+	// URL-encode the password in case it contains special characters
+	encodedPassword := url.QueryEscape(password)
+
+	// Build DSN with simple_protocol to disable statement caching for PgBouncer compatibility
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&timezone=UTC&default_query_exec_mode=simple_protocol",
+		username, encodedPassword, host, port, database, sslmode)
+}
 
 func init() {
 	config := facades.Config()
@@ -38,8 +70,8 @@ func init() {
 				"timezone": "UTC",
 				"prefix":   "",
 				"singular": false,
-				// Note: schema/search_path removed for PgBouncer compatibility
-				// PgBouncer doesn't support search_path in transaction pooling mode
+				// PgBouncer compatibility: custom DSN with simple protocol to disable statement cache
+				"dsn": getPostgresDSN(),
 				"via": func() (driver.Driver, error) {
 					return postgresfacades.Postgres("postgres")
 				},
