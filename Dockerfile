@@ -55,18 +55,9 @@ WORKDIR /app
 
 # Copy package files for better caching
 COPY package*.json ./
-COPY pnpm-lock.yaml* ./
-COPY yarn.lock* ./
 
-# Install dependencies based on available lock file
-RUN if [ -f pnpm-lock.yaml ]; then \
-        corepack enable && corepack prepare pnpm@latest --activate && \
-        pnpm install --frozen-lockfile; \
-    elif [ -f yarn.lock ]; then \
-        yarn install --frozen-lockfile; \
-    else \
-        npm ci --prefer-offline; \
-    fi
+# Install dependencies using npm (clean install to avoid rollup platform issues)
+RUN npm ci
 
 # Copy frontend source files
 COPY tsconfig.json ./
@@ -78,13 +69,7 @@ COPY components.json ./
 COPY resources ./resources
 
 # Build frontend assets
-RUN if [ -f pnpm-lock.yaml ]; then \
-        pnpm run build; \
-    elif [ -f yarn.lock ]; then \
-        yarn build; \
-    else \
-        npm run build; \
-    fi
+RUN npm run build
 
 # =============================================================================
 # Stage 3: Runtime Image

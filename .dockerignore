@@ -114,3 +114,5 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .pnpm-store/
+yarn.lock
+pnpm-lock.yaml
