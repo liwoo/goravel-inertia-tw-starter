@@ -18,6 +18,16 @@ nameOverride: ""
 fullnameOverride: ""
 
 # =============================================================================
+# Database Migrations
+# =============================================================================
+migrations:
+  # Enable to run migrations as an init container before the app starts
+  # Runs: migrate, db:seed, rbac:setup
+  enabled: false
+  # Set to true to create admin user during first deployment
+  createAdmin: false
+
+# =============================================================================
 # Service Account
 # =============================================================================
 serviceAccount:

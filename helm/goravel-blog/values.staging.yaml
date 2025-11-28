@@ -4,6 +4,11 @@
 
 replicaCount: 1
 
+# Run database migrations before app starts
+migrations:
+  enabled: true
+  createAdmin: true
+
 image:
   pullPolicy: Always
 
@@ -11,7 +16,7 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
   hosts:
-    - host: staging-smedi.example.com
+    - host: smedi.dartsmw.com
       paths:
         - path: /
           pathType: Prefix
@@ -37,7 +42,7 @@ networkPolicy:
 app:
   env: "staging"
   debug: true
-  url: "https://staging-smedi.example.com"
+  url: "https://smedi.dartsmw.com"
 
   database:
     connection: "postgres"
@@ -59,6 +64,11 @@ app:
 
   session:
     driver: "redis"
+
+  admin:
+    name: "Admin"
+    email: "admin@dartsmw.com"
+    password: "changeme123"  # Change this!
 
   logging:
     level: "debug"

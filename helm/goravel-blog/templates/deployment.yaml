@@ -37,9 +37,39 @@ spec:
       serviceAccountName: {{ include "goravel-blog.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- with .Values.initContainers }}
+      {{- if or .Values.migrations.enabled .Values.initContainers }}
       initContainers:
+        {{- if .Values.migrations.enabled }}
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Running database migrations..."
+              /app/goravel-app artisan migrate --force
+              echo "Running database seeders..."
+              /app/goravel-app artisan db:seed --force || true
+              echo "Setting up RBAC..."
+              /app/goravel-app artisan rbac:setup
+              {{- if .Values.migrations.createAdmin }}
+              echo "Creating admin user..."
+              /app/goravel-app artisan user:create-admin \
+                --name="${ADMIN_NAME}" \
+                --email="${ADMIN_EMAIL}" \
+                --password="${ADMIN_PASSWORD}" || true
+              {{- end }}
+              echo "Database setup complete!"
+          envFrom:
+            - configMapRef:
+                name: {{ include "goravel-blog.fullname" . }}
+            - secretRef:
+                name: {{ include "goravel-blog.fullname" . }}
+        {{- end }}
+        {{- with .Values.initContainers }}
         {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
