@@ -74,19 +74,19 @@ jobs:
       - name: Determine image tag
         id: tag
         run: |
-          # Get branch and SHA - workflow_run uses different context
+          # Get branch - workflow_run uses different context
           if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
             BRANCH="${{ github.event.workflow_run.head_branch }}"
-            SHA="${{ github.event.workflow_run.head_sha }}"
           else
             BRANCH="${{ github.ref_name }}"
-            SHA="${{ github.sha }}"
           fi
 
+          # Use branch name as tag (more reliable than SHA-based tags)
+          # CI always pushes: develop, main, or version tags
           if [[ "$BRANCH" == refs/tags/v* ]] || [[ "$BRANCH" == v* ]]; then
             echo "tag=${BRANCH#refs/tags/}" >> $GITHUB_OUTPUT
           else
-            echo "tag=${BRANCH}-${SHA::8}" >> $GITHUB_OUTPUT
+            echo "tag=${BRANCH}" >> $GITHUB_OUTPUT
           fi
 
   # =============================================================================
