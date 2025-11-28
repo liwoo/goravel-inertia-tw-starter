@@ -34,6 +34,10 @@ func init() {
 			"file": map[string]any{
 				"driver": "file",
 			},
+			"redis": map[string]any{
+				"driver":     "redis",
+				"connection": "default",
+			},
 		},
 
 		// Session Lifetime

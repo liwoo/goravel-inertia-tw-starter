@@ -132,7 +132,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Environment variables
 ENV APP_ENV=production \
-    HTTP_HOST=0.0.0.0:3000 \
+    APP_HOST=0.0.0.0 \
+    APP_PORT=3000 \
     TZ=UTC
 
 # Use exec form for better signal handling
