@@ -305,6 +305,7 @@ export interface Event extends BaseModel {
   title: string;
   description: string;
   date: string;
+  end_date: string;
   venue: string;
   partners: string[];
   district: string;
@@ -318,6 +319,7 @@ export interface EventCreateData {
   title: string;
   description: string;
   date: string;
+  end_date: string;
   venue: string;
   partners: string[];
   district: string;
@@ -330,6 +332,7 @@ export interface EventUpdateData {
   title?: string;
   description?: string;
   date?: string;
+  end_date?: string;
   venue?: string;
   partners?: string[];
   district?: string;
@@ -350,6 +353,7 @@ export interface EventFormErrors {
   title?: string;
   description?: string;
   date?: string;
+  end_date?: string;
   venue?: string;
   partners?: string;
   district?: string;

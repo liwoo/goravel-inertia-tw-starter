@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DISTRICT_OPTIONS } from '@/types/district';
 import axios from 'axios';
 
 interface EventEditFormProps extends CrudEditFormProps<Event> {
@@ -29,6 +31,7 @@ export const EventEditForm = forwardRef<any, EventEditFormProps>(({
     title: event.title,
     description: event.description,
     date: event.date,
+    end_date: event.end_date,
     venue: event.venue,
     partners: event.partners || [],
     district: event.district,
@@ -58,14 +61,14 @@ export const EventEditForm = forwardRef<any, EventEditFormProps>(({
           axios.get('/api/configs', {
             params: {
               config_type: 'Partners',
-              pageSize: 1000,
+              pageSize: 100,
               sort: 'name',
               direction: 'ASC'
             }
           }),
           axios.get('/api/smes', {
             params: {
-              pageSize: 1000,
+              pageSize: 100,
               sort: 'business_name',
               direction: 'ASC'
             }
@@ -76,7 +79,7 @@ export const EventEditForm = forwardRef<any, EventEditFormProps>(({
         const smesData = smesRes.data.data?.data || [];
 
         setPartnerOptions(partnersData.map((config: any) => config.name));
-        setSmeOptions(smesData.map((sme: any) => ({ id: sme.id, name: sme.business_name })));
+        setSmeOptions(smesData.map((sme: any) => ({ id: sme.id, name: sme.name })));
       } catch (error) {
         console.error('Error fetching config options:', error);
       } finally {
@@ -199,7 +202,9 @@ export const EventEditForm = forwardRef<any, EventEditFormProps>(({
                 />
                 {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Date *</Label>
                 <Input
@@ -210,6 +215,17 @@ export const EventEditForm = forwardRef<any, EventEditFormProps>(({
                   className={errors.date ? 'border-destructive' : ''}
                 />
                 {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_date">End Date</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  className={errors.end_date ? 'border-destructive' : ''}
+                />
+                {errors.end_date && <p className="text-sm text-destructive">{errors.end_date}</p>}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -249,13 +265,21 @@ export const EventEditForm = forwardRef<any, EventEditFormProps>(({
 
               <div className="space-y-2">
                 <Label htmlFor="district">District *</Label>
-                <Input
-                  id="district"
+                <Select
                   value={formData.district}
-                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                  placeholder="Enter district"
-                  className={errors.district ? 'border-destructive' : ''}
-                />
+                  onValueChange={(value) => setFormData({ ...formData, district: value })}
+                >
+                  <SelectTrigger className={errors.district ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Select district" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DISTRICT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.district && <p className="text-sm text-destructive">{errors.district}</p>}
               </div>
             </div>

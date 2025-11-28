@@ -2,6 +2,7 @@ package requests
 
 import (
 	"errors"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/support/carbon"
 )
@@ -11,6 +12,7 @@ type EventCreateRequest struct {
 	Title         string   `form:"title" json:"title"`
 	Description   string   `form:"description" json:"description"`
 	Date          string   `form:"date" json:"date"` // String for validation, convert to carbon.DateTime
+	EndDate       string   `form:"end_date" json:"end_date"`
 	Venue         string   `form:"venue" json:"venue"`
 	Partners      []string `form:"partners" json:"partners"`
 	District      string   `form:"district" json:"district"`
@@ -38,6 +40,7 @@ func (r *EventCreateRequest) Messages(ctx http.Context) map[string]string {
 		"description.required": "Event description is required",
 		"date.required":        "Event date is required",
 		"date.date":            "Event date must be a valid date",
+		"end_data.date":        "Event end date must be a valid date",
 		"venue.required":       "Event venue is required",
 		"venue.max_len":        "Event venue cannot exceed 255 characters",
 		"district.required":    "Event district is required",
@@ -70,6 +73,12 @@ func (r *EventCreateRequest) PrepareForValidation(ctx http.Context) error {
 			return errors.New("date: Event date must be a valid date")
 		}
 	}
+	if r.EndDate != "" {
+		parsedDate := carbon.Parse(r.EndDate)
+		if parsedDate.Error != nil {
+			return errors.New("end_date: Event end date must be a valid date")
+		}
+	}
 	return nil
 }
 
@@ -95,6 +104,12 @@ func (r *EventCreateRequest) ToCreateData() map[string]interface{} {
 		parsedDate := carbon.Parse(r.Date)
 		if parsedDate.Error == nil {
 			data["date"] = *carbon.NewDateTime(parsedDate)
+		}
+	}
+	if r.EndDate != "" {
+		parsedDate := carbon.Parse(r.EndDate)
+		if parsedDate.Error == nil {
+			data["end_date"] = *carbon.NewDateTime(parsedDate)
 		}
 	}
 
