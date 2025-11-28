@@ -44,10 +44,10 @@ func (s *NotificationService) GetUserNotifications(userID uint, request contract
 		query = query.Where("priority = ?", priority)
 	}
 
-	// Apply search
+	// Apply search (using ILIKE for case-insensitive PostgreSQL search)
 	if request.Search != "" {
 		searchPattern := "%" + request.Search + "%"
-		query = query.Where("title LIKE ? OR message LIKE ?", searchPattern, searchPattern)
+		query = query.Where("title ILIKE ? OR message ILIKE ?", searchPattern, searchPattern)
 	}
 
 	// Apply sorting

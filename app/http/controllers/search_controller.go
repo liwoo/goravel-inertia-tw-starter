@@ -11,6 +11,8 @@ import (
 	"smedi-sme-db/app/services"
 )
 
+// Note: This controller searches SMEs, BDSPs, Events, Procurements, Users, and Configs
+
 type SearchController struct{}
 
 func NewSearchController() *SearchController {
@@ -41,8 +43,8 @@ func (c *SearchController) GlobalSearch(ctx http.Context) http.Response {
 		})
 	}
 
-	// Normalize query for case-insensitive search
-	query = strings.ToLower(strings.TrimSpace(query))
+	// Normalize query - trim whitespace (ILIKE handles case-insensitivity)
+	query = strings.TrimSpace(query)
 
 	// Get current user and permissions
 	permHelper := auth.GetPermissionHelper()
@@ -55,22 +57,34 @@ func (c *SearchController) GlobalSearch(ctx http.Context) http.Response {
 
 	results := []SearchResult{}
 
-	// Search Books if user has permission
-	if permHelper.CheckServicePermission(ctx, auth.ServiceBooks, auth.PermissionRead) {
-		bookResults := c.searchBooks(query)
-		results = append(results, bookResults...)
+	// Search SMEs if user has permission
+	if permHelper.CheckServicePermission(ctx, auth.ServiceSMEs, auth.PermissionRead) {
+		smeResults := c.searchSMEs(query)
+		results = append(results, smeResults...)
+	}
+
+	// Search BDSPs if user has permission
+	if permHelper.CheckServicePermission(ctx, auth.ServiceBdsps, auth.PermissionRead) {
+		bdspResults := c.searchBDSPs(query)
+		results = append(results, bdspResults...)
+	}
+
+	// Search Events if user has permission
+	if permHelper.CheckServicePermission(ctx, auth.ServiceEvents, auth.PermissionRead) {
+		eventResults := c.searchEvents(query)
+		results = append(results, eventResults...)
+	}
+
+	// Search Procurements if user has permission
+	if permHelper.CheckServicePermission(ctx, auth.ServiceProcurementNotices, auth.PermissionRead) {
+		procurementResults := c.searchProcurements(query)
+		results = append(results, procurementResults...)
 	}
 
 	// Search Users if user has permission
 	if permHelper.CheckServicePermission(ctx, auth.ServiceUsers, auth.PermissionRead) {
 		userResults := c.searchUsers(query)
 		results = append(results, userResults...)
-	}
-
-	// Search Lenders if user has permission
-	if permHelper.CheckServicePermission(ctx, auth.ServiceLenders, auth.PermissionRead) {
-		lenderResults := c.searchLenders(query)
-		results = append(results, lenderResults...)
 	}
 
 	// Search Configs if user has permission
@@ -85,14 +99,14 @@ func (c *SearchController) GlobalSearch(ctx http.Context) http.Response {
 	})
 }
 
-// searchBooks performs fuzzy search on books using the BookService
-func (c *SearchController) searchBooks(query string) []SearchResult {
+// searchSMEs performs fuzzy search on SMEs using the SmeService
+func (c *SearchController) searchSMEs(query string) []SearchResult {
 	results := []SearchResult{}
 
-	bookService := services.NewBookService()
+	smeService := services.NewSmeService()
 
 	// Use the service's search functionality
-	paginatedResult, err := bookService.Search(query, contracts.ListRequest{
+	paginatedResult, err := smeService.Search(query, contracts.ListRequest{
 		Page:     1,
 		PageSize: 10,
 	})
@@ -102,20 +116,130 @@ func (c *SearchController) searchBooks(query string) []SearchResult {
 	}
 
 	// Convert service results to search results
-	// Note: Data contains values, not pointers
 	for _, item := range paginatedResult.Data {
-		if book, ok := item.(models.Book); ok {
-			subtitle := book.Author
-			if book.Status != "" {
-				subtitle = fmt.Sprintf("%s • %s", book.Author, book.Status)
+		if sme, ok := item.(models.Sme); ok {
+			subtitle := sme.BusinessCategory
+			if sme.Sector != "" {
+				subtitle = fmt.Sprintf("%s • %s", sme.BusinessCategory, sme.Sector)
 			}
 
 			results = append(results, SearchResult{
-				ID:       book.ID,
-				Title:    book.Title,
+				ID:       sme.ID,
+				Title:    sme.Name,
 				Subtitle: subtitle,
-				Type:     "book",
-				URL:      fmt.Sprintf("/admin/books?search=%s", query),
+				Type:     "sme",
+				URL:      fmt.Sprintf("/admin/smes?search=%s", query),
+			})
+		}
+	}
+
+	return results
+}
+
+// searchBDSPs performs fuzzy search on BDSPs using the BdspService
+func (c *SearchController) searchBDSPs(query string) []SearchResult {
+	results := []SearchResult{}
+
+	bdspService := services.NewBdspService()
+
+	// Use the service's search functionality
+	paginatedResult, err := bdspService.Search(query, contracts.ListRequest{
+		Page:     1,
+		PageSize: 10,
+	})
+
+	if err != nil || paginatedResult == nil {
+		return results
+	}
+
+	// Convert service results to search results
+	for _, item := range paginatedResult.Data {
+		if bdsp, ok := item.(models.Bdsp); ok {
+			subtitle := bdsp.UbdspNumber
+			if bdsp.RegistrationStatus != nil && *bdsp.RegistrationStatus != "" {
+				subtitle = fmt.Sprintf("%s • %s", bdsp.UbdspNumber, *bdsp.RegistrationStatus)
+			}
+
+			results = append(results, SearchResult{
+				ID:       bdsp.ID,
+				Title:    bdsp.Name,
+				Subtitle: subtitle,
+				Type:     "bdsp",
+				URL:      fmt.Sprintf("/admin/bdsps?search=%s", query),
+			})
+		}
+	}
+
+	return results
+}
+
+// searchEvents performs fuzzy search on Events using the EventService
+func (c *SearchController) searchEvents(query string) []SearchResult {
+	results := []SearchResult{}
+
+	eventService := services.NewEventService()
+
+	// Use the service's search functionality
+	paginatedResult, err := eventService.Search(query, contracts.ListRequest{
+		Page:     1,
+		PageSize: 10,
+	})
+
+	if err != nil || paginatedResult == nil {
+		return results
+	}
+
+	// Convert service results to search results
+	for _, item := range paginatedResult.Data {
+		if event, ok := item.(models.Event); ok {
+			subtitle := event.Venue
+			if event.District != "" {
+				subtitle = fmt.Sprintf("%s • %s", event.Venue, event.District)
+			}
+
+			results = append(results, SearchResult{
+				ID:       event.ID,
+				Title:    event.Title,
+				Subtitle: subtitle,
+				Type:     "event",
+				URL:      fmt.Sprintf("/admin/events?search=%s", query),
+			})
+		}
+	}
+
+	return results
+}
+
+// searchProcurements performs fuzzy search on Procurements using the ProcurementNoticeService
+func (c *SearchController) searchProcurements(query string) []SearchResult {
+	results := []SearchResult{}
+
+	procurementService := services.NewProcurementNoticeService()
+
+	// Use the service's search functionality
+	paginatedResult, err := procurementService.Search(query, contracts.ListRequest{
+		Page:     1,
+		PageSize: 10,
+	})
+
+	if err != nil || paginatedResult == nil {
+		return results
+	}
+
+	// Convert service results to search results
+	for _, item := range paginatedResult.Data {
+		if procurement, ok := item.(models.ProcurementNotice); ok {
+			subtitle := procurement.ProcurementType
+			if procurement.Organization != "" {
+				subtitle = fmt.Sprintf("%s • %s", procurement.ProcurementType, procurement.Organization)
+			}
+
+			results = append(results, SearchResult{
+				ID:       procurement.ID,
+				Title:    procurement.Invitation,
+				Subtitle: subtitle,
+				Type:     "procurement",
+				URL:      fmt.Sprintf("/admin/procurements?search=%s", query),
 			})
 		}
 	}
@@ -149,44 +273,6 @@ func (c *SearchController) searchUsers(query string) []SearchResult {
 				Subtitle: user.Email,
 				Type:     "user",
 				URL:      fmt.Sprintf("/admin/users?search=%s", query),
-			})
-		}
-	}
-
-	return results
-}
-
-// searchLenders performs fuzzy search on lenders using the LenderService
-func (c *SearchController) searchLenders(query string) []SearchResult {
-	results := []SearchResult{}
-
-	lenderService := services.NewLenderService()
-
-	// Use the service's search functionality
-	paginatedResult, err := lenderService.Search(query, contracts.ListRequest{
-		Page:     1,
-		PageSize: 10,
-	})
-
-	if err != nil || paginatedResult == nil {
-		return results
-	}
-
-	// Convert service results to search results
-	// Note: Data contains values, not pointers
-	for _, item := range paginatedResult.Data {
-		if lender, ok := item.(models.Lender); ok {
-			subtitle := lender.Email
-			if lender.Phone != nil && *lender.Phone != "" {
-				subtitle = fmt.Sprintf("%s • %s", lender.Email, *lender.Phone)
-			}
-
-			results = append(results, SearchResult{
-				ID:       lender.ID,
-				Title:    lender.Name,
-				Subtitle: subtitle,
-				Type:     "lender",
-				URL:      fmt.Sprintf("/admin/lenders?search=%s", query),
 			})
 		}
 	}

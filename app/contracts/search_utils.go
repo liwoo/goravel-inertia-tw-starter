@@ -47,7 +47,8 @@ func (sb *SearchBuilder) ApplySearch(query orm.Query, config SearchConfig) (orm.
 	searchPattern := "%" + config.Query + "%"
 
 	for i, field := range config.SearchableFields {
-		conditions[i] = field + " LIKE ?"
+		// Use ILIKE for case-insensitive search in PostgreSQL
+		conditions[i] = field + " ILIKE ?"
 		values[i] = searchPattern
 	}
 
@@ -85,7 +86,8 @@ func (sb *SearchBuilder) BuildSearchCondition(fields []string) (condition string
 
 	conditions := make([]string, len(fields))
 	for i, field := range fields {
-		conditions[i] = field + " LIKE ?"
+		// Use ILIKE for case-insensitive search in PostgreSQL
+		conditions[i] = field + " ILIKE ?"
 	}
 
 	return strings.Join(conditions, " OR "), len(fields)

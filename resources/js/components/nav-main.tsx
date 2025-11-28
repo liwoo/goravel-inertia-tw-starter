@@ -2,6 +2,7 @@ import { MailIcon, PlusCircleIcon, Command, type LucideIcon } from "lucide-react
 // @ts-ignore
 import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect } from 'react'
+import { usePermissions } from "@/contexts/PermissionsContext"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -30,6 +31,7 @@ export function NavMain({
   }[]
 }) {
   const { url } = usePage();
+  const { canPerformAction } = usePermissions();
 
   // Check if a menu item is active based on current URL
   const isActive = (itemUrl: string) => {
@@ -41,6 +43,13 @@ export function NavMain({
     // This handles /admin/smes, /admin/smes/1, /admin/smes/create, etc.
     return url.startsWith(itemUrl);
   };
+
+  // Check if user can create any entity
+  const canCreateAnything =
+    canPerformAction('smes', 'create') ||
+    canPerformAction('bdsps', 'create') ||
+    canPerformAction('events', 'create') ||
+    canPerformAction('procurement_notices', 'create');
 
   // Keyboard shortcuts for navigation items (Cmd/Ctrl + 1-9)
   useEffect(() => {
@@ -61,45 +70,55 @@ export function NavMain({
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  tooltip="Quick Create"
-                  className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
-                >
-                  <PlusCircleIcon />
-                  <span>Quick Create</span>
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="start" className="w-48">
-                <DropdownMenuLabel>Create New</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.visit('/smes/create')}>
-                  SME
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.visit('/bdsps/create')}>
-                  BDSP
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.visit('/events/create')}>
-                  Event
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.visit('/procurements/create')}>
-                  Procurement
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button
-              size="icon"
-              className="h-9 w-9 shrink-0 group-data-[collapsible=icon]:opacity-0"
-              variant="outline"
-            >
-              <MailIcon />
-              <span className="sr-only">Inbox</span>
-            </Button>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {canCreateAnything && (
+          <SidebarMenu>
+            <SidebarMenuItem className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    tooltip="Quick Create"
+                    className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+                  >
+                    <PlusCircleIcon />
+                    <span>Quick Create</span>
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="start" className="w-48">
+                  <DropdownMenuLabel>Create New</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {canPerformAction('smes', 'create') && (
+                    <DropdownMenuItem onClick={() => router.visit('/smes/create')}>
+                      SME
+                    </DropdownMenuItem>
+                  )}
+                  {canPerformAction('bdsps', 'create') && (
+                    <DropdownMenuItem onClick={() => router.visit('/bdsps/create')}>
+                      BDSP
+                    </DropdownMenuItem>
+                  )}
+                  {canPerformAction('events', 'create') && (
+                    <DropdownMenuItem onClick={() => router.visit('/events/create')}>
+                      Event
+                    </DropdownMenuItem>
+                  )}
+                  {canPerformAction('procurement_notices', 'create') && (
+                    <DropdownMenuItem onClick={() => router.visit('/procurements/create')}>
+                      Procurement
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                size="icon"
+                className="h-9 w-9 shrink-0 group-data-[collapsible=icon]:opacity-0"
+                variant="outline"
+              >
+                <MailIcon />
+                <span className="sr-only">Inbox</span>
+              </Button>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
         <SidebarMenu>
           {items.map((item, index) => {
             const active = isActive(item.url);

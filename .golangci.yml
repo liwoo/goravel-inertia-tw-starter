@@ -1,70 +1,173 @@
+# golangci-lint configuration
+# https://golangci-lint.run/usage/configuration/
+
 run:
   timeout: 5m
-  tests: false
+  tests: true
   skip-dirs:
     - node_modules
     - vendor
     - tmp
-    - tests
-  skip-files:
-    - ".*_test.go"
+    - testdata
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
 
 linters:
   enable:
-    - gofmt
-    - govet
-    - ineffassign
-    - misspell
-    - staticcheck
-    - typecheck
-    - unused
+    - errcheck       # Check for unchecked errors
+    - gosimple       # Simplify code
+    - govet          # Go vet checks
+    - ineffassign    # Detect ineffectual assignments
+    - staticcheck    # Static analysis checks
+    - unused         # Find unused code
+    - gofmt          # Format check
+    - goimports      # Import organization
+    - misspell       # Spell checking
+    - typecheck      # Type checking
+    - bodyclose      # Check HTTP response body is closed
+    - contextcheck   # Check context usage
+    - durationcheck  # Check duration multiplication
+    - errorlint      # Error wrapping checks
+    - goconst        # Find repeated strings
+    - gocritic       # Code review comments
+    - nilerr         # Check nil error returns
+    - prealloc       # Slice preallocation
+    - revive         # Replacement for golint
+    - unconvert      # Unnecessary type conversions
+    - whitespace     # Whitespace issues
+
   disable:
-    - gosec
-    - errcheck
-    - gosimple
-    - structcheck
-    - varcheck
-    - deadcode
-    - exhaustive
-    - gocyclo
-    - dupl
+    - gosec          # Security checks - can be noisy with Goravel
+    - exhaustive     # Can be too strict for enum switches
+    - wrapcheck      # Can be too verbose for error wrapping
+    - varnamelen     # Variable name length can be subjective
+    - structcheck    # Deprecated
+    - varcheck       # Deprecated
+    - deadcode       # Deprecated
+    - gocyclo        # Use gocognit instead
+    - dupl           # Too noisy for this codebase
 
 linters-settings:
-  gofmt:
-    simplify: true
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
+    exclude-functions:
+      - (io.Closer).Close
+      - (net/http.ResponseWriter).Write
+
   govet:
     check-shadowing: true
+    enable-all: false
+    enable:
+      - assign
+      - atomic
+      - bools
+      - buildtag
+      - copylocks
+      - httpresponse
+      - loopclosure
+      - lostcancel
+      - nilfunc
+      - printf
+      - shift
+      - stdmethods
+      - structtag
+      - tests
+      - unmarshal
+      - unreachable
+      - unsafeptr
+
+  gofmt:
+    simplify: true
+
+  goimports:
+    local-prefixes: smedi-sme-db
+
   staticcheck:
-    go: "1.21"
+    go: "1.24"
     checks: ["all", "-SA1019", "-ST1003"]
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+    disabled-checks:
+      - ifElseChain
+      - hugeParam
+      - rangeValCopy
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: if-return
+      - name: increment-decrement
+      - name: var-declaration
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unreachable-code
+      - name: redefines-builtin-id
+      - name: package-comments
+        disabled: true
+      - name: exported
+        disabled: true
+      - name: unused-parameter
+        disabled: true
 
 issues:
   exclude-rules:
-    # Exclude some linters from running on tests files.
+    # Exclude some linters from running on tests files
     - path: _test\.go
       linters:
-        - gocyclo
+        - gocognit
+        - goconst
+        - gosec
         - errcheck
         - dupl
-        - gosec
-    
+
+    # Exclude some linters from running on generated files
+    - path: mock_.*\.go
+      linters:
+        - all
+
     # Exclude typecheck for orm.Model embedded fields
     - path: app/models/
       linters:
         - typecheck
       text: "has no field or method"
-    
-    # Exclude import errors for Goravel framework v2
+
+    # Exclude import errors for Goravel framework
     - linters:
         - typecheck
       text: "could not import github.com/goravel/framework"
-    
-    # Allow dot imports for standard library
+
+    # Allow dot imports for standard library in middleware
     - path: app/http/middleware/
       linters:
         - stylecheck
       text: "should not use dot imports"
 
-  max-issues-per-linter: 0
-  max-same-issues: 0
+  max-issues-per-linter: 50
+  max-same-issues: 10
   new: false

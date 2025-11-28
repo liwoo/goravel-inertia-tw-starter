@@ -1,4 +1,7 @@
-# Production environment values
+# =============================================================================
+# Production environment values for goravel-blog
+# =============================================================================
+
 replicaCount: 3
 
 image:
@@ -8,24 +11,27 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
     nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
   hosts:
-    - host: blog.example.com
+    - host: smedi.example.com
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: blog-tls-secret
+    - secretName: smedi-tls-secret
       hosts:
-        - blog.example.com
+        - smedi.example.com
 
 resources:
   limits:
     cpu: 1000m
     memory: 1Gi
   requests:
-    cpu: 500m
-    memory: 512Mi
+    cpu: 250m
+    memory: 256Mi
 
 autoscaling:
   enabled: true
@@ -34,19 +40,82 @@ autoscaling:
   targetCPUUtilizationPercentage: 70
   targetMemoryUtilizationPercentage: 75
 
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+networkPolicy:
+  enabled: true
+
 app:
   env: "production"
   debug: false
-  url: "https://blog.example.com"
-  
+  url: "https://smedi.example.com"
+
   database:
-    host: "mysql-production.default.svc.cluster.local"
-    database: "goravel_blog_production"
-    
+    connection: "postgres"
+    host: "postgresql.data.svc.cluster.local"
+    port: 5432
+    database: "smedi_db_production"
+    username: "smedi_production"
+    sslmode: "require"
+
   redis:
-    host: "redis-production.default.svc.cluster.local"
-    
+    enabled: true
+    host: "redis.data.svc.cluster.local"
+    port: 6379
+    database: 0
+
+  session:
+    driver: "redis"
+    lifetime: 120
+    encrypt: true
+
+  logging:
+    level: "warning"
+
   storage:
     persistence:
+      enabled: true
       storageClass: "gp3"
       size: 50Gi
+
+healthcheck:
+  enabled: true
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startupProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30
+
+# Production-specific affinity for high availability
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - goravel-blog
+        topologyKey: kubernetes.io/hostname
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - goravel-blog
+          topologyKey: topology.kubernetes.io/zone

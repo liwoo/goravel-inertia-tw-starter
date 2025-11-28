@@ -1,31 +1,31 @@
 # =============================================================================
-# Docker Compose for Local Development
+# Docker Compose for Local Development with Hot Reload
 # =============================================================================
 # Usage:
-#   docker-compose up -d        # Start all services
-#   docker-compose down         # Stop all services
-#   docker-compose logs -f app  # Follow app logs
+#   docker-compose -f docker-compose.dev.yml up -d
+#   docker-compose -f docker-compose.dev.yml logs -f app
 # =============================================================================
 
-name: smedi-database
+name: smedi-database-dev
 
 services:
   # ===========================================================================
-  # Application Service
+  # Go Backend with Air (Hot Reload)
   # ===========================================================================
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        GO_VERSION: "1.24"
-        NODE_VERSION: "20"
+  backend:
+    image: golang:1.24-alpine
+    working_dir: /app
+    command: >
+      sh -c "
+        go install github.com/air-verse/air@latest &&
+        air -c .air.toml
+      "
     ports:
       - "3000:3000"
     environment:
       # Application
       APP_NAME: "SMEDI Database"
-      APP_ENV: development
+      APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: "http://localhost:3000"
       APP_KEY: "base64:local-development-key-change-in-prod"
@@ -60,22 +60,33 @@ services:
       LOG_LEVEL: debug
       LOG_CHANNEL: stack
     volumes:
-      # Mount storage for persistence during development
-      - app-storage:/app/storage
+      - .:/app
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
     networks:
-      - smedi-network
+      - smedi-network-dev
+
+  # ===========================================================================
+  # Vite Frontend Dev Server
+  # ===========================================================================
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: npm run dev -- --host
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_APP_URL: "http://localhost:3000"
+    volumes:
+      - .:/app
+      - node-modules:/app/node_modules
+    networks:
+      - smedi-network-dev
 
   # ===========================================================================
   # PostgreSQL Database
@@ -90,17 +101,15 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - postgres-data-dev:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U smedi -d smedi_db"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
       start_period: 10s
-    restart: unless-stopped
     networks:
-      - smedi-network
+      - smedi-network-dev
 
   # ===========================================================================
   # Redis Cache
@@ -111,71 +120,71 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis-data:/data
+      - redis-data-dev:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
     networks:
-      - smedi-network
+      - smedi-network-dev
 
   # ===========================================================================
-  # MinIO Object Storage (Optional - for S3-compatible storage)
+  # pgAdmin (Database Management)
   # ===========================================================================
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+  pgadmin:
+    image: dpage/pgadmin4:latest
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
     volumes:
-      - minio-data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
     profiles:
-      - storage
+      - tools
     networks:
-      - smedi-network
+      - smedi-network-dev
 
   # ===========================================================================
-  # Mailhog (Email Testing)
+  # Redis Commander (Cache Management)
   # ===========================================================================
-  mailhog:
-    image: mailhog/mailhog:latest
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      REDIS_HOSTS: local:redis:6379
     ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Web UI
-    restart: unless-stopped
+      - "8081:8081"
+    depends_on:
+      - redis
     profiles:
-      - mail
+      - tools
     networks:
-      - smedi-network
+      - smedi-network-dev
 
 # =============================================================================
 # Volumes
 # =============================================================================
 volumes:
-  postgres-data:
+  postgres-data-dev:
     driver: local
-  redis-data:
+  redis-data-dev:
     driver: local
-  app-storage:
+  go-mod-cache:
     driver: local
-  minio-data:
+  go-build-cache:
+    driver: local
+  node-modules:
+    driver: local
+  pgadmin-data:
     driver: local
 
 # =============================================================================
 # Networks
 # =============================================================================
 networks:
-  smedi-network:
+  smedi-network-dev:
     driver: bridge

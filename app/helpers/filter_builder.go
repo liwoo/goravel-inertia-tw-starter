@@ -25,13 +25,13 @@ func (f *FilterBuilder) Search(fields []string, term string) *FilterBuilder {
 
 	searchTerm := "%" + term + "%"
 
-	// Build OR conditions for search
+	// Build OR conditions for search (using ILIKE for case-insensitive PostgreSQL search)
 	f.query = f.query.Where(func(query orm.Query) orm.Query {
 		for i, field := range fields {
 			if i == 0 {
-				query = query.Where(field+" LIKE ?", searchTerm)
+				query = query.Where(field+" ILIKE ?", searchTerm)
 			} else {
-				query = query.OrWhere(field+" LIKE ?", searchTerm)
+				query = query.OrWhere(field+" ILIKE ?", searchTerm)
 			}
 		}
 		return query
@@ -65,10 +65,10 @@ func (f *FilterBuilder) WhereIn(field string, values []interface{}) *FilterBuild
 	return f
 }
 
-// WhereLike adds a LIKE condition
+// WhereLike adds a LIKE condition (using ILIKE for case-insensitive PostgreSQL search)
 func (f *FilterBuilder) WhereLike(field string, pattern string) *FilterBuilder {
 	if pattern != "" {
-		f.query = f.query.Where(field+" LIKE ?", "%"+pattern+"%")
+		f.query = f.query.Where(field+" ILIKE ?", "%"+pattern+"%")
 	}
 	return f
 }

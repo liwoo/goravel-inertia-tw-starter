@@ -182,7 +182,7 @@ func (s *CustomFiltersTestSuite) TestFilterToSQL() {
 		Value:    "Go",
 	}
 	sql, args = containsFilter.ToSQL()
-	s.Equal("title LIKE ?", sql)
+	s.Equal("title ILIKE ?", sql)
 	s.Equal([]interface{}{"%Go%"}, args)
 
 	// Test is null

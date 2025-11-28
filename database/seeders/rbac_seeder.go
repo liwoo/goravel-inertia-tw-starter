@@ -16,15 +16,21 @@ func (s *RBACSeeder) Signature() string {
 	return "rbac"
 }
 
-// Run seeds default roles and permissions
+// Run seeds default roles and permissions (idempotent - safe to run multiple times)
 func (s *RBACSeeder) Run() error {
 	facades.Log().Info("Starting RBAC Seeder...")
 
-	// Clear existing data first
-	facades.Orm().Query().Exec("DELETE FROM role_permissions")
-	facades.Orm().Query().Exec("DELETE FROM user_roles")
-	facades.Orm().Query().Exec("DELETE FROM permissions")
-	facades.Orm().Query().Exec("DELETE FROM roles")
+	// Check if RBAC is already set up by checking for existing roles
+	roleCount, err := facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", true).Count()
+	if err == nil && roleCount > 0 {
+		facades.Log().Info("RBAC already set up, checking for updates...", map[string]interface{}{
+			"existing_roles": roleCount,
+		})
+		// Don't delete existing data - just ensure all roles and permissions exist
+		return s.ensureRBACSetup()
+	}
+
+	facades.Log().Info("No existing RBAC setup found, creating fresh...")
 
 	// Create roles directly with raw SQL (using NOW() for PostgreSQL compatibility)
 	rolesSQL := []string{
@@ -55,15 +61,15 @@ func (s *RBACSeeder) Run() error {
 	}
 
 	// Assign all permissions to super-admin role
-	_, err := facades.Orm().Query().Exec(`
+	_, execErr := facades.Orm().Query().Exec(`
 		INSERT INTO role_permissions (role_id, permission_id, is_active, created_at, updated_at)
 		SELECT r.id, p.id, true, NOW(), NOW()
 		FROM roles r, permissions p
 		WHERE r.slug = 'super-admin'
 	`)
-	if err != nil {
+	if execErr != nil {
 		facades.Log().Error("Failed to assign permissions to super-admin", map[string]interface{}{
-			"error": err.Error(),
+			"error": execErr.Error(),
 		})
 	}
 
@@ -498,4 +504,71 @@ func minInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// ensureRBACSetup ensures all roles and permissions exist without deleting existing data
+func (s *RBACSeeder) ensureRBACSetup() error {
+	facades.Log().Info("Ensuring RBAC setup is complete (idempotent mode)...")
+
+	// Ensure all default roles exist
+	rolesData := []struct {
+		name, slug, description string
+		level                   int
+	}{
+		{"Super Administrator", "super-admin", "Full system access with all permissions", 100},
+		{"Administrator", "admin", "Administrative access to most features", 80},
+		{"Librarian", "librarian", "Full book management access", 60},
+		{"Moderator", "moderator", "Limited administrative access", 40},
+		{"Member", "member", "Regular user with borrowing privileges", 20},
+		{"Guest", "guest", "Basic read-only access", 10},
+	}
+
+	for _, role := range rolesData {
+		var existing models.Role
+		err := facades.Orm().Query().Where("slug = ?", role.slug).First(&existing)
+		if err != nil {
+			// Role doesn't exist, create it
+			sql := `INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at)
+			       VALUES ($1, $2, $3, $4, true, NOW(), NOW())`
+			_, err = facades.Orm().Query().Exec(sql, role.name, role.slug, role.description, role.level)
+			if err != nil {
+				facades.Log().Error("Failed to create role", map[string]interface{}{
+					"error": err.Error(),
+					"slug":  role.slug,
+				})
+			} else {
+				facades.Log().Info("Created missing role", map[string]interface{}{
+					"slug": role.slug,
+				})
+			}
+		}
+	}
+
+	// Ensure permissions exist (this already handles duplicates gracefully)
+	if err := s.createPermissionsFromServices(); err != nil {
+		facades.Log().Warning("Failed to create permissions from services, using fallback", map[string]interface{}{
+			"error": err.Error(),
+		})
+		s.createHardcodedPermissions()
+	}
+
+	// Ensure super-admin has all permissions
+	_, err := facades.Orm().Query().Exec(`
+		INSERT INTO role_permissions (role_id, permission_id, is_active, created_at, updated_at)
+		SELECT r.id, p.id, true, NOW(), NOW()
+		FROM roles r, permissions p
+		WHERE r.slug = 'super-admin'
+		AND NOT EXISTS (
+			SELECT 1 FROM role_permissions rp
+			WHERE rp.role_id = r.id AND rp.permission_id = p.id
+		)
+	`)
+	if err != nil {
+		facades.Log().Error("Failed to assign new permissions to super-admin", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	facades.Log().Info("RBAC setup verification completed")
+	return nil
 }

@@ -5,34 +5,37 @@ metadata:
   labels:
     {{- include "goravel-blog.labels" . | nindent 4 }}
 data:
+  # Application configuration
   APP_NAME: {{ .Values.app.name | quote }}
   APP_ENV: {{ .Values.app.env | quote }}
   APP_DEBUG: {{ .Values.app.debug | quote }}
   APP_URL: {{ .Values.app.url | quote }}
-  
-  # Database configuration
+  APP_TIMEZONE: {{ .Values.app.timezone | default "UTC" | quote }}
+
+  # Database configuration (PostgreSQL)
   DB_CONNECTION: {{ .Values.app.database.connection | quote }}
   DB_HOST: {{ .Values.app.database.host | quote }}
   DB_PORT: {{ .Values.app.database.port | quote }}
   DB_DATABASE: {{ .Values.app.database.database | quote }}
   DB_USERNAME: {{ .Values.app.database.username | quote }}
-  DB_CHARSET: {{ .Values.app.database.charset | quote }}
-  
+  DB_SSLMODE: {{ .Values.app.database.sslmode | default "disable" | quote }}
+
   # Redis configuration
   {{- if .Values.app.redis.enabled }}
   REDIS_HOST: {{ .Values.app.redis.host | quote }}
   REDIS_PORT: {{ .Values.app.redis.port | quote }}
+  REDIS_DATABASE: {{ .Values.app.redis.database | default 0 | quote }}
   {{- end }}
-  
+
   # JWT configuration
   JWT_TTL: {{ .Values.app.jwt.ttl | quote }}
   JWT_REFRESH_TTL: {{ .Values.app.jwt.refresh_ttl | quote }}
-  
+
   # Session configuration
   SESSION_DRIVER: {{ .Values.app.session.driver | quote }}
   SESSION_LIFETIME: {{ .Values.app.session.lifetime | quote }}
   SESSION_ENCRYPT: {{ .Values.app.session.encrypt | quote }}
-  
+
   # Mail configuration
   {{- if .Values.app.mail.enabled }}
   MAIL_MAILER: {{ .Values.app.mail.mailer | quote }}
@@ -43,11 +46,14 @@ data:
   MAIL_FROM_ADDRESS: {{ .Values.app.mail.from_address | quote }}
   MAIL_FROM_NAME: {{ .Values.app.mail.from_name | quote }}
   {{- end }}
-  
+
   # Goravel specific
   HTTP_HOST: "0.0.0.0:3000"
   GRPC_HOST: ""
-  LOG_LEVEL: "info"
-  
+
+  # Logging configuration
+  LOG_LEVEL: {{ .Values.app.logging.level | default "info" | quote }}
+  LOG_CHANNEL: {{ .Values.app.logging.channel | default "stack" | quote }}
+
   # Inertia/Frontend
   VITE_APP_URL: {{ .Values.app.url | quote }}

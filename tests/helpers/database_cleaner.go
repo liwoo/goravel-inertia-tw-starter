@@ -1,12 +1,31 @@
 package helpers
 
 import (
-	"github.com/goravel/framework/facades"
 	"os"
+
+	"github.com/goravel/framework/facades"
 )
 
 // CleanTestDatabase removes all test data from the database
+// Works with both SQLite and PostgreSQL
 func CleanTestDatabase() error {
+	orm := facades.Orm()
+	if orm == nil {
+		return nil
+	}
+
+	dbConnection := os.Getenv("DB_CONNECTION")
+
+	if dbConnection == "postgres" {
+		return cleanPostgresDatabase()
+	}
+
+	// Default to SQLite
+	return cleanSQLiteDatabase()
+}
+
+// cleanSQLiteDatabase removes all test data from SQLite database
+func cleanSQLiteDatabase() error {
 	orm := facades.Orm()
 	if orm == nil {
 		return nil
@@ -15,9 +34,9 @@ func CleanTestDatabase() error {
 	// Get all tables (SQLite specific)
 	var tables []string
 	err := orm.Query().Raw(`
-		SELECT name FROM sqlite_master 
-		WHERE type='table' 
-		AND name NOT LIKE 'sqlite_%' 
+		SELECT name FROM sqlite_master
+		WHERE type='table'
+		AND name NOT LIKE 'sqlite_%'
 		AND name NOT LIKE 'migrations'
 		ORDER BY name
 	`).Scan(&tables)
@@ -42,33 +61,85 @@ func CleanTestDatabase() error {
 	return nil
 }
 
-// ResetTestDatabase completely recreates the test database
-func ResetTestDatabase() error {
-	// For SQLite, we can just delete and recreate the file
-	if os.Getenv("DB_CONNECTION") == "sqlite" {
-		dbPath := os.Getenv("DB_DATABASE")
-		if dbPath == "" {
-			dbPath = "database/test.sqlite"
-		}
+// cleanPostgresDatabase removes all test data from PostgreSQL database
+func cleanPostgresDatabase() error {
+	orm := facades.Orm()
+	if orm == nil {
+		return nil
+	}
 
-		// Delete the existing database file
-		os.Remove(dbPath)
+	// Get all tables from PostgreSQL
+	var tables []struct {
+		TableName string `gorm:"column:tablename"`
+	}
+	err := orm.Query().Raw(`
+		SELECT tablename FROM pg_tables
+		WHERE schemaname = 'public'
+		AND tablename != 'migrations'
+		ORDER BY tablename
+	`).Scan(&tables)
 
-		// Create a new empty file
-		file, err := os.Create(dbPath)
-		if err != nil {
-			return err
-		}
-		file.Close()
+	if err != nil {
+		return err
+	}
 
-		// Run migrations
-		err = facades.Artisan().Call("migrate")
-		if err != nil {
-			return err
+	// Use TRUNCATE CASCADE for PostgreSQL (faster and handles FKs)
+	for _, table := range tables {
+		if table.TableName != "migrations" {
+			_, err := orm.Query().Exec("TRUNCATE TABLE " + table.TableName + " CASCADE")
+			if err != nil {
+				// If TRUNCATE fails, try DELETE
+				orm.Query().Exec("DELETE FROM " + table.TableName)
+			}
 		}
 	}
 
 	return nil
+}
+
+// ResetTestDatabase completely recreates the test database
+func ResetTestDatabase() error {
+	dbConnection := os.Getenv("DB_CONNECTION")
+
+	if dbConnection == "postgres" {
+		return resetPostgresDatabase()
+	}
+
+	// Default to SQLite
+	return resetSQLiteDatabase()
+}
+
+// resetSQLiteDatabase resets the SQLite test database
+func resetSQLiteDatabase() error {
+	dbPath := os.Getenv("DB_DATABASE")
+	if dbPath == "" {
+		dbPath = "database/test.sqlite"
+	}
+
+	// Delete the existing database file
+	os.Remove(dbPath)
+
+	// Create a new empty file
+	file, err := os.Create(dbPath)
+	if err != nil {
+		return err
+	}
+	file.Close()
+
+	// Run migrations
+	return facades.Artisan().Call("migrate")
+}
+
+// resetPostgresDatabase resets the PostgreSQL test database
+func resetPostgresDatabase() error {
+	// Clean all tables first
+	err := cleanPostgresDatabase()
+	if err != nil {
+		return err
+	}
+
+	// Run migrations with --force flag for non-interactive execution
+	return facades.Artisan().Call("migrate --force")
 }
 
 // CleanupTestData removes only test-specific data

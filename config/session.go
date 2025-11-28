@@ -1,10 +1,22 @@
 package config
 
 import (
+	"os"
+
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/path"
 	"github.com/goravel/framework/support/str"
 )
+
+// getSessionFilesPath returns the session files directory.
+// In testing mode (when SESSION_FILES_PATH is set), use the test-specific path
+// to avoid interfering with the main application's sessions.
+func getSessionFilesPath() string {
+	if testPath := os.Getenv("SESSION_FILES_PATH"); testPath != "" {
+		return testPath
+	}
+	return path.Storage("framework/sessions")
+}
 
 func init() {
 	config := facades.Config()
@@ -39,7 +51,8 @@ func init() {
 		// When using the file session driver, we need a location where the
 		// session files may be stored. A default has been set for you, but a
 		// different location may be specified. This is only needed for file sessions.
-		"files": path.Storage("framework/sessions"),
+		// Uses SESSION_FILES_PATH env var if set (for test isolation), otherwise uses default storage path.
+		"files": getSessionFilesPath(),
 
 		// Session Garbage Collection Running Time Interval (in minutes)
 		//

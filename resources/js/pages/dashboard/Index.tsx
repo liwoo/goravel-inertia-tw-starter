@@ -66,7 +66,7 @@ const defaultStats: DashboardStats = {
 const DashboardPage: React.FC = () => {
   const { props } = usePage<DashboardPageProps>();
   const user = props.auth?.user;
-  const { canPerformAction } = usePermissions();
+  const { canPerformAction, isSuperAdmin } = usePermissions();
 
   // Use provided stats or default empty stats
   const stats = props.stats || defaultStats;
@@ -144,7 +144,9 @@ const DashboardPage: React.FC = () => {
 
           {/* Right Sidebar - Widgets (top-aligned with KPI cards) */}
           <aside className="w-full xl:w-[380px] 2xl:w-[420px] flex flex-col gap-4 shrink-0">
-            <RecentActivitiesWidget activities={recentActivities} />
+            {isSuperAdmin() && (
+              <RecentActivitiesWidget activities={recentActivities} />
+            )}
             <PermissionGate service="events" action="read">
               <UpcomingEventsWidget events={upcomingEvents} />
             </PermissionGate>

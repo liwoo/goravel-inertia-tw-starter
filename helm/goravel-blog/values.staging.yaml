@@ -1,35 +1,73 @@
-# Staging environment values
+# =============================================================================
+# Staging environment values for goravel-blog
+# =============================================================================
+
 replicaCount: 1
 
 image:
   pullPolicy: Always
 
 ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
   hosts:
-    - host: staging-blog.example.com
+    - host: staging-smedi.example.com
       paths:
         - path: /
           pathType: Prefix
+  tls: []
 
 resources:
   limits:
     cpu: 250m
     memory: 256Mi
   requests:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 50m
+    memory: 64Mi
 
 autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+networkPolicy:
   enabled: false
 
 app:
   env: "staging"
   debug: true
-  url: "https://staging-blog.example.com"
-  
+  url: "https://staging-smedi.example.com"
+
   database:
-    host: "mysql-staging.default.svc.cluster.local"
-    database: "goravel_blog_staging"
-    
+    connection: "postgres"
+    host: "postgresql.data.svc.cluster.local"
+    port: 5432
+    database: "smedi_db_staging"
+    username: "smedi_staging"
+    sslmode: "disable"
+
   redis:
-    host: "redis-staging.default.svc.cluster.local"
+    enabled: true
+    host: "redis.data.svc.cluster.local"
+    port: 6379
+    database: 1
+
+  session:
+    driver: "redis"
+
+  logging:
+    level: "debug"
+
+  storage:
+    persistence:
+      enabled: false
+
+healthcheck:
+  enabled: true
+  livenessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
