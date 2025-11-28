@@ -3,6 +3,8 @@ package inertia
 import (
 	"encoding/json"
 	"log"
+	"os"
+	"sync"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
@@ -12,8 +14,43 @@ import (
 	"smedi-sme-db/app/models" // Import the User model
 )
 
-// Version represents the current asset version
-const Version = "1.0.0"
+// Version represents the current asset version (loaded from package.json)
+var Version = "0.0.0"
+
+// versionOnce ensures we only read package.json once
+var versionOnce sync.Once
+
+// packageJSON represents the structure of package.json
+type packageJSON struct {
+	Version string `json:"version"`
+}
+
+// loadVersion reads the version from package.json
+func loadVersion() {
+	versionOnce.Do(func() {
+		data, err := os.ReadFile("package.json")
+		if err != nil {
+			log.Printf("Warning: Could not read package.json: %v", err)
+			return
+		}
+
+		var pkg packageJSON
+		if err := json.Unmarshal(data, &pkg); err != nil {
+			log.Printf("Warning: Could not parse package.json: %v", err)
+			return
+		}
+
+		if pkg.Version != "" {
+			Version = pkg.Version
+			log.Printf("Loaded app version from package.json: %s", Version)
+		}
+	})
+}
+
+// init loads the version when the package is initialized
+func init() {
+	loadVersion()
+}
 
 var Manager *inertia.Inertia
 
@@ -27,6 +64,9 @@ func GetManager() *inertia.Inertia {
 func Render(ctx http.Context, component string, props map[string]interface{}) http.Response {
 	// Prepare shared props, including auth user
 	sharedProps := make(map[string]interface{})
+
+	// Add app version to shared props
+	sharedProps["appVersion"] = Version
 
 	// Add session errors to shared props for Inertia.js
 	if ctx.Request().HasSession() {

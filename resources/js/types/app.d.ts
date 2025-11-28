@@ -13,6 +13,7 @@ export interface User {
 
 export interface SharedData {
     pageTitle: string;
+    appVersion: string;
     auth: {
         user: User | null;
     };

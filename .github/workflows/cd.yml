@@ -147,17 +147,19 @@ jobs:
           version: ${{ env.HELM_VERSION }}
 
       - name: Configure Kubernetes credentials
-        env:
-          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p $HOME/.kube
-          echo "$KUBECONFIG_DATA" > $HOME/.kube/config
+          cat <<'KUBECONFIG_EOF' > $HOME/.kube/config
+          ${{ secrets.KUBECONFIG }}
+          KUBECONFIG_EOF
           chmod 600 $HOME/.kube/config
 
       - name: Verify cluster connection
         run: |
-          kubectl cluster-info
-          kubectl get nodes
+          echo "Testing cluster connection..."
+          kubectl cluster-info || { echo "Failed to connect to cluster"; exit 1; }
+          kubectl get nodes || { echo "Failed to get nodes"; exit 1; }
+          echo "Cluster connection verified successfully"
 
       - name: Create namespace if not exists
         run: |
@@ -337,11 +339,11 @@ jobs:
     if: failure()
     steps:
       - name: Configure Kubernetes credentials
-        env:
-          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p $HOME/.kube
-          echo "$KUBECONFIG_DATA" > $HOME/.kube/config
+          cat <<'KUBECONFIG_EOF' > $HOME/.kube/config
+          ${{ secrets.KUBECONFIG }}
+          KUBECONFIG_EOF
           chmod 600 $HOME/.kube/config
 
       - name: Install Helm
