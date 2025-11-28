@@ -86,8 +86,8 @@ func init() {
 		"host": config.Env("APP_HOST", "127.0.0.1"),
 		// HTTP Port
 		"port": config.Env("APP_PORT", "3500"),
-		// HTTP Timeout, default is 3 seconds
-		"request_timeout": 3,
+		// HTTP Timeout, default is 3 seconds (use higher value for testing with bcrypt)
+		"request_timeout": config.Env("HTTP_REQUEST_TIMEOUT", 3),
 
 		// HTTP Client Configuration
 		"client": map[string]any{

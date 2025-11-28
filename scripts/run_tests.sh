@@ -100,6 +100,9 @@ export SESSION_COOKIE="smedi_test_session_$TEST_RUN_ID"
 # JWT - use a completely different secret for tests
 export JWT_SECRET="test-jwt-secret-$TEST_RUN_ID-isolated-from-prod"
 
+# HTTP request timeout - increase for CI where bcrypt is slower
+export HTTP_REQUEST_TIMEOUT=30
+
 # Disable Redis for tests (use memory/file instead)
 export REDIS_HOST=""
 export CACHE_DRIVER=file
