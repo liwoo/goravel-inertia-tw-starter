@@ -40,6 +40,11 @@ coverage.out
 *.test
 .nyc_output/
 vitest.config.ts
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/__tests__/
 
 # IDE and editor files
 .idea/

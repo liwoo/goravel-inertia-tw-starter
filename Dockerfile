@@ -69,8 +69,9 @@ COPY tailwind.config.js ./
 COPY components.json ./
 COPY resources ./resources
 
-# Build frontend assets
-RUN npm run build
+# Build frontend assets (skip tsc type-checking, just build with vite)
+# Type checking is done in CI, here we just need the production bundle
+RUN npx vite build
 
 # =============================================================================
 # Stage 3: Runtime Image
