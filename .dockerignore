@@ -116,3 +116,4 @@ pnpm-debug.log*
 .pnpm-store/
 yarn.lock
 pnpm-lock.yaml
+package-lock.json

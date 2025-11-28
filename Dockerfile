@@ -54,10 +54,11 @@ FROM node:${NODE_VERSION}-alpine AS node-builder
 WORKDIR /app
 
 # Copy package files for better caching
-COPY package*.json ./
+COPY package.json ./
 
-# Install dependencies using npm (clean install to avoid rollup platform issues)
-RUN npm ci
+# Install dependencies using fresh npm install to get correct platform binaries
+# (npm ci uses lockfile which may have wrong platform-specific deps)
+RUN npm install --legacy-peer-deps
 
 # Copy frontend source files
 COPY tsconfig.json ./
