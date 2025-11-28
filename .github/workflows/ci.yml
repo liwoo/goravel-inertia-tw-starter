@@ -10,7 +10,7 @@ env:
   GO_VERSION: '1.24'
   NODE_VERSION: '20'
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/smedi-database
+  # Note: IMAGE_NAME is set per-job since secrets aren't available at workflow level
 
 # Cancel in-progress runs for the same branch
 concurrency:
@@ -246,6 +246,8 @@ jobs:
     name: Docker Build
     needs: [go-lint, go-test, frontend-build]
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/smedi-database
     outputs:
       image-digest: ${{ steps.build.outputs.digest }}
       image-tags: ${{ steps.meta.outputs.tags }}
@@ -322,6 +324,8 @@ jobs:
     if: |
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    env:
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/smedi-database
     permissions:
       contents: read
       packages: write
