@@ -8,6 +8,7 @@ import {
     FileCodeIcon,
     FileIcon,
     FileTextIcon,
+    FolderIcon,
     HelpCircleIcon,
     LayoutDashboardIcon, NotebookTabsIcon, NotepadText, PercentSquareIcon, PersonStandingIcon,
     SettingsIcon,
@@ -22,7 +23,9 @@ export interface BaseNavItem {
     icon: any;
     requiredService?: string;
     requiredAction?: "read" | "write" | "delete" | "manage" | "create" | "update" | "export" | "bulk_update" | "bulk_delete";
+    requiredRole?: string;
     requireSuperAdmin?: boolean;
+    variant?: "default" | "primary";
 }
 
 export type NavItem = BaseNavItem;
@@ -41,6 +44,7 @@ interface DocumentItem {
     icon: any;
     requiredService?: string;
     requiredAction?: "read" | "write" | "delete" | "manage" | "create" | "update" | "export" | "bulk_update" | "bulk_delete";
+    requiredRole?: string;
 }
 
 export interface NavigationConfig {
@@ -48,6 +52,7 @@ export interface NavigationConfig {
     navClouds: NavItemWithChildren[];
     navSecondary: NavItem[];
     documents: DocumentItem[];
+    navSme: NavItem[];
 }
 
 // Navigation items with permission requirements
@@ -172,6 +177,28 @@ export const navigationConfig: NavigationConfig = {
             icon: NotebookTabsIcon,
             requiredService: "applications",
             requiredAction: "read" as const,
+        },
+    ],
+
+    navSme: [
+        {
+            title: "My MSME",
+            url: "/dashboard",
+            icon: LayoutDashboardIcon,
+            requiredRole: "sme-user",
+            variant: "primary",
+        },
+        {
+            title: "Portal",
+            url: "/portal",
+            icon: LayoutDashboardIcon,
+            requiredRole: "sme-user",
+        },
+        {
+            title: "Directory",
+            url: "/directory",
+            icon: FolderIcon,
+            requiredRole: "sme-user",
         },
     ],
 }

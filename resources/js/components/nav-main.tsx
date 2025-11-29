@@ -21,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+import { cn } from "@/lib/utils"
+
 export function NavMain({
   items,
 }: {
@@ -28,6 +30,7 @@ export function NavMain({
     title: string
     url: string
     icon?: LucideIcon
+    variant?: "default" | "primary"
   }[]
 }) {
   const { url } = usePage();
@@ -127,7 +130,10 @@ export function NavMain({
                 <Link href={item.url}>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    className="group"
+                    className={cn(
+                      "group",
+                      item.variant === 'primary' && "bg-green-600 text-white hover:bg-green-700 hover:text-white data-[active=true]:bg-green-700 data-[active=true]:text-white"
+                    )}
                     isActive={active}
                   >
                     {item.icon && <item.icon />}

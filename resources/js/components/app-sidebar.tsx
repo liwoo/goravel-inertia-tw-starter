@@ -1,10 +1,10 @@
 import * as React from "react"
 import { ShieldIcon, Search, Command } from "lucide-react"
 
-import {NavDocuments} from "@/components/nav-documents"
-import {NavMain} from "@/components/nav-main"
-import {NavSecondary} from "@/components/nav-secondary"
-import {NavUser} from "@/components/nav-user"
+import { NavDocuments } from "@/components/nav-documents"
+import { NavMain } from "@/components/nav-main"
+import { NavSecondary } from "@/components/nav-secondary"
+import { NavUser } from "@/components/nav-user"
 import {
     Sidebar,
     SidebarContent,
@@ -22,63 +22,73 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     user?: any;
 }
 
-export function AppSidebar({user, ...props}: AppSidebarProps) {
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
     const { canPerformAction, isSuperAdmin: checkIsSuperAdmin, isAdmin } = usePermissions();
     const [searchOpen, setSearchOpen] = React.useState(false);
-    
+
     // Filter navigation items based on permissions
     const navigationItems = React.useMemo(() => {
-        // Filter main navigation
-        const filteredNavMain = navigationConfig.navMain.filter(item => {
+        const userRoles = user?.roles || [];
+
+        // Helper to check role requirement
+        const hasRequiredRole = (item: any) => {
+            if (!item.requiredRole) return true;
+            return userRoles.some((role: any) => role.slug === item.requiredRole);
+        };
+
+        // Helper to check all requirements for an item
+        const checkItemRequirements = (item: any) => {
             // Check super admin requirement
             if (item.requireSuperAdmin) {
                 return checkIsSuperAdmin();
             }
-            
+
+            // Check role requirement
+            if (!hasRequiredRole(item)) return false;
+
             // If no permission requirement, show the item
             if (!item.requiredService && !item.requiredAction) {
                 return true;
             }
-            
+
             // Check service permission
             if (item.requiredService && item.requiredAction) {
                 return canPerformAction(item.requiredService, item.requiredAction);
             }
-            
+
             return true;
-        });
-        
+        };
+
+        // Determine which main navigation to use
+        let activeNavMain = navigationConfig.navMain;
+
+        // List of specialized navigation sections to check
+        const specializedNavs = [navigationConfig.navSme];
+
+        for (const navSection of specializedNavs) {
+            if (navSection && navSection.length > 0) {
+                if (navSection[0].requiredRole && hasRequiredRole(navSection[0])) {
+                    activeNavMain = navSection;
+                    break;
+                }
+            }
+        }
+
+        // Filter main navigation
+        const filteredNavMain = activeNavMain.filter(checkItemRequirements);
+
         // Filter secondary navigation
-        const filteredNavSecondary = navigationConfig.navSecondary.filter(item => {
-            // Check super admin requirement
-            if (item.requireSuperAdmin) {
-                return checkIsSuperAdmin();
-            }
-            
-            // Check service permission
-            if (item.requiredService && item.requiredAction) {
-                return canPerformAction(item.requiredService, item.requiredAction);
-            }
-            
-            return true;
-        });
-        
+        const filteredNavSecondary = navigationConfig.navSecondary.filter(checkItemRequirements);
+
         // Filter documents
-        const filteredDocuments = navigationConfig.documents.filter(item => {
-            // Check service permission
-            if (item.requiredService && item.requiredAction) {
-                return canPerformAction(item.requiredService, item.requiredAction);
-            }
-            
-            return true;
-        });
-        
+        const filteredDocuments = navigationConfig.documents.filter(checkItemRequirements);
+
         return {
             navMain: filteredNavMain,
             navSecondary: filteredNavSecondary,
             documents: filteredDocuments,
         };
-    }, [canPerformAction, checkIsSuperAdmin]);
+    }, [canPerformAction, checkIsSuperAdmin, user]);
 
     // Global keyboard shortcut for search
     React.useEffect(() => {
@@ -92,7 +102,7 @@ export function AppSidebar({user, ...props}: AppSidebarProps) {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
-    
+
     return (
         <>
             <Sidebar collapsible="offcanvas" {...props}>
@@ -106,10 +116,10 @@ export function AppSidebar({user, ...props}: AppSidebarProps) {
 
                 </SidebarHeader>
                 <SidebarContent>
-                    <NavMain items={navigationItems.navMain}/>
-                    <NavDocuments items={navigationItems.documents}/>
-                    <NavSecondary items={navigationItems.navSecondary} className="mt-auto"/>
-                    
+                    <NavMain items={navigationItems.navMain} />
+                    <NavDocuments items={navigationItems.documents} />
+                    <NavSecondary items={navigationItems.navSecondary} className="mt-auto" />
+
                     {/* Hardcoded Search Option */}
                     <div className="mt-2 px-3 pb-3">
                         <SidebarMenu>
@@ -131,7 +141,7 @@ export function AppSidebar({user, ...props}: AppSidebarProps) {
                     )}
                 </SidebarFooter>
             </Sidebar>
-            
+
             {/* Global Search Dialog */}
             <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
         </>

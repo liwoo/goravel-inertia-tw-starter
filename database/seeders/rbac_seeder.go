@@ -215,6 +215,7 @@ func (s *RBACSeeder) createRoles() error {
 	roles := []roleData{
 		{Name: "Super Administrator", Slug: "super-admin", Description: "Full system access with all permissions", Level: 100},
 		{Name: "Administrator", Slug: "admin", Description: "Administrative access to most features", Level: 80},
+		{Name: "SME User", Slug: "sme-user", Description: "SME Portal access", Level: 60},
 		{Name: "Librarian", Slug: "librarian", Description: "Full book management access", Level: 60},
 		{Name: "Moderator", Slug: "moderator", Description: "Limited administrative access", Level: 40},
 		{Name: "Member", Slug: "member", Description: "Regular user with borrowing privileges", Level: 20},
@@ -517,6 +518,7 @@ func (s *RBACSeeder) ensureRBACSetup() error {
 	}{
 		{"Super Administrator", "super-admin", "Full system access with all permissions", 100},
 		{"Administrator", "admin", "Administrative access to most features", 80},
+		{"SME User", "sme-user", "SME Portal access", 60},
 		{"Librarian", "librarian", "Full book management access", 60},
 		{"Moderator", "moderator", "Limited administrative access", 40},
 		{"Member", "member", "Regular user with borrowing privileges", 20},
