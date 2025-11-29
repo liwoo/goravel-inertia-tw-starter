@@ -15,27 +15,35 @@ import (
 	"smedi-sme-db/app/models" // Import the User model
 )
 
-// Version represents the current asset version (loaded from package.json)
+// Version represents the current asset version
+// This is loaded from APP_VERSION environment variable (set by Helm from package.json)
 var Version = "0.0.0"
 
-// versionOnce ensures we only read package.json once
+// versionOnce ensures we only load version once
 var versionOnce sync.Once
 
-// packageJSON represents the structure of package.json
-type packageJSON struct {
-	Version string `json:"version"`
-}
-
-// loadVersion reads the version from package.json
+// loadVersion reads the version from APP_VERSION environment variable
+// In production, APP_VERSION is set by Helm from package.json version
+// In development, it falls back to reading package.json directly
 func loadVersion() {
 	versionOnce.Do(func() {
-		data, err := os.ReadFile("package.json")
-		if err != nil {
-			log.Printf("Warning: Could not read package.json: %v", err)
+		// First, try APP_VERSION environment variable (production)
+		if envVersion := os.Getenv("APP_VERSION"); envVersion != "" {
+			Version = envVersion
+			log.Printf("Loaded app version from APP_VERSION env: %s", Version)
 			return
 		}
 
-		var pkg packageJSON
+		// Fallback: try reading package.json (local development)
+		data, err := os.ReadFile("package.json")
+		if err != nil {
+			log.Printf("Warning: APP_VERSION not set and could not read package.json: %v", err)
+			return
+		}
+
+		var pkg struct {
+			Version string `json:"version"`
+		}
 		if err := json.Unmarshal(data, &pkg); err != nil {
 			log.Printf("Warning: Could not parse package.json: %v", err)
 			return
