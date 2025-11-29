@@ -299,8 +299,9 @@ jobs:
           load: true
           tags: ${{ env.IMAGE_NAME }}:scan
           platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Disabled cache to ensure fresh builds include all changes
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           build-args: |
             GO_VERSION=${{ env.GO_VERSION }}
             NODE_VERSION=${{ env.NODE_VERSION }}
@@ -342,8 +343,9 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Disabled cache to ensure fresh builds include all changes
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           build-args: |
             GO_VERSION=${{ env.GO_VERSION }}
             NODE_VERSION=${{ env.NODE_VERSION }}
