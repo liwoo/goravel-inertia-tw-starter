@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/goravel/framework/contracts/http"
@@ -212,11 +213,11 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 	if requestPath == "" {
 		requestPath = "/"
 	}
-	// Include query string if present
-	queryString := ctx.Request().QueryStr()
+	// Include query string if present - extract from FullUrl since there's no QueryStr method
 	requestURL := requestPath
-	if queryString != "" {
-		requestURL = requestPath + "?" + queryString
+	fullURL := ctx.Request().FullUrl()
+	if idx := strings.Index(fullURL, "?"); idx != -1 {
+		requestURL = requestPath + fullURL[idx:]
 	}
 
 	// Create the page data
@@ -282,10 +283,11 @@ func Middleware(next http.HandlerFunc) http.HandlerFunc {
 					// Build the full URL using APP_URL config to avoid internal URL issues
 					appURL := facades.Config().GetString("app.url", "")
 					requestPath := ctx.Request().Path()
-					queryString := ctx.Request().QueryStr()
 					locationURL := appURL + requestPath
-					if queryString != "" {
-						locationURL = locationURL + "?" + queryString
+					// Extract query string from FullUrl
+					fullURL := ctx.Request().FullUrl()
+					if idx := strings.Index(fullURL, "?"); idx != -1 {
+						locationURL = locationURL + fullURL[idx:]
 					}
 					return ctx.Response().
 						Header("X-Inertia-Location", locationURL).
