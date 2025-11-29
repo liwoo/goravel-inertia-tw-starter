@@ -17,6 +17,8 @@ export default defineConfig({
     outDir: 'public',
     assetsDir: '',
     manifest: true,
+    // Preserve existing files in public/ (like images/) during build
+    emptyOutDir: false,
     rollupOptions: {
       input: 'resources/js/app.tsx',
       output: {
