@@ -204,10 +204,19 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 		finalProps[k] = v
 	}
 
-	// Get the URL safely
-	requestURL := ctx.Request().FullUrl()
-	if requestURL == "" {
-		requestURL = ctx.Request().Url()
+	// Get the URL path only (not full URL) to avoid origin mismatch issues
+	// When behind a reverse proxy (nginx ingress), FullUrl() returns internal URLs like
+	// http://localhost:3000/... which causes DOMException: operation is insecure
+	// when Inertia tries to pushState with a different origin than the browser
+	requestPath := ctx.Request().Path()
+	if requestPath == "" {
+		requestPath = "/"
+	}
+	// Include query string if present
+	queryString := ctx.Request().QueryStr()
+	requestURL := requestPath
+	if queryString != "" {
+		requestURL = requestPath + "?" + queryString
 	}
 
 	// Create the page data
@@ -270,8 +279,16 @@ func Middleware(next http.HandlerFunc) http.HandlerFunc {
 			if ctx.Request().Header("X-Inertia-Version", "") != Version {
 				// If there's a version mismatch and this is a GET request, force a full page reload
 				if ctx.Request().Method() == "GET" {
+					// Build the full URL using APP_URL config to avoid internal URL issues
+					appURL := facades.Config().GetString("app.url", "")
+					requestPath := ctx.Request().Path()
+					queryString := ctx.Request().QueryStr()
+					locationURL := appURL + requestPath
+					if queryString != "" {
+						locationURL = locationURL + "?" + queryString
+					}
 					return ctx.Response().
-						Header("X-Inertia-Location", ctx.Request().FullUrl()).
+						Header("X-Inertia-Location", locationURL).
 						Status(409).
 						Json(http.Json{})
 				}
