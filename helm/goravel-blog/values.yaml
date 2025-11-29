@@ -7,8 +7,8 @@
 replicaCount: 2
 
 image:
-  # Note: Repository will be overridden by CI/CD with DOCKERHUB_USERNAME secret
-  repository: smedi/smedi-database
+  # DockerHub repository for the application image
+  repository: jeremiahchienda/smedi-database
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""

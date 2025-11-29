@@ -50,6 +50,7 @@ jobs:
       namespace: ${{ steps.env.outputs.namespace }}
       values_file: ${{ steps.env.outputs.values_file }}
       image_tag: ${{ steps.tag.outputs.tag }}
+      app_version: ${{ steps.tag.outputs.version }}
     steps:
       - name: Determine environment
         id: env
@@ -74,10 +75,23 @@ jobs:
       - name: Determine image tag
         id: tag
         run: |
-          # Use version from package.json - matches CI tagging
+          # Get version from package.json for APP_VERSION env var
           VERSION=$(curl -s "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.workflow_run.head_sha || github.sha }}/package.json" | jq -r '.version')
-          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Using image tag: ${VERSION}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+          # Get environment from previous step
+          ENVIRONMENT="${{ steps.env.outputs.environment }}"
+
+          # Determine Docker image tag based on environment
+          # - staging uses 'develop' tag (CI tags develop branch as 'develop')
+          # - production uses package.json version
+          if [[ "$ENVIRONMENT" == "staging" ]]; then
+            echo "tag=develop" >> $GITHUB_OUTPUT
+            echo "Using image tag: develop (staging environment)"
+          else
+            echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+            echo "Using image tag: ${VERSION} (production environment)"
+          fi
 
   # =============================================================================
   # Pre-deployment Checks
@@ -174,7 +188,7 @@ jobs:
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ needs.setup.outputs.image_tag }} \
             --set imagePullSecrets[0].name=dockerhub-secret \
-            --set app.version=${{ needs.setup.outputs.image_tag }} \
+            --set app.version=${{ needs.setup.outputs.app_version }} \
             --set app.database.password=${{ secrets.DB_PASSWORD }} \
             --set app.jwt.secret=${{ secrets.JWT_SECRET }} \
             --set app.key=${{ secrets.APP_KEY }} \

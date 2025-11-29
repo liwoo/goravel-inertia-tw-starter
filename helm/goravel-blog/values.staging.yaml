@@ -10,6 +10,8 @@ migrations:
   createAdmin: true
 
 image:
+  # Use 'develop' tag for staging - CI automatically tags develop branch pushes
+  tag: "develop"
   pullPolicy: Always
 
 ingress:
