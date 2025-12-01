@@ -899,3 +899,217 @@ func (s *SmeService) GetDistributionByGender() []map[string]interface{} {
 
 	return distribution
 }
+
+// ============================================================================
+// Formalisation Score Calculation Functions
+// ============================================================================
+
+// CalculateFormalisationScore calculates and updates the formalisation score for a given SME
+// The score is calculated based on:
+// - Formalisation Checkboxes (70 points max): 7 boolean fields, 10 points each
+// - Team Structure (20 points max): primary owner, team members, employees, team size
+// - Financial Data (10 points max): annual turnover and estimated assets
+// Returns the calculated score (0-100)
+func (s *SmeService) CalculateFormalisationScore(smeID uint) (int, error) {
+	// Load SME with all related data
+	var sme models.Sme
+	err := facades.Orm().Query().
+		With("BusinessFormalisation").
+		With("BusinessEmployeeSummary").
+		With("PrimaryBusinessOwner").
+		With("AdditionalBusinessMembers").
+		Where("id = ?", smeID).
+		First(&sme)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to load SME: %w", err)
+	}
+
+	if sme.ID == 0 {
+		return 0, errors.New("SME not found")
+	}
+
+	// Calculate the score
+	score := s.calculateScore(&sme)
+
+	// Update the FormalisationScore in BusinessFormalisation table
+	if sme.BusinessFormalisation != nil {
+		_, err = facades.Orm().Query().
+			Model(&models.BusinessFormalisation{}).
+			Where("id = ?", sme.BusinessFormalisation.ID).
+			Update(map[string]interface{}{
+				"formalisation_score": score,
+			})
+		if err != nil {
+			return score, fmt.Errorf("failed to update formalisation score: %w", err)
+		}
+	} else {
+		// If no BusinessFormalisation record exists, create one with just the score
+		newFormalisation := &models.BusinessFormalisation{
+			SmeID:              int(smeID),
+			FormalisationScore: score,
+		}
+		err = facades.Orm().Query().Create(newFormalisation)
+		if err != nil {
+			return score, fmt.Errorf("failed to create business formalisation record: %w", err)
+		}
+	}
+
+	return score, nil
+}
+
+// calculateScore performs the actual score calculation based on SME data
+func (s *SmeService) calculateScore(sme *models.Sme) int {
+	score := 0
+
+	// ========================================
+	// Formalisation Checkboxes (70 points max)
+	// ========================================
+	if sme.BusinessFormalisation != nil {
+		bf := sme.BusinessFormalisation
+
+		// has_bank_account: 10 points
+		if bf.HasBankAccount {
+			score += 10
+		}
+
+		// has_tax_clarification: 10 points
+		if bf.HasTaxClarification {
+			score += 10
+		}
+
+		// is_registered_for_vat: 10 points
+		if bf.IsRegisteredForVat {
+			score += 10
+		}
+
+		// is_member_of_association: 10 points
+		if bf.IsMemberOfAssociation {
+			score += 10
+		}
+
+		// is_affiliated: 10 points
+		if bf.IsAffiliated {
+			score += 10
+		}
+
+		// has_export_license: 10 points
+		if bf.HasExportLicense {
+			score += 10
+		}
+
+		// has_accessed_bds: 10 points
+		if bf.HasAccessedBds {
+			score += 10
+		}
+	}
+
+	// ========================================
+	// Team Structure (20 points max)
+	// ========================================
+
+	// Has primary business owner: 5 points
+	if sme.PrimaryBusinessOwner != nil && sme.PrimaryBusinessOwner.ID != 0 {
+		score += 5
+	}
+
+	// Has additional team members (1+): 5 points
+	if len(sme.AdditionalBusinessMembers) > 0 {
+		score += 5
+	}
+
+	// Calculate total team size for team structure scoring
+	totalTeamSize := 0
+
+	// Count primary owner
+	if sme.PrimaryBusinessOwner != nil && sme.PrimaryBusinessOwner.ID != 0 {
+		totalTeamSize += 1
+	}
+
+	// Count additional business members
+	totalTeamSize += len(sme.AdditionalBusinessMembers)
+
+	// Has full-time employees (1+): 5 points
+	fullTimeEmployees := 0
+	if sme.BusinessEmployeeSummary != nil {
+		bes := sme.BusinessEmployeeSummary
+		fullTimeEmployees = bes.FullTimeMales + bes.FullTimeFemales
+
+		// Add all employees to team size
+		totalTeamSize += bes.FullTimeMales + bes.FullTimeFemales
+		totalTeamSize += bes.PartTimeMales + bes.PartTimeFemales
+		totalTeamSize += bes.InternMales + bes.InternFemales
+	}
+
+	if fullTimeEmployees > 0 {
+		score += 5
+	}
+
+	// Team size > 5 people: 5 points
+	if totalTeamSize > 5 {
+		score += 5
+	}
+
+	// ========================================
+	// Financial Data (10 points max)
+	// ========================================
+	if sme.BusinessFormalisation != nil {
+		bf := sme.BusinessFormalisation
+
+		// annual_turnover > 0: 5 points
+		if bf.AnnualTurnover > 0 {
+			score += 5
+		}
+
+		// estimated_value_of_assets > 0: 5 points
+		if bf.EstimatedValueOfAssets > 0 {
+			score += 5
+		}
+	}
+
+	// Ensure score doesn't exceed 100
+	if score > 100 {
+		score = 100
+	}
+
+	return score
+}
+
+// RecalculateAllFormalisationScores recalculates formalisation scores for all SMEs
+// This is useful for batch processing when the scoring algorithm changes
+// Returns the number of SMEs processed and any error encountered
+func (s *SmeService) RecalculateAllFormalisationScores() (int, error) {
+	// Get all SME IDs
+	var smes []models.Sme
+	err := facades.Orm().Query().
+		Model(&models.Sme{}).
+		Select("id").
+		Find(&smes)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch SME IDs: %w", err)
+	}
+
+	processedCount := 0
+	var lastError error
+
+	for _, sme := range smes {
+		_, err := s.CalculateFormalisationScore(sme.ID)
+		if err != nil {
+			// Log the error but continue processing
+			facades.Log().Warning("Failed to calculate formalisation score", map[string]interface{}{
+				"sme_id": sme.ID,
+				"error":  err.Error(),
+			})
+			lastError = err
+		} else {
+			processedCount++
+		}
+	}
+
+	if lastError != nil && processedCount == 0 {
+		return 0, fmt.Errorf("failed to process any SMEs: %w", lastError)
+	}
+
+	return processedCount, nil
+}

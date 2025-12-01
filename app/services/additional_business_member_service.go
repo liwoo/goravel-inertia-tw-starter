@@ -125,6 +125,7 @@ func (s *AdditionalBusinessMemberService) GetFilterDefinitions() []contracts.Fil
 // Add domain-specific methods below this line
 
 // Create overrides the base Create method to fire AdditionalBusinessMemberCreated event
+// and recalculate formalisation score
 func (s *AdditionalBusinessMemberService) Create(data map[string]interface{}) (interface{}, error) {
 	// Call the base Create method
 	result, err := s.CrudServiceContract.Create(data)
@@ -132,12 +133,21 @@ func (s *AdditionalBusinessMemberService) Create(data map[string]interface{}) (i
 		return nil, err
 	}
 
-	// Fire the AdditionalBusinessMemberCreated event
+	// Fire the AdditionalBusinessMemberCreated event and recalculate formalisation score
 	if member, ok := result.(*models.AdditionalBusinessMember); ok {
 		if err := facades.Event().Job(&events.AdditionalBusinessMemberCreated{}, []event.Arg{
 			{Type: "int", Value: member.SmeId},
 		}).Dispatch(); err != nil {
 			facades.Log().Warningf("Failed to dispatch AdditionalBusinessMemberCreated event: %v", err)
+		}
+
+		// Recalculate formalisation score after creating an additional business member
+		if member.SmeId > 0 {
+			smeService := NewSmeService()
+			_, err := smeService.CalculateFormalisationScore(uint(member.SmeId))
+			if err != nil {
+				facades.Log().Warningf("Failed to recalculate formalisation score after additional member create: %v", err)
+			}
 		}
 	}
 
@@ -145,6 +155,7 @@ func (s *AdditionalBusinessMemberService) Create(data map[string]interface{}) (i
 }
 
 // Update overrides the base Update method to fire AdditionalBusinessMemberUpdated event
+// and recalculate formalisation score
 func (s *AdditionalBusinessMemberService) Update(id uint, data map[string]interface{}) (interface{}, error) {
 	// Call the base Update method
 	result, err := s.CrudServiceContract.Update(id, data)
@@ -152,12 +163,21 @@ func (s *AdditionalBusinessMemberService) Update(id uint, data map[string]interf
 		return nil, err
 	}
 
-	// Fire the AdditionalBusinessMemberUpdated event
+	// Fire the AdditionalBusinessMemberUpdated event and recalculate formalisation score
 	if member, ok := result.(*models.AdditionalBusinessMember); ok {
 		if err := facades.Event().Job(&events.AdditionalBusinessMemberUpdated{}, []event.Arg{
 			{Type: "int", Value: member.SmeId},
 		}).Dispatch(); err != nil {
 			facades.Log().Warningf("Failed to dispatch AdditionalBusinessMemberUpdated event: %v", err)
+		}
+
+		// Recalculate formalisation score after updating an additional business member
+		if member.SmeId > 0 {
+			smeService := NewSmeService()
+			_, err := smeService.CalculateFormalisationScore(uint(member.SmeId))
+			if err != nil {
+				facades.Log().Warningf("Failed to recalculate formalisation score after additional member update: %v", err)
+			}
 		}
 	}
 
@@ -165,8 +185,9 @@ func (s *AdditionalBusinessMemberService) Update(id uint, data map[string]interf
 }
 
 // Delete overrides the base Delete method to fire AdditionalBusinessMemberDeleted event
+// and recalculate formalisation score
 func (s *AdditionalBusinessMemberService) Delete(id uint) error {
-	// Get the member before delete
+	// Get the member before delete to capture sme_id
 	memberInterface, err := s.CrudServiceContract.GetByID(id)
 	if err != nil {
 		return err
@@ -179,12 +200,21 @@ func (s *AdditionalBusinessMemberService) Delete(id uint) error {
 		return err
 	}
 
-	// Fire the AdditionalBusinessMemberDeleted event
+	// Fire the AdditionalBusinessMemberDeleted event and recalculate formalisation score
 	if member != nil {
 		if err := facades.Event().Job(&events.AdditionalBusinessMemberDeleted{}, []event.Arg{
 			{Type: "int", Value: member.SmeId},
 		}).Dispatch(); err != nil {
 			facades.Log().Warningf("Failed to dispatch AdditionalBusinessMemberDeleted event: %v", err)
+		}
+
+		// Recalculate formalisation score after deleting an additional business member
+		if member.SmeId > 0 {
+			smeService := NewSmeService()
+			_, err := smeService.CalculateFormalisationScore(uint(member.SmeId))
+			if err != nil {
+				facades.Log().Warningf("Failed to recalculate formalisation score after additional member delete: %v", err)
+			}
 		}
 	}
 

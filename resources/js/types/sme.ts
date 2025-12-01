@@ -55,7 +55,16 @@ export interface Sme extends BaseModel {
   // Relationships (optional, loaded via eager loading)
   primaryBusinessOwner?: any; // PrimaryBusinessOwner type
   additionalBusinessMembers?: any[]; // AdditionalBusinessMember[] type
-  businessFormalisation?: any; // BusinessFormalisation type
+  businessFormalisation?: {
+    id?: number;
+    formalisationScore?: number;
+    formalisation_score?: number;
+  }; // BusinessFormalisation type
+  business_formalisation?: {
+    id?: number;
+    formalisationScore?: number;
+    formalisation_score?: number;
+  }; // BusinessFormalisation snake_case variant
   businessEmployeeSummary?: any; // BusinessEmployeeSummary type
 }
 

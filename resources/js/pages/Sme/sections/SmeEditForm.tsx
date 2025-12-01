@@ -43,6 +43,7 @@ interface AdditionalMemberData {
   nationality: string;
   nationalIdNumber: string;
   dateOfBirth?: string;
+  gender: string;
   email?: string;
   phoneNumber: string;
   isIntern: boolean;
@@ -66,37 +67,25 @@ export const SmeEditForm = forwardRef<any, SmeEditFormProps>(({
     const fetchRelatedData = async () => {
       setLoadingRelatedData(true);
       try {
-        // Fetch all related data in parallel
+        // Fetch all related data in parallel using the SME-specific endpoints
         const [ownerRes, formalizationRes, membersRes] = await Promise.all([
           // Fetch primary owner
-          axios.get(`/api/primary-business-owners`, {
-            params: {
-              sme_id: sme.id,
-              pageSize: 1
-            }
-          }).catch(() => ({ data: { data: { data: [] } } })),
+          axios.get(`/api/smes/${sme.id}/primary_business_owner`)
+            .catch(() => ({ data: { data: null } })),
 
           // Fetch formalization
-          axios.get(`/api/business-formalisations`, {
-            params: {
-              sme_id: sme.id,
-              pageSize: 1
-            }
-          }).catch(() => ({ data: { data: { data: [] } } })),
+          axios.get(`/api/smes/${sme.id}/business_formalisation`)
+            .catch(() => ({ data: { data: null } })),
 
           // Fetch additional members
-          axios.get(`/api/additional-business-members`, {
-            params: {
-              sme_id: sme.id,
-              pageSize: 100
-            }
-          }).catch(() => ({ data: { data: { data: [] } } }))
+          axios.get(`/api/smes/${sme.id}/additional_business_members`)
+            .catch(() => ({ data: { data: [] } }))
         ]);
 
-        // Extract the data from paginated responses
-        const ownerData = ownerRes.data.data?.data?.[0];
-        const formalizationData = formalizationRes.data.data?.data?.[0];
-        const membersData = membersRes.data.data?.data || [];
+        // Extract the data from responses (these are direct endpoints, not paginated)
+        const ownerData = ownerRes.data.data;
+        const formalizationData = formalizationRes.data.data;
+        const membersData = membersRes.data.data || [];
 
         // Convert from snake_case to camelCase for primary owner
         if (ownerData) {
@@ -155,6 +144,7 @@ export const SmeEditForm = forwardRef<any, SmeEditFormProps>(({
           nationality: member.nationality || '',
           nationalIdNumber: member.national_id_number || '',
           dateOfBirth: member.date_of_birth || undefined,
+          gender: member.gender || '',
           email: member.email || undefined,
           phoneNumber: member.phone_number || '',
           isIntern: member.is_intern || false,

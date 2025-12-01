@@ -45,7 +45,7 @@ export const ProcurementNoticeCreateForm = forwardRef<any, ProcurementNoticeCrea
         // ref_no: generated on backend
         open_date: '',
         close_date: '',
-        // is_published: default false on backend
+        // is_published: controlled via row action, not in create form
         organization: '',
         details: '',
         application_details: '',

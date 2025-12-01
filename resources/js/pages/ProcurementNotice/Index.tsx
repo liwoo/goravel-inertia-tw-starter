@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import { SharedData } from '@/types/app.d';
-import { Download } from 'lucide-react';
+import { Download, Globe, GlobeLock } from 'lucide-react';
 import {
     ProcurementNotice,
     ProcurementNoticeListResponse,
@@ -23,7 +23,8 @@ import { createSimpleFilters } from '@/lib/crud-page-utils';
 import { ExportDialog } from '@/components/ExportDialog';
 import { ExportField, ExportOptions, ExportColumn } from '@/types/export';
 import { exportData, formatDateForExport } from '@/utils/exportUtils';
-import { PageAction } from '@/types/crud';
+import { PageAction, CrudAction } from '@/types/crud';
+import { toast } from 'sonner';
 
 // Props interface for the ProcurementNotice Index page
 interface ProcurementNoticeIndexProps {
@@ -85,6 +86,41 @@ export default function ProcurementNoticeIndex({
     const handleRefresh = () => {
         router.reload({ only: ['data'] });
     };
+
+    // Handle toggle publish
+    const handleTogglePublish = async (item: ProcurementNotice) => {
+        try {
+            const response = await fetch(`/api/procurement-notices/${item.id}/toggle-publish`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                const statusText = result.data?.is_published ? 'published' : 'unpublished';
+                toast.success(`Procurement notice ${statusText} successfully`);
+                router.reload({ only: ['data'] });
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                toast.error(errorData.message || 'Failed to update publish status');
+            }
+        } catch (error) {
+            toast.error('Failed to update publish status');
+        }
+    };
+
+    // Custom row actions
+    const customActions: CrudAction<ProcurementNotice>[] = permissions.canEdit ? [
+        {
+            key: 'toggle-publish',
+            label: 'Toggle Publish',
+            icon: <Globe className="w-4 h-4" />,
+            onClick: handleTogglePublish,
+        },
+    ] : [];
 
     // Handle export
     const handleExport = async (options: ExportOptions) => {
@@ -158,6 +194,7 @@ export default function ProcurementNoticeIndex({
                         canDelete={permissions.canDelete}
                         canView={true}
                         pageActions={pageActions}
+                        actions={customActions}
                     />
                 </div>
             </div>

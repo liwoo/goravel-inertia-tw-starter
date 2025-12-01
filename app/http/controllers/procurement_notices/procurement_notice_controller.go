@@ -80,24 +80,52 @@ func NewProcurementNoticeController() *ProcurementNoticeController {
 	return controller
 }
 
-// Add custom domain-specific methods below this line
-// Examples:
-//
-// // CustomAction GET /api/procurement_notices/{id}/custom-action
-// func (c *ProcurementNoticeController) CustomAction(ctx http.Context) http.Response {
-//     // Get ID from URL
-//     id, err := c.ValidateID(ctx, "id")
-//     if err != nil {
-//         return c.BadRequestResponse(ctx, "Invalid procurement_notice ID", nil)
-//     }
-//
-//     // Check permissions
-//     if err := c.CheckAuth(ctx, "view", nil); err != nil {
-//         return c.ForbiddenResponse(ctx, "Access denied")
-//     }
-//
-//     // Your custom logic here
-//     // result, err := c.procurementNoticeService.CustomMethod(id)
-//
-//     return c.SuccessResponse(ctx, nil, "Action completed successfully")
-// }
+// TogglePublish toggles the is_published status of a procurement notice
+// POST /api/procurement-notices/{id}/toggle-publish
+func (c *ProcurementNoticeController) TogglePublish(ctx http.Context) http.Response {
+	// Get ID from URL
+	id, err := c.ValidateID(ctx, "id")
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid procurement notice ID", nil)
+	}
+
+	// Check update permissions
+	if err := c.CheckAuth(ctx, "update", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Get current procurement notice
+	result, err := c.procurementNoticeService.GetByID(id)
+	if err != nil {
+		return c.NotFoundResponse(ctx, "Procurement notice not found")
+	}
+
+	// Type assert to get the model
+	item, ok := result.(*models.ProcurementNotice)
+	if !ok {
+		return c.BadRequestResponse(ctx, "Invalid procurement notice data", nil)
+	}
+
+	// Toggle the is_published status
+	newStatus := !item.IsPublished
+
+	// Update only the is_published field
+	updateData := map[string]interface{}{
+		"is_published": newStatus,
+	}
+
+	_, err = c.procurementNoticeService.Update(id, updateData)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Failed to update publish status", nil)
+	}
+
+	statusText := "unpublished"
+	if newStatus {
+		statusText = "published"
+	}
+
+	return c.SuccessResponse(ctx, map[string]interface{}{
+		"id":           id,
+		"is_published": newStatus,
+	}, "Procurement notice "+statusText+" successfully")
+}

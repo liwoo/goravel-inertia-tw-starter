@@ -1,25 +1,34 @@
 # =============================================================================
-# Docker Compose for Local Development with Hot Reload
+# Docker Compose for SMEDI Database - Local Development
 # =============================================================================
 # Usage:
-#   docker-compose -f docker-compose.dev.yml up -d
-#   docker-compose -f docker-compose.dev.yml logs -f app
+#   cd docker-compose
+#   docker compose up -d                    # Start all services
+#   docker compose up -d --build            # Rebuild and start
+#   docker compose down                     # Stop all services
+#   docker compose down -v                  # Stop and remove volumes
+#   docker compose logs -f app              # Follow app logs
+#
+# Optional services (using profiles):
+#   docker compose --profile storage up -d  # Include MinIO
+#   docker compose --profile mail up -d     # Include Mailhog
+#   docker compose --profile tools up -d    # Include pgAdmin & Redis Commander
 # =============================================================================
 
-name: smedi-database-dev
+name: smedi-database
 
 services:
   # ===========================================================================
-  # Go Backend with Air (Hot Reload)
+  # Application Service
   # ===========================================================================
-  backend:
-    image: golang:1.24-alpine
-    working_dir: /app
-    command: >
-      sh -c "
-        go install github.com/air-verse/air@latest &&
-        air -c .air.toml
-      "
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        GO_VERSION: "1.24"
+        NODE_VERSION: "20"
+    container_name: smedi-app
     ports:
       - "3000:3000"
     environment:
@@ -39,6 +48,9 @@ services:
       DB_DATABASE: smedi_db
       DB_USERNAME: smedi
       DB_PASSWORD: smedi_password
+      DB_SSLMODE: disable
+      DB_POOL_MAX: 25
+      DB_POOL_MIN: 5
 
       # Redis
       REDIS_HOST: redis
@@ -51,6 +63,10 @@ services:
       SESSION_LIFETIME: 120
       SESSION_ENCRYPT: "true"
 
+      # Cache
+      CACHE_DRIVER: redis
+      CACHE_PREFIX: smedi
+
       # JWT
       JWT_SECRET: "local-jwt-secret-change-in-production"
       JWT_TTL: 60
@@ -60,39 +76,28 @@ services:
       LOG_LEVEL: debug
       LOG_CHANNEL: stack
     volumes:
-      - .:/app
-      - go-mod-cache:/go/pkg/mod
-      - go-build-cache:/root/.cache/go-build
+      - app-storage:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
     networks:
-      - smedi-network-dev
-
-  # ===========================================================================
-  # Vite Frontend Dev Server
-  # ===========================================================================
-  frontend:
-    image: node:20-alpine
-    working_dir: /app
-    command: npm run dev -- --host
-    ports:
-      - "5173:5173"
-    environment:
-      VITE_APP_URL: "http://localhost:3000"
-    volumes:
-      - .:/app
-      - node-modules:/app/node_modules
-    networks:
-      - smedi-network-dev
+      - smedi-network
 
   # ===========================================================================
   # PostgreSQL Database
   # ===========================================================================
   postgres:
     image: postgres:16-alpine
+    container_name: smedi-postgres
     environment:
       POSTGRES_DB: smedi_db
       POSTGRES_USER: smedi
@@ -101,41 +106,86 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data-dev:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U smedi -d smedi_db"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    restart: unless-stopped
     networks:
-      - smedi-network-dev
+      - smedi-network
 
   # ===========================================================================
   # Redis Cache
   # ===========================================================================
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes
+    container_name: smedi-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
     volumes:
-      - redis-data-dev:/data
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
     networks:
-      - smedi-network-dev
+      - smedi-network
+
+  # ===========================================================================
+  # MinIO Object Storage (Optional - for S3-compatible storage)
+  # ===========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: smedi-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    profiles:
+      - storage
+    networks:
+      - smedi-network
+
+  # ===========================================================================
+  # Mailhog (Email Testing)
+  # ===========================================================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: smedi-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    restart: unless-stopped
+    profiles:
+      - mail
+    networks:
+      - smedi-network
 
   # ===========================================================================
   # pgAdmin (Database Management)
   # ===========================================================================
   pgadmin:
     image: dpage/pgadmin4:latest
+    container_name: smedi-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_EMAIL: admin@localhost.com
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
@@ -144,40 +194,41 @@ services:
       - pgadmin-data:/var/lib/pgadmin
     depends_on:
       - postgres
+    restart: unless-stopped
     profiles:
       - tools
     networks:
-      - smedi-network-dev
+      - smedi-network
 
   # ===========================================================================
   # Redis Commander (Cache Management)
   # ===========================================================================
   redis-commander:
     image: rediscommander/redis-commander:latest
+    container_name: smedi-redis-commander
     environment:
       REDIS_HOSTS: local:redis:6379
     ports:
       - "8081:8081"
     depends_on:
       - redis
+    restart: unless-stopped
     profiles:
       - tools
     networks:
-      - smedi-network-dev
+      - smedi-network
 
 # =============================================================================
 # Volumes
 # =============================================================================
 volumes:
-  postgres-data-dev:
+  postgres-data:
     driver: local
-  redis-data-dev:
+  redis-data:
     driver: local
-  go-mod-cache:
+  app-storage:
     driver: local
-  go-build-cache:
-    driver: local
-  node-modules:
+  minio-data:
     driver: local
   pgadmin-data:
     driver: local
@@ -186,5 +237,5 @@ volumes:
 # Networks
 # =============================================================================
 networks:
-  smedi-network-dev:
+  smedi-network:
     driver: bridge

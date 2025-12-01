@@ -191,6 +191,7 @@ func Api(router route.Router) {
 		protectedRouter.Post("/procurement-notices", procurementNoticeController.Store)
 		protectedRouter.Put("/procurement-notices/{id}", procurementNoticeController.Update)
 		protectedRouter.Delete("/procurement-notices/{id}", procurementNoticeController.Delete)
+		protectedRouter.Post("/procurement-notices/{id}/toggle-publish", procurementNoticeController.TogglePublish)
 
 		//bdsp
 		protectedRouter.Post("/bdsps", bdspController.Store)

@@ -182,6 +182,36 @@ func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint, scope
 	// Super admins should be able to customize all roles
 	// The UI/controller layer handles super admin authorization
 
+	// Validate that all permission IDs exist in the permissions table
+	if len(permissionIDs) > 0 {
+		var validPermissions []models.Permission
+		err := facades.Orm().Query().
+			Model(&models.Permission{}).
+			WhereIn("id", interfaceSlice(permissionIDs)).
+			Where("is_active = ?", true).
+			Find(&validPermissions)
+		if err != nil {
+			return fmt.Errorf("failed to validate permissions: %v", err)
+		}
+
+		// Build a set of valid permission IDs
+		validIDSet := make(map[uint]bool)
+		for _, p := range validPermissions {
+			validIDSet[p.ID] = true
+		}
+
+		// Filter to only valid permission IDs
+		validPermissionIDs := make([]uint, 0, len(permissionIDs))
+		for _, id := range permissionIDs {
+			if validIDSet[id] {
+				validPermissionIDs = append(validPermissionIDs, id)
+			} else {
+				facades.Log().Warningf("Skipping invalid permission ID %d (not found or inactive)", id)
+			}
+		}
+		permissionIDs = validPermissionIDs
+	}
+
 	// Begin transaction
 	tx, err := facades.Orm().Query().Begin()
 	if err != nil {
@@ -220,6 +250,15 @@ func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint, scope
 	tx.Commit()
 
 	return nil
+}
+
+// interfaceSlice converts a []uint to []interface{} for WhereIn
+func interfaceSlice(ids []uint) []interface{} {
+	result := make([]interface{}, len(ids))
+	for i, id := range ids {
+		result[i] = id
+	}
+	return result
 }
 
 // GetPermissionsMatrix returns all permissions organized by service and action

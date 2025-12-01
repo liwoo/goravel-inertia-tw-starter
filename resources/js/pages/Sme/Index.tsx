@@ -63,6 +63,7 @@ const smeExportFields: ExportField[] = [
   { id: 'district', label: 'District' },
   { id: 'traditionalAuthority', label: 'Traditional Authority' },
   { id: 'operationalStartDate', label: 'Operational Start Date' },
+  { id: 'formalisationScore', label: 'Formalisation Score' },
   { id: 'createdAt', label: 'Date Added' },
 ];
 
@@ -117,6 +118,12 @@ export default function SmeIndex({
       usmeNumber: sme.usmeNumber || (sme as any).usme_number,
       businessCategory: sme.businessCategory || (sme as any).business_category,
       createdAt: sme.createdAt || (sme as any).created_at,
+      formalisationScore:
+        sme.businessFormalisation?.formalisationScore ??
+        sme.businessFormalisation?.formalisation_score ??
+        (sme as any).business_formalisation?.formalisationScore ??
+        (sme as any).business_formalisation?.formalisation_score ??
+        '',
     }));
 
     await exportData(
