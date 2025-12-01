@@ -5,6 +5,7 @@
 replicaCount: 1
 
 # Run database migrations before app starts
+# Uses stdin redirect to /dev/null to prevent charmbracelet/huh TTY panic
 migrations:
   enabled: true
   createAdmin: true

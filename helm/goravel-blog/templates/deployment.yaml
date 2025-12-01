@@ -43,22 +43,26 @@ spec:
         - name: migrate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          stdin: false
+          tty: false
           command:
             - /bin/sh
             - -c
             - |
+              # Redirect stdin to /dev/null to prevent TTY panic in Goravel artisan
+              # The charmbracelet/huh library tries to open /dev/tty for interactive prompts
               echo "Running database migrations..."
-              /app/goravel-app artisan migrate
+              /app/goravel-app artisan migrate < /dev/null
               echo "Running database seeders..."
-              /app/goravel-app artisan db:seed || true
+              /app/goravel-app artisan db:seed < /dev/null || true
               echo "Setting up RBAC..."
-              /app/goravel-app artisan rbac:setup || true
+              /app/goravel-app artisan rbac:setup < /dev/null || true
               {{- if .Values.migrations.createAdmin }}
               echo "Creating admin user..."
               /app/goravel-app artisan user:create-admin \
                 --name="${ADMIN_NAME}" \
                 --email="${ADMIN_EMAIL}" \
-                --password="${ADMIN_PASSWORD}" || true
+                --password="${ADMIN_PASSWORD}" < /dev/null || true
               {{- end }}
               echo "Database setup complete!"
           envFrom:

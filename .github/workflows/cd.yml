@@ -203,32 +203,8 @@ jobs:
             -n ${{ needs.setup.outputs.namespace }} \
             --timeout=5m
 
-      - name: Run database migrations and setup
-        run: |
-          POD_NAME=$(kubectl get pods -n ${{ needs.setup.outputs.namespace }} \
-            -l app.kubernetes.io/name=goravel-blog \
-            -o jsonpath="{.items[0].metadata.name}" \
-            --field-selector=status.phase=Running)
-
-          echo "Running migrations..."
-          kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan migrate
-
-          echo "Running database seeders..."
-          kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan db:seed || true
-
-          echo "Setting up RBAC (idempotent)..."
-          kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan rbac:setup
-
-          echo "Creating admin user (if not exists)..."
-          kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan user:create-admin \
-              --name="${{ secrets.ADMIN_NAME }}" \
-              --email="${{ secrets.ADMIN_EMAIL }}" \
-              --password="${{ secrets.ADMIN_PASSWORD }}" \
-              --skip-existing
+      # NOTE: Database migrations are handled by the init container in the Helm chart
+      # The init container redirects stdin to /dev/null to prevent charmbracelet/huh TTY panic
 
       - name: Get deployment URL
         id: deploy-url
