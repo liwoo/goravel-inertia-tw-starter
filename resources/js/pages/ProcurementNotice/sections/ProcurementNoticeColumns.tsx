@@ -14,19 +14,30 @@ export const procurementNoticeColumns: CrudColumn<ProcurementNotice>[] = [
         sortable: true,
         className: 'min-w-[150px]',
         render: (item) => (
-            <div className="space-y-1">
-                <div className="font-medium text-gray-900 flex items-center">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <p className="font-medium text-foreground">{item.procured_by}</p>
-                </div>
-                <div className="text-sm text-gray-600 flex items-center">
-                    <FileText className="w-3 h-3 mr-1 text-gray-400" />
-                    {item.procurement_type}
-                </div>
-                <div className="text-xs text-gray-500 flex items-center">
-                    <Hash className="w-3 h-3 mr-1 text-gray-400" />
-                    {item.ref_no}
-                </div>
+            <div className="font-medium text-gray-900 flex items-center">
+                <p className="font-medium text-foreground">{item.procured_by}</p>
+            </div>
+        ),
+    },
+    {
+        key: 'ref_no',
+        label: 'Ref No',
+        sortable: true,
+        className: 'min-w-[150px]',
+        render: (item) => (
+            <div className="font-medium text-gray-900 flex items-center">
+                <p className="font-medium text-foreground">{item.ref_no}</p>
+            </div>
+        ),
+    },
+    {
+        key: 'procurement_type',
+        label: 'Type',
+        sortable: true,
+        className: 'min-w-[150px]',
+        render: (item) => (
+            <div className="font-medium text-gray-900 flex items-center">
+                <p className="font-medium text-foreground">{item.procurement_type}</p>
             </div>
         ),
     },

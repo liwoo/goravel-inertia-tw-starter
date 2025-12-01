@@ -12,4 +12,7 @@ const (
 	ConfigTypeDevelopmentPartners = "Development Partners"
 	ConfigTypeProductTypes        = "Product Types"
 	ConfigTypeAssociatedPartners  = "Associated Partners"
+	ConfigTypeProcurementType     = "Procurement Type"
+	ConfigTypeProcuredBy          = "Procured By"
+	ConfigTypeOrganization        = "Organization"
 )

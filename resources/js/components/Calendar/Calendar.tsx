@@ -4,6 +4,7 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./calendar.css";
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 const locales = {
     'en-US': enUS,
@@ -21,11 +22,18 @@ export default function Calendar<TEvent extends object = object, TResource exten
     props: Omit<CalendarProps<TEvent, TResource>, 'localizer'>
 ) {
     return (
-        <div className="h-[600px] w-full bg-background border rounded-md p-4">
-            <BigCalendar
-                localizer={localizer}
-                {...props}
-            />
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>Event Calendar</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <BigCalendar
+                    className="bg-card"
+                    localizer={localizer}
+                    {...props}
+                />
+            </CardContent>
+
+        </Card>
     );
 }

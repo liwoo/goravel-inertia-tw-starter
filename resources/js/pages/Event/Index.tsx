@@ -173,7 +173,7 @@ export default function EventIndex({
 
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         {/* Calendar Widget */}
-        <div className="px-0">
+        <div className="px-4 lg:px-6">
           <Calendar
             events={calendarEvents}
             startAccessor="start"

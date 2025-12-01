@@ -2,6 +2,7 @@ package requests
 
 import (
 	"errors"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/support/carbon"
 )
@@ -13,9 +14,8 @@ type ProcurementNoticeUpdateRequest struct {
 	ProcurementType        *string  `form:"procurement_type" json:"procurement_type"`
 	MarketApproach         *string  `form:"market_approach" json:"market_approach"`
 	Invitation             *string  `form:"invitation" json:"invitation"`
-	RefNo                  *string  `form:"ref_no" json:"ref_no"`
-	OpenDate               *string  `form:"open_date" json:"open_date"`     // String for validation, convert to carbon.DateTime
-	CloseDate              *string  `form:"close_date" json:"close_date"`   // String for validation, convert to carbon.DateTime
+	OpenDate               *string  `form:"open_date" json:"open_date"`   // String for validation, convert to carbon.DateTime
+	CloseDate              *string  `form:"close_date" json:"close_date"` // String for validation, convert to carbon.DateTime
 	Partners               []string `form:"partners" json:"partners"`
 	QualifyingDistricts    []string `form:"qualifying_districts" json:"qualifying_districts"`
 	IsPublished            *bool    `form:"is_published" json:"is_published"`
@@ -43,9 +43,6 @@ func (r *ProcurementNoticeUpdateRequest) Rules(ctx http.Context) map[string]stri
 	}
 	if r.Invitation != nil {
 		rules["invitation"] = "required|in:open,limited,single-source"
-	}
-	if r.RefNo != nil {
-		rules["ref_no"] = "required|max_len:255"
 	}
 	if r.OpenDate != nil {
 		rules["open_date"] = "required"
@@ -87,47 +84,44 @@ func (r *ProcurementNoticeUpdateRequest) Rules(ctx http.Context) map[string]stri
 // Messages defines custom validation messages for updates
 func (r *ProcurementNoticeUpdateRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"procured_by.required":             "Procured By is required",
-		"procured_by.max_len":              "Procured By cannot exceed 255 characters",
-		"procurement_type.required":        "Procurement Type is required",
-		"procurement_type.max_len":         "Procurement Type cannot exceed 255 characters",
-		"market_approach.required":         "Market Approach is required",
-		"market_approach.in":               "Market Approach must be National or International",
-		"invitation.required":              "Invitation type is required",
-		"invitation.in":                    "Invitation must be open, limited, or single-source",
-		"ref_no.required":                  "Reference Number is required",
-		"ref_no.max_len":                   "Reference Number cannot exceed 255 characters",
-		"open_date.required":               "Open Date is required",
-		"close_date.required":              "Close Date is required",
-		"organization.required":            "Organization is required",
-		"organization.max_len":             "Organization cannot exceed 255 characters",
-		"details.required":                 "Details are required",
-		"application_details.required":     "Application Details are required",
+		"procured_by.required":              "Procured By is required",
+		"procured_by.max_len":               "Procured By cannot exceed 255 characters",
+		"procurement_type.required":         "Procurement Type is required",
+		"procurement_type.max_len":          "Procurement Type cannot exceed 255 characters",
+		"market_approach.required":          "Market Approach is required",
+		"market_approach.in":                "Market Approach must be National or International",
+		"invitation.required":               "Invitation type is required",
+		"invitation.in":                     "Invitation must be open, limited, or single-source",
+		"open_date.required":                "Open Date is required",
+		"close_date.required":               "Close Date is required",
+		"organization.required":             "Organization is required",
+		"organization.max_len":              "Organization cannot exceed 255 characters",
+		"details.required":                  "Details are required",
+		"application_details.required":      "Application Details are required",
 		"minimum_qualifying_score.required": "Minimum Qualifying Score is required",
-		"minimum_qualifying_score.numeric": "Minimum Qualifying Score must be a number",
-		"minimum_qualifying_score.min":     "Minimum Qualifying Score must be at least 0",
-		"minimum_qualifying_score.max":     "Minimum Qualifying Score cannot exceed 100",
+		"minimum_qualifying_score.numeric":  "Minimum Qualifying Score must be a number",
+		"minimum_qualifying_score.min":      "Minimum Qualifying Score must be at least 0",
+		"minimum_qualifying_score.max":      "Minimum Qualifying Score cannot exceed 100",
 	}
 }
 
 // Attributes defines custom attribute names for updates
 func (r *ProcurementNoticeUpdateRequest) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"procured_by":             "Procured By",
-		"procurement_type":        "Procurement Type",
-		"market_approach":         "Market Approach",
-		"invitation":              "Invitation Type",
-		"ref_no":                  "Reference Number",
-		"open_date":               "Open Date",
-		"close_date":              "Close Date",
-		"partners":                "Partners",
-		"qualifying_districts":    "Qualifying Districts",
-		"is_published":            "Published Status",
-		"organization":            "Organization",
-		"classification":          "Classification",
-		"interested_smes":         "Interested SMEs",
-		"details":                 "Details",
-		"application_details":     "Application Details",
+		"procured_by":              "Procured By",
+		"procurement_type":         "Procurement Type",
+		"market_approach":          "Market Approach",
+		"invitation":               "Invitation Type",
+		"open_date":                "Open Date",
+		"close_date":               "Close Date",
+		"partners":                 "Partners",
+		"qualifying_districts":     "Qualifying Districts",
+		"is_published":             "Published Status",
+		"organization":             "Organization",
+		"classification":           "Classification",
+		"interested_smes":          "Interested SMEs",
+		"details":                  "Details",
+		"application_details":      "Application Details",
 		"minimum_qualifying_score": "Minimum Qualifying Score",
 	}
 }
@@ -193,9 +187,6 @@ func (r *ProcurementNoticeUpdateRequest) ToUpdateData() map[string]interface{} {
 	}
 	if r.Invitation != nil {
 		data["invitation"] = *r.Invitation
-	}
-	if r.RefNo != nil {
-		data["ref_no"] = *r.RefNo
 	}
 	if r.IsPublished != nil {
 		data["is_published"] = *r.IsPublished
