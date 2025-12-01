@@ -71,14 +71,14 @@ run_tests() {
     print_color "$YELLOW" "🧪 Running $test_type tests..."
     print_color "$YELLOW" "📍 Path: $test_path"
     
-    # Build test command
-    cmd="go test $VERBOSE $test_path -timeout=$TIMEOUT"
+    # Build test command with APP_ENV explicitly set
+    cmd="APP_ENV=testing go test $VERBOSE $test_path -timeout=$TIMEOUT"
     if [ -n "$COVERAGE" ]; then
         cmd="$cmd -cover -coverprofile=coverage.out"
     fi
-    
+
     # Run tests
-    if $cmd; then
+    if eval $cmd; then
         print_color "$GREEN" "✅ $test_type tests passed!"
         return 0
     else
