@@ -212,11 +212,11 @@ jobs:
 
           echo "Running migrations..."
           kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan migrate --force
+            ./goravel-app artisan migrate
 
           echo "Running database seeders..."
           kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan db:seed --force || true
+            ./goravel-app artisan db:seed || true
 
           echo "Setting up RBAC (idempotent)..."
           kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
