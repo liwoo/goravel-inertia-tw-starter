@@ -391,32 +391,42 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 		return permissions
 	}
 
-	// OPTIMIZED: Use a single raw query to get permission slugs directly
+	// OPTIMIZED: Use query builder to get permission slugs directly
 	// This avoids loading 8000+ full permission objects into memory
 	// Previous approach used With("Permission") which caused OOM with large permission sets
 	type PermissionSlugResult struct {
-		Slug   string `gorm:"column:slug"`
-		Scope  string `gorm:"column:scope"`
+		Slug  string `gorm:"column:slug"`
+		Scope string `gorm:"column:scope"`
+	}
+
+	// Convert roleIDs to interface slice for WhereIn
+	roleIDsInterface := make([]interface{}, len(roleIDs))
+	for i, id := range roleIDs {
+		roleIDsInterface[i] = id
 	}
 
 	var slugResults []PermissionSlugResult
 	err := facades.Orm().Query().
-		Raw(`
-			SELECT p.slug, rp.scope
-			FROM role_permissions rp
-			INNER JOIN permissions p ON p.id = rp.permission_id
-			WHERE rp.role_id IN (?)
-			AND rp.is_active = true
-			AND p.is_active = true
-		`, roleIDs).
-		Scan(&slugResults)
+		Table("role_permissions as rp").
+		Select("p.slug, rp.scope").
+		Join("INNER JOIN permissions p ON p.id = rp.permission_id").
+		WhereIn("rp.role_id", roleIDsInterface).
+		Where("rp.is_active = ?", true).
+		Where("p.is_active = ?", true).
+		Get(&slugResults)
 
 	if err != nil {
 		facades.Log().Error("Failed to load permission slugs", map[string]interface{}{
-			"error": err.Error(),
+			"error":    err.Error(),
+			"role_ids": roleIDs,
 		})
 		return permissions
 	}
+
+	facades.Log().Debug("Loaded permission slugs", map[string]interface{}{
+		"role_ids":     roleIDs,
+		"results_count": len(slugResults),
+	})
 
 	// Collect all permissions from all roles
 	permissionMap := make(map[string]bool)
