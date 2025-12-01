@@ -199,7 +199,7 @@ jobs:
 
       - name: Wait for deployment rollout
         run: |
-          kubectl rollout status deployment/goravel-blog-goravel-blog \
+          kubectl rollout status deployment/goravel-blog \
             -n ${{ needs.setup.outputs.namespace }} \
             --timeout=5m
 
@@ -363,7 +363,7 @@ jobs:
 
       - name: Verify rollback
         run: |
-          kubectl rollout status deployment/goravel-blog-goravel-blog \
+          kubectl rollout status deployment/goravel-blog \
             -n ${{ needs.setup.outputs.namespace }} \
             --timeout=5m || true
 
