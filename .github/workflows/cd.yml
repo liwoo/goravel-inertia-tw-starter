@@ -52,6 +52,10 @@ jobs:
       image_tag: ${{ steps.tag.outputs.tag }}
       app_version: ${{ steps.tag.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
       - name: Determine environment
         id: env
         run: |
@@ -75,9 +79,14 @@ jobs:
       - name: Determine image tag
         id: tag
         run: |
-          # Get version from package.json for APP_VERSION env var
-          VERSION=$(curl -s "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.workflow_run.head_sha || github.sha }}/package.json" | jq -r '.version')
+          # Get version from package.json (local checkout)
+          VERSION=$(jq -r '.version' package.json)
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "App version from package.json: ${VERSION}"
+
+          # Sync Chart.yaml appVersion to match package.json
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" helm/goravel-blog/Chart.yaml
+          echo "Synced Chart.yaml appVersion to: ${VERSION}"
 
           # Get environment from previous step
           ENVIRONMENT="${{ steps.env.outputs.environment }}"
