@@ -53,14 +53,6 @@ func (s *PermissionService) HasPermission(user *models.User, permission string) 
 	// Fall back to loading fresh if no cache is available
 	permissions := s.loadUserPermissions(user)
 
-	// Debug log permissions (only at debug level to reduce noise)
-	facades.Log().Debug("HasPermission check", map[string]interface{}{
-		"user_id":             user.ID,
-		"email":               user.Email,
-		"checking_permission": permission,
-		"permissions_count":   len(permissions),
-	})
-
 	// Check direct permission match
 	for _, perm := range permissions {
 		if perm == permission {
@@ -352,10 +344,6 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	if cachedJSON := facades.Cache().GetString(cacheKey, ""); cachedJSON != "" {
 		var cachedPermissions []string
 		if err := json.Unmarshal([]byte(cachedJSON), &cachedPermissions); err == nil {
-			facades.Log().Debug("Permission cache hit", map[string]interface{}{
-				"user_id":           user.ID,
-				"permissions_count": len(cachedPermissions),
-			})
 			return cachedPermissions
 		}
 	}
@@ -423,11 +411,6 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 		return permissions
 	}
 
-	facades.Log().Debug("Loaded permission slugs", map[string]interface{}{
-		"role_ids":     roleIDs,
-		"results_count": len(slugResults),
-	})
-
 	// Collect all permissions from all roles
 	permissionMap := make(map[string]bool)
 
@@ -454,17 +437,7 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	// Cache the permissions
 	if len(permissions) > 0 {
 		if jsonBytes, err := json.Marshal(permissions); err == nil {
-			if err := facades.Cache().Put(cacheKey, string(jsonBytes), permissionCacheTTL); err != nil {
-				facades.Log().Warning("Failed to cache user permissions", map[string]interface{}{
-					"user_id": user.ID,
-					"error":   err.Error(),
-				})
-			} else {
-				facades.Log().Debug("Cached user permissions", map[string]interface{}{
-					"user_id":           user.ID,
-					"permissions_count": len(permissions),
-				})
-			}
+			facades.Cache().Put(cacheKey, string(jsonBytes), permissionCacheTTL)
 		}
 	}
 

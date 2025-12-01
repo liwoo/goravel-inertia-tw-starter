@@ -128,20 +128,39 @@ func (h *PermissionHelper) BuildPermissionsMap(ctx http.Context, resourceType st
 		}
 	}
 
-	// Helper function to check permission with scoped variants
+	// Super admin has all permissions - short circuit
+	if user.IsSuperAdminUser() {
+		return map[string]bool{
+			"canView":       true,
+			"canCreate":     true,
+			"canEdit":       true,
+			"canDelete":     true,
+			"canManage":     true,
+			"canExport":     true,
+			"canBulkUpdate": true,
+			"canBulkDelete": true,
+			"isAdmin":       true,
+			"isSuperAdmin":  true,
+		}
+	}
+
+	// Get user's permissions once (cached)
+	userPermissions := h.permissionService.GetUserPermissions(user)
+
+	// Build a set for O(1) lookup
+	permissionSet := make(map[string]bool, len(userPermissions))
+	for _, perm := range userPermissions {
+		permissionSet[perm] = true
+	}
+
+	// Helper function to check permission with scoped variants using the set
 	hasPermissionWithScope := func(basePermission string) bool {
 		// Check base permission and all scoped variants
-		scopedPermissions := []string{
-			basePermission,
-			basePermission + "_by_all",
-			basePermission + "_by_my_role",
-			basePermission + "_by_me",
-		}
-
-		for _, perm := range scopedPermissions {
-			if h.permissionService.HasPermission(user, perm) {
-				return true
-			}
+		if permissionSet[basePermission] ||
+			permissionSet[basePermission+"_by_all"] ||
+			permissionSet[basePermission+"_by_my_role"] ||
+			permissionSet[basePermission+"_by_me"] {
+			return true
 		}
 		return false
 	}
@@ -192,28 +211,28 @@ func (h *PermissionHelper) RequireServicePermission(ctx http.Context, service Se
 		return nil, err
 	}
 
-	// Check for any scoped variant of the permission
+	// Super admin has all permissions
+	if user.IsSuperAdminUser() {
+		return user, nil
+	}
+
+	// Get user's permissions once (cached) and build a set for O(1) lookup
+	userPermissions := h.permissionService.GetUserPermissions(user)
+	permissionSet := make(map[string]bool, len(userPermissions))
+	for _, perm := range userPermissions {
+		permissionSet[perm] = true
+	}
+
+	// Check for any scoped variant of the permission using set lookup
 	basePermission := BuildPermissionSlug(service, action)
-	scopedPermissions := []string{
-		basePermission,
-		basePermission + "_by_all",
-		basePermission + "_by_my_role",
-		basePermission + "_by_me",
+	if permissionSet[basePermission] ||
+		permissionSet[basePermission+"_by_all"] ||
+		permissionSet[basePermission+"_by_my_role"] ||
+		permissionSet[basePermission+"_by_me"] {
+		return user, nil
 	}
 
-	hasPermission := false
-	for _, perm := range scopedPermissions {
-		if h.permissionService.HasPermission(user, perm) {
-			hasPermission = true
-			break
-		}
-	}
-
-	if !hasPermission {
-		return nil, fmt.Errorf("insufficient permissions: %s required", basePermission)
-	}
-
-	return user, nil
+	return nil, fmt.Errorf("insufficient permissions: %s required", basePermission)
 }
 
 // GetUserRoles returns user roles as simple string slice

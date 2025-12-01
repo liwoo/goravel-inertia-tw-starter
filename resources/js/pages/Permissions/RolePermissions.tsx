@@ -96,32 +96,32 @@ export default function RolePermissions({
   }, [role.id, currentPermissions, services]);
 
   // Check for changes
+  // Note: key is already "service_action" (e.g., "procurement_notices_create")
   useEffect(() => {
     let changed = false;
-    
+
     Object.entries(permissions).forEach(([key, scope]) => {
-      const [service, action] = key.split('_');
-      
+      // key is already "service_action", don't split it incorrectly
       // Check if current state differs from original
-      const hasAny = ['by_all', 'by_my_role', 'by_me'].some(s => 
-        currentPermissions[`${service}_${action}_${s}`] ||
-        (s === 'by_all' && currentPermissions[`${service}_${action}`])
+      const hasAny = ['by_all', 'by_my_role', 'by_me'].some(s =>
+        currentPermissions[`${key}_${s}`] ||
+        (s === 'by_all' && currentPermissions[key])
       );
-      
+
       if (scope === 'none' && hasAny) {
         changed = true;
       } else if (scope !== 'none') {
-        const expectedPerm = scope === 'by_all' ? 
-          [`${service}_${action}_by_all`, `${service}_${action}`] : 
-          [`${service}_${action}_${scope}`];
-        
+        const expectedPerm = scope === 'by_all' ?
+          [`${key}_by_all`, key] :
+          [`${key}_${scope}`];
+
         const hasExpected = expectedPerm.some(p => currentPermissions[p]);
         if (!hasExpected) {
           changed = true;
         }
       }
     });
-    
+
     setHasChanges(changed);
   }, [permissions, currentPermissions]);
 
@@ -205,12 +205,14 @@ export default function RolePermissions({
     
     try {
       // Convert permissions to the format expected by the API
+      // key is already "service_action" (e.g., "procurement_notices_create")
+      // We just append the scope to form "service_action_scope"
       const permissionsToSave: string[] = [];
-      
+
       Object.entries(permissions).forEach(([key, scope]) => {
         if (scope !== 'none') {
-          const [service, action] = key.split('_');
-          permissionsToSave.push(`${service}_${action}_${scope}`);
+          // key is already in format "service_action", just append scope
+          permissionsToSave.push(`${key}_${scope}`);
         }
       });
       
