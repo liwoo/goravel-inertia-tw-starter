@@ -418,6 +418,8 @@ interface ModernDataTableProps<T> extends DataTableProps<T> {
   onSearch?: (value: string) => void
   bulkActions?: BulkAction[]
   onBulkAction?: (action: string, selectedIds: number[]) => void
+  onRowClick?: (item: T) => void
+  canRowClick?: boolean
 }
 
 export function CrudDataTable<T extends { id: number }>({
@@ -441,6 +443,8 @@ export function CrudDataTable<T extends { id: number }>({
   onSearch,
   bulkActions = [],
   onBulkAction,
+  onRowClick,
+  canRowClick = false,
 }: ModernDataTableProps<T>) {
   // State management
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -560,6 +564,27 @@ export function CrudDataTable<T extends { id: number }>({
     onSelectionChange([]);
   }, [table, onSelectionChange]);
 
+  // Handle row click - only triggers for non-interactive elements
+  const handleRowClick = React.useCallback((item: T, event: React.MouseEvent) => {
+    // Don't trigger row click if clicking on a button, link, checkbox, or interactive element
+    const target = event.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('[role="button"]') ||
+      target.closest('[role="menuitem"]') ||
+      target.closest('input') ||
+      target.closest('select') ||
+      target.closest('[data-radix-collection-item]')
+    ) {
+      return;
+    }
+
+    if (canRowClick && onRowClick) {
+      onRowClick(item);
+    }
+  }, [canRowClick, onRowClick]);
+
   return (
     <div className={cn("w-full space-y-4", className)}>
       {/* Bulk Action Bar */}
@@ -636,7 +661,12 @@ export function CrudDataTable<T extends { id: number }>({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className="hover:bg-muted/50"
+                      onClick={(e) => handleRowClick(row.original, e)}
+                      className={cn(
+                        "transition-colors duration-150",
+                        canRowClick && onRowClick && "cursor-pointer hover:bg-muted/70 active:bg-muted",
+                        !canRowClick && "hover:bg-muted/50"
+                      )}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell

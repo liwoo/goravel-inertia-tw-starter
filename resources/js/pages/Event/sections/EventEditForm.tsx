@@ -60,7 +60,7 @@ export const EventEditForm = forwardRef<any, EventEditFormProps>(({
         const [partnersRes, smesRes] = await Promise.all([
           axios.get('/api/configs', {
             params: {
-              config_type: 'Partners',
+              config_type: 'Development Partners',
               pageSize: 100,
               sort: 'name',
               direction: 'ASC'

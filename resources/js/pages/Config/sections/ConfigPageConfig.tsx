@@ -67,6 +67,41 @@ export const configSimpleFilters = (stats: any): SimpleFilterConfig[] => [
     badge: stats?.developmentPartnersCount || 0,
     filterParams: { config_type: ConfigType.DevelopmentPartners }
   },
+  {
+    key: 'type-product-types',
+    label: 'Products',
+    value: ConfigType.ProductTypes,
+    badge: stats?.productTypesCount || 0,
+    filterParams: { config_type: ConfigType.ProductTypes }
+  },
+  {
+    key: 'type-procurement-type',
+    label: 'Proc. Type',
+    value: ConfigType.ProcurementType,
+    badge: stats?.procurementTypeCount || 0,
+    filterParams: { config_type: ConfigType.ProcurementType }
+  },
+  {
+    key: 'type-procurement-classification',
+    label: 'Proc. Class.',
+    value: ConfigType.ProcurementClassification,
+    badge: stats?.procurementClassificationCount || 0,
+    filterParams: { config_type: ConfigType.ProcurementClassification }
+  },
+  {
+    key: 'type-procured-by',
+    label: 'Procurers',
+    value: ConfigType.ProcuredBy,
+    badge: stats?.procuredByCount || 0,
+    filterParams: { config_type: ConfigType.ProcuredBy }
+  },
+  {
+    key: 'type-organization',
+    label: 'Orgs',
+    value: ConfigType.Organization,
+    badge: stats?.organizationCount || 0,
+    filterParams: { config_type: ConfigType.Organization }
+  },
 ];
 
 /**

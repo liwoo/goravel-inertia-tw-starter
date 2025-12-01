@@ -22,18 +22,17 @@ export default function Calendar<TEvent extends object = object, TResource exten
     props: Omit<CalendarProps<TEvent, TResource>, 'localizer'>
 ) {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Event Calendar</CardTitle>
+        <Card className="shadow-sm">
+            <CardHeader className="pb-4">
+                <CardTitle className="text-2xl font-semibold tracking-tight">Event Calendar</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
                 <BigCalendar
                     className="bg-card"
                     localizer={localizer}
                     {...props}
                 />
             </CardContent>
-
         </Card>
     );
 }

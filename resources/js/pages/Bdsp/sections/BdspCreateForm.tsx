@@ -63,7 +63,7 @@ export const BdspCreateForm = forwardRef<any, BdspCreateFormProps>(({
         const [partnersRes, productsRes] = await Promise.all([
           axios.get('/api/configs', {
             params: {
-              config_type: 'Partners',
+              config_type: 'Development Partners',
               pageSize: 100,
               sort: 'name',
               direction: 'ASC'

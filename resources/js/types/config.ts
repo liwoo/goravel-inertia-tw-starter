@@ -10,7 +10,9 @@ export enum ConfigType {
   Sectors = 'Sectors',
   RegistrationStatus = 'Registration Status',
   DevelopmentPartners = 'Development Partners',
+  ProductTypes = 'Product Types',
   ProcurementType = 'Procurement Type',
+  ProcurementClassification = 'Procurement Classification',
   ProcuredBy = 'Procured By',
   Organization = 'Organization',
 }
@@ -48,9 +50,17 @@ export const CONFIG_TYPE_CONFIG = {
     label: 'Development Partners',
     description: 'Development partner organizations',
   },
+  [ConfigType.ProductTypes]: {
+    label: 'Product Types',
+    description: 'Types of products offered by BDSPs',
+  },
   [ConfigType.ProcurementType]: {
     label: 'Procurement Type',
     description: 'Types of procurement',
+  },
+  [ConfigType.ProcurementClassification]: {
+    label: 'Procurement Classification',
+    description: 'Classifications for procurement notices',
   },
   [ConfigType.ProcuredBy]: {
     label: 'Procured By',
@@ -58,7 +68,7 @@ export const CONFIG_TYPE_CONFIG = {
   },
   [ConfigType.Organization]: {
     label: 'Organization',
-    description: 'Organizations involved',
+    description: 'Organizations involved in procurement',
   },
 } as const;
 

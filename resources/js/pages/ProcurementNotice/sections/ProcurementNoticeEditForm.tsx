@@ -87,8 +87,8 @@ export const ProcurementNoticeEditForm = forwardRef<any, ProcurementNoticeEditFo
             setLoadingConfigs(true);
             try {
                 const [partnersRes, classificationRes, procuredByRes, organizationRes, procurementTypeRes] = await Promise.all([
-                    axios.get('/api/configs', { params: { config_type: 'Partners', pageSize: 100, sort: 'name', direction: 'ASC' } }),
-                    axios.get('/api/configs', { params: { config_type: 'Classification', pageSize: 100, sort: 'name', direction: 'ASC' } }),
+                    axios.get('/api/configs', { params: { config_type: 'Development Partners', pageSize: 100, sort: 'name', direction: 'ASC' } }),
+                    axios.get('/api/configs', { params: { config_type: 'Procurement Classification', pageSize: 100, sort: 'name', direction: 'ASC' } }),
                     axios.get('/api/configs', { params: { config_type: 'Procured By', pageSize: 100, sort: 'name', direction: 'ASC' } }),
                     axios.get('/api/configs', { params: { config_type: 'Organization', pageSize: 100, sort: 'name', direction: 'ASC' } }),
                     axios.get('/api/configs', { params: { config_type: 'Procurement Type', pageSize: 100, sort: 'name', direction: 'ASC' } }),

@@ -74,6 +74,8 @@ export interface CrudPageProps<T = any> {
   customFilters?: CrudFilter[];
   pageActions?: PageAction[];
   simpleFilters?: SimpleFilter[];
+  simpleFiltersVariant?: 'tabs' | 'dropdown';
+  simpleFiltersDropdownLabel?: string;
   bulkActions?: BulkAction[];
 
   // Pagination metadata (optional - will fallback to defaults if not provided)
@@ -88,6 +90,9 @@ export interface CrudPageProps<T = any> {
   canEdit?: boolean;
   canDelete?: boolean;
   canView?: boolean;
+
+  // Read-only mode - disables create, edit, delete actions (useful for view-only pages like Applications)
+  readOnly?: boolean;
 
   // Custom Components
   createForm?: React.ForwardRefExoticComponent<CrudFormProps & React.RefAttributes<any>>;
@@ -234,6 +239,14 @@ export interface SimpleFilter {
   // The actual filter parameters to apply when this filter is selected
   // If not provided, defaults to { [key]: value }
   filterParams?: Record<string, any>;
+}
+
+// Simple filters configuration
+export interface SimpleFiltersConfig {
+  filters: SimpleFilter[];
+  variant?: 'tabs' | 'dropdown';
+  // Label for dropdown variant (e.g., "Configuration", "Status")
+  dropdownLabel?: string;
 }
 
 // Bulk action types

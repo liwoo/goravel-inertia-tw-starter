@@ -18,7 +18,20 @@ func (s *BdspSeeder) Signature() string {
 }
 
 // Run executes the seeder logic.
+// This seeder is idempotent - it will skip if BDSPs already exist.
 func (s *BdspSeeder) Run() error {
+	// Check if BDSPs already exist - skip if we have data
+	existingCount, err := facades.Orm().Query().Model(&models.Bdsp{}).Count()
+	if err != nil {
+		return fmt.Errorf("failed to count existing BDSPs: %v", err)
+	}
+
+	if existingCount > 0 {
+		facades.Log().Infof("BdspSeeder: Skipping - BDSPs table already has %d records", existingCount)
+		fmt.Printf("BdspSeeder: Skipping - BDSPs table already has %d records\n", existingCount)
+		return nil
+	}
+
 	fmt.Println("Seeding BDSPs...")
 
 	// Create 100 BDSPs

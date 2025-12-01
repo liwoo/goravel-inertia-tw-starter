@@ -165,16 +165,28 @@ func (s *DashboardService) GetUpcomingProcurements(limit int) []UpcomingProcurem
 func (s *DashboardService) GetRecentActivities(limit int) []RecentActivityDTO {
 	var activities []RecentActivityDTO
 
-	// Helper to get user name by ID
+	// Cache for user names to avoid repeated queries
+	userNameCache := make(map[int]string)
+
+	// Helper to get user name by ID with caching
 	getUserName := func(userID *int) string {
-		if userID == nil {
+		if userID == nil || *userID == 0 {
 			return "System"
 		}
+
+		// Check cache first
+		if name, ok := userNameCache[*userID]; ok {
+			return name
+		}
+
 		var user models.User
-		err := facades.Orm().Query().Model(&models.User{}).Where("id = ?", *userID).First(&user)
-		if err != nil {
+		err := facades.Orm().Query().Where("id = ?", *userID).First(&user)
+		if err != nil || user.ID == 0 {
+			userNameCache[*userID] = "Unknown"
 			return "Unknown"
 		}
+
+		userNameCache[*userID] = user.Name
 		return user.Name
 	}
 
