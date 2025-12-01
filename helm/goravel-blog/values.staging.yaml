@@ -31,11 +31,11 @@ ingress:
 
 resources:
   limits:
-    cpu: 250m
-    memory: 256Mi
+    cpu: 500m
+    memory: 512Mi
   requests:
-    cpu: 50m
-    memory: 64Mi
+    cpu: 100m
+    memory: 128Mi
 
 autoscaling:
   enabled: false
@@ -88,9 +88,29 @@ app:
 
 healthcheck:
   enabled: true
-  livenessProbe:
-    initialDelaySeconds: 15
+  # Startup probe runs first - allows up to 5 mins for app to start
+  # Liveness/readiness probes only start after startup probe succeeds
+  startupProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 10
     periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30  # 30 * 10s = 5 minutes to start
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 0  # Startup probe handles delay
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
   readinessProbe:
-    initialDelaySeconds: 5
-    periodSeconds: 5
+    httpGet:
+      path: /ready
+      port: http
+    initialDelaySeconds: 0  # Startup probe handles delay
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3

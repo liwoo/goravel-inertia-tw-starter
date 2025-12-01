@@ -391,44 +391,49 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 		return permissions
 	}
 
-	// Single optimized query to get ALL permissions for ALL roles at once
-	// This replaces the N+1 pattern where we queried permissions for each role separately
-	// Convert roleIDs to interface slice for WhereIn
-	roleIDsInterface := make([]interface{}, len(roleIDs))
-	for i, id := range roleIDs {
-		roleIDsInterface[i] = id
+	// OPTIMIZED: Use a single raw query to get permission slugs directly
+	// This avoids loading 8000+ full permission objects into memory
+	// Previous approach used With("Permission") which caused OOM with large permission sets
+	type PermissionSlugResult struct {
+		Slug   string `gorm:"column:slug"`
+		Scope  string `gorm:"column:scope"`
 	}
 
-	var rolePermissions []models.RolePermission
+	var slugResults []PermissionSlugResult
 	err := facades.Orm().Query().
-		WhereIn("role_id", roleIDsInterface).
-		Where("is_active = ?", true).
-		With("Permission").
-		Find(&rolePermissions)
+		Raw(`
+			SELECT p.slug, rp.scope
+			FROM role_permissions rp
+			INNER JOIN permissions p ON p.id = rp.permission_id
+			WHERE rp.role_id IN (?)
+			AND rp.is_active = true
+			AND p.is_active = true
+		`, roleIDs).
+		Scan(&slugResults)
 
 	if err != nil {
+		facades.Log().Error("Failed to load permission slugs", map[string]interface{}{
+			"error": err.Error(),
+		})
 		return permissions
 	}
 
-	// Collect all permissions from all roles through the pivot table
+	// Collect all permissions from all roles
 	permissionMap := make(map[string]bool)
 
 	// Build permission slugs with scopes
-	for _, rp := range rolePermissions {
-		if rp.Permission.IsActive {
-			// Build the permission slug with scope
-			permSlug := rp.Permission.Slug
-			if rp.Scope != "" && rp.Scope != "by_all" {
-				// Include scope in the permission slug
-				permSlug = fmt.Sprintf("%s_%s", permSlug, rp.Scope)
-			} else if rp.Scope == "by_all" || rp.Scope == "" {
-				// For by_all scope, include both the base permission and the explicit scoped version
-				permissionMap[permSlug] = true
-				permissionMap[fmt.Sprintf("%s_by_all", permSlug)] = true
-				continue
-			}
+	for _, result := range slugResults {
+		permSlug := result.Slug
+		if result.Scope != "" && result.Scope != "by_all" {
+			// Include scope in the permission slug
+			permSlug = fmt.Sprintf("%s_%s", permSlug, result.Scope)
+		} else if result.Scope == "by_all" || result.Scope == "" {
+			// For by_all scope, include both the base permission and the explicit scoped version
 			permissionMap[permSlug] = true
+			permissionMap[fmt.Sprintf("%s_by_all", permSlug)] = true
+			continue
 		}
+		permissionMap[permSlug] = true
 	}
 
 	// Convert map to slice
