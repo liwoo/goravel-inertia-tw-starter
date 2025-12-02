@@ -259,9 +259,10 @@ func (s *SmeService) GetColumnMapping() map[string]string {
 	mapping["ipAddress"] = "ip_address"
 	mapping["userAgent"] = "user_agent"
 	mapping["isActive"] = "is_active"
-	// Map formalisationScore to the joined table column
-	mapping["formalisationScore"] = "business_formalisation.formalisation_score"
-	mapping["formalisation_score"] = "business_formalisation.formalisation_score"
+	// Map formalisationScore to the joined table column with COALESCE to handle NULLs
+	// SMEs without formalisation records will be treated as having score 0
+	mapping["formalisationScore"] = "COALESCE(business_formalisation.formalisation_score, 0)"
+	mapping["formalisation_score"] = "COALESCE(business_formalisation.formalisation_score, 0)"
 	// Note: We do NOT map business_improvement_aspects or business_accessed_financing here
 	// because they need to go through the model's BeforeSave hook which converts the arrays to JSON
 	return mapping

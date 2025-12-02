@@ -9,6 +9,7 @@ import (
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"github.com/goravel/framework/support/str"
 	"smedi-sme-db/app/auth"
 )
 
@@ -856,16 +857,28 @@ func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool
 		}
 	}
 
+	// Convert camelCase to snake_case for validation
+	// e.g., "formalisationScore" -> "formalisation_score"
+	snakeCaseField := str.Of(frontendField).Snake().String()
+
 	// If we have a mapping, check if this field has a mapped name
 	if mapping != nil {
 		if dbField, exists := mapping[frontendField]; exists {
-			// Check if the mapped field is sortable
-			if s.ValidateSortField(dbField) {
+			// The mapped field could be a complex expression like "COALESCE(table.column, 0)"
+			// We validate using the original frontend field or its snake_case equivalent
+			// since sortFields contains the logical field names, not the fully qualified column names
+			if s.ValidateSortField(frontendField) {
+				return dbField, true
+			}
+			// Check snake_case version (e.g., formalisationScore -> formalisation_score)
+			if s.ValidateSortField(snakeCaseField) {
 				return dbField, true
 			}
 			if logger := facades.Log(); logger != nil {
 				logger.Warning("Mapped field is NOT sortable", map[string]interface{}{
 					"service":        s.tableName,
+					"frontendField":  frontendField,
+					"snakeCaseField": snakeCaseField,
 					"dbField":        dbField,
 					"sortableFields": s.sortFields,
 				})
@@ -877,12 +890,17 @@ func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool
 	if s.ValidateSortField(frontendField) {
 		return frontendField, true
 	}
+	// Also check snake_case version
+	if s.ValidateSortField(snakeCaseField) {
+		return snakeCaseField, true
+	}
 
 	// Log warning if logger is available (may be nil in unit tests)
 	if logger := facades.Log(); logger != nil {
 		logger.Warning("Field not sortable", map[string]interface{}{
 			"service":        s.tableName,
 			"frontendField":  frontendField,
+			"snakeCaseField": snakeCaseField,
 			"sortableFields": s.sortFields,
 		})
 	}

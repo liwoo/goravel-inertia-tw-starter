@@ -459,6 +459,203 @@ func (s *SmeControllerCRUDTestSuite) TestSorting() {
 	s.Equal("Zebra Business", firstItem["name"])
 }
 
+func (s *SmeControllerCRUDTestSuite) TestSortingByFormalisationScore() {
+	createdBy := int(s.testUser.ID)
+
+	// Create SMEs with different formalisation scores
+	// Score -1 means no formalisation record (should be treated as 0)
+	testData := []struct {
+		name  string
+		score int // -1 means no formalisation record
+	}{
+		{"No Formalisation SME", -1}, // Should sort as 0
+		{"Low Score SME", 20},
+		{"High Score SME", 90},
+		{"Medium Score SME", 50},
+	}
+
+	for i, td := range testData {
+		// Create SME
+		sme := &models.Sme{
+			UsmeNumber:                 fmt.Sprintf("USME-SCORE-%03d", i+1),
+			Name:                       td.name,
+			BusinessCategory:           "Services",
+			Sector:                     "Technology",
+			ContactPhone:               fmt.Sprintf("+265993%06d", i),
+			ContactEmail:               fmt.Sprintf("score%d@test.mw", i),
+			BusinessImprovementAspects: []string{"Innovation"},
+			BusinessAccessedFinancing:  []string{"Grant"},
+			CreatedBy:                  &createdBy,
+		}
+		s.Nil(facades.Orm().Query().Create(sme))
+
+		// Create corresponding business formalisation with score (skip if score is -1)
+		if td.score >= 0 {
+			formalisation := &models.BusinessFormalisation{
+				HasBankAccount:         true,
+				HasTaxClarification:    td.score > 50,
+				IsRegisteredForVat:     td.score > 70,
+				IsMemberOfAssociation:  false,
+				IsAffiliated:           false,
+				HasExportLicense:       false,
+				HasAccessedBds:         td.score > 30,
+				AnnualTurnover:         float64(td.score * 1000),
+				EstimatedValueOfAssets: float64(td.score * 5000),
+				FormalisationScore:     td.score,
+				SmeID:                  int(sme.ID),
+				CreatedBy:              &createdBy,
+			}
+			s.Nil(facades.Orm().Query().Create(formalisation))
+		}
+	}
+
+	// Test sort ascending by formalisationScore (camelCase as frontend sends it)
+	resp, result := s.makeRequest("GET", "/api/smes?sort=formalisationScore&direction=asc", nil)
+	s.Equal(http.StatusOK, resp.StatusCode)
+
+	data := result["data"].(map[string]interface{})
+	items := data["data"].([]interface{})
+	s.GreaterOrEqual(len(items), 4, "Should have at least 4 SMEs")
+
+	// Extract formalisation scores in order (0 for SMEs without formalisation)
+	var scores []int
+	var names []string
+	for _, item := range items {
+		itemData := item.(map[string]interface{})
+		name := itemData["name"].(string)
+		names = append(names, name)
+
+		// Check if business_formalisation is present
+		if bf, ok := itemData["business_formalisation"].(map[string]interface{}); ok && bf != nil {
+			if score, ok := bf["formalisation_score"].(float64); ok {
+				scores = append(scores, int(score))
+			} else {
+				scores = append(scores, 0) // No score means 0
+			}
+		} else {
+			scores = append(scores, 0) // No formalisation record means 0
+		}
+	}
+
+	s.T().Logf("Ascending order - Names: %v, Scores: %v", names, scores)
+
+	// Verify ascending order - scores should be in increasing order
+	for i := 1; i < len(scores); i++ {
+		s.LessOrEqual(scores[i-1], scores[i],
+			"Formalisation scores should be in ascending order: %v (names: %v)", scores, names)
+	}
+
+	// Verify first item has lowest score (0 - the one without formalisation)
+	s.Equal(0, scores[0], "First item should have score 0 (no formalisation record)")
+	s.Equal("No Formalisation SME", names[0], "First item should be the SME without formalisation")
+
+	// Test sort descending by formalisationScore
+	resp, result = s.makeRequest("GET", "/api/smes?sort=formalisationScore&direction=desc", nil)
+	s.Equal(http.StatusOK, resp.StatusCode)
+
+	data = result["data"].(map[string]interface{})
+	items = data["data"].([]interface{})
+
+	// Extract formalisation scores in order for descending check
+	scores = nil
+	names = nil
+	for _, item := range items {
+		itemData := item.(map[string]interface{})
+		name := itemData["name"].(string)
+		names = append(names, name)
+
+		if bf, ok := itemData["business_formalisation"].(map[string]interface{}); ok && bf != nil {
+			if score, ok := bf["formalisation_score"].(float64); ok {
+				scores = append(scores, int(score))
+			} else {
+				scores = append(scores, 0)
+			}
+		} else {
+			scores = append(scores, 0)
+		}
+	}
+
+	s.T().Logf("Descending order - Names: %v, Scores: %v", names, scores)
+
+	// Verify descending order - scores should be in decreasing order
+	for i := 1; i < len(scores); i++ {
+		s.GreaterOrEqual(scores[i-1], scores[i],
+			"Formalisation scores should be in descending order: %v (names: %v)", scores, names)
+	}
+
+	// Verify first item has highest score (90)
+	s.Equal(90, scores[0], "First item should have the highest formalisation score")
+	s.Equal("High Score SME", names[0], "First item should be the High Score SME")
+
+	// Verify last item has lowest score (0 - the one without formalisation)
+	lastIdx := len(scores) - 1
+	s.Equal(0, scores[lastIdx], "Last item should have score 0 (no formalisation record)")
+	s.Equal("No Formalisation SME", names[lastIdx], "Last item should be the SME without formalisation")
+}
+
+func (s *SmeControllerCRUDTestSuite) TestSortingByFormalisationScoreSnakeCase() {
+	createdBy := int(s.testUser.ID)
+
+	// Create SMEs with different formalisation scores (using snake_case sort parameter)
+	testData := []struct {
+		name   string
+		score  int
+	}{
+		{"Snake Low", 15},
+		{"Snake High", 85},
+		{"Snake Mid", 45},
+	}
+
+	for i, td := range testData {
+		sme := &models.Sme{
+			UsmeNumber:                 fmt.Sprintf("USME-SNAKE-%03d", i+1),
+			Name:                       td.name,
+			BusinessCategory:           "Manufacturing",
+			Sector:                     "Industrial",
+			ContactPhone:               fmt.Sprintf("+265994%06d", i),
+			ContactEmail:               fmt.Sprintf("snake%d@test.mw", i),
+			BusinessImprovementAspects: []string{"Quality"},
+			BusinessAccessedFinancing:  []string{"Loan"},
+			CreatedBy:                  &createdBy,
+		}
+		s.Nil(facades.Orm().Query().Create(sme))
+
+		formalisation := &models.BusinessFormalisation{
+			HasBankAccount:         true,
+			HasTaxClarification:    td.score > 50,
+			FormalisationScore:     td.score,
+			SmeID:                  int(sme.ID),
+			CreatedBy:              &createdBy,
+		}
+		s.Nil(facades.Orm().Query().Create(formalisation))
+	}
+
+	// Test sort using snake_case parameter (formalisation_score)
+	resp, result := s.makeRequest("GET", "/api/smes?sort=formalisation_score&direction=asc", nil)
+	s.Equal(http.StatusOK, resp.StatusCode)
+
+	data := result["data"].(map[string]interface{})
+	items := data["data"].([]interface{})
+	s.GreaterOrEqual(len(items), 3, "Should have at least 3 SMEs")
+
+	// Extract and verify scores are in ascending order
+	var scores []int
+	for _, item := range items {
+		itemData := item.(map[string]interface{})
+		if bf, ok := itemData["business_formalisation"].(map[string]interface{}); ok {
+			if score, ok := bf["formalisation_score"].(float64); ok {
+				scores = append(scores, int(score))
+			}
+		}
+	}
+
+	// Verify ascending order
+	for i := 1; i < len(scores); i++ {
+		s.LessOrEqual(scores[i-1], scores[i],
+			"Formalisation scores should be in ascending order when using snake_case: %v", scores)
+	}
+}
+
 // ============================================================================
 // SEARCH Tests
 // ============================================================================

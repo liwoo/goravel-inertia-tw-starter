@@ -180,7 +180,7 @@ func (s *DashboardService) GetRecentActivities(limit int) []RecentActivityDTO {
 		}
 
 		var user models.User
-		err := facades.Orm().Query().Where("id = ?", *userID).First(&user)
+		err := facades.Orm().Query().Model(&models.User{}).Where("id = ?", *userID).First(&user)
 		if err != nil || user.ID == 0 {
 			userNameCache[*userID] = "Unknown"
 			return "Unknown"
