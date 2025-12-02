@@ -32,17 +32,17 @@ class SSEManager {
   }
 
   private getAuthToken(): string | null {
-    // Try to get token from cookie
+    // Try to get token from sse_token cookie (non-HttpOnly, accessible to JS)
     const cookies = document.cookie.split(';');
     for (const cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
-      if (name === 'jwt_token') {
+      if (name === 'sse_token') {
         return decodeURIComponent(value);
       }
     }
-    
+
     // Try localStorage as fallback
-    return localStorage.getItem('jwt_token');
+    return localStorage.getItem('jwt_token') || localStorage.getItem('token');
   }
 
   private handleAuthChange(event: CustomEvent) {

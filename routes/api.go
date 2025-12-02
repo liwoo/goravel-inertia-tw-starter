@@ -58,6 +58,7 @@ func Api(router route.Router) {
 	lenderController := lenders.NewLenderController()
 	applicationController := applications.NewApplicationController()
 	accountController := account.NewAccountController()
+	sseController := controllers.NewSSEController()
 
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
@@ -239,8 +240,15 @@ func Api(router route.Router) {
 		protectedRouter.Prefix("messages").Group(func(messageRouter route.Router) {
 			// Send and manage messages
 			messageRouter.Post("/", messageController.SendMessage)
+			messageRouter.Post("/broadcast", messageController.SendBroadcast)           // Broadcast to multiple users
+			messageRouter.Post("/broadcast-to-role", messageController.BroadcastToRole) // Super admin: broadcast to all users in a role
+			messageRouter.Get("/broadcast-history", messageController.GetBroadcastHistory) // Super admin: get broadcast history
 			messageRouter.Get("/conversations", messageController.GetConversations) // List all conversations
 			messageRouter.Get("/conversation/{userId}", messageController.GetConversation)
+			messageRouter.Put("/conversation/{userId}/read", messageController.MarkConversationAsRead)
+			messageRouter.Get("/inbox", messageController.GetInbox)         // User's inbox
+			messageRouter.Get("/sent", messageController.GetSentMessages)   // User's sent messages
+			messageRouter.Get("/unread", messageController.GetUnreadMessages) // User's unread messages
 			messageRouter.Put("/{id}/read", messageController.MarkAsRead)
 			messageRouter.Get("/users", messageController.GetMessagableUsers)
 			messageRouter.Get("/unread-count", messageController.GetUnreadCount)
@@ -296,4 +304,7 @@ func Api(router route.Router) {
 		authRouter.Middleware(jwtAuth).Post("/logout", apiAuthController.Logout)
 		authRouter.Middleware(jwtAuth).Get("/me", apiAuthController.Me)
 	})
+
+	// SSE (Server-Sent Events) for real-time updates
+	router.Middleware(jwtAuth).Get("/sse/stream", sseController.Stream)
 }

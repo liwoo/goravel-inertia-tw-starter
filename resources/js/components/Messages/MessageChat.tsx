@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Send, Edit3, Trash2, Reply, MoreHorizontal, Smile } from "lucide-react";
+import { Send, Edit3, Trash2, Reply, MoreHorizontal, Smile, MessageSquarePlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserMentionInput } from "./UserMentionInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -28,9 +27,10 @@ interface MessageChatProps {
   currentUser: User;
   conversation: Conversation | null;
   className?: string;
+  onComposeClick?: () => void;
 }
 
-export function MessageChat({ currentUser, conversation, className }: MessageChatProps) {
+export function MessageChat({ currentUser, conversation, className, onComposeClick }: MessageChatProps) {
   const [newMessage, setNewMessage] = React.useState("");
   const [editingMessage, setEditingMessage] = React.useState<number | null>(null);
   const [editContent, setEditContent] = React.useState("");
@@ -53,17 +53,20 @@ export function MessageChat({ currentUser, conversation, className }: MessageCha
   // Load conversation messages when conversation changes
   React.useEffect(() => {
     if (conversation?.user.id) {
+      // Load messages first
       loadConversation(conversation.user.id, {
         page: 1,
         pageSize: 50,
         sort: "created_at",
         direction: "ASC"
       });
-      
-      // Mark messages as read
-      markAsRead(conversation.user.id);
+
+      // Mark messages as read (fire and forget, don't block on errors)
+      markAsRead(conversation.user.id).catch(() => {
+        // Silently ignore mark as read errors
+      });
     }
-  }, [conversation?.user.id, loadConversation, markAsRead]);
+  }, [conversation?.user.id]);
 
   // Scroll to bottom when new messages arrive
   React.useEffect(() => {
@@ -180,8 +183,15 @@ export function MessageChat({ currentUser, conversation, className }: MessageCha
     return (
       <div className={cn("flex items-center justify-center h-full", className)}>
         <div className="text-center text-muted-foreground">
+          <MessageSquarePlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <div className="text-lg font-medium mb-2">No conversation selected</div>
-          <div className="text-sm">Choose a conversation from the sidebar to start messaging</div>
+          <div className="text-sm mb-4">Choose a conversation from the sidebar or start a new one</div>
+          {onComposeClick && (
+            <Button onClick={onComposeClick} variant="default" size="lg">
+              <MessageSquarePlus className="h-4 w-4 mr-2" />
+              New Message
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -389,23 +399,19 @@ export function MessageChat({ currentUser, conversation, className }: MessageCha
         )}
 
         <div className="flex gap-2">
-          <div className="flex-1">
-            <UserMentionInput
-              placeholder={`Message ${conversation.user.name}...`}
-              value={newMessage}
-              onChange={setNewMessage}
-              onUserSelect={(user) => {
-                console.log(`Mentioned user: ${user.name}`);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              disabled={loading}
-            />
-          </div>
+          <Input
+            placeholder={`Message ${conversation.user.name}...`}
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            disabled={loading}
+            className="flex-1"
+          />
           <Button
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || loading}

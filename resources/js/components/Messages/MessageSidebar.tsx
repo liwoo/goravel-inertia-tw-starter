@@ -1,80 +1,49 @@
 "use client";
 
 import * as React from "react";
-import { 
-  MessageCircle, 
-  Search, 
-  Send, 
-  Archive, 
-  Users,
+import {
+  MessageCircle,
+  Send,
   Plus,
-  MoreHorizontal,
-  Pin,
-  Clock
+  Loader2,
+  Megaphone
 } from "lucide-react";
 
-import { NavUser } from "@/components/nav-user";
 import { Label } from "@/components/ui/label";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarInput,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useMessages, Conversation, MessageUser } from "@/contexts/MessageContext";
+import { BroadcastToRole } from "./BroadcastToRole";
 
-// Use MessageUser as the User type for this component
-type User = MessageUser;
-
-interface MessageSidebarProps extends Omit<React.ComponentProps<typeof Sidebar>, 'user'> {
-  user: User;
-  onNewMessage?: () => void;
+interface User extends MessageUser {
+  is_super_admin?: boolean;
+  isSuperAdmin?: boolean;
 }
 
-const navigationItems = [
-  {
-    title: "Inbox",
-    icon: MessageCircle,
-    isActive: true,
-    category: "inbox"
-  },
-  {
-    title: "Sent",
-    icon: Send,
-    isActive: false,
-    category: "sent"
-  },
-  {
-    title: "Archive",
-    icon: Archive,
-    isActive: false,
-    category: "archive"
-  },
-  {
-    title: "All Users",
-    icon: Users,
-    isActive: false,
-    category: "users"
-  },
+interface MessageSidebarProps {
+  user: User;
+  showNewMessage?: boolean;
+  onShowNewMessageChange?: (show: boolean) => void;
+  onBroadcastModeChange?: (isBroadcast: boolean) => void;
+  onBroadcastSent?: () => void;
+}
+
+type TabCategory = "inbox" | "sent" | "users" | "broadcast";
+
+const tabs: { title: string; icon: React.ElementType; category: TabCategory }[] = [
+  { title: "Inbox", icon: MessageCircle, category: "inbox" },
+  { title: "Sent", icon: Send, category: "sent" },
 ];
 
-export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarProps) {
-  const [activeItem, setActiveItem] = React.useState(navigationItems[0]);
+export function MessageSidebar({ user, showNewMessage, onShowNewMessageChange, onBroadcastModeChange, onBroadcastSent }: MessageSidebarProps) {
+  const [activeTab, setActiveTab] = React.useState<TabCategory>("inbox");
   const [searchTerm, setSearchTerm] = React.useState("");
   const [showUnreadOnly, setShowUnreadOnly] = React.useState(false);
-  const { setOpen } = useSidebar();
 
   const {
     conversations,
@@ -83,14 +52,25 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
     setSelectedConversation,
     loading,
     unreadCount,
-    searchUsers,
     loadConversations,
     loadMessagableUsers
   } = useMessages();
 
-  // Load data based on active item
+  // Switch to users view when requested externally
   React.useEffect(() => {
-    if (activeItem.category === "inbox" || activeItem.category === "sent") {
+    if (showNewMessage) {
+      setActiveTab("users");
+    }
+  }, [showNewMessage]);
+
+  // Notify parent when broadcast mode changes
+  React.useEffect(() => {
+    onBroadcastModeChange?.(activeTab === "broadcast");
+  }, [activeTab, onBroadcastModeChange]);
+
+  // Load data based on active tab
+  React.useEffect(() => {
+    if (activeTab === "inbox" || activeTab === "sent") {
       loadConversations({
         page: 1,
         pageSize: 20,
@@ -99,14 +79,14 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
           unread_only: showUnreadOnly
         }
       });
-    } else if (activeItem.category === "users") {
+    } else if (activeTab === "users") {
       loadMessagableUsers({
         page: 1,
         pageSize: 50,
         search: searchTerm
       });
     }
-  }, [activeItem, searchTerm, showUnreadOnly]);
+  }, [activeTab, searchTerm, showUnreadOnly, loadConversations, loadMessagableUsers]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -117,14 +97,15 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
       return "Just now";
     } else if (diffInHours < 24) {
       return `${Math.floor(diffInHours)}h ago`;
-    } else if (diffInHours < 168) { // 7 days
+    } else if (diffInHours < 168) {
       return `${Math.floor(diffInHours / 24)}d ago`;
     } else {
       return date.toLocaleDateString();
     }
   };
 
-  const truncateMessage = (content: string, maxLength: number = 60) => {
+  const truncateMessage = (content: string, maxLength: number = 50) => {
+    if (!content) return "";
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + "...";
   };
@@ -140,11 +121,9 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
 
   const handleConversationSelect = (conversation: Conversation) => {
     setSelectedConversation(conversation);
-    setOpen(true);
   };
 
   const handleUserSelect = (selectedUser: User) => {
-    // Create a mock conversation for new message
     const now = new Date().toISOString();
     const newConversation: Conversation = {
       user: selectedUser,
@@ -162,22 +141,32 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
       last_activity: now
     };
     setSelectedConversation(newConversation);
-    setOpen(true);
+    onShowNewMessageChange?.(false);
+    setActiveTab("inbox");
+  };
+
+  const handleNewMessageClick = () => {
+    setActiveTab("users");
+    onShowNewMessageChange?.(true);
   };
 
   const renderConversations = () => {
     if (loading) {
       return (
-        <div className="p-4 text-center text-sm text-muted-foreground">
-          Loading conversations...
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       );
     }
 
     if (!conversations || conversations.length === 0) {
       return (
-        <div className="p-4 text-center text-sm text-muted-foreground">
-          No conversations found
+        <div className="p-4 text-center">
+          <p className="text-sm text-muted-foreground mb-3">No conversations yet</p>
+          <Button variant="outline" size="sm" onClick={handleNewMessageClick}>
+            <Plus className="h-4 w-4 mr-2" />
+            Start a conversation
+          </Button>
         </div>
       );
     }
@@ -186,8 +175,8 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
       <button
         key={conversation.user.id}
         className={cn(
-          "flex w-full items-start gap-3 border-b p-4 text-left text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground last:border-b-0",
-          selectedConversation?.user.id === conversation.user.id && "bg-sidebar-accent"
+          "flex w-full items-start gap-3 p-3 text-left text-sm transition-colors hover:bg-accent rounded-lg",
+          selectedConversation?.user.id === conversation.user.id && "bg-accent"
         )}
         onClick={() => handleConversationSelect(conversation)}
       >
@@ -198,18 +187,11 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-0.5">
             <span className="font-medium truncate">{conversation.user.name}</span>
-            <div className="flex items-center gap-1 shrink-0">
-              {conversation.unread_count > 0 && (
-                <Badge variant="destructive" className="h-5 min-w-5 text-xs px-1">
-                  {conversation.unread_count > 99 ? "99+" : conversation.unread_count}
-                </Badge>
-              )}
-              <span className="text-xs text-muted-foreground">
-                {formatTime(conversation.last_activity)}
-              </span>
-            </div>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {formatTime(conversation.last_activity)}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <p className={cn(
@@ -218,25 +200,13 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
             )}>
               {conversation.latest_message.sender_id === user.id && "You: "}
               {truncateMessage(conversation.latest_message.content)}
-              {conversation.latest_message.is_edited && (
-                <span className="ml-1 text-xs opacity-70">(edited)</span>
-              )}
             </p>
+            {conversation.unread_count > 0 && (
+              <Badge variant="destructive" className="h-5 min-w-5 text-xs px-1.5">
+                {conversation.unread_count > 99 ? "99+" : conversation.unread_count}
+              </Badge>
+            )}
           </div>
-          {conversation.user.roles && conversation.user.roles.length > 0 && (
-            <div className="flex gap-1 mt-1">
-              {conversation.user.roles.slice(0, 2).map((role) => (
-                <Badge key={role.id} variant="outline" className="text-xs px-1 h-4">
-                  {role.name}
-                </Badge>
-              ))}
-              {conversation.user.roles.length > 2 && (
-                <Badge variant="outline" className="text-xs px-1 h-4">
-                  +{conversation.user.roles.length - 2}
-                </Badge>
-              )}
-            </div>
-          )}
         </div>
       </button>
     ));
@@ -245,8 +215,8 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
   const renderUsers = () => {
     if (loading) {
       return (
-        <div className="p-4 text-center text-sm text-muted-foreground">
-          Loading users...
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       );
     }
@@ -254,7 +224,7 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
     if (!messagableUsers || messagableUsers.length === 0) {
       return (
         <div className="p-4 text-center text-sm text-muted-foreground">
-          No users found
+          No users available to message
         </div>
       );
     }
@@ -262,7 +232,7 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
     return messagableUsers.map((msgUser) => (
       <button
         key={msgUser.id}
-        className="flex w-full items-center gap-3 border-b p-4 text-left text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground last:border-b-0"
+        className="flex w-full items-center gap-3 p-3 text-left text-sm transition-colors hover:bg-accent rounded-lg"
         onClick={() => handleUserSelect(msgUser)}
       >
         <Avatar className="h-10 w-10 shrink-0">
@@ -272,7 +242,7 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-0.5">
             <span className="font-medium truncate">{msgUser.name}</span>
             {msgUser.is_active && (
               <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
@@ -284,15 +254,10 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
           {msgUser.roles && msgUser.roles.length > 0 && (
             <div className="flex gap-1 mt-1">
               {msgUser.roles.slice(0, 2).map((role) => (
-                <Badge key={role.id} variant="outline" className="text-xs px-1 h-4">
+                <Badge key={role.id} variant="secondary" className="text-xs px-1.5 h-4">
                   {role.name}
                 </Badge>
               ))}
-              {msgUser.roles.length > 2 && (
-                <Badge variant="outline" className="text-xs px-1 h-4">
-                  +{msgUser.roles.length - 2}
-                </Badge>
-              )}
             </div>
           )}
         </div>
@@ -301,115 +266,116 @@ export function MessageSidebar({ user, onNewMessage, ...props }: MessageSidebarP
   };
 
   return (
-    <Sidebar
-      collapsible="icon"
-      className="overflow-hidden *:data-[sidebar=sidebar]:flex-row"
-      {...props}
-    >
-      {/* Navigation sidebar */}
-      <Sidebar
-        collapsible="none"
-        className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r"
-      >
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
-                <div className="cursor-pointer">
-                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                    <MessageCircle className="size-4" />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">Messages</span>
-                    <span className="truncate text-xs">
-                      {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
-                    </span>
-                  </div>
-                </div>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent className="px-1.5 md:px-0">
-              <SidebarMenu>
-                {navigationItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      tooltip={{
-                        children: item.title,
-                        hidden: false,
-                      }}
-                      onClick={() => {
-                        setActiveItem(item);
-                        setOpen(true);
-                      }}
-                      isActive={activeItem?.title === item.title}
-                      className="px-2.5 md:px-2"
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                      {item.title === "Inbox" && unreadCount > 0 && (
-                        <Badge variant="destructive" className="ml-auto h-5 min-w-5 text-xs px-1">
-                          {unreadCount > 99 ? "99+" : unreadCount}
-                        </Badge>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <NavUser user={user as any} isSuperAdmin={false} />
-        </SidebarFooter>
-      </Sidebar>
-
-      {/* Content sidebar */}
-      <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3.5 border-b p-4">
-          <div className="flex w-full items-center justify-between">
-            <div className="text-foreground text-base font-medium">
-              {activeItem?.title}
-            </div>
-            <div className="flex items-center gap-2">
-              {(activeItem?.category === "inbox" || activeItem?.category === "sent") && (
-                <Label className="flex items-center gap-2 text-sm">
-                  <span>Unread</span>
-                  <Switch 
-                    checked={showUnreadOnly}
-                    onCheckedChange={setShowUnreadOnly}
-                    className="shadow-none" 
-                  />
-                </Label>
-              )}
-              {activeItem?.category === "users" && onNewMessage && (
-                <Button onClick={onNewMessage} size="sm" variant="outline">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+    <div className="flex flex-col h-full">
+      {/* Header with New Message button */}
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            <span className="font-semibold">Messages</span>
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="h-5 min-w-5 text-xs px-1.5">
+                {unreadCount}
+              </Badge>
+            )}
           </div>
-          <SidebarInput 
-            placeholder={
-              activeItem?.category === "users" 
-                ? "Search users..." 
-                : "Search conversations..."
-            }
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup className="px-0">
-            <SidebarGroupContent>
-              {activeItem?.category === "users" ? renderUsers() : renderConversations()}
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-      </Sidebar>
-    </Sidebar>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleNewMessageClick}
+            className="h-8"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            New
+          </Button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 flex-wrap">
+          {tabs.map((tab) => (
+            <Button
+              key={tab.category}
+              variant={activeTab === tab.category ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-3"
+              onClick={() => {
+                setActiveTab(tab.category);
+                onShowNewMessageChange?.(false);
+              }}
+            >
+              <tab.icon className="h-4 w-4 mr-1.5" />
+              {tab.title}
+            </Button>
+          ))}
+          {/* Broadcast tab - Super admin only */}
+          {(user.is_super_admin || user.isSuperAdmin) && (
+            <Button
+              variant={activeTab === "broadcast" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-3"
+              onClick={() => {
+                setActiveTab("broadcast");
+                onShowNewMessageChange?.(false);
+              }}
+            >
+              <Megaphone className="h-4 w-4 mr-1.5" />
+              Broadcast
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Broadcast view - Super admin only */}
+      {activeTab === "broadcast" && (user.is_super_admin || user.isSuperAdmin) && (
+        <BroadcastToRole
+          onSuccess={() => {
+            onBroadcastSent?.();
+          }}
+        />
+      )}
+
+      {/* Search and filters - only for non-broadcast views */}
+      {activeTab !== "broadcast" && (
+        <div className="p-3 border-b space-y-2">
+          {activeTab === "users" ? (
+            <>
+              <p className="text-sm font-medium">Select Recipient</p>
+              <Input
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8"
+              />
+            </>
+          ) : (
+            <>
+              <Input
+                placeholder="Search conversations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8"
+              />
+              <Label className="flex items-center gap-2 text-xs">
+                <Switch
+                  checked={showUnreadOnly}
+                  onCheckedChange={setShowUnreadOnly}
+                  className="scale-75"
+                />
+                <span>Show unread only</span>
+              </Label>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Content - only for non-broadcast views */}
+      {activeTab !== "broadcast" && (
+        <ScrollArea className="flex-1">
+          <div className="p-2">
+            {activeTab === "users" ? renderUsers() : renderConversations()}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
   );
 }

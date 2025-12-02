@@ -109,12 +109,22 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 	// Set token in HTTP-only cookie
 	ttl := facades.Config().GetInt("jwt.ttl", 720) // Default to 12 hours (720 minutes) if not set
+	expiry := time.Now().Add(time.Duration(ttl) * time.Minute)
 	ctx.Response().Cookie(http.Cookie{
 		Name:     "token",
 		Value:    token,
-		Expires:  time.Now().Add(time.Duration(ttl) * time.Minute),
+		Expires:  expiry,
 		Path:     "/",
 		HttpOnly: true,
+	})
+
+	// Set a non-HttpOnly cookie for SSE connections (JavaScript needs to read this)
+	ctx.Response().Cookie(http.Cookie{
+		Name:     "sse_token",
+		Value:    token,
+		Expires:  expiry,
+		Path:     "/",
+		HttpOnly: false,
 	})
 
 	// Update last login timestamp
@@ -160,6 +170,22 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 			nil,
 		)
 	}
+
+	// Clear the cookies
+	ctx.Response().Cookie(http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		Path:     "/",
+		HttpOnly: true,
+	})
+	ctx.Response().Cookie(http.Cookie{
+		Name:     "sse_token",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		Path:     "/",
+		HttpOnly: false,
+	})
 
 	fmt.Println("Logout successful")
 
