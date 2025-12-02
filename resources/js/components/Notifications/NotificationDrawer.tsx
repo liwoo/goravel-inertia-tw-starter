@@ -62,11 +62,17 @@ interface Notification {
 
 interface NotificationDrawerProps {
   children?: React.ReactNode;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function NotificationDrawer({ children }: NotificationDrawerProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenChange }: NotificationDrawerProps) {
+  const [internalIsOpen, setInternalIsOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("all");
+
+  // Use controlled state if provided, otherwise use internal state
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = onOpenChange || setInternalIsOpen;
 
   const {
     notifications,

@@ -80,13 +80,19 @@ func NewBdspService() *BdspService {
 			return nil
 		}).
 		WithBeforeUpdate(func(id uint, data map[string]interface{}) error {
-			if _, exists := data["ubdsp_number"]; !exists || data["ubdsp_number"] == "" {
+			// Check if BDSP exists and has a ubdsp_number - only generate if missing
+			var existingBdsp models.Bdsp
+			err := facades.Orm().Query().Where("id = ?", id).First(&existingBdsp)
+			if err == nil && existingBdsp.UbdspNumber == "" {
+				// Generate UBDSP number only if the existing record doesn't have one
 				ubi, err := generateBdspUBI()
 				if err != nil {
-					return fmt.Errorf("failed to generate UBI: %w", err)
+					facades.Log().Warning("Failed to generate UBDSP number during update", map[string]interface{}{"error": err.Error(), "bdsp_id": id})
+				} else {
+					data["ubdsp_number"] = ubi
 				}
-				data["ubdsp_number"] = ubi
 			}
+			// Note: If existing record already has a ubdsp_number, we don't overwrite it
 
 			if partners, ok := data["partners"]; ok {
 				if partnersSlice, ok := partners.([]interface{}); ok {

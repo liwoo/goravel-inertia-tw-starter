@@ -12,6 +12,7 @@ import (
 	"smedi-sme-db/app/http/requests"
 	"smedi-sme-db/app/models"
 
+	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
 )
 
@@ -25,8 +26,8 @@ func NewSmeService() *SmeService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.Sme]("smes", "id").
 		WithSearchFields("usme_number", "name", "registration_number", "tax_identification_number", "business_category", "sector", "contact_email", "contact_phone", "region", "district"). // Fields that will be searchable via the search query parameter
-		WithSortFields("id", "created_at", "updated_at", "usme_number", "name", "operational_start_date", "business_category", "sector", "region", "district").                             // Fields that can be used for sorting results
-		WithFilterFields("business_category", "sector", "region", "district", "created_by", "is_active").                                                                                   // Fields that can be filtered on
+		WithSortFields("id", "created_at", "updated_at", "usme_number", "name", "operational_start_date", "business_category", "sector", "region", "district", "formalisation_score").      // Fields that can be used for sorting results
+		WithFilterFields("business_category", "sector", "region", "district", "created_by", "is_active", "formalisation_score").                                                            // Fields that can be filtered on
 		WithValidationRules(map[string]interface{}{                                                                                                                                         // Validation rules for create/update operations
 			// usme_number is omitted from validation - will be auto-generated in BeforeCreate hook if not provided
 			"name":                           "required|string|max:255",
@@ -54,7 +55,11 @@ func NewSmeService() *SmeService {
 		WithDefaultSort("created_at", "DESC").                                                                                  // Default sorting when none specified
 		WithScopeFiltering("smes", "created_by").                                                                               // Enable permission-based filtering
 		WithSoftDeletes().                                                                                                      // Enable soft delete support
-		WithBeforeCreate(func(data map[string]interface{}) error {                                                              // Handle JSON array fields and UBI generation
+		WithCustomQuery(func(query orm.Query) orm.Query {
+			// Join business_formalisation table for sorting/filtering by formalisation_score
+			return query.Join("LEFT JOIN business_formalisation ON business_formalisation.sme_id = smes.id AND business_formalisation.deleted_at IS NULL")
+		}).
+		WithBeforeCreate(func(data map[string]interface{}) error { // Handle JSON array fields and UBI generation
 			// Generate UBI if usme_number is not provided
 			if _, exists := data["usme_number"]; !exists || data["usme_number"] == "" {
 				ubi, err := generateUBI(data)
@@ -255,6 +260,10 @@ func (s *SmeService) GetColumnMapping() map[string]string {
 	mapping["ipAddress"] = "ip_address"
 	mapping["userAgent"] = "user_agent"
 	mapping["isActive"] = "is_active"
+	// Map formalisationScore to the joined table column with COALESCE to handle NULLs
+	// SMEs without formalisation records will be treated as having score 0
+	mapping["formalisationScore"] = "COALESCE(business_formalisation.formalisation_score, 0)"
+	mapping["formalisation_score"] = "COALESCE(business_formalisation.formalisation_score, 0)"
 	// Note: We do NOT map business_improvement_aspects or business_accessed_financing here
 	// because they need to go through the model's BeforeSave hook which converts the arrays to JSON
 	return mapping
@@ -332,6 +341,13 @@ func (s *SmeService) GetFilterDefinitions() []contracts.FilterDefinition {
 			"Date Registered",
 			contracts.FilterTypeDateTime,
 			nil,
+		),
+		// Formalisation Score - number filter (0-100)
+		contracts.NewFilterDefinition(
+			"formalisation_score",
+			"Formalisation Score",
+			contracts.FilterTypeNumber,
+			nil, // Use all number operators (equals, greater_than, less_than, between, etc.)
 		),
 	}
 }

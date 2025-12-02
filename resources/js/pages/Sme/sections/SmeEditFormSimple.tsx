@@ -302,7 +302,7 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
 
       // Delete removed members
       for (const memberId of deletedMemberIds) {
-        await fetch(`/api/additional-business-members/${memberId}`, {
+        await fetch(`/api/additional_business_members/${memberId}`, {
           method: 'DELETE',
           headers: {
             'Accept': 'application/json',
@@ -320,7 +320,7 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
 
         if (member.id) {
           // Update existing member
-          await fetch(`/api/additional-business-members/${member.id}`, {
+          await fetch(`/api/additional_business_members/${member.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -331,7 +331,7 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
           });
         } else {
           // Create new member
-          const response = await fetch('/api/additional-business-members', {
+          const response = await fetch('/api/additional_business_members', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

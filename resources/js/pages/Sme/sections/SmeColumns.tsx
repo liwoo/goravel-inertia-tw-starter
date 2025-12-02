@@ -4,6 +4,7 @@ import { CrudColumn, CrudFilter } from '@/types/crud';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, CircleCheck, CircleX } from 'lucide-react';
 import { ScoreMeter } from '@/components/ui/score-meter';
+import { CopyableText } from '@/components/ui/copyable-text';
 
 /**
  * Sme table columns configuration
@@ -16,10 +17,40 @@ export const smeColumns: CrudColumn<Sme>[] = [
     sortable: true,
     className: 'min-w-[140px]',
     render: (sme) => (
-      <div className="font-mono text-sm font-medium text-foreground">
-        {sme.usmeNumber || (sme as any).usme_number || '-'}
-      </div>
+      <CopyableText
+        value={sme.usmeNumber || (sme as any).usme_number}
+        className="font-mono text-sm font-medium text-foreground"
+      />
     ),
+  },
+  {
+    key: 'formalisationScore',
+    label: 'Score',
+    sortable: true,
+    className: 'w-20 text-center',
+    render: (sme) => {
+      // Get formalisation score from relationship (camelCase or snake_case)
+      const score =
+        sme.businessFormalisation?.formalisationScore ??
+        sme.businessFormalisation?.formalisation_score ??
+        sme.business_formalisation?.formalisationScore ??
+        sme.business_formalisation?.formalisation_score ??
+        null;
+
+      if (score === null || score === undefined) {
+        return (
+          <div className="flex justify-center items-center">
+            <span className="text-sm text-muted-foreground">-</span>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex justify-center">
+          <ScoreMeter score={score} size="sm" showLabel={true} />
+        </div>
+      );
+    },
   },
   {
     key: 'name',
@@ -92,7 +123,10 @@ export const smeColumns: CrudColumn<Sme>[] = [
     sortable: true,
     className: 'min-w-[130px]',
     render: (sme) => (
-      <span className="text-sm font-mono">{sme.contactPhone}</span>
+      <CopyableText
+        value={sme.contactPhone || (sme as any).contact_phone}
+        className="text-sm font-mono"
+      />
     ),
   },
   {
@@ -102,42 +136,13 @@ export const smeColumns: CrudColumn<Sme>[] = [
     className: 'w-28 text-center',
     render: (sme) => (
       <div className="flex justify-center">
-        {sme.registrationNumber ? (
+        {sme.registrationNumber || (sme as any).registration_number ? (
           <CheckCircle2 className="h-4 w-4 text-green-600" />
         ) : (
           <XCircle className="h-4 w-4 text-gray-400" />
         )}
       </div>
     ),
-  },
-  {
-    key: 'formalisationScore',
-    label: 'Score',
-    sortable: true,
-    className: 'w-20 text-center',
-    render: (sme) => {
-      // Get formalisation score from relationship (camelCase or snake_case)
-      const score =
-        sme.businessFormalisation?.formalisationScore ??
-        sme.businessFormalisation?.formalisation_score ??
-        sme.business_formalisation?.formalisationScore ??
-        sme.business_formalisation?.formalisation_score ??
-        null;
-
-      if (score === null || score === undefined) {
-        return (
-          <div className="flex justify-center items-center">
-            <span className="text-sm text-muted-foreground">-</span>
-          </div>
-        );
-      }
-
-      return (
-        <div className="flex justify-center">
-          <ScoreMeter score={score} size="sm" showLabel={true} />
-        </div>
-      );
-    },
   },
   {
     key: 'createdAt',
@@ -189,12 +194,15 @@ export const smeColumnsMobile: CrudColumn<Sme>[] = [
               {!isActive && (
                 <Badge variant="secondary" className="text-xs">Inactive</Badge>
               )}
-              {sme.registrationNumber && (
+              {(sme.registrationNumber || (sme as any).registration_number) && (
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
               )}
             </div>
           </div>
-          <div className="text-sm text-muted-foreground font-mono">{sme.usmeNumber || (sme as any).usme_number || '-'}</div>
+          <CopyableText
+            value={sme.usmeNumber || (sme as any).usme_number}
+            className="text-sm text-muted-foreground font-mono"
+          />
           <div className="flex gap-2 flex-wrap items-center">
             <Badge variant="secondary" className="text-xs">
               {sme.businessCategory || (sme as any).business_category || '-'}
@@ -242,5 +250,11 @@ export const smeFilters: CrudFilter[] = [
     label: 'District',
     type: 'text',
     placeholder: 'Filter by district',
+  },
+  {
+    key: 'formalisationScore',
+    label: 'Min Score',
+    type: 'number',
+    placeholder: 'Minimum score (0-100)',
   },
 ];

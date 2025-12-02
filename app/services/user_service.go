@@ -24,7 +24,7 @@ func NewUserService() *UserService {
 	var pendingRoleID *uint
 
 	// Build the service with all required configurations
-	service := contracts.NewServiceBuilder[models.User]("user", "id").
+	service := contracts.NewServiceBuilder[models.User]("users", "id").
 		WithSearchFields("name", "email").                                                  // REQUIRED
 		WithSortFields("id", "name", "email", "created_at", "updated_at").                  // REQUIRED
 		WithFilterFields("email", "is_active", "role", "is_super_admin", "email_verified"). // REQUIRED

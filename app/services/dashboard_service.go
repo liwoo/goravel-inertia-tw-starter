@@ -180,7 +180,7 @@ func (s *DashboardService) GetRecentActivities(limit int) []RecentActivityDTO {
 		}
 
 		var user models.User
-		err := facades.Orm().Query().Where("id = ?", *userID).First(&user)
+		err := facades.Orm().Query().Model(&models.User{}).Where("id = ?", *userID).First(&user)
 		if err != nil || user.ID == 0 {
 			userNameCache[*userID] = "Unknown"
 			return "Unknown"
@@ -296,6 +296,111 @@ func safeInt(ptr *int) int {
 		return 0
 	}
 	return *ptr
+}
+
+// GetUserRecentActivities returns the most recent activities performed BY a specific user
+func (s *DashboardService) GetUserRecentActivities(userID uint, limit int) []RecentActivityDTO {
+	var activities []RecentActivityDTO
+	intUserID := int(userID)
+
+	// Get recent SME activities by this user
+	var smes []models.Sme
+	facades.Orm().Query().Model(&models.Sme{}).
+		Where("created_by = ? OR updated_by = ?", intUserID, intUserID).
+		Order("updated_at DESC").
+		Limit(limit).
+		Find(&smes)
+
+	for _, sme := range smes {
+		action := "updated"
+		timestamp := sme.UpdatedAt.ToDateTimeString()
+
+		// Check if this user created or updated
+		if sme.CreatedBy != nil && *sme.CreatedBy == intUserID &&
+			sme.CreatedAt.ToDateTimeString() == sme.UpdatedAt.ToDateTimeString() {
+			action = "created"
+			timestamp = sme.CreatedAt.ToDateTimeString()
+		}
+
+		activities = append(activities, RecentActivityDTO{
+			ID:         sme.ID,
+			EntityType: "sme",
+			EntityID:   sme.ID,
+			EntityName: sme.Name,
+			Action:     action,
+			UserID:     userID,
+			UserName:   "", // Not needed for user's own activities
+			Timestamp:  timestamp,
+		})
+	}
+
+	// Get recent Event activities by this user
+	var events []models.Event
+	facades.Orm().Query().Model(&models.Event{}).
+		Where("created_by = ? OR updated_by = ?", intUserID, intUserID).
+		Order("updated_at DESC").
+		Limit(limit).
+		Find(&events)
+
+	for _, event := range events {
+		action := "updated"
+		timestamp := event.UpdatedAt.ToDateTimeString()
+
+		if event.CreatedBy != nil && *event.CreatedBy == intUserID &&
+			event.CreatedAt.ToDateTimeString() == event.UpdatedAt.ToDateTimeString() {
+			action = "created"
+			timestamp = event.CreatedAt.ToDateTimeString()
+		}
+
+		activities = append(activities, RecentActivityDTO{
+			ID:         event.ID,
+			EntityType: "event",
+			EntityID:   event.ID,
+			EntityName: event.Title,
+			Action:     action,
+			UserID:     userID,
+			UserName:   "",
+			Timestamp:  timestamp,
+		})
+	}
+
+	// Get recent Procurement Notice activities by this user
+	var procurements []models.ProcurementNotice
+	facades.Orm().Query().Model(&models.ProcurementNotice{}).
+		Where("created_by = ? OR updated_by = ?", intUserID, intUserID).
+		Order("updated_at DESC").
+		Limit(limit).
+		Find(&procurements)
+
+	for _, proc := range procurements {
+		action := "updated"
+		timestamp := proc.UpdatedAt.ToDateTimeString()
+
+		if proc.CreatedBy != nil && *proc.CreatedBy == intUserID &&
+			proc.CreatedAt.ToDateTimeString() == proc.UpdatedAt.ToDateTimeString() {
+			action = "created"
+			timestamp = proc.CreatedAt.ToDateTimeString()
+		}
+
+		activities = append(activities, RecentActivityDTO{
+			ID:         proc.ID,
+			EntityType: "procurement",
+			EntityID:   proc.ID,
+			EntityName: proc.Organization + " - " + proc.RefNo,
+			Action:     action,
+			UserID:     userID,
+			UserName:   "",
+			Timestamp:  timestamp,
+		})
+	}
+
+	// Sort all activities by timestamp (newest first) and limit
+	sortActivitiesByTimestamp(activities)
+	if len(activities) > limit {
+		activities = activities[:limit]
+	}
+
+	return activities
 }
 
 // sortActivitiesByTimestamp sorts activities by timestamp descending

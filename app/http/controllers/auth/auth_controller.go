@@ -2,7 +2,8 @@ package auth
 
 import (
 	"fmt"
-	"smedi-sme-db/app/models" // Assuming your User model is here
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/app/services"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -11,11 +12,13 @@ import (
 )
 
 type AuthController struct {
-	// Dependencies can be injected here
+	activityService *services.UserActivityService
 }
 
 func NewAuthController() *AuthController {
-	return &AuthController{}
+	return &AuthController{
+		activityService: services.NewUserActivityService(),
+	}
 }
 
 // LoginRequest defines the structure for login requests.
@@ -114,12 +117,31 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		HttpOnly: true,
 	})
 
+	// Update last login timestamp
+	now := time.Now()
+	facades.Orm().Query().Model(&user).Update("last_login_at", now)
+
+	// Log login activity
+	r.activityService.LogActivity(
+		ctx,
+		user.ID,
+		models.ActivityLogin,
+		"User logged in",
+		map[string]interface{}{
+			"email": user.Email,
+		},
+	)
+
 	// Redirect to dashboard on successful login.
 	// Use 303 See Other to ensure the next request is a GET, which is best practice for Inertia.
 	return ctx.Response().Redirect(http.StatusSeeOther, "/dashboard")
 }
 
 func (r *AuthController) Logout(ctx http.Context) http.Response {
+	// Get the current user before logging out (for activity logging)
+	var user models.User
+	facades.Auth(ctx).User(&user)
+
 	if err := facades.Auth(ctx).Logout(); err != nil {
 		// It's good to log this, but for the user, redirecting is usually best.
 		facades.Log().Error("Error during logout: " + err.Error())
@@ -128,8 +150,18 @@ func (r *AuthController) Logout(ctx http.Context) http.Response {
 		return ctx.Response().Redirect(http.StatusFound, "/")
 	}
 
+	// Log logout activity (if we had a valid user)
+	if user.ID != 0 {
+		r.activityService.LogActivity(
+			ctx,
+			user.ID,
+			models.ActivityLogout,
+			"User logged out",
+			nil,
+		)
+	}
+
 	fmt.Println("Logout successful")
 
 	return ctx.Response().Redirect(http.StatusFound, "/")
-
 }

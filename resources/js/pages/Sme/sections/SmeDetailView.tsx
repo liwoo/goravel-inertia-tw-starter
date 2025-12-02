@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import {
   Calendar, FileText, User, FolderOpen, Phone, Mail, MapPin,
   Building2, Globe, Users, Briefcase, CheckCircle2, XCircle, DollarSign,
-  TrendingUp, Shield, CreditCard, Award
+  TrendingUp, Shield, CreditCard, Award, ChevronLeft, ChevronRight
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { EmptyState } from '@/components/EmptyState';
 import { ScoreBreakdownBar, calculateScoreBreakdown } from '@/components/ui/score-breakdown-bar';
+import { CopyableText } from '@/components/ui/copyable-text';
 
 export function SmeDetailView({
   item: sme,
@@ -27,13 +29,19 @@ export function SmeDetailView({
   const [employeeSummary, setEmployeeSummary] = useState<any>(null);
   const [formalisation, setFormalisation] = useState<BusinessFormalisation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentMemberIndex, setCurrentMemberIndex] = useState(0);
 
   useEffect(() => {
+    // Reset state before fetching to ensure fresh data display
+    setLoading(true);
+    setPrimaryOwner(null);
+    setAdditionalMembers([]);
+    setEmployeeSummary(null);
+    setFormalisation(null);
+
     // Fetch related data
     const fetchRelatedData = async () => {
       try {
-        setLoading(true);
-
         // Fetch all related data in parallel
         const [ownerRes, membersRes, summaryRes, formalisationRes] = await Promise.all([
           axios.get(`/api/smes/${sme.id}/primary_business_owner`).catch(() => ({ data: { data: null } })),
@@ -109,21 +117,43 @@ export function SmeDetailView({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DetailRow label="USME Number" value={sme.usmeNumber} />
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">USME Number</p>
+                  <CopyableText value={sme.usmeNumber || sme.usme_number} className="font-mono font-medium text-foreground" iconSize="md" />
+                </div>
+                {/* Formalisation Score - inline after USME */}
+                {!loading && formalisation && (
+                  <div className="md:col-span-2">
+                    <ScoreBreakdownBar
+                      breakdown={calculateScoreBreakdown(
+                        formalisation,
+                        !!primaryOwner,
+                        additionalMembers.length,
+                        employeeSummary
+                      )}
+                    />
+                  </div>
+                )}
                 <DetailRow label="Business Name" value={sme.name} />
-                <DetailRow label="Registration Number" value={sme.registrationNumber} />
-                <DetailRow label="Tax Identification Number" value={sme.taxIdentificationNumber} />
-                <DetailRow label="Operational Since" value={formatDate(sme.operationalStartDate)} />
-                <DetailRow label="Business Category" value={sme.businessCategory} />
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Registration Number</p>
+                  <CopyableText value={sme.registrationNumber || sme.registration_number} className="font-medium text-foreground" iconSize="md" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Tax Identification Number</p>
+                  <CopyableText value={sme.taxIdentificationNumber || sme.tax_identification_number} className="font-mono font-medium text-foreground" iconSize="md" />
+                </div>
+                <DetailRow label="Operational Since" value={formatDate(sme.operationalStartDate || sme.operational_start_date)} />
+                <DetailRow label="Business Category" value={sme.businessCategory || sme.business_category} />
                 <DetailRow label="Sector" value={sme.sector} />
-                <DetailRow label="Sub Sector" value={sme.subSector} />
+                <DetailRow label="Sub Sector" value={sme.subSector || sme.sub_sector} />
               </div>
 
               <Separator />
 
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Business Description</p>
-                <p className="text-sm text-foreground">{sme.businessDescription || 'No description provided'}</p>
+                <p className="text-sm text-foreground">{sme.businessDescription || sme.business_description || 'No description provided'}</p>
               </div>
 
               <Separator />
@@ -131,8 +161,14 @@ export function SmeDetailView({
               <div className="space-y-4">
                 <h4 className="font-semibold">Contact Information</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DetailRow label="Phone" value={sme.contactPhone} />
-                  <DetailRow label="Email" value={sme.contactEmail} />
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <CopyableText value={sme.contactPhone || sme.contact_phone} className="font-mono font-medium text-foreground" iconSize="md" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <CopyableText value={sme.contactEmail || sme.contact_email} className="font-medium text-foreground" iconSize="md" />
+                  </div>
                   <DetailRow label="Website" value={sme.website} />
                 </div>
               </div>
@@ -144,9 +180,9 @@ export function SmeDetailView({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <DetailRow label="Region" value={(sme as any).region} />
                   <DetailRow label="District" value={sme.district} />
-                  <DetailRow label="Traditional Authority" value={sme.traditionalAuthority} />
-                  <DetailRow label="Physical Address" value={sme.physicalAddress} />
-                  <DetailRow label="Postal Address" value={sme.postalAddress} />
+                  <DetailRow label="Traditional Authority" value={sme.traditionalAuthority || sme.traditional_authority} />
+                  <DetailRow label="Physical Address" value={sme.physicalAddress || sme.physical_address} />
+                  <DetailRow label="Postal Address" value={sme.postalAddress || sme.postal_address} />
                 </div>
               </div>
 
@@ -157,8 +193,8 @@ export function SmeDetailView({
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Improvement Aspects</p>
                   <div className="flex flex-wrap gap-2">
-                    {sme.businessImprovementAspects && sme.businessImprovementAspects.length > 0 ? (
-                      sme.businessImprovementAspects.map((aspect, idx) => (
+                    {((sme.businessImprovementAspects || sme.business_improvement_aspects) && (sme.businessImprovementAspects || sme.business_improvement_aspects || []).length > 0) ? (
+                      (sme.businessImprovementAspects || sme.business_improvement_aspects || []).map((aspect, idx) => (
                         <Badge key={idx} variant="outline">{aspect}</Badge>
                       ))
                     ) : (
@@ -169,8 +205,8 @@ export function SmeDetailView({
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Accessed Financing</p>
                   <div className="flex flex-wrap gap-2">
-                    {sme.businessAccessedFinancing && sme.businessAccessedFinancing.length > 0 ? (
-                      sme.businessAccessedFinancing.map((financing, idx) => (
+                    {((sme.businessAccessedFinancing || sme.business_accessed_financing) && (sme.businessAccessedFinancing || sme.business_accessed_financing || []).length > 0) ? (
+                      (sme.businessAccessedFinancing || sme.business_accessed_financing || []).map((financing, idx) => (
                         <Badge key={idx} variant="secondary">{financing}</Badge>
                       ))
                     ) : (
@@ -202,18 +238,21 @@ export function SmeDetailView({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DetailRow label="First Name" value={primaryOwner.firstName} />
-                  <DetailRow label="Last Name" value={primaryOwner.lastName} />
-                  <DetailRow label="Other Names" value={primaryOwner.otherNames} />
-                  <DetailRow label="National ID" value={primaryOwner.nationalIdNumber} />
+                  <DetailRow label="First Name" value={primaryOwner.firstName || primaryOwner.first_name} />
+                  <DetailRow label="Last Name" value={primaryOwner.lastName || primaryOwner.last_name} />
+                  <DetailRow label="Other Names" value={primaryOwner.otherNames || primaryOwner.other_names} />
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">National ID</p>
+                    <CopyableText value={primaryOwner.nationalIdNumber || primaryOwner.national_id_number} className="font-mono font-medium text-foreground" iconSize="md" />
+                  </div>
                   <DetailRow label="Nationality" value={primaryOwner.nationality} />
-                  <DetailRow label="Date of Birth" value={formatDate(primaryOwner.dateOfBirth)} />
+                  <DetailRow label="Date of Birth" value={formatDate(primaryOwner.dateOfBirth || primaryOwner.date_of_birth)} />
                   <DetailRow label="Gender" value={primaryOwner.gender} />
-                  <DetailRow label="Education Level" value={primaryOwner.educationLevel} />
-                  <DetailRow label="Malawian Status" value={primaryOwner.malawianStatus} />
+                  <DetailRow label="Education Level" value={primaryOwner.educationLevel || primaryOwner.education_level} />
+                  <DetailRow label="Malawian Status" value={primaryOwner.malawianStatus || primaryOwner.malawian_status} />
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Special Needs</p>
-                    <BooleanBadge value={primaryOwner.hasSpecialNeeds} />
+                    <BooleanBadge value={primaryOwner.hasSpecialNeeds ?? primaryOwner.has_special_needs ?? false} />
                   </div>
                 </div>
 
@@ -222,9 +261,18 @@ export function SmeDetailView({
                 <div className="space-y-4">
                   <h4 className="font-semibold">Contact Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DetailRow label="Phone Number" value={primaryOwner.phoneNumber} />
-                    <DetailRow label="Landline" value={primaryOwner.landlineNumber} />
-                    <DetailRow label="Email" value={primaryOwner.email} />
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Phone Number</p>
+                      <CopyableText value={primaryOwner.phoneNumber || primaryOwner.phone_number} className="font-mono font-medium text-foreground" iconSize="md" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Landline</p>
+                      <CopyableText value={primaryOwner.landlineNumber || primaryOwner.landline_number} className="font-mono font-medium text-foreground" iconSize="md" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <CopyableText value={primaryOwner.email} className="font-medium text-foreground" iconSize="md" />
+                    </div>
                   </div>
                 </div>
 
@@ -235,9 +283,9 @@ export function SmeDetailView({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <DetailRow label="Region" value={primaryOwner.region} />
                     <DetailRow label="District" value={primaryOwner.district} />
-                    <DetailRow label="Traditional Authority" value={primaryOwner.traditionalAuthority} />
-                    <DetailRow label="Physical Address" value={primaryOwner.physicalAddress} />
-                    <DetailRow label="Postal Address" value={primaryOwner.postalAddress} />
+                    <DetailRow label="Traditional Authority" value={primaryOwner.traditionalAuthority || primaryOwner.traditional_authority} />
+                    <DetailRow label="Physical Address" value={primaryOwner.physicalAddress || primaryOwner.physical_address} />
+                    <DetailRow label="Postal Address" value={primaryOwner.postalAddress || primaryOwner.postal_address} />
                   </div>
                 </div>
 
@@ -246,9 +294,9 @@ export function SmeDetailView({
                 <div className="space-y-4">
                   <h4 className="font-semibold">Alternative Contact</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DetailRow label="Contact Name" value={primaryOwner.altContactName} />
-                    <DetailRow label="Relationship" value={primaryOwner.altContactRelationship} />
-                    <DetailRow label="Contact Phone" value={primaryOwner.altContactPhone} />
+                    <DetailRow label="Contact Name" value={primaryOwner.altContactName || primaryOwner.alt_contact_name} />
+                    <DetailRow label="Relationship" value={primaryOwner.altContactRelationship || primaryOwner.alt_contact_relationship} />
+                    <DetailRow label="Contact Phone" value={primaryOwner.altContactPhone || primaryOwner.alt_contact_phone} />
                   </div>
                 </div>
               </CardContent>
@@ -272,42 +320,88 @@ export function SmeDetailView({
             </Card>
           ) : additionalMembers.length > 0 ? (
             <div className="space-y-4">
-              {additionalMembers.map((member, idx) => (
-                <Card key={member.id || idx}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      {member.firstName} {member.lastName}
-                    </CardTitle>
-                    <CardDescription>Additional business member</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <DetailRow label="First Name" value={member.firstName} />
-                      <DetailRow label="Last Name" value={member.lastName} />
-                      <DetailRow label="Other Names" value={member.otherNames} />
-                      <DetailRow label="National ID" value={member.nationalIdNumber} />
-                      <DetailRow label="Nationality" value={member.nationality} />
-                      <DetailRow label="Date of Birth" value={formatDate(member.dateOfBirth)} />
-                      <DetailRow label="Phone Number" value={member.phoneNumber} />
-                      <DetailRow label="Email" value={member.email} />
-                    </div>
+              {/* Carousel Navigation */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentMemberIndex(Math.max(0, currentMemberIndex - 1))}
+                    disabled={currentMemberIndex === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentMemberIndex(Math.min(additionalMembers.length - 1, currentMemberIndex + 1))}
+                    disabled={currentMemberIndex === additionalMembers.length - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {currentMemberIndex + 1} of {additionalMembers.length}
+                  </span>
+                  {/* Dot indicators */}
+                  <div className="flex gap-1">
+                    {additionalMembers.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentMemberIndex(idx)}
+                        className={`h-2 w-2 rounded-full transition-colors ${
+                          idx === currentMemberIndex
+                            ? 'bg-primary'
+                            : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-                    <Separator />
+              {/* Current Member Card */}
+              {(() => {
+                const member = additionalMembers[currentMemberIndex];
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        {member.firstName || member.first_name} {member.lastName || member.last_name}
+                      </CardTitle>
+                      <CardDescription>Additional business member</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <DetailRow label="First Name" value={member.firstName || member.first_name} />
+                        <DetailRow label="Last Name" value={member.lastName || member.last_name} />
+                        <DetailRow label="Other Names" value={member.otherNames || member.other_names} />
+                        <DetailRow label="Gender" value={member.gender} />
+                        <DetailRow label="National ID" value={member.nationalIdNumber || member.national_id_number} />
+                        <DetailRow label="Nationality" value={member.nationality} />
+                        <DetailRow label="Date of Birth" value={formatDate(member.dateOfBirth || member.date_of_birth)} />
+                        <DetailRow label="Phone Number" value={member.phoneNumber || member.phone_number} />
+                        <DetailRow label="Email" value={member.email} />
+                      </div>
 
-                    <div className="flex gap-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Intern:</span>
-                        <BooleanBadge value={member.isIntern} />
+                      <Separator />
+
+                      <div className="flex gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Intern:</span>
+                          <BooleanBadge value={member.isIntern ?? member.is_intern ?? false} />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Part Time:</span>
+                          <BooleanBadge value={member.isPartTime ?? member.is_part_time ?? false} />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Part Time:</span>
-                        <BooleanBadge value={member.isPartTime} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
             </div>
           ) : (
             <EmptyState
@@ -327,100 +421,123 @@ export function SmeDetailView({
               </CardContent>
             </Card>
           ) : employeeSummary ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Employee Summary
-                </CardTitle>
-                <CardDescription>Breakdown of employees by type and gender</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Full Time */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <Badge variant="default">Full Time</Badge>
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Males</span>
-                        <Badge variant="outline">{employeeSummary.fullTimeMales || 0}</Badge>
+            <>
+              {/* By Employee Type */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">By Employee Type</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Full-Time Employees */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                        <span className="text-sm text-muted-foreground">Full-Time Employees</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Females</span>
-                        <Badge variant="outline">{employeeSummary.fullTimeFemales || 0}</Badge>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold tabular-nums text-foreground">
+                          {(employeeSummary.fullTimeMales ?? employeeSummary.full_time_males ?? 0) +
+                           (employeeSummary.fullTimeFemales ?? employeeSummary.full_time_females ?? 0)}
+                        </span>
+                        <span className="text-sm text-muted-foreground">Employees</span>
                       </div>
-                      <Separator />
-                      <div className="flex justify-between items-center font-semibold">
-                        <span className="text-sm">Total</span>
-                        <Badge>{(employeeSummary.fullTimeMales || 0) + (employeeSummary.fullTimeFemales || 0)}</Badge>
+                    </div>
+
+                    {/* Part-Time Employees */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                        <span className="text-sm text-muted-foreground">Part-Time Employees</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold tabular-nums text-foreground">
+                          {(employeeSummary.partTimeMales ?? employeeSummary.part_time_males ?? 0) +
+                           (employeeSummary.partTimeFemales ?? employeeSummary.part_time_females ?? 0)}
+                        </span>
+                        <span className="text-sm text-muted-foreground">Employees</span>
+                      </div>
+                    </div>
+
+                    {/* Internship Employees */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                        <span className="text-sm text-muted-foreground">Internship Employees</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold tabular-nums text-foreground">
+                          {(employeeSummary.internMales ?? employeeSummary.intern_males ?? 0) +
+                           (employeeSummary.internFemales ?? employeeSummary.intern_females ?? 0)}
+                        </span>
+                        <span className="text-sm text-muted-foreground">Employees</span>
+                      </div>
+                    </div>
+
+                    {/* Total */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-slate-500" />
+                        <span className="text-sm text-muted-foreground">Total Employees</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold tabular-nums text-foreground">
+                          {(employeeSummary.fullTimeMales ?? employeeSummary.full_time_males ?? 0) +
+                           (employeeSummary.fullTimeFemales ?? employeeSummary.full_time_females ?? 0) +
+                           (employeeSummary.partTimeMales ?? employeeSummary.part_time_males ?? 0) +
+                           (employeeSummary.partTimeFemales ?? employeeSummary.part_time_females ?? 0) +
+                           (employeeSummary.internMales ?? employeeSummary.intern_males ?? 0) +
+                           (employeeSummary.internFemales ?? employeeSummary.intern_females ?? 0)}
+                        </span>
+                        <span className="text-sm text-muted-foreground">Employees</span>
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  {/* Part Time */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <Badge variant="secondary">Part Time</Badge>
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Males</span>
-                        <Badge variant="outline">{employeeSummary.partTimeMales || 0}</Badge>
+              {/* By Gender */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">By Gender</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Male Employees */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-sky-500" />
+                        <span className="text-sm text-muted-foreground">Male Employees</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Females</span>
-                        <Badge variant="outline">{employeeSummary.partTimeFemales || 0}</Badge>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold tabular-nums text-foreground">
+                          {(employeeSummary.fullTimeMales ?? employeeSummary.full_time_males ?? 0) +
+                           (employeeSummary.partTimeMales ?? employeeSummary.part_time_males ?? 0) +
+                           (employeeSummary.internMales ?? employeeSummary.intern_males ?? 0)}
+                        </span>
+                        <span className="text-sm text-muted-foreground">Employees</span>
                       </div>
-                      <Separator />
-                      <div className="flex justify-between items-center font-semibold">
-                        <span className="text-sm">Total</span>
-                        <Badge>{(employeeSummary.partTimeMales || 0) + (employeeSummary.partTimeFemales || 0)}</Badge>
+                    </div>
+
+                    {/* Female Employees */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-pink-500" />
+                        <span className="text-sm text-muted-foreground">Female Employees</span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold tabular-nums text-foreground">
+                          {(employeeSummary.fullTimeFemales ?? employeeSummary.full_time_females ?? 0) +
+                           (employeeSummary.partTimeFemales ?? employeeSummary.part_time_females ?? 0) +
+                           (employeeSummary.internFemales ?? employeeSummary.intern_females ?? 0)}
+                        </span>
+                        <span className="text-sm text-muted-foreground">Employees</span>
                       </div>
                     </div>
                   </div>
-
-                  {/* Interns */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <Badge variant="outline">Interns</Badge>
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Males</span>
-                        <Badge variant="outline">{employeeSummary.internMales || 0}</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Females</span>
-                        <Badge variant="outline">{employeeSummary.internFemales || 0}</Badge>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between items-center font-semibold">
-                        <span className="text-sm">Total</span>
-                        <Badge>{(employeeSummary.internMales || 0) + (employeeSummary.internFemales || 0)}</Badge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="bg-muted p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">Grand Total Employees</span>
-                    <Badge variant="default" className="text-lg px-4 py-1">
-                      {(employeeSummary.fullTimeMales || 0) +
-                       (employeeSummary.fullTimeFemales || 0) +
-                       (employeeSummary.partTimeMales || 0) +
-                       (employeeSummary.partTimeFemales || 0) +
-                       (employeeSummary.internMales || 0) +
-                       (employeeSummary.internFemales || 0)}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </>
           ) : (
             <EmptyState
               icon={Briefcase}
@@ -440,20 +557,6 @@ export function SmeDetailView({
             </Card>
           ) : formalisation ? (
             <div className="space-y-6">
-              {/* Formalisation Score Breakdown */}
-              <Card>
-                <CardContent className="pt-6">
-                  <ScoreBreakdownBar
-                    breakdown={calculateScoreBreakdown(
-                      formalisation,
-                      !!primaryOwner,
-                      additionalMembers.length,
-                      employeeSummary
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
               {/* Registration & Compliance Status */}
               <Card>
                 <CardHeader>
@@ -472,7 +575,7 @@ export function SmeDetailView({
                       <div className="flex-1 space-y-1">
                         <p className="text-sm text-muted-foreground">Bank Account</p>
                         <BooleanBadge
-                          value={formalisation.hasBankAccount}
+                          value={(formalisation as any).hasBankAccount ?? (formalisation as any).has_bank_account ?? false}
                           trueLabel="Has Account"
                           falseLabel="No Account"
                         />
@@ -486,7 +589,7 @@ export function SmeDetailView({
                       <div className="flex-1 space-y-1">
                         <p className="text-sm text-muted-foreground">Tax Clarification Certificate</p>
                         <BooleanBadge
-                          value={formalisation.hasTaxClarification}
+                          value={(formalisation as any).hasTaxClarification ?? (formalisation as any).has_tax_clarification ?? false}
                           trueLabel="Has Certificate"
                           falseLabel="No Certificate"
                         />
@@ -500,7 +603,7 @@ export function SmeDetailView({
                       <div className="flex-1 space-y-1">
                         <p className="text-sm text-muted-foreground">VAT Registration</p>
                         <BooleanBadge
-                          value={formalisation.isRegisteredForVat}
+                          value={(formalisation as any).isRegisteredForVat ?? (formalisation as any).is_registered_for_vat ?? false}
                           trueLabel="Registered"
                           falseLabel="Not Registered"
                         />
@@ -514,7 +617,7 @@ export function SmeDetailView({
                       <div className="flex-1 space-y-1">
                         <p className="text-sm text-muted-foreground">Export License</p>
                         <BooleanBadge
-                          value={formalisation.hasExportLicense}
+                          value={(formalisation as any).hasExportLicense ?? (formalisation as any).has_export_license ?? false}
                           trueLabel="Has License"
                           falseLabel="No License"
                         />
@@ -542,7 +645,7 @@ export function SmeDetailView({
                       <div className="flex-1 space-y-1">
                         <p className="text-sm text-muted-foreground">Business Association</p>
                         <BooleanBadge
-                          value={formalisation.isMemberOfAssociation}
+                          value={(formalisation as any).isMemberOfAssociation ?? (formalisation as any).is_member_of_association ?? false}
                           trueLabel="Member"
                           falseLabel="Non-Member"
                         />
@@ -556,7 +659,7 @@ export function SmeDetailView({
                       <div className="flex-1 space-y-1">
                         <p className="text-sm text-muted-foreground">Business Affiliation</p>
                         <BooleanBadge
-                          value={formalisation.isAffiliated}
+                          value={(formalisation as any).isAffiliated ?? (formalisation as any).is_affiliated ?? false}
                           trueLabel="Affiliated"
                           falseLabel="Not Affiliated"
                         />
@@ -570,7 +673,7 @@ export function SmeDetailView({
                       <div className="flex-1 space-y-1">
                         <p className="text-sm text-muted-foreground">Business Development Services</p>
                         <BooleanBadge
-                          value={formalisation.hasAccessedBds}
+                          value={(formalisation as any).hasAccessedBds ?? (formalisation as any).has_accessed_bds ?? false}
                           trueLabel="Accessed"
                           falseLabel="Not Accessed"
                         />
@@ -597,11 +700,11 @@ export function SmeDetailView({
                         <p className="text-sm text-muted-foreground">Annual Turnover</p>
                       </div>
                       <p className="text-2xl font-bold text-foreground">
-                        {formalisation.annualTurnover ? `MWK ${formalisation.annualTurnover.toLocaleString()}` : 'Not Specified'}
+                        {((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover) ? `MWK ${((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover).toLocaleString()}` : 'Not Specified'}
                       </p>
-                      {formalisation.annualTurnover && (
+                      {((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover) > 0 && (
                         <p className="text-xs text-muted-foreground">
-                          {formalisation.annualTurnover >= 1000000 ? 'Above MWK 1M' : 'Below MWK 1M'}
+                          {((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover) >= 1000000 ? 'Above MWK 1M' : 'Below MWK 1M'}
                         </p>
                       )}
                     </div>
@@ -612,51 +715,55 @@ export function SmeDetailView({
                         <p className="text-sm text-muted-foreground">Estimated Value of Assets</p>
                       </div>
                       <p className="text-2xl font-bold text-foreground">
-                        {formalisation.estimatedValueOfAssets ? `MWK ${formalisation.estimatedValueOfAssets.toLocaleString()}` : 'Not Specified'}
+                        {((formalisation as any).estimatedValueOfAssets ?? (formalisation as any).estimated_value_of_assets) ? `MWK ${((formalisation as any).estimatedValueOfAssets ?? (formalisation as any).estimated_value_of_assets).toLocaleString()}` : 'Not Specified'}
                       </p>
-                      {formalisation.estimatedValueOfAssets && (
+                      {((formalisation as any).estimatedValueOfAssets ?? (formalisation as any).estimated_value_of_assets) > 0 && (
                         <p className="text-xs text-muted-foreground">
-                          {formalisation.estimatedValueOfAssets >= 5000000 ? 'High Value Assets' : formalisation.estimatedValueOfAssets >= 1000000 ? 'Medium Value Assets' : 'Low Value Assets'}
+                          {((formalisation as any).estimatedValueOfAssets ?? (formalisation as any).estimated_value_of_assets) >= 5000000 ? 'High Value Assets' : ((formalisation as any).estimatedValueOfAssets ?? (formalisation as any).estimated_value_of_assets) >= 1000000 ? 'Medium Value Assets' : 'Low Value Assets'}
                         </p>
                       )}
                     </div>
                   </div>
 
                   {/* Financial Metrics Summary */}
-                  {(formalisation.annualTurnover || formalisation.estimatedValueOfAssets) && (
+                  {(((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover) || ((formalisation as any).estimatedValueOfAssets ?? (formalisation as any).estimated_value_of_assets)) && (
                     <>
                       <Separator />
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                         <div>
                           <p className="text-xs text-muted-foreground">Asset to Turnover Ratio</p>
                           <p className="text-lg font-semibold">
-                            {formalisation.annualTurnover && formalisation.estimatedValueOfAssets
-                              ? `${(formalisation.estimatedValueOfAssets / formalisation.annualTurnover).toFixed(2)}x`
+                            {((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover) && ((formalisation as any).estimatedValueOfAssets ?? (formalisation as any).estimated_value_of_assets)
+                              ? `${(((formalisation as any).estimatedValueOfAssets ?? (formalisation as any).estimated_value_of_assets) / ((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover)).toFixed(2)}x`
                               : '-'}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Monthly Turnover</p>
                           <p className="text-lg font-semibold">
-                            {formalisation.annualTurnover
-                              ? `MWK ${Math.round(formalisation.annualTurnover / 12).toLocaleString()}`
+                            {((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover)
+                              ? `MWK ${Math.round(((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover) / 12).toLocaleString()}`
                               : '-'}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Daily Turnover</p>
                           <p className="text-lg font-semibold">
-                            {formalisation.annualTurnover
-                              ? `MWK ${Math.round(formalisation.annualTurnover / 365).toLocaleString()}`
+                            {((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover)
+                              ? `MWK ${Math.round(((formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover) / 365).toLocaleString()}`
                               : '-'}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Business Scale</p>
                           <p className="text-lg font-semibold">
-                            {formalisation.annualTurnover >= 50000000 ? 'Large' :
-                             formalisation.annualTurnover >= 10000000 ? 'Medium' :
-                             formalisation.annualTurnover >= 1000000 ? 'Small' : 'Micro'}
+                            {(() => {
+                              const turnover = (formalisation as any).annualTurnover ?? (formalisation as any).annual_turnover ?? 0;
+                              if (turnover >= 50000000) return 'Large';
+                              if (turnover >= 10000000) return 'Medium';
+                              if (turnover >= 1000000) return 'Small';
+                              return 'Micro';
+                            })()}
                           </p>
                         </div>
                       </div>
@@ -672,43 +779,48 @@ export function SmeDetailView({
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {formalisation.hasBankAccount && (
+                    {((formalisation as any).hasBankAccount ?? (formalisation as any).has_bank_account) && (
                       <Badge variant="outline" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" />
                         Bank Account
                       </Badge>
                     )}
-                    {formalisation.hasTaxClarification && (
+                    {((formalisation as any).hasTaxClarification ?? (formalisation as any).has_tax_clarification) && (
                       <Badge variant="outline" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" />
                         Tax Compliant
                       </Badge>
                     )}
-                    {formalisation.isRegisteredForVat && (
+                    {((formalisation as any).isRegisteredForVat ?? (formalisation as any).is_registered_for_vat) && (
                       <Badge variant="outline" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" />
                         VAT Registered
                       </Badge>
                     )}
-                    {formalisation.hasExportLicense && (
+                    {((formalisation as any).hasExportLicense ?? (formalisation as any).has_export_license) && (
                       <Badge variant="outline" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" />
                         Export Ready
                       </Badge>
                     )}
-                    {formalisation.isMemberOfAssociation && (
+                    {((formalisation as any).isMemberOfAssociation ?? (formalisation as any).is_member_of_association) && (
                       <Badge variant="outline" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" />
                         Association Member
                       </Badge>
                     )}
-                    {formalisation.hasAccessedBds && (
+                    {((formalisation as any).hasAccessedBds ?? (formalisation as any).has_accessed_bds) && (
                       <Badge variant="outline" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" />
                         BDS Beneficiary
                       </Badge>
                     )}
-                    {!formalisation.hasBankAccount && !formalisation.hasTaxClarification && !formalisation.isRegisteredForVat && !formalisation.hasExportLicense && !formalisation.isMemberOfAssociation && !formalisation.hasAccessedBds && (
+                    {!((formalisation as any).hasBankAccount ?? (formalisation as any).has_bank_account) &&
+                     !((formalisation as any).hasTaxClarification ?? (formalisation as any).has_tax_clarification) &&
+                     !((formalisation as any).isRegisteredForVat ?? (formalisation as any).is_registered_for_vat) &&
+                     !((formalisation as any).hasExportLicense ?? (formalisation as any).has_export_license) &&
+                     !((formalisation as any).isMemberOfAssociation ?? (formalisation as any).is_member_of_association) &&
+                     !((formalisation as any).hasAccessedBds ?? (formalisation as any).has_accessed_bds) && (
                       <span className="text-sm text-muted-foreground">No compliance items completed</span>
                     )}
                   </div>
