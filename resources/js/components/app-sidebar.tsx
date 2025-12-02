@@ -17,6 +17,7 @@ import {
 import { usePermissions } from "@/contexts/PermissionsContext"
 import { navigationConfig } from "@/config/navigation"
 import { GlobalSearch } from "@/components/GlobalSearch"
+import { useUI } from "@/contexts/UIContext"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     user?: any;
@@ -25,6 +26,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({user, ...props}: AppSidebarProps) {
     const { canPerformAction, isSuperAdmin: checkIsSuperAdmin, isAdmin } = usePermissions();
     const [searchOpen, setSearchOpen] = React.useState(false);
+    const { openMessages, openNotifications } = useUI();
     
     // Filter navigation items based on permissions
     const navigationItems = React.useMemo(() => {
@@ -127,7 +129,12 @@ export function AppSidebar({user, ...props}: AppSidebarProps) {
                 </SidebarContent>
                 <SidebarFooter>
                     {user && (
-                        <NavUser user={user} isSuperAdmin={checkIsSuperAdmin()} />
+                        <NavUser
+                            user={user}
+                            isSuperAdmin={checkIsSuperAdmin()}
+                            onMessagesClick={openMessages}
+                            onNotificationsClick={openNotifications}
+                        />
                     )}
                 </SidebarFooter>
             </Sidebar>

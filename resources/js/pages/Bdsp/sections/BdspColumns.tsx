@@ -3,6 +3,7 @@ import { Bdsp } from '@/types/bdsp';
 import { CrudColumn, CrudFilter } from '@/types/crud';
 import { Badge } from '@/components/ui/badge';
 import { User, MapPin, Tag, FileText } from 'lucide-react';
+import { CopyableText } from '@/components/ui/copyable-text';
 
 /**
  * Bdsp table columns configuration
@@ -14,12 +15,10 @@ export const bdspColumns: CrudColumn<Bdsp>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (bdsp) => (
-      <div className="flex items-start gap-3">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          <p className="font-medium text-foreground">{bdsp.ubdsp_number}</p>
-        </div>
-      </div>
+      <CopyableText
+        value={bdsp.ubdsp_number || (bdsp as any).ubdspNumber}
+        className="font-mono text-sm font-medium text-foreground"
+      />
     ),
   },
   {

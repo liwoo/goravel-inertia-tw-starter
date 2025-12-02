@@ -4,12 +4,12 @@ import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 import { NotificationDrawer } from "@/components/Notifications/NotificationDrawer"
 import { Button } from "@/components/ui/button"
 import { MessageCircle } from "lucide-react"
-import { useState } from "react"
 import { MessageSidebar } from "@/components/Messages/MessageSidebar"
 import { MessageChat } from "@/components/Messages/MessageChat"
 import { useMessages, MessageUser } from "@/contexts/MessageContext"
 import { usePage } from "@inertiajs/react"
 import { SharedData } from "@/types/app"
+import { useUI } from "@/contexts/UIContext"
 import {
   Drawer,
   DrawerContent,
@@ -18,10 +18,10 @@ import {
 } from "@/components/ui/drawer"
 
 export function SiteHeader({title}: { title: string }) {
-  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const { props } = usePage<SharedData>();
   const user = props.auth?.user;
   const { selectedConversation, unreadCount } = useMessages();
+  const { isMessagesOpen, openMessages, closeMessages, isNotificationsOpen, openNotifications, closeNotifications } = useUI();
 
   return (
     <>
@@ -39,7 +39,7 @@ export function SiteHeader({title}: { title: string }) {
               variant="ghost"
               size="icon"
               className="relative"
-              onClick={() => setIsMessagesOpen(true)}
+              onClick={openMessages}
             >
               <MessageCircle className="h-5 w-5" />
               {unreadCount > 0 && (
@@ -50,7 +50,7 @@ export function SiteHeader({title}: { title: string }) {
             </Button>
 
             {/* Notifications */}
-            <NotificationDrawer />
+            <NotificationDrawer isOpen={isNotificationsOpen} onOpenChange={(open) => open ? openNotifications() : closeNotifications()} />
 
             {/* Theme Toggle */}
             <ThemeToggleIcon />
@@ -59,7 +59,7 @@ export function SiteHeader({title}: { title: string }) {
       </header>
 
       {/* Messages Drawer */}
-      <Drawer open={isMessagesOpen} onOpenChange={setIsMessagesOpen}>
+      <Drawer open={isMessagesOpen} onOpenChange={(open) => open ? openMessages() : closeMessages()}>
         <DrawerContent className="max-w-6xl mx-auto h-[80vh]">
           <DrawerHeader className="pb-4">
             <DrawerTitle>Messages</DrawerTitle>

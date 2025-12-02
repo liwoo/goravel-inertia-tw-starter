@@ -1,6 +1,5 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, Users, DollarSign } from 'lucide-react';
 
 interface ScoreBreakdown {
   formalisation: number; // Actual score from 7 checkboxes (0-70)
@@ -16,218 +15,82 @@ interface ScoreBreakdownBarProps {
 export function ScoreBreakdownBar({ breakdown, className }: ScoreBreakdownBarProps) {
   const totalScore = breakdown.formalisation + breakdown.teamStructure + breakdown.financialData;
 
-  // Calculate percentages for the bar (out of 100 total)
-  const formalisationPercent = breakdown.formalisation;
-  const teamPercent = breakdown.teamStructure;
-  const financialPercent = breakdown.financialData;
-
-  // Get color based on total score
-  const getOverallColor = () => {
-    if (totalScore >= 67) return 'text-emerald-600';
-    if (totalScore >= 34) return 'text-amber-500';
-    return 'text-red-500';
-  };
-
-  const getOverallBadgeColor = () => {
-    if (totalScore >= 67) return 'bg-emerald-600 text-white';
-    if (totalScore >= 34) return 'bg-amber-500 text-white';
-    return 'bg-red-500 text-white';
-  };
-
-  const sections = [
+  const categories = [
     {
-      label: 'Formalisation Checkboxes',
+      label: 'Compliance',
       score: breakdown.formalisation,
       maxScore: 70,
       color: 'bg-blue-500',
-      lightColor: 'bg-blue-100 dark:bg-blue-950',
-      textColor: 'text-blue-700 dark:text-blue-300',
-      icon: CheckCircle2,
-      description: '7 compliance indicators, 10 points each'
+      dotColor: 'bg-blue-500',
     },
     {
       label: 'Team Structure',
       score: breakdown.teamStructure,
       maxScore: 20,
-      color: 'bg-purple-500',
-      lightColor: 'bg-purple-100 dark:bg-purple-950',
-      textColor: 'text-purple-700 dark:text-purple-300',
-      icon: Users,
-      description: 'Owner, members, employees, team size'
+      color: 'bg-amber-500',
+      dotColor: 'bg-amber-500',
     },
     {
-      label: 'Financial Data',
+      label: 'Financial',
       score: breakdown.financialData,
       maxScore: 10,
-      color: 'bg-green-500',
-      lightColor: 'bg-green-100 dark:bg-green-950',
-      textColor: 'text-green-700 dark:text-green-300',
-      icon: DollarSign,
-      description: 'Annual turnover and estimated assets'
-    }
+      color: 'bg-emerald-500',
+      dotColor: 'bg-emerald-500',
+    },
   ];
 
+  // Calculate cumulative positions for the segmented bar
+  let cumulativePercent = 0;
+
   return (
-    <div className={cn('space-y-6', className)}>
-      {/* Overall Score Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold text-foreground">Formalisation Score</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Overall business formalisation assessment
-          </p>
-        </div>
-        <div className="text-right">
-          <div className={cn('text-5xl font-bold tabular-nums', getOverallColor())}>
-            {totalScore}
-          </div>
-          <div className="text-sm text-muted-foreground mt-1">out of 100</div>
-        </div>
+    <div className={cn('space-y-4', className)}>
+      {/* Header with title and total score */}
+      <div className="flex items-baseline justify-between">
+        <h3 className="text-sm font-medium text-muted-foreground">Formalisation Score</h3>
       </div>
 
-      {/* Main Progress Bar */}
-      <div className="space-y-3">
-        <div className="relative h-12 w-full overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
-          {/* Formalisation segment */}
-          {breakdown.formalisation > 0 && (
-            <div
-              className="absolute left-0 top-0 h-full bg-blue-500 transition-all duration-500 flex items-center justify-center"
-              style={{ width: `${formalisationPercent}%` }}
-            >
-              {formalisationPercent >= 8 && (
-                <span className="text-xs font-semibold text-white">
-                  {breakdown.formalisation}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Team Structure segment */}
-          {breakdown.teamStructure > 0 && (
-            <div
-              className="absolute top-0 h-full bg-purple-500 transition-all duration-500 flex items-center justify-center"
-              style={{
-                left: `${formalisationPercent}%`,
-                width: `${teamPercent}%`
-              }}
-            >
-              {teamPercent >= 5 && (
-                <span className="text-xs font-semibold text-white">
-                  {breakdown.teamStructure}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Financial Data segment */}
-          {breakdown.financialData > 0 && (
-            <div
-              className="absolute top-0 h-full bg-green-500 transition-all duration-500 flex items-center justify-center"
-              style={{
-                left: `${formalisationPercent + teamPercent}%`,
-                width: `${financialPercent}%`
-              }}
-            >
-              {financialPercent >= 3 && (
-                <span className="text-xs font-semibold text-white">
-                  {breakdown.financialData}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Score marker overlay */}
-          {totalScore === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-sm text-muted-foreground">No score data</span>
-            </div>
-          )}
-        </div>
-
-        {/* Score range labels */}
-        <div className="flex justify-between text-xs text-muted-foreground px-1">
-          <span>0</span>
-          <span className="text-red-500">0-33 Low</span>
-          <span className="text-amber-500">34-66 Medium</span>
-          <span className="text-emerald-600">67-100 High</span>
-          <span>100</span>
-        </div>
+      {/* Large Score Display */}
+      <div className="flex items-baseline gap-2">
+        <span className="text-5xl font-bold tabular-nums text-foreground">{totalScore}</span>
+        <span className="text-lg text-muted-foreground">/ 100</span>
       </div>
 
-      {/* Breakdown Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {sections.map((section) => {
-          const Icon = section.icon;
-          const percentage = (section.score / section.maxScore) * 100;
+      {/* Segmented Progress Bar */}
+      <div className="relative h-3 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+        {categories.map((category, index) => {
+          const width = category.score;
+          const left = cumulativePercent;
+          cumulativePercent += category.score;
+
+          if (width === 0) return null;
 
           return (
             <div
-              key={section.label}
-              className={cn(
-                'rounded-lg border p-4 transition-all hover:shadow-md',
-                section.lightColor,
-                'border-slate-200 dark:border-slate-700'
-              )}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className={cn('p-2 rounded-lg', section.color)}>
-                  <Icon className="h-4 w-4 text-white" />
-                </div>
-                <div className="text-right">
-                  <div className={cn('text-2xl font-bold tabular-nums', section.textColor)}>
-                    {section.score}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    / {section.maxScore}
-                  </div>
-                </div>
-              </div>
-
-              <h4 className="font-semibold text-sm text-foreground mb-1">
-                {section.label}
-              </h4>
-              <p className="text-xs text-muted-foreground mb-3">
-                {section.description}
-              </p>
-
-              {/* Mini progress bar */}
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                <div
-                  className={cn('h-full transition-all duration-500', section.color)}
-                  style={{ width: `${percentage}%` }}
-                />
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground text-right">
-                {Math.round(percentage)}%
-              </div>
-            </div>
+              key={category.label}
+              className={cn('absolute top-0 h-full transition-all duration-500', category.color)}
+              style={{
+                left: `${left}%`,
+                width: `${width}%`,
+              }}
+            />
           );
         })}
       </div>
 
-      {/* Status Badge */}
-      <div className="flex items-center justify-center">
-        <div className={cn(
-          'inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold',
-          getOverallBadgeColor()
-        )}>
-          {totalScore >= 67 ? (
-            <>
-              <CheckCircle2 className="h-5 w-5" />
-              <span>Highly Formalised</span>
-            </>
-          ) : totalScore >= 34 ? (
-            <>
-              <CheckCircle2 className="h-5 w-5" />
-              <span>Moderately Formalised</span>
-            </>
-          ) : (
-            <>
-              <CheckCircle2 className="h-5 w-5" />
-              <span>Low Formalisation</span>
-            </>
-          )}
-        </div>
+      {/* Category Breakdown - 3 columns */}
+      <div className="grid grid-cols-3 gap-4 pt-2">
+        {categories.map((category) => (
+          <div key={category.label} className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className={cn('h-2.5 w-2.5 rounded-full', category.dotColor)} />
+              <span className="text-sm text-muted-foreground">{category.label}</span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold tabular-nums text-foreground">{category.score}</span>
+              <span className="text-sm text-muted-foreground">/ {category.maxScore}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -245,14 +108,15 @@ export function calculateScoreBreakdown(
   let financialScore = 0;
 
   // Formalisation Checkboxes (70 points max)
+  // Support both camelCase and snake_case field names
   if (formalisation) {
-    if (formalisation.hasBankAccount) formalisationScore += 10;
-    if (formalisation.hasTaxClarification) formalisationScore += 10;
-    if (formalisation.isRegisteredForVat) formalisationScore += 10;
-    if (formalisation.isMemberOfAssociation) formalisationScore += 10;
-    if (formalisation.isAffiliated) formalisationScore += 10;
-    if (formalisation.hasExportLicense) formalisationScore += 10;
-    if (formalisation.hasAccessedBds) formalisationScore += 10;
+    if (formalisation.hasBankAccount ?? formalisation.has_bank_account) formalisationScore += 10;
+    if (formalisation.hasTaxClarification ?? formalisation.has_tax_clarification) formalisationScore += 10;
+    if (formalisation.isRegisteredForVat ?? formalisation.is_registered_for_vat) formalisationScore += 10;
+    if (formalisation.isMemberOfAssociation ?? formalisation.is_member_of_association) formalisationScore += 10;
+    if (formalisation.isAffiliated ?? formalisation.is_affiliated) formalisationScore += 10;
+    if (formalisation.hasExportLicense ?? formalisation.has_export_license) formalisationScore += 10;
+    if (formalisation.hasAccessedBds ?? formalisation.has_accessed_bds) formalisationScore += 10;
   }
 
   // Team Structure (20 points max)
@@ -267,8 +131,16 @@ export function calculateScoreBreakdown(
   }
 
   // Has full-time employees: 5 points
+  // Support both camelCase and snake_case field names
   if (employeeSummary) {
-    const fullTimeEmployees = (employeeSummary.fullTimeMales || 0) + (employeeSummary.fullTimeFemales || 0);
+    const fullTimeMales = employeeSummary.fullTimeMales ?? employeeSummary.full_time_males ?? 0;
+    const fullTimeFemales = employeeSummary.fullTimeFemales ?? employeeSummary.full_time_females ?? 0;
+    const partTimeMales = employeeSummary.partTimeMales ?? employeeSummary.part_time_males ?? 0;
+    const partTimeFemales = employeeSummary.partTimeFemales ?? employeeSummary.part_time_females ?? 0;
+    const internMales = employeeSummary.internMales ?? employeeSummary.intern_males ?? 0;
+    const internFemales = employeeSummary.internFemales ?? employeeSummary.intern_females ?? 0;
+
+    const fullTimeEmployees = fullTimeMales + fullTimeFemales;
     if (fullTimeEmployees > 0) {
       teamScore += 5;
     }
@@ -277,9 +149,9 @@ export function calculateScoreBreakdown(
     let totalTeamSize = 0;
     if (hasPrimaryOwner) totalTeamSize += 1;
     totalTeamSize += additionalMembersCount;
-    totalTeamSize += (employeeSummary.fullTimeMales || 0) + (employeeSummary.fullTimeFemales || 0);
-    totalTeamSize += (employeeSummary.partTimeMales || 0) + (employeeSummary.partTimeFemales || 0);
-    totalTeamSize += (employeeSummary.internMales || 0) + (employeeSummary.internFemales || 0);
+    totalTeamSize += fullTimeMales + fullTimeFemales;
+    totalTeamSize += partTimeMales + partTimeFemales;
+    totalTeamSize += internMales + internFemales;
 
     if (totalTeamSize >= 10) {
       teamScore += 5;
@@ -291,14 +163,18 @@ export function calculateScoreBreakdown(
   }
 
   // Financial Data (10 points max)
+  // Support both camelCase and snake_case field names
   if (formalisation) {
+    const annualTurnover = formalisation.annualTurnover ?? formalisation.annual_turnover ?? 0;
+    const estimatedAssets = formalisation.estimatedValueOfAssets ?? formalisation.estimated_value_of_assets ?? 0;
+
     // Annual turnover: 5 points
-    if (formalisation.annualTurnover && formalisation.annualTurnover > 0) {
+    if (annualTurnover > 0) {
       financialScore += 5;
     }
 
     // Estimated assets: 5 points
-    if (formalisation.estimatedValueOfAssets && formalisation.estimatedValueOfAssets > 0) {
+    if (estimatedAssets > 0) {
       financialScore += 5;
     }
   }

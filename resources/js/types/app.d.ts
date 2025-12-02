@@ -4,6 +4,9 @@ export interface User {
     email: string
     role: string
     is_active?: boolean
+    isSuperAdmin?: boolean
+    isAdmin?: boolean
+    permissions?: string[]
     roles?: Array<{
         id: number
         name: string

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"smedi-sme-db/app/http/controllers"
+	"smedi-sme-db/app/http/controllers/account"
 	"smedi-sme-db/app/http/controllers/additional_business_members"
 	"smedi-sme-db/app/http/controllers/applications"
 	"smedi-sme-db/app/http/controllers/auth"
@@ -56,6 +57,7 @@ func Api(router route.Router) {
 	bdspController := bdsps.NewBdspController()
 	lenderController := lenders.NewLenderController()
 	applicationController := applications.NewApplicationController()
+	accountController := account.NewAccountController()
 
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
@@ -272,6 +274,17 @@ func Api(router route.Router) {
 			notificationRouter.Post("/", notificationController.CreateNotification)
 			notificationRouter.Post("/system", notificationController.CreateSystemNotification)
 			notificationRouter.Post("/cleanup", notificationController.CleanupExpired)
+		})
+
+		// Account routes (user profile and settings)
+		protectedRouter.Prefix("account").Group(func(accountRouter route.Router) {
+			accountRouter.Get("/profile", accountController.GetProfile)
+			accountRouter.Put("/profile", accountController.UpdateProfile)
+			accountRouter.Put("/password", accountController.ChangePassword)
+			accountRouter.Get("/activities", accountController.GetActivities)
+			accountRouter.Get("/activities/types", accountController.GetActivityTypes)
+			accountRouter.Get("/activities/summary", accountController.GetActivitySummary)
+			accountRouter.Get("/recent-activities", accountController.GetRecentActivities)
 		})
 
 	})

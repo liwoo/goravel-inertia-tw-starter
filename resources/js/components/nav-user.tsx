@@ -1,4 +1,4 @@
-import {BellIcon, CreditCardIcon, LogOutIcon, MoreVerticalIcon, UserCircleIcon,} from "lucide-react"
+import {BellIcon, MessageCircleIcon, LogOutIcon, MoreVerticalIcon, UserCircleIcon,} from "lucide-react"
 
 import {Avatar, AvatarFallback, AvatarImage,} from "@/components/ui/avatar"
 import {
@@ -18,9 +18,13 @@ import {Link} from "@inertiajs/react";
 export function NavUser({
                             user,
                             isSuperAdmin = false,
+                            onMessagesClick,
+                            onNotificationsClick,
                         }: {
     user: User | null,
-    isSuperAdmin: boolean
+    isSuperAdmin: boolean,
+    onMessagesClick?: () => void,
+    onNotificationsClick?: () => void,
 }) {
     const {isMobile} = useSidebar()
 
@@ -91,11 +95,11 @@ export function NavUser({
                                     <span>Account</span>
                                 </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <CreditCardIcon className="mr-2 h-4 w-4"/>
-                                <span>Billing</span>
+                            <DropdownMenuItem onClick={onMessagesClick}>
+                                <MessageCircleIcon className="mr-2 h-4 w-4"/>
+                                <span>Messages</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={onNotificationsClick}>
                                 <BellIcon className="mr-2 h-4 w-4"/>
                                 <span>Notifications</span>
                             </DropdownMenuItem>

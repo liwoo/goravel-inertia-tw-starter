@@ -7,6 +7,7 @@ import { Bdsp } from '@/types/bdsp';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CopyableText } from '@/components/ui/copyable-text';
 
 export function BdspDetailView({
   item: bdsp,
@@ -48,7 +49,19 @@ export function BdspDetailView({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DetailRow icon={FileText} label="UBDSP Number" value={bdsp.ubdsp_number} />
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-muted">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-sm text-muted-foreground">UBDSP Number</p>
+                <CopyableText
+                  value={bdsp.ubdsp_number || (bdsp as any).ubdspNumber}
+                  className="font-mono font-medium text-foreground"
+                  iconSize="md"
+                />
+              </div>
+            </div>
 
             <DetailRow icon={User} label="Name" value={bdsp.name} />
             <div className="flex items-start gap-3">
