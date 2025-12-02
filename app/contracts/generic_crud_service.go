@@ -475,8 +475,9 @@ func (s *GenericCrudService[T]) GetByID(id uint) (interface{}, error) {
 		query = s.customQuery(query)
 	}
 
-	// Use First with the model pointer to ensure GORM handles soft deletes
-	if err := query.Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
+	// Use qualified primary key (table.column) to avoid ambiguity when JOINs are used
+	primaryKey := s.BaseCrudService.GetQualifiedPrimaryKey()
+	if err := query.Where(primaryKey+" = ?", id).First(&model); err != nil {
 		fmt.Printf("DEBUG: GetByID - Failed to find model with ID %d: %v\n", id, err)
 		return nil, fmt.Errorf("%s not found: %w", s.BaseCrudService.tableName, err)
 	}
@@ -528,7 +529,9 @@ func (s *GenericCrudService[T]) GetByIDWithContext(ctx http.Context, id uint) (i
 		}
 	}
 
-	if err := query.Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
+	// Use qualified primary key (table.column) to avoid ambiguity when JOINs are used
+	primaryKey := s.BaseCrudService.GetQualifiedPrimaryKey()
+	if err := query.Where(primaryKey+" = ?", id).First(&model); err != nil {
 		return nil, fmt.Errorf("%s not found: %w", s.BaseCrudService.tableName, err)
 	}
 

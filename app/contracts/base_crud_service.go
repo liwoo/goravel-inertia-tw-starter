@@ -112,6 +112,12 @@ func (b *BaseCrudService) GetPrimaryKey() string {
 	return b.primaryKey
 }
 
+// GetQualifiedPrimaryKey returns the table-qualified primary key (e.g., "smes.id")
+// This is needed when using JOINs to avoid ambiguous column references
+func (b *BaseCrudService) GetQualifiedPrimaryKey() string {
+	return b.tableName + "." + b.primaryKey
+}
+
 // VALIDATION HELPERS
 
 func (b *BaseCrudService) ValidateListRequest(req *ListRequest) error {
