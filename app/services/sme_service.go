@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/goravel/framework/facades"
 	"smedi-sme-db/app/contracts"
 	"smedi-sme-db/app/http/requests"
 	"smedi-sme-db/app/models"
+
+	"github.com/goravel/framework/facades"
 )
 
 // SmeService implements business logic for smes using the builder pattern
@@ -25,7 +26,7 @@ func NewSmeService() *SmeService {
 	service := contracts.NewServiceBuilder[models.Sme]("smes", "id").
 		WithSearchFields("usme_number", "name", "registration_number", "tax_identification_number", "business_category", "sector", "contact_email", "contact_phone", "region", "district"). // Fields that will be searchable via the search query parameter
 		WithSortFields("id", "created_at", "updated_at", "usme_number", "name", "operational_start_date", "business_category", "sector", "region", "district").                             // Fields that can be used for sorting results
-		WithFilterFields("business_category", "sector", "region", "district", "created_by", "is_active").                                                                                                // Fields that can be filtered on
+		WithFilterFields("business_category", "sector", "region", "district", "created_by", "is_active").                                                                                   // Fields that can be filtered on
 		WithValidationRules(map[string]interface{}{                                                                                                                                         // Validation rules for create/update operations
 			// usme_number is omitted from validation - will be auto-generated in BeforeCreate hook if not provided
 			"name":                           "required|string|max:255",
@@ -800,6 +801,40 @@ func (s *SmeService) getDistributionByField(field string) []map[string]interface
 	}
 
 	return distribution
+}
+
+// GetSmeByUserId retrieves the SME associated with the given user ID
+// It checks both PrimaryBusinessOwner and AdditionalBusinessMember tables by email
+func (s *SmeService) GetSmeByUserEmail(email string) (*models.Sme, error) {
+	var sme models.Sme
+
+	err := facades.Orm().Query().
+		Model(&models.Sme{}).
+		Join("INNER JOIN primary_business_owner ON primary_business_owner.sme_id = smes.id").
+		Where("primary_business_owner.email = ?", email).
+		Where("primary_business_owner.deleted_at IS NULL").
+		First(&sme)
+
+	if err == nil && sme.ID != 0 {
+		return &sme, nil
+	}
+
+	err = facades.Orm().Query().
+		Model(&models.Sme{}).
+		Join("INNER JOIN additional_business_members ON additional_business_members.sme_id = smes.id").
+		Where("additional_business_members.email = ?", email).
+		Where("additional_business_members.deleted_at IS NULL").
+		First(&sme)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if sme.ID == 0 {
+		return nil, nil
+	}
+
+	return &sme, nil
 }
 
 // GetDistributionBySector returns SME distribution by sector field

@@ -200,5 +200,11 @@ export const navigationConfig: NavigationConfig = {
             icon: FolderIcon,
             requiredRole: "sme-user",
         },
+        {
+            title: "My Applications",
+            url: "/applications",
+            icon: NotebookTabsIcon,
+            requiredRole: "sme-user",
+        },
     ],
 }
