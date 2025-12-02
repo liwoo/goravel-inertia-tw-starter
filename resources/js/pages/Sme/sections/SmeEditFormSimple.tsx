@@ -50,6 +50,7 @@ interface AdditionalMemberData {
   nationality: string;
   nationalIdNumber: string;
   dateOfBirth?: string;
+  gender: string;
   email?: string;
   phoneNumber: string;
   isIntern: boolean;
@@ -110,8 +111,9 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
     initialFormalization || undefined
   );
 
-  // Additional members
+  // Additional members - track both current and original to detect deletions
   const [additionalMembers, setAdditionalMembers] = useState<AdditionalMemberData[]>(initialAdditionalMembers);
+  const [originalMemberIds] = useState<number[]>(initialAdditionalMembers.filter(m => m.id).map(m => m.id!));
 
   // Save business info
   const handleSaveBusinessInfo = async () => {
@@ -290,6 +292,75 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
     }
   };
 
+  // Save additional members
+  const handleSaveAdditionalMembers = async () => {
+    setIsSaving?.(true);
+
+    try {
+      const currentMemberIds = additionalMembers.filter(m => m.id).map(m => m.id!);
+      const deletedMemberIds = originalMemberIds.filter(id => !currentMemberIds.includes(id));
+
+      // Delete removed members
+      for (const memberId of deletedMemberIds) {
+        await fetch(`/api/additional-business-members/${memberId}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        });
+      }
+
+      // Create or update members
+      for (const member of additionalMembers) {
+        const payload = snakefiyKeys({
+          ...member,
+          smeId: sme.id,
+        });
+
+        if (member.id) {
+          // Update existing member
+          await fetch(`/api/additional-business-members/${member.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          // Create new member
+          const response = await fetch('/api/additional-business-members', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          // Update local state with the new id
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data?.id) {
+              member.id = data.data.id;
+            }
+          }
+        }
+      }
+
+      // Update state with new ids
+      setAdditionalMembers([...additionalMembers]);
+      onSuccess('Team members saved successfully');
+    } catch (error) {
+      onError?.(error);
+    } finally {
+      setIsSaving?.(false);
+    }
+  };
+
   // Expose handleSubmit - saves the active tab
   useImperativeHandle(ref, () => ({
     handleSubmit: () => {
@@ -301,8 +372,7 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
         case 'formalization':
           return handleSaveFormalization();
         case 'additional-members':
-          onSuccess('Additional members updated locally. Note: Changes are not yet persisted to the backend.');
-          return Promise.resolve();
+          return handleSaveAdditionalMembers();
         default:
           return handleSaveBusinessInfo();
       }

@@ -1,6 +1,8 @@
 package services
 
 import (
+	"github.com/goravel/framework/facades"
+
 	"smedi-sme-db/app/contracts"
 	"smedi-sme-db/app/models"
 )
@@ -14,28 +16,28 @@ type BusinessFormalisationService struct {
 func NewBusinessFormalisationService() *BusinessFormalisationService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.BusinessFormalisation]("business_formalisation", "id").
-		WithSearchFields("sme_id").                                                                             // REQUIRED
-		WithSortFields("id", "sme_id", "formalisation_score", "annual_turnover", "estimated_value_of_assets", "created_at", "updated_at"). // REQUIRED
+		WithSearchFields("sme_id").                                                                                                          // REQUIRED
+		WithSortFields("id", "sme_id", "formalisation_score", "annual_turnover", "estimated_value_of_assets", "created_at", "updated_at").   // REQUIRED
 		WithFilterFields("sme_id", "has_bank_account", "has_tax_clarification", "is_registered_for_vat",
-			"is_member_of_association", "is_affiliated", "has_export_license", "has_accessed_bds").          // REQUIRED
-		WithValidationRules(map[string]interface{}{                                                             // REQUIRED
-			"sme_id":                     "required|numeric|min:1",
-			"has_bank_account":           "boolean",
-			"has_tax_clarification":      "boolean",
-			"is_registered_for_vat":      "boolean",
-			"is_member_of_association":   "boolean",
-			"is_affiliated":              "boolean",
-			"has_export_license":         "boolean",
-			"has_accessed_bds":           "boolean",
-			"annual_turnover":            "numeric|min:0",
-			"estimated_value_of_assets":  "numeric|min:0",
+			"is_member_of_association", "is_affiliated", "has_export_license", "has_accessed_bds"). // REQUIRED
+		WithValidationRules(map[string]interface{}{ // REQUIRED
+			"sme_id":                    "required|numeric|min:1",
+			"has_bank_account":          "boolean",
+			"has_tax_clarification":     "boolean",
+			"is_registered_for_vat":     "boolean",
+			"is_member_of_association":  "boolean",
+			"is_affiliated":             "boolean",
+			"has_export_license":        "boolean",
+			"has_accessed_bds":          "boolean",
+			"annual_turnover":           "numeric|min:0",
+			"estimated_value_of_assets": "numeric|min:0",
 			// Note: formalisation_score is intentionally not included in validation rules
 			// as it should be read-only and calculated internally
 		}).
-		WithDefaultSort("created_at", "DESC").                     // Optional
-		WithSoftDeletes().                                         // Optional
+		WithDefaultSort("created_at", "DESC").                      // Optional
+		WithSoftDeletes().                                          // Optional
 		WithScopeFiltering("business_formalisation", "created_by"). // Optional
-		WithBeforeCreate(func(data map[string]interface{}) error { // Optional
+		WithBeforeCreate(func(data map[string]interface{}) error {  // Optional
 			// Ensure boolean fields have default values
 			boolFields := []string{
 				"has_bank_account", "has_tax_clarification", "is_registered_for_vat",
@@ -67,19 +69,31 @@ func NewBusinessFormalisationService() *BusinessFormalisationService {
 
 			return nil
 		}).
+		WithAfterCreate(func(model *models.BusinessFormalisation) error {
+			// Recalculate formalisation score after creating a business formalisation record
+			if model != nil && model.SmeID > 0 {
+				smeService := NewSmeService()
+				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate formalisation score after create: %v", err)
+				}
+			}
+			return nil
+		}).
+		WithAfterUpdate(func(model *models.BusinessFormalisation) error {
+			// Recalculate formalisation score after updating a business formalisation record
+			if model != nil && model.SmeID > 0 {
+				smeService := NewSmeService()
+				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate formalisation score after update: %v", err)
+				}
+			}
+			return nil
+		}).
 		Build()
 
 	return &BusinessFormalisationService{
 		CrudServiceContract: service,
 	}
 }
-
-// Additional custom methods can be added here if needed
-// For example, a method to calculate the formalisation score could be added:
-/*
-func (s *BusinessFormalisationService) CalculateFormalisationScore(id uint) error {
-	// Implementation for calculating and updating the formalisation score
-	// This would be the only way to update the formalisation_score field
-	return nil
-}
-*/

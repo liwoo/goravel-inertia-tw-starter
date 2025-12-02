@@ -14,6 +14,7 @@ import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { EmptyState } from '@/components/EmptyState';
+import { ScoreBreakdownBar, calculateScoreBreakdown } from '@/components/ui/score-breakdown-bar';
 
 export function SmeDetailView({
   item: sme,
@@ -439,27 +440,17 @@ export function SmeDetailView({
             </Card>
           ) : formalisation ? (
             <div className="space-y-6">
-              {/* Formalisation Score Card */}
+              {/* Formalisation Score Breakdown */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Award className="h-5 w-5" />
-                      Formalisation Score
-                    </div>
-                    <Badge variant={formalisation.formalisationScore >= 70 ? 'default' : formalisation.formalisationScore >= 40 ? 'secondary' : 'destructive'} className="text-lg px-4 py-1">
-                      {formalisation.formalisationScore || 0} / 100
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>Overall business formalisation assessment</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Progress value={formalisation.formalisationScore || 0} className="h-3" />
-                  <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-                    <span>Informal</span>
-                    <span>Semi-Formal</span>
-                    <span>Formal</span>
-                  </div>
+                <CardContent className="pt-6">
+                  <ScoreBreakdownBar
+                    breakdown={calculateScoreBreakdown(
+                      formalisation,
+                      !!primaryOwner,
+                      additionalMembers.length,
+                      employeeSummary
+                    )}
+                  />
                 </CardContent>
               </Card>
 

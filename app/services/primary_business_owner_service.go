@@ -1,6 +1,8 @@
 package services
 
 import (
+	"github.com/goravel/framework/facades"
+
 	"smedi-sme-db/app/contracts"
 	"smedi-sme-db/app/models"
 )
@@ -8,10 +10,15 @@ import (
 // PrimaryBusinessOwnerService implements business logic for primary business owners using the builder pattern
 type PrimaryBusinessOwnerService struct {
 	contracts.CrudServiceContract // Embedded interface - automatically exposes all CRUD methods!
+	// Store sme_id for use in after delete hook
+	pendingDeleteSmeID int
 }
 
 // NewPrimaryBusinessOwnerService creates a new PrimaryBusinessOwner service using the builder pattern
 func NewPrimaryBusinessOwnerService() *PrimaryBusinessOwnerService {
+	// Create service instance first to allow referencing in hooks
+	primaryBusinessOwnerServiceInstance := &PrimaryBusinessOwnerService{}
+
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.PrimaryBusinessOwner]("primary_business_owner", "id").
 		WithSearchFields("first_name", "last_name", "other_names", "national_id_number", "phone_number", "email").
@@ -44,11 +51,52 @@ func NewPrimaryBusinessOwnerService() *PrimaryBusinessOwnerService {
 		WithDefaultSort("created_at", "DESC").
 		WithScopeFiltering("primary_business_owner", "created_by").
 		WithSoftDeletes().
+		WithAfterCreate(func(model *models.PrimaryBusinessOwner) error {
+			// Recalculate formalisation score after creating a primary business owner
+			if model != nil && model.SmeID > 0 {
+				smeService := NewSmeService()
+				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate formalisation score after primary owner create: %v", err)
+				}
+			}
+			return nil
+		}).
+		WithAfterUpdate(func(model *models.PrimaryBusinessOwner) error {
+			// Recalculate formalisation score after updating a primary business owner
+			if model != nil && model.SmeID > 0 {
+				smeService := NewSmeService()
+				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate formalisation score after primary owner update: %v", err)
+				}
+			}
+			return nil
+		}).
+		WithBeforeDelete(func(id uint) error {
+			// Fetch the primary business owner to get the sme_id before deletion
+			var owner models.PrimaryBusinessOwner
+			err := facades.Orm().Query().Where("id = ?", id).First(&owner)
+			if err == nil && owner.SmeID > 0 {
+				primaryBusinessOwnerServiceInstance.pendingDeleteSmeID = owner.SmeID
+			}
+			return nil
+		}).
+		WithAfterDelete(func(id uint) error {
+			// Recalculate formalisation score after deleting a primary business owner
+			if primaryBusinessOwnerServiceInstance.pendingDeleteSmeID > 0 {
+				smeService := NewSmeService()
+				_, err := smeService.CalculateFormalisationScore(uint(primaryBusinessOwnerServiceInstance.pendingDeleteSmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate formalisation score after primary owner delete: %v", err)
+				}
+				primaryBusinessOwnerServiceInstance.pendingDeleteSmeID = 0 // Reset after use
+			}
+			return nil
+		}).
 		Build()
 
-	primaryBusinessOwnerServiceInstance := &PrimaryBusinessOwnerService{
-		CrudServiceContract: service,
-	}
+	primaryBusinessOwnerServiceInstance.CrudServiceContract = service
 
 	// Set the actual service instance for proper method resolution
 	contracts.SetActualServiceHelper(service, primaryBusinessOwnerServiceInstance, "PrimaryBusinessOwnerService")

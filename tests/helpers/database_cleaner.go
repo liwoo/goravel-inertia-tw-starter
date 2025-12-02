@@ -1,64 +1,18 @@
 package helpers
 
 import (
-	"os"
-
 	"github.com/goravel/framework/facades"
 )
 
 // CleanTestDatabase removes all test data from the database
-// Works with both SQLite and PostgreSQL
+// Uses PostgreSQL (testcontainers)
 func CleanTestDatabase() error {
 	orm := facades.Orm()
 	if orm == nil {
 		return nil
 	}
 
-	dbConnection := os.Getenv("DB_CONNECTION")
-
-	if dbConnection == "postgres" {
-		return cleanPostgresDatabase()
-	}
-
-	// Default to SQLite
-	return cleanSQLiteDatabase()
-}
-
-// cleanSQLiteDatabase removes all test data from SQLite database
-func cleanSQLiteDatabase() error {
-	orm := facades.Orm()
-	if orm == nil {
-		return nil
-	}
-
-	// Get all tables (SQLite specific)
-	var tables []string
-	err := orm.Query().Raw(`
-		SELECT name FROM sqlite_master
-		WHERE type='table'
-		AND name NOT LIKE 'sqlite_%'
-		AND name NOT LIKE 'migrations'
-		ORDER BY name
-	`).Scan(&tables)
-
-	if err != nil {
-		return err
-	}
-
-	// Disable foreign key constraints temporarily
-	orm.Query().Exec("PRAGMA foreign_keys = OFF")
-
-	// Clear all tables except migrations
-	for _, table := range tables {
-		if table != "migrations" {
-			orm.Query().Exec("DELETE FROM " + table)
-		}
-	}
-
-	// Re-enable foreign key constraints
-	orm.Query().Exec("PRAGMA foreign_keys = ON")
-
-	return nil
+	return cleanPostgresDatabase()
 }
 
 // cleanPostgresDatabase removes all test data from PostgreSQL database
@@ -98,36 +52,9 @@ func cleanPostgresDatabase() error {
 }
 
 // ResetTestDatabase completely recreates the test database
+// Uses PostgreSQL (testcontainers)
 func ResetTestDatabase() error {
-	dbConnection := os.Getenv("DB_CONNECTION")
-
-	if dbConnection == "postgres" {
-		return resetPostgresDatabase()
-	}
-
-	// Default to SQLite
-	return resetSQLiteDatabase()
-}
-
-// resetSQLiteDatabase resets the SQLite test database
-func resetSQLiteDatabase() error {
-	dbPath := os.Getenv("DB_DATABASE")
-	if dbPath == "" {
-		dbPath = "database/test.sqlite"
-	}
-
-	// Delete the existing database file
-	os.Remove(dbPath)
-
-	// Create a new empty file
-	file, err := os.Create(dbPath)
-	if err != nil {
-		return err
-	}
-	file.Close()
-
-	// Run migrations
-	return facades.Artisan().Call("migrate")
+	return resetPostgresDatabase()
 }
 
 // resetPostgresDatabase resets the PostgreSQL test database

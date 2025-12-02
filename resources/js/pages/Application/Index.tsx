@@ -7,8 +7,6 @@ import {
 } from '@/types/application';
 import { CrudPage } from '@/components/Crud/CrudPage';
 import {
-  ApplicationCreateForm,
-  ApplicationEditForm,
   ApplicationDetailView,
   applicationColumns,
   applicationColumnsMobile,
@@ -57,19 +55,15 @@ export default function ApplicationIndex({
           <CrudPage<Application>
             data={data}
             filters={filters}
-            title="applications"
+            title="Applications"
             resourceName="applications"
             columns={isMobile ? applicationColumnsMobile : applicationColumns}
             customFilters={applicationFilters}
             paginationConfig={meta?.pagination}
-            createForm={ApplicationCreateForm}
-            editForm={ApplicationEditForm}
             detailView={ApplicationDetailView}
             onRefresh={handleRefresh}
-            canCreate={permissions.canCreate}
-            canEdit={permissions.canEdit}
-            canDelete={permissions.canDelete}
             canView={true}
+            readOnly={true}
           />
         </div>
       </div>

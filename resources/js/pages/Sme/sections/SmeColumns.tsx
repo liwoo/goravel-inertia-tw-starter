@@ -3,6 +3,7 @@ import { Sme } from '@/types/sme';
 import { CrudColumn, CrudFilter } from '@/types/crud';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, CircleCheck, CircleX } from 'lucide-react';
+import { ScoreMeter } from '@/components/ui/score-meter';
 
 /**
  * Sme table columns configuration
@@ -110,6 +111,35 @@ export const smeColumns: CrudColumn<Sme>[] = [
     ),
   },
   {
+    key: 'formalisationScore',
+    label: 'Score',
+    sortable: true,
+    className: 'w-20 text-center',
+    render: (sme) => {
+      // Get formalisation score from relationship (camelCase or snake_case)
+      const score =
+        sme.businessFormalisation?.formalisationScore ??
+        sme.businessFormalisation?.formalisation_score ??
+        sme.business_formalisation?.formalisationScore ??
+        sme.business_formalisation?.formalisation_score ??
+        null;
+
+      if (score === null || score === undefined) {
+        return (
+          <div className="flex justify-center items-center">
+            <span className="text-sm text-muted-foreground">-</span>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex justify-center">
+          <ScoreMeter score={score} size="sm" showLabel={true} />
+        </div>
+      );
+    },
+  },
+  {
     key: 'createdAt',
     label: 'Added',
     sortable: true,
@@ -142,6 +172,15 @@ export const smeColumnsMobile: CrudColumn<Sme>[] = [
     sortable: false,
     render: (sme) => {
       const isActive = sme.isActive ?? (sme as any).is_active ?? true;
+
+      // Get formalisation score
+      const score =
+        sme.businessFormalisation?.formalisationScore ??
+        sme.businessFormalisation?.formalisation_score ??
+        sme.business_formalisation?.formalisationScore ??
+        sme.business_formalisation?.formalisation_score ??
+        null;
+
       return (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -169,6 +208,12 @@ export const smeColumnsMobile: CrudColumn<Sme>[] = [
               </span>
             )}
           </div>
+          {score !== null && score !== undefined && (
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-muted-foreground min-w-[40px]">Score:</span>
+              <ScoreMeter score={score} size="sm" showLabel={true} />
+            </div>
+          )}
         </div>
       );
     },

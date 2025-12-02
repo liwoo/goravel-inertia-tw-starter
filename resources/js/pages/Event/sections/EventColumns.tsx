@@ -14,19 +14,8 @@ export const eventColumns: CrudColumn<Event>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (event) => (
-      <div className="space-y-1">
-        <div className="font-medium text-gray-900 flex items-center">
-          <BookOpen className="h-4 w-4 text-muted-foreground mr-2" />
-          <p className="font-medium text-foreground ">{event.title}</p>
-        </div>
-        <div className="text-xs text-gray-500 flex items-center">
-          <NotepadText className="h-3 w-3 text-muted-foreground mr-2" />
-          {event.description}
-        </div>
-        <div className="text-xs text-gray-500 flex items-center">
-          <MapPin className="h-3 w-3 text-muted-foreground mr-2" />
-          District: {event.district}
-        </div>
+      <div className="flex items-center gap-2">
+        <p className="font-mono text-sm font-medium text-foreground">{event.title}</p>
       </div>
     ),
   },
@@ -37,9 +26,8 @@ export const eventColumns: CrudColumn<Event>[] = [
     className: 'min-w-[150px]',
     render: (event) => (
       <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted-foreground" />
         <p className="font-medium text-foreground">
-          {event.date ? new Date(event.date).toLocaleDateString() : '-'}
+          {event.date ? new Date(event.date).toLocaleDateString() : '-'} {event.end_date ? ' - ' + new Date(event.end_date).toLocaleDateString() : ''}
         </p>
       </div>
     ),
@@ -51,8 +39,7 @@ export const eventColumns: CrudColumn<Event>[] = [
     className: 'min-w-[150px]',
     render: (event) => (
       <div className="flex items-center gap-2">
-        <MapPin className="h-4 w-4 text-muted-foreground" />
-        <p className="font-medium text-foreground">{event.venue}</p>
+        <p className="font-medium text-foreground">{event.venue} ({event.district})</p>
       </div>
     ),
   },
@@ -93,22 +80,7 @@ export const eventColumns: CrudColumn<Event>[] = [
       <div className="flex items-start gap-3">
         <div className="flex-1 space-y-1">
           <div className="flex flex-wrap gap-1">
-            {event.attending_sme_details && event.attending_sme_details.length > 0 ? (
-              <>
-                {event.attending_sme_details.slice(0, 2).map((sme) => (
-                  <Badge key={sme.id} variant="outline" className="text-xs">
-                    {sme.name}
-                  </Badge>
-                ))}
-                {event.attending_sme_details.length > 2 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{event.attending_sme_details.length - 2}
-                  </Badge>
-                )}
-              </>
-            ) : (
-              <Badge variant="outline">0 SMEs</Badge>
-            )}
+            <Badge variant="outline">{event.attending_sme_details?.length || 0} SMEs</Badge>
           </div>
         </div>
       </div>

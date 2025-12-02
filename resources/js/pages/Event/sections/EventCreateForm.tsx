@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DISTRICT_OPTIONS } from '@/types/district';
 import axios from 'axios';
 
 interface EventCreateFormProps extends CrudFormProps {
@@ -60,7 +62,7 @@ export const EventCreateForm = forwardRef<any, EventCreateFormProps>(({
         const [partnersRes, smesRes] = await Promise.all([
           axios.get('/api/configs', {
             params: {
-              config_type: 'Partners',
+              config_type: 'Development Partners',
               pageSize: 100,
               sort: 'name',
               direction: 'ASC'
@@ -201,7 +203,9 @@ export const EventCreateForm = forwardRef<any, EventCreateFormProps>(({
                 />
                 {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Date *</Label>
                 <Input
@@ -212,6 +216,17 @@ export const EventCreateForm = forwardRef<any, EventCreateFormProps>(({
                   className={errors.date ? 'border-destructive' : ''}
                 />
                 {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_date">End Date</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  className={errors.end_date ? 'border-destructive' : ''}
+                />
+                {errors.end_date && <p className="text-sm text-destructive">{errors.end_date}</p>}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -251,13 +266,21 @@ export const EventCreateForm = forwardRef<any, EventCreateFormProps>(({
 
               <div className="space-y-2">
                 <Label htmlFor="district">District *</Label>
-                <Input
-                  id="district"
+                <Select
                   value={formData.district}
-                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                  placeholder="Enter district"
-                  className={errors.district ? 'border-destructive' : ''}
-                />
+                  onValueChange={(value) => setFormData({ ...formData, district: value })}
+                >
+                  <SelectTrigger className={errors.district ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Select district" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DISTRICT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.district && <p className="text-sm text-destructive">{errors.district}</p>}
               </div>
             </div>

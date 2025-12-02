@@ -362,6 +362,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Sync Chart.yaml appVersion with package.json
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" helm/goravel-blog/Chart.yaml
+          echo "Synced Chart.yaml appVersion to: $VERSION"
+          grep appVersion helm/goravel-blog/Chart.yaml
+
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:

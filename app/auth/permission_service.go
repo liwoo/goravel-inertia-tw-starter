@@ -53,14 +53,6 @@ func (s *PermissionService) HasPermission(user *models.User, permission string) 
 	// Fall back to loading fresh if no cache is available
 	permissions := s.loadUserPermissions(user)
 
-	// Debug log permissions (only at debug level to reduce noise)
-	facades.Log().Debug("HasPermission check", map[string]interface{}{
-		"user_id":             user.ID,
-		"email":               user.Email,
-		"checking_permission": permission,
-		"permissions_count":   len(permissions),
-	})
-
 	// Check direct permission match
 	for _, perm := range permissions {
 		if perm == permission {
@@ -352,10 +344,6 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	if cachedJSON := facades.Cache().GetString(cacheKey, ""); cachedJSON != "" {
 		var cachedPermissions []string
 		if err := json.Unmarshal([]byte(cachedJSON), &cachedPermissions); err == nil {
-			facades.Log().Debug("Permission cache hit", map[string]interface{}{
-				"user_id":           user.ID,
-				"permissions_count": len(cachedPermissions),
-			})
 			return cachedPermissions
 		}
 	}
@@ -391,44 +379,54 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 		return permissions
 	}
 
-	// Single optimized query to get ALL permissions for ALL roles at once
-	// This replaces the N+1 pattern where we queried permissions for each role separately
+	// OPTIMIZED: Use query builder to get permission slugs directly
+	// This avoids loading 8000+ full permission objects into memory
+	// Previous approach used With("Permission") which caused OOM with large permission sets
+	type PermissionSlugResult struct {
+		Slug  string `gorm:"column:slug"`
+		Scope string `gorm:"column:scope"`
+	}
+
 	// Convert roleIDs to interface slice for WhereIn
 	roleIDsInterface := make([]interface{}, len(roleIDs))
 	for i, id := range roleIDs {
 		roleIDsInterface[i] = id
 	}
 
-	var rolePermissions []models.RolePermission
+	var slugResults []PermissionSlugResult
 	err := facades.Orm().Query().
-		WhereIn("role_id", roleIDsInterface).
-		Where("is_active = ?", true).
-		With("Permission").
-		Find(&rolePermissions)
+		Table("role_permissions as rp").
+		Select("p.slug, rp.scope").
+		Join("INNER JOIN permissions p ON p.id = rp.permission_id").
+		WhereIn("rp.role_id", roleIDsInterface).
+		Where("rp.is_active = ?", true).
+		Where("p.is_active = ?", true).
+		Get(&slugResults)
 
 	if err != nil {
+		facades.Log().Error("Failed to load permission slugs", map[string]interface{}{
+			"error":    err.Error(),
+			"role_ids": roleIDs,
+		})
 		return permissions
 	}
 
-	// Collect all permissions from all roles through the pivot table
+	// Collect all permissions from all roles
 	permissionMap := make(map[string]bool)
 
 	// Build permission slugs with scopes
-	for _, rp := range rolePermissions {
-		if rp.Permission.IsActive {
-			// Build the permission slug with scope
-			permSlug := rp.Permission.Slug
-			if rp.Scope != "" && rp.Scope != "by_all" {
-				// Include scope in the permission slug
-				permSlug = fmt.Sprintf("%s_%s", permSlug, rp.Scope)
-			} else if rp.Scope == "by_all" || rp.Scope == "" {
-				// For by_all scope, include both the base permission and the explicit scoped version
-				permissionMap[permSlug] = true
-				permissionMap[fmt.Sprintf("%s_by_all", permSlug)] = true
-				continue
-			}
+	for _, result := range slugResults {
+		permSlug := result.Slug
+		if result.Scope != "" && result.Scope != "by_all" {
+			// Include scope in the permission slug
+			permSlug = fmt.Sprintf("%s_%s", permSlug, result.Scope)
+		} else if result.Scope == "by_all" || result.Scope == "" {
+			// For by_all scope, include both the base permission and the explicit scoped version
 			permissionMap[permSlug] = true
+			permissionMap[fmt.Sprintf("%s_by_all", permSlug)] = true
+			continue
 		}
+		permissionMap[permSlug] = true
 	}
 
 	// Convert map to slice
@@ -439,17 +437,7 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 	// Cache the permissions
 	if len(permissions) > 0 {
 		if jsonBytes, err := json.Marshal(permissions); err == nil {
-			if err := facades.Cache().Put(cacheKey, string(jsonBytes), permissionCacheTTL); err != nil {
-				facades.Log().Warning("Failed to cache user permissions", map[string]interface{}{
-					"user_id": user.ID,
-					"error":   err.Error(),
-				})
-			} else {
-				facades.Log().Debug("Cached user permissions", map[string]interface{}{
-					"user_id":           user.ID,
-					"permissions_count": len(permissions),
-				})
-			}
+			facades.Cache().Put(cacheKey, string(jsonBytes), permissionCacheTTL)
 		}
 	}
 

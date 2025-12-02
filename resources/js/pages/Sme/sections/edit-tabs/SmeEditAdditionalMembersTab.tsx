@@ -25,6 +25,7 @@ interface AdditionalMemberData {
   nationality: string;
   nationalIdNumber: string;
   dateOfBirth?: string;
+  gender: string;
   email?: string;
   phoneNumber: string;
   isIntern: boolean;
@@ -43,11 +44,17 @@ const emptyMember: AdditionalMemberData = {
   nationality: '',
   nationalIdNumber: '',
   dateOfBirth: '',
+  gender: '',
   email: '',
   phoneNumber: '',
   isIntern: false,
   isPartTime: false,
 };
+
+const GENDER_OPTIONS = [
+  { value: 'MALE', label: 'Male' },
+  { value: 'FEMALE', label: 'Female' },
+];
 
 export const SmeEditAdditionalMembersTab: React.FC<SmeEditAdditionalMembersTabProps> = ({
   members,
@@ -59,7 +66,8 @@ export const SmeEditAdditionalMembersTab: React.FC<SmeEditAdditionalMembersTabPr
   const addMember = () => {
     // Validate required fields
     if (!newMember.firstName.trim() || !newMember.lastName.trim() ||
-        !newMember.nationalIdNumber.trim() || !newMember.phoneNumber.trim()) {
+        !newMember.nationalIdNumber.trim() || !newMember.phoneNumber.trim() ||
+        !newMember.gender) {
       return;
     }
 
@@ -154,6 +162,12 @@ export const SmeEditAdditionalMembersTab: React.FC<SmeEditAdditionalMembersTabPr
                         <p className="text-muted-foreground">Phone</p>
                         <p className="font-medium">{member.phoneNumber}</p>
                       </div>
+                      {member.gender && (
+                        <div>
+                          <p className="text-muted-foreground">Gender</p>
+                          <p className="font-medium">{member.gender === 'MALE' ? 'Male' : member.gender === 'FEMALE' ? 'Female' : member.gender}</p>
+                        </div>
+                      )}
                       {member.email && (
                         <div>
                           <p className="text-muted-foreground">Email</p>
@@ -264,6 +278,25 @@ export const SmeEditAdditionalMembersTab: React.FC<SmeEditAdditionalMembersTabPr
                     </div>
 
                     <div className="space-y-2">
+                      <Label htmlFor="memberGender">Gender *</Label>
+                      <Select
+                        value={newMember.gender}
+                        onValueChange={(value) => setNewMember({ ...newMember, gender: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GENDER_OPTIONS.map((gender) => (
+                            <SelectItem key={gender.value} value={gender.value}>
+                              {gender.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="memberEmail">Email</Label>
                       <Input
                         id="memberEmail"
@@ -309,7 +342,7 @@ export const SmeEditAdditionalMembersTab: React.FC<SmeEditAdditionalMembersTabPr
                   <Button
                     type="button"
                     onClick={addMember}
-                    disabled={!newMember.firstName || !newMember.lastName || !newMember.nationalIdNumber || !newMember.phoneNumber}
+                    disabled={!newMember.firstName || !newMember.lastName || !newMember.nationalIdNumber || !newMember.phoneNumber || !newMember.gender}
                     className="w-full mt-6"
                   >
                     <Plus className="h-4 w-4 mr-2" />

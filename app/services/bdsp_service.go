@@ -34,6 +34,51 @@ func NewBdspService() *BdspService {
 		}).
 		WithDefaultSort("created_at", "DESC").     // Default sorting when none specified
 		WithScopeFiltering("bdsps", "created_by"). // Enable permission-based filtering
+		WithBeforeCreate(func(data map[string]interface{}) error {
+			// Generate UBDSP number if not provided
+			if _, exists := data["ubdsp_number"]; !exists || data["ubdsp_number"] == "" {
+				ubi, err := generateBdspUBI()
+				if err != nil {
+					return fmt.Errorf("failed to generate UBDSP number: %w", err)
+				}
+				data["ubdsp_number"] = ubi
+			}
+
+			// Handle partners array to JSON conversion
+			if partners, ok := data["partners"]; ok {
+				if partnersSlice, ok := partners.([]interface{}); ok {
+					bytes, err := json.Marshal(partnersSlice)
+					if err == nil {
+						data["partners_json"] = string(bytes)
+					}
+				}
+				delete(data, "partners")
+			}
+
+			// Handle product_types array to JSON conversion
+			if productTypes, ok := data["product_types"]; ok {
+				if productTypesSlice, ok := productTypes.([]interface{}); ok {
+					bytes, err := json.Marshal(productTypesSlice)
+					if err == nil {
+						data["product_types_json"] = string(bytes)
+					}
+				}
+				delete(data, "product_types")
+			}
+
+			// Handle service_list array to JSON conversion
+			if serviceList, ok := data["service_list"]; ok {
+				if serviceListSlice, ok := serviceList.([]interface{}); ok {
+					bytes, err := json.Marshal(serviceListSlice)
+					if err == nil {
+						data["service_list_json"] = string(bytes)
+					}
+				}
+				delete(data, "service_list")
+			}
+
+			return nil
+		}).
 		WithBeforeUpdate(func(id uint, data map[string]interface{}) error {
 			if _, exists := data["ubdsp_number"]; !exists || data["ubdsp_number"] == "" {
 				ubi, err := generateBdspUBI()
@@ -126,12 +171,12 @@ func getNextSequentialBdspNumber(year int) (int, error) {
 		return 1, nil
 	}
 
-	// Extract the sequential number from the ubdso_number
-	// Format: MW-YYYY-DD-CT-NNNNNN-C
+	// Extract the sequential number from the ubdsp_number
+	// Format: MW-YYYY-NNNNNN-C (4 parts: [0]=MW, [1]=YYYY, [2]=NNNNNN, [3]=C)
 	parts := splitUBI(bdsp.UbdspNumber)
-	if len(parts) >= 5 {
+	if len(parts) >= 3 {
 		var parseErr error
-		maxSequence, parseErr = strconv.Atoi(parts[4])
+		maxSequence, parseErr = strconv.Atoi(parts[2])
 		if parseErr != nil {
 			// If parsing fails, start from 1
 			return 1, nil

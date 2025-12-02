@@ -1,6 +1,13 @@
 .idea
 .DS_Store
 .env
+
+# Vite build output
+public/js/
+public/css/
+public/assets/
+public/build/
+public/.vite/
 .env.*
 !.env.example
 storage/framework
@@ -19,6 +26,7 @@ storage/logs/*.log
 # Go binaries
 players
 goravel
+smedi-sme-db
 *.out
 
 # Test binary, built with `go test -c`

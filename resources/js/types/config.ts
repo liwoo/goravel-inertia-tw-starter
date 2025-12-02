@@ -10,6 +10,11 @@ export enum ConfigType {
   Sectors = 'Sectors',
   RegistrationStatus = 'Registration Status',
   DevelopmentPartners = 'Development Partners',
+  ProductTypes = 'Product Types',
+  ProcurementType = 'Procurement Type',
+  ProcurementClassification = 'Procurement Classification',
+  ProcuredBy = 'Procured By',
+  Organization = 'Organization',
 }
 
 // Helper array for dropdowns
@@ -45,6 +50,26 @@ export const CONFIG_TYPE_CONFIG = {
     label: 'Development Partners',
     description: 'Development partner organizations',
   },
+  [ConfigType.ProductTypes]: {
+    label: 'Product Types',
+    description: 'Types of products offered by BDSPs',
+  },
+  [ConfigType.ProcurementType]: {
+    label: 'Procurement Type',
+    description: 'Types of procurement',
+  },
+  [ConfigType.ProcurementClassification]: {
+    label: 'Procurement Classification',
+    description: 'Classifications for procurement notices',
+  },
+  [ConfigType.ProcuredBy]: {
+    label: 'Procured By',
+    description: 'Entities procuring goods/services',
+  },
+  [ConfigType.Organization]: {
+    label: 'Organization',
+    description: 'Organizations involved in procurement',
+  },
 } as const;
 
 // Core Config interface matching the backend model
@@ -73,7 +98,7 @@ export interface ConfigUpdateData {
 }
 
 // Config list response (matches service GetList response)
-export interface ConfigListResponse extends PaginatedResult<Config> {}
+export interface ConfigListResponse extends PaginatedResult<Config> { }
 
 // Config list request (extends base ListRequest with config-specific filters)
 export interface ConfigListRequest extends ListRequest {

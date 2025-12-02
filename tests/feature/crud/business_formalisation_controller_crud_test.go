@@ -249,10 +249,10 @@ func (s *BusinessFormalisationControllerCRUDTestSuite) TestCreateBusinessFormali
 	s.Equal(float64(s.testUser.ID), data["created_by"])
 }
 
-// CRITICAL TEST: Verify formalisation_score CANNOT be set via API
+// CRITICAL TEST: Verify formalisation_score CANNOT be set via API (it's calculated automatically)
 func (s *BusinessFormalisationControllerCRUDTestSuite) TestFormalisationScoreCannotBeSetViaCreate() {
 	formalisationData := s.getValidFormalisationData()
-	// Try to set formalisation_score via API (should be ignored)
+	// Try to set formalisation_score via API (should be ignored - score is calculated, not set)
 	formalisationData["formalisation_score"] = 99
 
 	resp, result := s.makeRequest("POST", "/api/business-formalisations", formalisationData)
@@ -263,11 +263,17 @@ func (s *BusinessFormalisationControllerCRUDTestSuite) TestFormalisationScoreCan
 	data := result["data"].(map[string]interface{})
 	formalisationID := uint(data["id"].(float64))
 
-	// Verify formalisation_score was NOT set (should be 0 or null)
+	// Verify formalisation_score was NOT set to the API-provided value (99)
+	// The score should be calculated based on the formalisation data, not the API input
 	var formalisation models.BusinessFormalisation
 	err := facades.Orm().Query().Find(&formalisation, formalisationID)
 	s.Nil(err)
-	s.Equal(0, formalisation.FormalisationScore, "formalisation_score should NOT be settable via create API")
+	s.NotEqual(99, formalisation.FormalisationScore, "formalisation_score should NOT be settable via create API - it should be calculated")
+	// The score is calculated based on boolean fields (10 points each for true values)
+	// has_bank_account=true(10) + has_tax_clarification=true(10) + is_member_of_association=true(10) + has_accessed_bds=true(10) = 40 points from checkboxes
+	// Plus additional points from team structure and financial data
+	s.GreaterOrEqual(formalisation.FormalisationScore, 0, "formalisation_score should be a valid calculated value")
+	s.LessOrEqual(formalisation.FormalisationScore, 100, "formalisation_score should not exceed 100")
 }
 
 func (s *BusinessFormalisationControllerCRUDTestSuite) TestCreateFormalisationValidationErrors() {

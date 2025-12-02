@@ -3,7 +3,7 @@
 import * as React from 'react';
 // @ts-ignore
 import {Head, router} from '@inertiajs/react';
-import {Command, Edit, Eye, Filter, Plus, RefreshCw, Search, Settings2, Trash2, X,} from 'lucide-react';
+import {ChevronDown, Command, Edit, Eye, Filter, Plus, RefreshCw, Search, Settings2, Trash2, X,} from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {CrudAction, CrudPageProps} from '@/types/crud';
 import {Button} from '@/components/ui/button';
@@ -43,6 +43,8 @@ export function CrudPage<T extends { id: number }>({
                                                        customFilters = [],
                                                        pageActions = [],
                                                        simpleFilters = [],
+                                                       simpleFiltersVariant = 'tabs',
+                                                       simpleFiltersDropdownLabel = 'Filter',
                                                        bulkActions = [],
                                                        paginationConfig,
                                                        createForm: CreateForm,
@@ -57,6 +59,8 @@ export function CrudPage<T extends { id: number }>({
                                                        canEdit: propCanEdit,
                                                        canDelete: propCanDelete,
                                                        canView: propCanView,
+                                                       // Read-only mode
+                                                       readOnly = false,
                                                    }: CrudPageProps<T>) {
     // Guard against undefined data
     if (!data || !data.data) {
@@ -74,9 +78,10 @@ export function CrudPage<T extends { id: number }>({
     // Use provided route or default to /admin/{resourceName}
     const baseRoute = route || `/admin/${resourceName}`;
 
-    const canCreate = propCanCreate !== undefined ? propCanCreate : canPerformAction(resourceName, 'create');
-    const canEdit = propCanEdit !== undefined ? propCanEdit : canPerformAction(resourceName, 'update');
-    const canDelete = propCanDelete !== undefined ? propCanDelete : canPerformAction(resourceName, 'delete');
+    // In readOnly mode, disable create, edit, and delete regardless of permissions
+    const canCreate = readOnly ? false : (propCanCreate !== undefined ? propCanCreate : canPerformAction(resourceName, 'create'));
+    const canEdit = readOnly ? false : (propCanEdit !== undefined ? propCanEdit : canPerformAction(resourceName, 'update'));
+    const canDelete = readOnly ? false : (propCanDelete !== undefined ? propCanDelete : canPerformAction(resourceName, 'delete'));
     const canView = propCanView !== undefined ? propCanView : canPerformAction(resourceName, 'read');
 
     const canExport = canPerformAction(resourceName, 'export');
@@ -960,7 +965,7 @@ export function CrudPage<T extends { id: number }>({
                     )}
 
                     {/* Simple Filters */}
-                    {simpleFilters.length > 0 && (
+                    {simpleFilters.length > 0 && simpleFiltersVariant === 'tabs' && (
                         <Tabs
                             value={activeSimpleFilter || "all"}
                             onValueChange={(value) => handleSimpleFilterChange(value === "all" ? undefined : value)}
@@ -982,6 +987,50 @@ export function CrudPage<T extends { id: number }>({
                                 ))}
                             </TabsList>
                         </Tabs>
+                    )}
+
+                    {/* Simple Filters - Dropdown Variant */}
+                    {simpleFilters.length > 0 && simpleFiltersVariant === 'dropdown' && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-fit gap-2">
+                                    <span className="truncate">
+                                        {activeSimpleFilter
+                                            ? simpleFilters.find(f => f.value.toString() === activeSimpleFilter)?.label || simpleFiltersDropdownLabel
+                                            : simpleFiltersDropdownLabel
+                                        }
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-fit min-w-[180px]">
+                                <DropdownMenuItem
+                                    onClick={() => handleSimpleFilterChange(undefined)}
+                                    className={cn(!activeSimpleFilter && "bg-accent")}
+                                >
+                                    All
+                                </DropdownMenuItem>
+                                {simpleFilters.map((filter) => (
+                                    <DropdownMenuItem
+                                        key={filter.key}
+                                        onClick={() => handleSimpleFilterChange(filter.value.toString())}
+                                        className={cn(
+                                            activeSimpleFilter === filter.value.toString() && "bg-accent"
+                                        )}
+                                    >
+                                        <span className="flex items-center gap-2 flex-1">
+                                            {filter.icon}
+                                            {filter.label}
+                                        </span>
+                                        {filter.badge !== undefined && (
+                                            <Badge variant="secondary" className="ml-auto">
+                                                {filter.badge}
+                                            </Badge>
+                                        )}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
 
                     {/* Filter Panel - Mobile-responsive overlay on small screens */}
@@ -1082,6 +1131,8 @@ export function CrudPage<T extends { id: number }>({
                         enableColumnToggle={true}
                         enablePagination={false} // We handle pagination externally
                         className={tableClassName}
+                        onRowClick={canView && DetailView ? handleView : undefined}
+                        canRowClick={canView && !!DetailView}
                     />
                 </div>
 

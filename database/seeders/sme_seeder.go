@@ -19,6 +19,18 @@ func (s *SmeSeeder) Signature() string {
 }
 
 func (s *SmeSeeder) Run() error {
+	// Check if SMEs already exist - skip if we have data
+	existingCount, err := facades.Orm().Query().Model(&models.Sme{}).Count()
+	if err != nil {
+		return fmt.Errorf("failed to count existing SMEs: %v", err)
+	}
+
+	if existingCount > 0 {
+		facades.Log().Infof("SmeSeeder: Skipping - SMEs table already has %d records", existingCount)
+		fmt.Printf("SmeSeeder: Skipping - SMEs table already has %d records\n", existingCount)
+		return nil
+	}
+
 	fmt.Println("Seeding SMEs...")
 
 	// Seed random generator

@@ -6,6 +6,9 @@ import (
 
 	"smedi-sme-db/app/contracts"
 	"smedi-sme-db/app/models"
+
+	"github.com/dromara/carbon/v2"
+	"github.com/goravel/framework/facades"
 )
 
 // ProcurementNoticeService implements business logic for procurement notices using the builder pattern
@@ -74,22 +77,21 @@ func NewProcurementNoticeService() *ProcurementNoticeService {
 	}
 
 	service := contracts.NewServiceBuilder[models.ProcurementNotice]("procurement_notices", "id").
-		WithSearchFields("procured_by", "procurement_type", "ref_no", "organization", "details", "application_details"). // Searchable fields
-		WithSortFields("id", "created_at", "updated_at", "open_date", "close_date", "procured_by", "organization").     // Sortable fields
+		WithSearchFields("procured_by", "procurement_type", "ref_no", "organization", "details", "application_details").      // Searchable fields
+		WithSortFields("id", "created_at", "updated_at", "open_date", "close_date", "procured_by", "organization").           // Sortable fields
 		WithFilterFields("market_approach", "invitation", "is_published", "qualifying_districts", "open_date", "close_date"). // Filterable fields
-		WithValidationRules(map[string]interface{}{ // Validation rules for create/update operations
+		WithValidationRules(map[string]interface{}{                                                                           // Validation rules for create/update operations
 			"procured_by":              "required|max_len:255",
 			"procurement_type":         "required|max_len:255",
 			"market_approach":          "required|max_len:50",
 			"invitation":               "required|max_len:50",
-			"ref_no":                   "required|max_len:255",
 			"organization":             "required|max_len:255",
 			"details":                  "required",
 			"application_details":      "required|max_len:500",
 			"minimum_qualifying_score": "required",
 			"is_published":             "boolean",
 		}).
-		WithDefaultSort("created_at", "DESC"). // Default sorting when none specified
+		WithDefaultSort("created_at", "DESC").                   // Default sorting when none specified
 		WithScopeFiltering("procurement_notices", "created_by"). // Enable permission-based filtering
 		WithBeforeCreate(func(data map[string]interface{}) error {
 			// Ensure array fields are properly typed as []string for GORM serializer
@@ -97,6 +99,32 @@ func NewProcurementNoticeService() *ProcurementNoticeService {
 			ensureStringArray(data, "qualifying_districts")
 			ensureStringArray(data, "classification")
 			ensureStringArray(data, "interested_smes")
+
+			// Generate Reference Number if not provided
+			if _, exists := data["ref_no"]; !exists || data["ref_no"] == "" {
+				today := carbon.Now().ToDateString()     // YYYY-MM-DD
+				datePrefix := carbon.Now().Format("Ymd") // YYYYMMDD
+
+				var count int64
+				// Assuming 'db' (a *gorm.DB instance) is accessible in this scope.
+				// This query counts existing notices created today to determine the next index.
+				var procurementNotice models.ProcurementNotice
+				count, err := facades.Orm().Query().
+					Model(&procurementNotice).
+					Where("DATE(created_at) = ?", today).
+					Count()
+				if err != nil {
+					return fmt.Errorf("failed to get daily procurement notice count: %w", err)
+				}
+
+				data["ref_no"] = fmt.Sprintf("PN-%s-%d", datePrefix, count+1)
+			}
+
+			// Default IsPublished to false
+			if _, exists := data["is_published"]; !exists {
+				data["is_published"] = false
+			}
+
 			return nil
 		}).
 		WithBeforeUpdate(func(id uint, data map[string]interface{}) error {

@@ -52,6 +52,10 @@ jobs:
       image_tag: ${{ steps.tag.outputs.tag }}
       app_version: ${{ steps.tag.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
       - name: Determine environment
         id: env
         run: |
@@ -75,9 +79,14 @@ jobs:
       - name: Determine image tag
         id: tag
         run: |
-          # Get version from package.json for APP_VERSION env var
-          VERSION=$(curl -s "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.workflow_run.head_sha || github.sha }}/package.json" | jq -r '.version')
+          # Get version from package.json (local checkout)
+          VERSION=$(jq -r '.version' package.json)
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "App version from package.json: ${VERSION}"
+
+          # Sync Chart.yaml appVersion to match package.json
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" helm/goravel-blog/Chart.yaml
+          echo "Synced Chart.yaml appVersion to: ${VERSION}"
 
           # Get environment from previous step
           ENVIRONMENT="${{ steps.env.outputs.environment }}"
@@ -199,36 +208,12 @@ jobs:
 
       - name: Wait for deployment rollout
         run: |
-          kubectl rollout status deployment/goravel-blog-goravel-blog \
+          kubectl rollout status deployment/goravel-blog \
             -n ${{ needs.setup.outputs.namespace }} \
             --timeout=5m
 
-      - name: Run database migrations and setup
-        run: |
-          POD_NAME=$(kubectl get pods -n ${{ needs.setup.outputs.namespace }} \
-            -l app.kubernetes.io/name=goravel-blog \
-            -o jsonpath="{.items[0].metadata.name}" \
-            --field-selector=status.phase=Running)
-
-          echo "Running migrations..."
-          kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan migrate --force
-
-          echo "Running database seeders..."
-          kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan db:seed --force || true
-
-          echo "Setting up RBAC (idempotent)..."
-          kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan rbac:setup
-
-          echo "Creating admin user (if not exists)..."
-          kubectl exec -n ${{ needs.setup.outputs.namespace }} $POD_NAME -- \
-            ./goravel-app artisan user:create-admin \
-              --name="${{ secrets.ADMIN_NAME }}" \
-              --email="${{ secrets.ADMIN_EMAIL }}" \
-              --password="${{ secrets.ADMIN_PASSWORD }}" \
-              --skip-existing
+      # NOTE: Database migrations are handled by the init container in the Helm chart
+      # The init container redirects stdin to /dev/null to prevent charmbracelet/huh TTY panic
 
       - name: Get deployment URL
         id: deploy-url
@@ -363,7 +348,7 @@ jobs:
 
       - name: Verify rollback
         run: |
-          kubectl rollout status deployment/goravel-blog-goravel-blog \
+          kubectl rollout status deployment/goravel-blog \
             -n ${{ needs.setup.outputs.namespace }} \
             --timeout=5m || true
 

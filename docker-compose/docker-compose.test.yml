@@ -2,9 +2,14 @@
 # Docker Compose for Integration Testing
 # =============================================================================
 # Usage:
-#   docker-compose -f docker-compose.test.yml up -d
-#   docker-compose -f docker-compose.test.yml run --rm test
-#   docker-compose -f docker-compose.test.yml down -v
+#   cd docker-compose
+#   docker compose -f docker-compose.test.yml up -d postgres-test redis-test
+#   docker compose -f docker-compose.test.yml run --rm test
+#   docker compose -f docker-compose.test.yml down -v
+#
+# For E2E testing:
+#   docker compose -f docker-compose.test.yml --profile e2e up -d
+#   docker compose -f docker-compose.test.yml run --rm e2e-test
 # =============================================================================
 
 name: smedi-database-test
@@ -15,14 +20,15 @@ services:
   # ===========================================================================
   test:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
       target: go-builder
+    container_name: smedi-test-runner
     working_dir: /app
     command: >
       sh -c "
         echo 'Waiting for services...' &&
-        sleep 5 &&
+        sleep 3 &&
         echo 'Running Go tests...' &&
         go test -v -race -coverprofile=coverage.out ./tests/... &&
         echo 'Tests completed!'
@@ -49,7 +55,7 @@ services:
       # Testing
       CGO_ENABLED: 0
     volumes:
-      - .:/app
+      - ..:/app
       - go-mod-cache-test:/go/pkg/mod
       - test-coverage:/app/coverage
     depends_on:
@@ -65,6 +71,7 @@ services:
   # ===========================================================================
   frontend-test:
     image: node:20-alpine
+    container_name: smedi-frontend-test
     working_dir: /app
     command: >
       sh -c "
@@ -74,7 +81,7 @@ services:
         echo 'Frontend tests completed!'
       "
     volumes:
-      - .:/app
+      - ..:/app
       - node-modules-test:/app/node_modules
     networks:
       - smedi-network-test
@@ -84,11 +91,13 @@ services:
   # ===========================================================================
   postgres-test:
     image: postgres:16-alpine
+    container_name: smedi-postgres-test
     environment:
       POSTGRES_DB: smedi_test
       POSTGRES_USER: smedi_test
       POSTGRES_PASSWORD: smedi_test_password
       PGDATA: /var/lib/postgresql/data/pgdata
+    # Use tmpfs for faster test runs
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
@@ -105,7 +114,9 @@ services:
   # ===========================================================================
   redis-test:
     image: redis:7-alpine
+    container_name: smedi-redis-test
     command: redis-server --appendonly no
+    # Use tmpfs for faster test runs
     tmpfs:
       - /data
     healthcheck:
@@ -117,38 +128,13 @@ services:
       - smedi-network-test
 
   # ===========================================================================
-  # End-to-End Test Runner (Playwright)
-  # ===========================================================================
-  e2e-test:
-    image: mcr.microsoft.com/playwright:v1.40.0-jammy
-    working_dir: /app
-    command: >
-      sh -c "
-        npm ci &&
-        npx playwright install --with-deps &&
-        npx playwright test
-      "
-    environment:
-      BASE_URL: "http://app-test:3000"
-      CI: "true"
-    volumes:
-      - .:/app
-      - node-modules-e2e:/app/node_modules
-    depends_on:
-      app-test:
-        condition: service_healthy
-    profiles:
-      - e2e
-    networks:
-      - smedi-network-test
-
-  # ===========================================================================
   # Application for E2E Testing
   # ===========================================================================
   app-test:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
+    container_name: smedi-app-test
     environment:
       APP_ENV: testing
       APP_DEBUG: "true"
@@ -179,6 +165,33 @@ services:
       timeout: 10s
       retries: 10
       start_period: 15s
+    profiles:
+      - e2e
+    networks:
+      - smedi-network-test
+
+  # ===========================================================================
+  # End-to-End Test Runner (Playwright)
+  # ===========================================================================
+  e2e-test:
+    image: mcr.microsoft.com/playwright:v1.40.0-jammy
+    container_name: smedi-e2e-test
+    working_dir: /app
+    command: >
+      sh -c "
+        npm ci &&
+        npx playwright install --with-deps &&
+        npx playwright test
+      "
+    environment:
+      BASE_URL: "http://app-test:3000"
+      CI: "true"
+    volumes:
+      - ..:/app
+      - node-modules-e2e:/app/node_modules
+    depends_on:
+      app-test:
+        condition: service_healthy
     profiles:
       - e2e
     networks:
