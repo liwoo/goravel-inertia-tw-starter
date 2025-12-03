@@ -141,7 +141,8 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/lenders/filters", lenderController.FilterMetadata)
 		optionalAuthRouter.Get("/lenders/{id}", lenderController.Show)
 
-		optionalAuthRouter.Post("/applications", applicationController.Store)
+		// Public application submission (no auth required)
+		optionalAuthRouter.Post("/applications", applicationController.PublicStore)
 	})
 
 	// Protected routes (require authentication)

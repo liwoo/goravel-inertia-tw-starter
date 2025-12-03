@@ -19,7 +19,7 @@ type RoleService struct {
 // NewRoleService creates a new role service using the builder pattern
 func NewRoleService() *RoleService {
 	// Build the service with all required configurations
-	service := contracts.NewServiceBuilder[models.Role]("role", "id").
+	service := contracts.NewServiceBuilder[models.Role]("roles", "id").
 		WithSearchFields("name", "slug", "description").                     // REQUIRED
 		WithSortFields("id", "name", "slug", "created_at", "updated_at").    // REQUIRED
 		WithFilterFields("slug", "is_active", "level", "name", "parent_id"). // REQUIRED

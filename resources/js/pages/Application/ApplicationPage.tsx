@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { ApplicationCreateForm } from './sections/ApplicationCreateForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,10 @@ export default function ApplicationPage() {
         }
     };
 
+    const handleCancel = () => {
+        router.visit('/login');
+    };
+
     if (isSuccess) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -31,9 +35,9 @@ export default function ApplicationPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="flex justify-center">
-                        <Button variant="outline" onClick={() => window.location.href = '/'}>
+                        <Button variant="outline" onClick={() => router.visit('/login')}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Home
+                            Back to Login
                         </Button>
                     </CardContent>
                 </Card>
@@ -58,10 +62,10 @@ export default function ApplicationPage() {
                         <ApplicationCreateForm
                             ref={formRef}
                             onSuccess={handleSuccess}
-                            onCancel={() => window.history.back()}
+                            onCancel={handleCancel}
                         />
                         <div className="mt-6 flex justify-end gap-4">
-                            <Button variant="outline" onClick={() => window.history.back()}>
+                            <Button variant="outline" onClick={handleCancel}>
                                 Cancel
                             </Button>
                             <Button onClick={handleSubmit}>

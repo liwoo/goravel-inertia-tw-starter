@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { forwardRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import {
   Member,
@@ -59,6 +59,11 @@ export default function MemberIndex({
     router.reload({ only: ['data'] });
   };
 
+  // Wrap MemberCreateForm with forwardRef to pass smeId while maintaining ref forwarding
+  const CreateFormWithSmeId = forwardRef((props: any, ref: any) => (
+    <MemberCreateForm {...props} smeId={smeId} ref={ref} />
+  ));
+
   return (
     <Admin title={"Member"}>
       <Head title="Member - Management" />
@@ -80,7 +85,7 @@ export default function MemberIndex({
             columns={isMobile ? memberColumnsMobile : memberColumns}
             customFilters={memberFilters}
             paginationConfig={meta?.pagination}
-            createForm={(props) => <MemberCreateForm {...props} smeId={smeId} />}
+            createForm={CreateFormWithSmeId}
             editForm={MemberEditForm}
             detailView={MemberDetailView}
             onRefresh={handleRefresh}

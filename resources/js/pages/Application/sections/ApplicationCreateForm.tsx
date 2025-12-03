@@ -10,6 +10,18 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { DISTRICT_NAMES } from '@/constants/districts';
+import { NATIONALITY_OPTIONS } from '@/types/nationalities';
+import { EDUCATION_OPTIONS } from '@/types/education';
+import { MALAWIAN_STATUS_OPTIONS } from '@/types/malawian-status';
+import {
+  formatMalawiPhone,
+  validateMalawiPhone,
+  validateBusinessRegistration,
+  validateTIN,
+  VALIDATION_MESSAGES,
+  EXAMPLE_FORMATS
+} from '@/lib/malawi-validators';
 
 interface ApplicationCreateFormProps extends CrudFormProps {
   setIsSaving?: (saving: boolean) => void;
@@ -62,10 +74,25 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
     if (!formData.sme?.trim()) newErrors.sme = 'SME is required';
     if (!formData.registrant_name?.trim()) newErrors.registrant_name = 'Registrant Name is required';
     if (!formData.email?.trim()) newErrors.email = 'Email is required';
-    if (!formData.phone?.trim()) newErrors.phone = 'Phone is required';
-    if (!formData.sme_registration_number?.trim()) newErrors.sme_registration_number = 'Registration Number is required';
-    if (!formData.sme_tax_identification_number?.trim()) newErrors.sme_tax_identification_number = 'Tax ID is required';
-    if (!formData.status?.trim()) newErrors.status = 'Status is required';
+
+    // Phone validation with Malawi format
+    if (!formData.phone?.trim()) {
+      newErrors.phone = 'Phone is required';
+    } else if (!validateMalawiPhone(formData.phone)) {
+      newErrors.phone = VALIDATION_MESSAGES.PHONE;
+    }
+
+    // Business Registration Number is optional, but validate format if provided
+    if (formData.sme_registration_number?.trim() && !validateBusinessRegistration(formData.sme_registration_number)) {
+      newErrors.sme_registration_number = VALIDATION_MESSAGES.BUSINESS_REG;
+    }
+
+    // Tax ID validation
+    if (!formData.sme_tax_identification_number?.trim()) {
+      newErrors.sme_tax_identification_number = 'Tax ID is required';
+    } else if (!validateTIN(formData.sme_tax_identification_number)) {
+      newErrors.sme_tax_identification_number = VALIDATION_MESSAGES.TIN;
+    }
 
     // Owner validation
     if (!formData.first_name?.trim()) newErrors.first_name = 'First Name is required';
@@ -177,8 +204,11 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                   <Input
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="Enter phone number"
+                    onChange={(e) => {
+                      const formatted = formatMalawiPhone(e.target.value);
+                      setFormData({ ...formData, phone: formatted });
+                    }}
+                    placeholder={EXAMPLE_FORMATS.PHONE}
                     className={`pl-9 ${errors.phone ? 'border-destructive' : ''}`}
                   />
                 </div>
@@ -196,12 +226,12 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sme_registration_number">SME Registration Number *</Label>
+                <Label htmlFor="sme_registration_number">Business Registration Number</Label>
                 <Input
                   id="sme_registration_number"
                   value={formData.sme_registration_number}
-                  onChange={(e) => setFormData({ ...formData, sme_registration_number: e.target.value })}
-                  placeholder="Enter registration number"
+                  onChange={(e) => setFormData({ ...formData, sme_registration_number: e.target.value.toUpperCase() })}
+                  placeholder={EXAMPLE_FORMATS.BUSINESS_REG}
                   className={errors.sme_registration_number ? 'border-destructive' : ''}
                 />
                 {errors.sme_registration_number && <p className="text-sm text-destructive">{errors.sme_registration_number}</p>}
@@ -213,7 +243,7 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                   id="sme_tax_identification_number"
                   value={formData.sme_tax_identification_number}
                   onChange={(e) => setFormData({ ...formData, sme_tax_identification_number: e.target.value })}
-                  placeholder="Enter tax ID"
+                  placeholder={EXAMPLE_FORMATS.TIN}
                   className={errors.sme_tax_identification_number ? 'border-destructive' : ''}
                 />
                 {errors.sme_tax_identification_number && <p className="text-sm text-destructive">{errors.sme_tax_identification_number}</p>}
@@ -263,12 +293,21 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="nationality">Nationality *</Label>
-                <Input
-                  id="nationality"
+                <Select
                   value={formData.nationality}
-                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                  className={errors.nationality ? 'border-destructive' : ''}
-                />
+                  onValueChange={(value) => setFormData({ ...formData, nationality: value })}
+                >
+                  <SelectTrigger className={errors.nationality ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Select nationality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NATIONALITY_OPTIONS.map((nationality) => (
+                      <SelectItem key={nationality.value} value={nationality.value}>
+                        {nationality.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.nationality && <p className="text-sm text-destructive">{errors.nationality}</p>}
               </div>
               <div className="space-y-2">
@@ -276,7 +315,9 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                 <Input
                   id="national_id_number"
                   value={formData.national_id_number}
-                  onChange={(e) => setFormData({ ...formData, national_id_number: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, national_id_number: e.target.value.toUpperCase() })}
+                  placeholder={EXAMPLE_FORMATS.NATIONAL_ID}
+                  maxLength={8}
                   className={errors.national_id_number ? 'border-destructive' : ''}
                 />
                 {errors.national_id_number && <p className="text-sm text-destructive">{errors.national_id_number}</p>}
@@ -312,22 +353,40 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="education_level">Education Level *</Label>
-                <Input
-                  id="education_level"
+                <Select
                   value={formData.education_level}
-                  onChange={(e) => setFormData({ ...formData, education_level: e.target.value })}
-                  className={errors.education_level ? 'border-destructive' : ''}
-                />
+                  onValueChange={(value) => setFormData({ ...formData, education_level: value })}
+                >
+                  <SelectTrigger className={errors.education_level ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Select education level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EDUCATION_OPTIONS.map((education) => (
+                      <SelectItem key={education.value} value={education.value}>
+                        {education.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.education_level && <p className="text-sm text-destructive">{errors.education_level}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="malawian_status">Malawian Status *</Label>
-                <Input
-                  id="malawian_status"
+                <Select
                   value={formData.malawian_status}
-                  onChange={(e) => setFormData({ ...formData, malawian_status: e.target.value })}
-                  className={errors.malawian_status ? 'border-destructive' : ''}
-                />
+                  onValueChange={(value) => setFormData({ ...formData, malawian_status: value })}
+                >
+                  <SelectTrigger className={errors.malawian_status ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MALAWIAN_STATUS_OPTIONS.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.malawian_status && <p className="text-sm text-destructive">{errors.malawian_status}</p>}
               </div>
             </div>
@@ -355,7 +414,11 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                 <Input
                   id="landline_number"
                   value={formData.landline_number || ''}
-                  onChange={(e) => setFormData({ ...formData, landline_number: e.target.value })}
+                  onChange={(e) => {
+                    const formatted = formatMalawiPhone(e.target.value);
+                    setFormData({ ...formData, landline_number: formatted });
+                  }}
+                  placeholder={EXAMPLE_FORMATS.PHONE}
                 />
               </div>
               <div className="space-y-2">
@@ -368,11 +431,21 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="district">District</Label>
-                <Input
-                  id="district"
+                <Select
                   value={formData.district || ''}
-                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                />
+                  onValueChange={(value) => setFormData({ ...formData, district: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select district" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DISTRICT_NAMES.map((district) => (
+                      <SelectItem key={district} value={district}>
+                        {district}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="traditional_authority">Traditional Authority</Label>
@@ -432,7 +505,11 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                 <Input
                   id="alt_contact_phone"
                   value={formData.alt_contact_phone || ''}
-                  onChange={(e) => setFormData({ ...formData, alt_contact_phone: e.target.value })}
+                  onChange={(e) => {
+                    const formatted = formatMalawiPhone(e.target.value);
+                    setFormData({ ...formData, alt_contact_phone: formatted });
+                  }}
+                  placeholder={EXAMPLE_FORMATS.PHONE}
                 />
               </div>
             </div>

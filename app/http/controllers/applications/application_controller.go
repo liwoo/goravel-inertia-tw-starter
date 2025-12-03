@@ -83,6 +83,55 @@ func NewApplicationController() *ApplicationController {
 
 // Add custom domain-specific methods below this line
 
+// PublicStore handles public application submissions without authentication
+// POST /api/public/applications
+func (c *ApplicationController) PublicStore(ctx http.Context) http.Response {
+	// Create a new instance of the create request type
+	var createReq requests.ApplicationCreateRequest
+	if err := ctx.Request().Bind(&createReq); err != nil {
+		return c.ValidationErrorResponse(ctx, map[string]interface{}{
+			"binding_error": err.Error(),
+		})
+	}
+
+	// Manual validation using the request's Rules method
+	rules := createReq.Rules(ctx)
+
+	// Convert the bound request to validation data
+	requestData := createReq.ToCreateData()
+
+	// Validate using Goravel's validator
+	validator, err := facades.Validation().Make(requestData, rules)
+	if err != nil {
+		return c.ValidationErrorResponse(ctx, map[string]interface{}{
+			"validation_setup_error": err.Error(),
+		})
+	}
+
+	if validator.Fails() {
+		// Convert validation errors to map[string]interface{}
+		errorMap := make(map[string]interface{})
+		for key, val := range validator.Errors().All() {
+			errorMap[key] = val
+		}
+		return c.ValidationErrorResponse(ctx, errorMap)
+	}
+
+	// Set default status to Pending for public submissions
+	requestData["status"] = "Pending"
+
+	// Call service Create
+	result, err := c.applicationService.Create(requestData)
+	if err != nil {
+		facades.Log().Error("Failed to create public application", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return c.BadRequestResponse(ctx, "Failed to create application: "+err.Error(), nil)
+	}
+
+	return c.ResourceCreatedResponse(ctx, result, "application")
+}
+
 // ApproveApplication POST /api/applications/{id}/approve
 func (c *ApplicationController) ApproveApplication(ctx http.Context) http.Response {
 	// Get ID from URL

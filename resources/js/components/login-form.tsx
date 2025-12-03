@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 // @ts-ignore
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm, usePage, Link } from '@inertiajs/react';
 import React from 'react';
 import { toast } from "sonner";
 
@@ -100,6 +100,17 @@ export function LoginForm({
         </div>
         <Button type="submit" className="w-full" disabled={processing}>
           {processing ? 'Logging in...' : 'Login'}
+        </Button>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Or</span>
+          </div>
+        </div>
+        <Button variant="outline" className="w-full" asChild>
+          <Link href="/apply">Apply for Access</Link>
         </Button>
       </div>
     </form>

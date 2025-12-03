@@ -401,6 +401,8 @@ func (s *PermissionService) loadUserPermissions(user *models.User) []string {
 		WhereIn("rp.role_id", roleIDsInterface).
 		Where("rp.is_active = ?", true).
 		Where("p.is_active = ?", true).
+		Where("rp.deleted_at IS NULL").
+		Where("p.deleted_at IS NULL").
 		Get(&slugResults)
 
 	if err != nil {

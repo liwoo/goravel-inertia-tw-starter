@@ -129,6 +129,7 @@ func (s *PermissionsService) AssignPermissionToRole(roleID, permissionID uint) e
 	count, err := facades.Orm().Query().
 		Table("role_permissions").
 		Where("role_id = ? AND permission_id = ?", roleID, permissionID).
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
 		return fmt.Errorf("failed to check existing assignment: %w", err)
