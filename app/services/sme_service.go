@@ -870,6 +870,40 @@ func (s *SmeService) getDistributionByField(field string) []map[string]interface
 	return distribution
 }
 
+// GetSmeByUserId retrieves the SME associated with the given user ID
+// It checks both PrimaryBusinessOwner and AdditionalBusinessMember tables by email
+func (s *SmeService) GetSmeByUserEmail(email string) (*models.Sme, error) {
+	var sme models.Sme
+
+	err := facades.Orm().Query().
+		Model(&models.Sme{}).
+		Join("INNER JOIN primary_business_owner ON primary_business_owner.sme_id = smes.id").
+		Where("primary_business_owner.email = ?", email).
+		Where("primary_business_owner.deleted_at IS NULL").
+		First(&sme)
+
+	if err == nil && sme.ID != 0 {
+		return &sme, nil
+	}
+
+	err = facades.Orm().Query().
+		Model(&models.Sme{}).
+		Join("INNER JOIN additional_business_members ON additional_business_members.sme_id = smes.id").
+		Where("additional_business_members.email = ?", email).
+		Where("additional_business_members.deleted_at IS NULL").
+		First(&sme)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if sme.ID == 0 {
+		return nil, nil
+	}
+
+	return &sme, nil
+}
+
 // GetDistributionBySector returns SME distribution by sector field
 func (s *SmeService) GetDistributionBySector() []map[string]interface{} {
 	return s.getDistributionByField("sector")
