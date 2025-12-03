@@ -1437,11 +1437,12 @@ func (s *SmeService) DetermineClassification(employees int, turnover, assets flo
 	// Turnover: Up to 5,000,000
 	// Assets: Up to 1,000,000
 	if employees >= models.MicroEmployeeMin && employees <= models.MicroEmployeeMax {
-		// For Micro, "up to" includes 0, so if employee count is met and
-		// financial data is within thresholds (including 0/missing), classify as Micro
-		turnoverMet := turnover <= models.MicroTurnoverMax // 0 is valid for "up to"
-		assetsMet := assets <= models.MicroAssetsMax       // 0 is valid for "up to"
-		if turnoverMet && assetsMet {
+		// For Micro, we require at least some financial data to classify
+		// Either turnover OR assets criteria can be met (OR logic like Small/Medium)
+		// But at least one must have a positive value to avoid classifying with no data
+		turnoverMet := turnover > 0 && turnover <= models.MicroTurnoverMax
+		assetsMet := assets > 0 && assets <= models.MicroAssetsMax
+		if turnoverMet || assetsMet {
 			return models.ClassificationMicro
 		}
 	}
