@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, User } from 'lucide-react';
+import { Building2, FileText, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CrudDetailViewProps } from '@/types/crud';
