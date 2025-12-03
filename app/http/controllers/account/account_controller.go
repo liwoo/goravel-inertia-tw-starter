@@ -1,8 +1,8 @@
 package account
 
 import (
-	"regexp"
 	nethttp "net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/goravel/framework/contracts/http"
@@ -30,7 +30,7 @@ func NewAccountController() *AccountController {
 
 // UpdateProfile godoc
 // @Summary      Update user profile
-// @Description  Update the authenticated user's profile (name and email)
+// @Description  Update the authenticated user's profile (name only - email cannot be changed)
 // @Tags         account
 // @Accept       json
 // @Produce      json
@@ -61,13 +61,11 @@ func (c *AccountController) UpdateProfile(ctx http.Context) http.Response {
 		})
 	}
 
-	// Validate using Goravel's validator
+	// Validate using Goravel's validator (only name - email cannot be changed)
 	validator, err := facades.Validation().Make(map[string]interface{}{
-		"name":  request.Name,
-		"email": request.Email,
+		"name": request.Name,
 	}, map[string]string{
-		"name":  "required|min_len:2|max_len:255",
-		"email": "required|email|max_len:255",
+		"name": "required|min_len:2|max_len:255",
 	})
 	if err != nil {
 		return ctx.Response().Json(nethttp.StatusInternalServerError, map[string]interface{}{
@@ -84,28 +82,11 @@ func (c *AccountController) UpdateProfile(ctx http.Context) http.Response {
 		})
 	}
 
-	// Check if email is being changed and if it's already taken
-	if request.Email != user.Email {
-		var existingUser models.User
-		err := facades.Orm().Query().Where("email = ? AND id != ?", request.Email, user.ID).First(&existingUser)
-		if err == nil && existingUser.ID > 0 {
-			return ctx.Response().Json(nethttp.StatusUnprocessableEntity, map[string]interface{}{
-				"success": false,
-				"message": "Validation failed",
-				"errors": map[string][]string{
-					"email": {"This email is already in use"},
-				},
-			})
-		}
-	}
-
-	// Store old values for activity log
+	// Store old name for activity log
 	oldName := user.Name
-	oldEmail := user.Email
 
-	// Update user
+	// Update user (only name - email is not changeable)
 	user.Name = request.Name
-	user.Email = request.Email
 
 	if err := facades.Orm().Query().Save(&user); err != nil {
 		return ctx.Response().Json(nethttp.StatusInternalServerError, map[string]interface{}{
@@ -124,12 +105,6 @@ func (c *AccountController) UpdateProfile(ctx http.Context) http.Response {
 			"to":   request.Name,
 		}
 	}
-	if oldEmail != request.Email {
-		metadata["changes"].(map[string]interface{})["email"] = map[string]string{
-			"from": oldEmail,
-			"to":   request.Email,
-		}
-	}
 
 	c.activityService.LogActivity(ctx, user.ID, models.ActivityProfileUpdate, "Profile updated", metadata)
 
@@ -140,12 +115,12 @@ func (c *AccountController) UpdateProfile(ctx http.Context) http.Response {
 		"success": true,
 		"message": "Profile updated successfully",
 		"data": map[string]interface{}{
-			"id":            user.ID,
-			"name":          user.Name,
-			"email":         user.Email,
-			"is_active":     user.IsActive,
+			"id":             user.ID,
+			"name":           user.Name,
+			"email":          user.Email,
+			"is_active":      user.IsActive,
 			"is_super_admin": user.IsSuperAdmin,
-			"roles":         user.Roles,
+			"roles":          user.Roles,
 		},
 	})
 }

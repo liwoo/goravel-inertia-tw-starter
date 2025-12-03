@@ -8,12 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goravel/framework/contracts/database/orm"
+	"github.com/goravel/framework/facades"
 	"smedi-sme-db/app/contracts"
 	"smedi-sme-db/app/http/requests"
 	"smedi-sme-db/app/models"
-
-	"github.com/goravel/framework/contracts/database/orm"
-	"github.com/goravel/framework/facades"
 )
 
 // SmeService implements business logic for smes using the builder pattern
@@ -26,9 +25,9 @@ func NewSmeService() *SmeService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.Sme]("smes", "id").
 		WithSearchFields("usme_number", "name", "registration_number", "tax_identification_number", "business_category", "sector", "contact_email", "contact_phone", "region", "district"). // Fields that will be searchable via the search query parameter
-		WithSortFields("id", "created_at", "updated_at", "usme_number", "name", "operational_start_date", "business_category", "sector", "region", "district", "formalisation_score").      // Fields that can be used for sorting results
-		WithFilterFields("business_category", "sector", "region", "district", "created_by", "is_active", "formalisation_score").                                                            // Fields that can be filtered on
-		WithValidationRules(map[string]interface{}{                                                                                                                                         // Validation rules for create/update operations
+		WithSortFields("id", "created_at", "updated_at", "usme_number", "name", "operational_start_date", "business_category", "sector", "region", "district", "formalisation_score").       // Fields that can be used for sorting results
+		WithFilterFields("business_category", "sector", "region", "district", "created_by", "is_active", "formalisation_score").                                                             // Fields that can be filtered on
+		WithValidationRules(map[string]interface{}{                                                                                                                                          // Validation rules for create/update operations
 			// usme_number is omitted from validation - will be auto-generated in BeforeCreate hook if not provided
 			"name":                           "required|string|max:255",
 			"registration_number":            "string|max:100",

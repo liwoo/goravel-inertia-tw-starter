@@ -5,36 +5,31 @@ import (
 )
 
 // UpdateProfileRequest handles profile update validation
+// Note: Email is intentionally excluded - users cannot change their email address
 type UpdateProfileRequest struct {
-	Name  string `form:"name" json:"name"`
-	Email string `form:"email" json:"email"`
+	Name string `form:"name" json:"name"`
 }
 
 // Rules defines validation rules for profile update
 func (r *UpdateProfileRequest) Rules(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name":  "required|min_len:2|max_len:255",
-		"email": "required|email|max_len:255",
+		"name": "required|min_len:2|max_len:255",
 	}
 }
 
 // Messages defines custom validation messages
 func (r *UpdateProfileRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name.required":   "Name is required",
-		"name.min_len":    "Name must be at least 2 characters",
-		"name.max_len":    "Name cannot exceed 255 characters",
-		"email.required":  "Email is required",
-		"email.email":     "Please provide a valid email address",
-		"email.max_len":   "Email cannot exceed 255 characters",
+		"name.required": "Name is required",
+		"name.min_len":  "Name must be at least 2 characters",
+		"name.max_len":  "Name cannot exceed 255 characters",
 	}
 }
 
 // Attributes defines custom attribute names
 func (r *UpdateProfileRequest) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
-		"name":  "name",
-		"email": "email address",
+		"name": "name",
 	}
 }
 
@@ -55,10 +50,10 @@ func (r *UpdateProfileRequest) PassedValidation(ctx http.Context) error {
 }
 
 // ToUpdateData converts the request to update data map
+// Note: Only name is included - email cannot be changed
 func (r *UpdateProfileRequest) ToUpdateData() map[string]interface{} {
 	return map[string]interface{}{
-		"name":  r.Name,
-		"email": r.Email,
+		"name": r.Name,
 	}
 }
 

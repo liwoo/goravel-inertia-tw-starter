@@ -158,13 +158,39 @@ func (u *User) SharesRoleWith(other *User) bool {
 	return false
 }
 
+// GetRoleLevel returns the user's highest role level, or 0 if no roles
+func (u *User) GetRoleLevel() int {
+	role := u.GetHighestRole()
+	if role == nil {
+		return 0
+	}
+	return role.Level
+}
+
 // CanMessageUser checks if this user can send messages to another user
+// Users can message others at their role level or lower
 func (u *User) CanMessageUser(other *User) bool {
 	// Super admins can message anyone
 	if u.IsSuperAdminUser() {
 		return true
 	}
 
-	// Users can message others with shared roles
-	return u.SharesRoleWith(other)
+	// Can't message yourself (handled elsewhere, but safety check)
+	if u.ID == other.ID {
+		return true
+	}
+
+	// Get sender's highest role level
+	senderLevel := u.GetRoleLevel()
+
+	// Get recipient's highest role level
+	recipientLevel := other.GetRoleLevel()
+
+	// Users with no role (level 0) can only message other users with no role
+	if senderLevel == 0 {
+		return recipientLevel == 0
+	}
+
+	// Sender can message if their level >= recipient's level
+	return senderLevel >= recipientLevel
 }

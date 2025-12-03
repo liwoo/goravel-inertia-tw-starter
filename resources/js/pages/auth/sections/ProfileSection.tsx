@@ -37,9 +37,8 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ user }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<UpdateProfileRequest>({
+  const [formData, setFormData] = useState<{ name: string }>({
     name: '',
-    email: '',
   });
   const [errors, setErrors] = useState<ProfileFormErrors>({});
 
@@ -56,7 +55,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ user }) => {
       setProfile(profileData);
       setFormData({
         name: profileData.name,
-        email: profileData.email,
       });
     } catch (error) {
       console.error('Failed to fetch profile:', error);
@@ -65,7 +63,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ user }) => {
       if (user) {
         setFormData({
           name: user.name,
-          email: user.email,
         });
       }
     } finally {
@@ -82,12 +79,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ user }) => {
       newErrors.name = 'Name must be at least 2 characters';
     } else if (formData.name.length > 100) {
       newErrors.name = 'Name must not exceed 100 characters';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
     }
 
     setErrors(newErrors);
@@ -117,9 +108,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ user }) => {
           if (errorData.errors.name) {
             apiErrors.name = errorData.errors.name[0];
           }
-          if (errorData.errors.email) {
-            apiErrors.email = errorData.errors.email[0];
-          }
           setErrors(apiErrors);
         }
 
@@ -139,7 +127,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ user }) => {
     if (profile) {
       setFormData({
         name: profile.name,
-        email: profile.email,
       });
     }
   };
@@ -304,24 +291,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ user }) => {
             ) : (
               <h2 className="text-2xl font-bold text-foreground">{displayProfile.name}</h2>
             )}
-            {isEditing ? (
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email Address</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Enter your email"
-                  className={errors.email ? 'border-destructive' : ''}
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
-                )}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">{displayProfile.email}</p>
-            )}
+            <p className="text-muted-foreground">{displayProfile.email}</p>
             <div className="flex flex-wrap justify-center sm:justify-start gap-2">
               {displayProfile.is_active ? (
                 <Badge variant="default" className="bg-green-600">Active</Badge>
