@@ -17,7 +17,7 @@ import {
   DrawerContent,
 } from "@/components/ui/drawer"
 
-export function SiteHeader({title}: { title: string }) {
+export function SiteHeader({ title }: { title: string }) {
   const { props } = usePage<SharedData>();
   const user = props.auth?.user;
   const { selectedConversation, unreadCount, setSelectedConversation } = useMessages();

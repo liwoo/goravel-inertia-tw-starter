@@ -20,6 +20,17 @@ export const procurementNoticeColumns: CrudColumn<ProcurementNotice>[] = [
         ),
     },
     {
+        key: 'organization',
+        label: 'Organization',
+        sortable: true,
+        className: 'min-w-[150px]',
+        render: (item) => (
+            <div className="font-medium text-gray-900 flex items-center">
+                <p className="font-medium text-foreground">{item.organization}</p>
+            </div>
+        ),
+    },
+    {
         key: 'ref_no',
         label: 'Ref No',
         sortable: true,

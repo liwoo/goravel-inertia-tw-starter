@@ -21,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+import { cn } from "@/lib/utils"
+
 export function NavMain({
   items,
 }: {
@@ -28,6 +30,7 @@ export function NavMain({
     title: string
     url: string
     icon?: LucideIcon
+    variant?: "default" | "primary"
   }[]
 }) {
   const { url } = usePage();
@@ -44,6 +47,7 @@ export function NavMain({
     return url.startsWith(itemUrl);
   };
 
+  const primaryCta = items.find(item => item.variant === 'primary');
   // Check if user can create any entity
   const canCreateAnything =
     canPerformAction('smes', 'create') ||
@@ -70,7 +74,26 @@ export function NavMain({
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
-        {canCreateAnything && (
+        {primaryCta != null ? <SidebarMenu>
+          <SidebarMenuItem className="flex items-center gap-2">
+            <SidebarMenuButton
+              tooltip="Quick Create"
+              className="min-w-16 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+              onClick={() => router.visit(primaryCta.url)}
+            >
+              <PlusCircleIcon />
+              <span>{primaryCta.title}</span>
+            </SidebarMenuButton>
+            <Button
+              size="icon"
+              className="h-9 w-9 shrink-0 group-data-[collapsible=icon]:opacity-0"
+              variant="outline"
+            >
+              <MailIcon />
+              <span className="sr-only">Inbox</span>
+            </Button>
+          </SidebarMenuItem>
+        </SidebarMenu> : canCreateAnything && (
           <SidebarMenu>
             <SidebarMenuItem className="flex items-center gap-2">
               <DropdownMenu>
@@ -120,14 +143,13 @@ export function NavMain({
           </SidebarMenu>
         )}
         <SidebarMenu>
-          {items.map((item, index) => {
+          {items.filter(item => item.variant !== 'primary').map((item, index) => {
             const active = isActive(item.url);
             return (
               <SidebarMenuItem key={item.title}>
                 <Link href={item.url}>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    className="group"
                     isActive={active}
                   >
                     {item.icon && <item.icon />}

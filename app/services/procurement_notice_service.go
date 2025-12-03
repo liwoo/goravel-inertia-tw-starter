@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/http/requests"
 	"smedi-sme-db/app/models"
 
 	"github.com/dromara/carbon/v2"
@@ -77,10 +78,10 @@ func NewProcurementNoticeService() *ProcurementNoticeService {
 	}
 
 	service := contracts.NewServiceBuilder[models.ProcurementNotice]("procurement_notices", "id").
-		WithSearchFields("procured_by", "procurement_type", "ref_no", "organization", "details", "application_details").      // Searchable fields
-		WithSortFields("id", "created_at", "updated_at", "open_date", "close_date", "procured_by", "organization").           // Sortable fields
-		WithFilterFields("market_approach", "invitation", "is_published", "qualifying_districts", "open_date", "close_date"). // Filterable fields
-		WithValidationRules(map[string]interface{}{                                                                           // Validation rules for create/update operations
+		WithSearchFields("procured_by", "procurement_type", "ref_no", "organization", "details", "application_details").                      // Searchable fields
+		WithSortFields("id", "created_at", "updated_at", "open_date", "close_date", "procured_by", "organization").                           // Sortable fields
+		WithFilterFields("organization", "market_approach", "invitation", "is_published", "qualifying_districts", "open_date", "close_date"). // Filterable fields
+		WithValidationRules(map[string]interface{}{                                                                                           // Validation rules for create/update operations
 			"procured_by":              "required|max_len:255",
 			"procurement_type":         "required|max_len:255",
 			"market_approach":          "required|max_len:50",
@@ -148,53 +149,95 @@ func NewProcurementNoticeService() *ProcurementNoticeService {
 	return procurementNoticeServiceInstance
 }
 
-// GetFilterDefinitions returns filter definitions for the procurementnotices resource
-// This method is OPTIONAL - only implement if you need custom filter UI components
-// Uncomment and customize the implementation below if needed:
-//
-// func (s *Procurement_noticeService) GetFilterDefinitions() []contracts.FilterDefinition {
-// 	return []contracts.FilterDefinition{
-// 		// String field example
-// 		contracts.NewFilterDefinition(
-// 			"field_name",           // Field name in database
-// 			"Display Name",         // Human-readable label
-// 			contracts.FilterTypeString,
-// 			nil,                    // nil = use all string operators (equals, contains, starts_with, etc.)
-// 		),
-//
-// 		// Enum field example (dropdown)
-// 		contracts.NewFilterDefinition(
-// 			"status",
-// 			"Status",
-// 			contracts.FilterTypeEnum,
-// 			&[]string{"ACTIVE", "INACTIVE", "PENDING"}, // Available options
-// 		),
-//
-// 		// Number field example
-// 		contracts.NewFilterDefinition(
-// 			"price",
-// 			"Price",
-// 			contracts.FilterTypeNumber,
-// 			nil,                    // nil = use all number operators (equals, greater_than, less_than, etc.)
-// 		),
-//
-// 		// Date field example
-// 		contracts.NewFilterDefinition(
-// 			"created_at",
-// 			"Created Date",
-// 			contracts.FilterTypeDate,
-// 			nil,                    // nil = use all date operators (equals, before, after, between, etc.)
-// 		),
-//
-// 		// Boolean field example
-// 		contracts.NewFilterDefinition(
-// 			"is_active",
-// 			"Active Status",
-// 			contracts.FilterTypeBoolean,
-// 			nil,
-// 		),
-// 	}
-// }
+// GetFilterDefinitions returns filter definitions for the procurement notices resource
+func (s *ProcurementNoticeService) GetFilterDefinitions() []contracts.FilterDefinition {
+	// Get all districts as strings for the enum
+	districts := requests.GetAllDistricts()
+	districtStrings := make([]string, len(districts))
+	for i, d := range districts {
+		districtStrings[i] = string(d)
+	}
+
+	// Market approach options
+	marketApproaches := []string{
+		"Open",
+		"Restricted",
+		"Direct",
+	}
+
+	// Invitation options
+	invitations := []string{
+		"Open",
+		"Selective",
+		"Limited",
+	}
+
+	return []contracts.FilterDefinition{
+		// Organization - string search
+		contracts.NewFilterDefinition(
+			"organization",
+			"Organization",
+			contracts.FilterTypeString,
+			nil,
+		),
+		// Procured By - string search
+		contracts.NewFilterDefinition(
+			"procured_by",
+			"Procured By",
+			contracts.FilterTypeString,
+			nil,
+		),
+		// Market Approach - enum
+		contracts.NewFilterDefinition(
+			"market_approach",
+			"Market Approach",
+			contracts.FilterTypeEnum,
+			&marketApproaches,
+		),
+		// Invitation - enum
+		contracts.NewFilterDefinition(
+			"invitation",
+			"Invitation Type",
+			contracts.FilterTypeEnum,
+			&invitations,
+		),
+		// Published Status - boolean
+		contracts.NewFilterDefinition(
+			"is_published",
+			"Published",
+			contracts.FilterTypeBoolean,
+			nil,
+		),
+		// Qualifying Districts - enum with all 28 Malawian districts
+		contracts.NewFilterDefinition(
+			"qualifying_districts",
+			"Qualifying Districts",
+			contracts.FilterTypeEnum,
+			&districtStrings,
+		),
+		// Open Date - date filter
+		contracts.NewFilterDefinition(
+			"open_date",
+			"Opening Date",
+			contracts.FilterTypeDate,
+			nil,
+		),
+		// Close Date - date filter
+		contracts.NewFilterDefinition(
+			"close_date",
+			"Closing Date",
+			contracts.FilterTypeDate,
+			nil,
+		),
+		// Created Date - datetime filter
+		contracts.NewFilterDefinition(
+			"created_at",
+			"Date Created",
+			contracts.FilterTypeDateTime,
+			nil,
+		),
+	}
+}
 
 // Add domain-specific methods below this line
 // Examples:

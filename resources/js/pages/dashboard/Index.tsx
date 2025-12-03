@@ -12,6 +12,7 @@ import {
   SmeBusinessChartsCarousel,
   BdspChartsCarousel,
 } from "./sections";
+import { SmeDashboard } from "./SmeDashboard";
 import {
   UpcomingEventsWidget,
   UpcomingProcurementsWidget,
@@ -92,6 +93,30 @@ const DashboardPage: React.FC = () => {
 
   // Check if user has any SME-related permissions to show charts
   const canViewSmeCharts = canViewSmes;
+
+  // Define specialized dashboards
+  const roleDashboards = [
+    {
+      role: 'sme-user',
+      component: <SmeDashboard user={user} />,
+      title: "My MSME Dashboard"
+    }
+  ];
+
+  const activeDashboard = roleDashboards.find(d =>
+    user?.roles?.some((role: any) => role.slug === d.role)
+  );
+
+  if (activeDashboard) {
+    return (
+      <Admin>
+        <Head>
+          <title>{props.pageTitle || activeDashboard.title}</title>
+        </Head>
+        {activeDashboard.component}
+      </Admin>
+    );
+  }
 
   return (
     <Admin>

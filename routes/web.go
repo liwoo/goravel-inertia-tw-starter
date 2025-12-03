@@ -10,6 +10,7 @@ import (
 	"smedi-sme-db/app/http/controllers/books"
 	"smedi-sme-db/app/http/controllers/configs"
 	"smedi-sme-db/app/http/controllers/events"
+	"smedi-sme-db/app/http/controllers/members"
 	"smedi-sme-db/app/http/controllers/procurementnotices"
 	"smedi-sme-db/app/http/controllers/smes"
 	inertiaHelper "smedi-sme-db/app/http/inertia"
@@ -64,6 +65,7 @@ func Web() {
 	eventsPageController := events.NewEventPageController()
 	procurementnoticesPageController := procurementnotices.NewProcurementNoticePageController()
 	applicationsPageController := applications.NewApplicationPageController()
+	membersPageController := members.NewMemberPageController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
@@ -131,6 +133,8 @@ func Web() {
 
 		// User management pages (super admin only)
 		router.Get("/admin/users", userPageController.Index)
+
+		router.Get("/portal", membersPageController.Index)
 
 		// SSE Test page (for development/testing)
 		router.Get("/test/sse", func(ctx http.Context) http.Response {
