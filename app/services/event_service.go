@@ -2,7 +2,9 @@ package services
 
 import (
 	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/http/requests"
 	"smedi-sme-db/app/models"
+	"sort"
 )
 
 // EventService implements business logic for events using the builder pattern
@@ -15,15 +17,15 @@ func NewEventService() *EventService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.Event]("events", "id").
 		WithSearchFields("title", "description", "venue", "district", "notes"). // Fields that will be searchable via the search query parameter
-		WithSortFields("id", "created_at", "updated_at", "date", "title"). // Fields that can be used for sorting results
-		WithFilterFields("district", "date"). // Fields that can be filtered on
-		WithValidationRules(map[string]interface{}{ // Validation rules for create/update operations
+		WithSortFields("id", "created_at", "updated_at", "date", "title").      // Fields that can be used for sorting results
+		WithFilterFields("title", "venue", "district", "date").                 // Fields that can be filtered on
+		WithValidationRules(map[string]interface{}{                             // Validation rules for create/update operations
 			"title":       "required|max_len:255",
 			"description": "required",
 			"venue":       "required|max_len:255",
 			"district":    "required|max_len:100",
 		}).
-		WithDefaultSort("date", "DESC"). // Default sorting when none specified
+		WithDefaultSort("date", "DESC").            // Default sorting when none specified
 		WithScopeFiltering("events", "created_by"). // Enable permission-based filtering
 
 		Build() // Returns a fully configured CrudServiceContract
@@ -39,52 +41,55 @@ func NewEventService() *EventService {
 }
 
 // GetFilterDefinitions returns filter definitions for the events resource
-// This method is OPTIONAL - only implement if you need custom filter UI components
-// Uncomment and customize the implementation below if needed:
-//
-// func (s *EventService) GetFilterDefinitions() []contracts.FilterDefinition {
-// 	return []contracts.FilterDefinition{
-// 		// String field example
-// 		contracts.NewFilterDefinition(
-// 			"field_name",           // Field name in database
-// 			"Display Name",         // Human-readable label
-// 			contracts.FilterTypeString,
-// 			nil,                    // nil = use all string operators (equals, contains, starts_with, etc.)
-// 		),
-//
-// 		// Enum field example (dropdown)
-// 		contracts.NewFilterDefinition(
-// 			"status",
-// 			"Status",
-// 			contracts.FilterTypeEnum,
-// 			&[]string{"ACTIVE", "INACTIVE", "PENDING"}, // Available options
-// 		),
-//
-// 		// Number field example
-// 		contracts.NewFilterDefinition(
-// 			"price",
-// 			"Price",
-// 			contracts.FilterTypeNumber,
-// 			nil,                    // nil = use all number operators (equals, greater_than, less_than, etc.)
-// 		),
-//
-// 		// Date field example
-// 		contracts.NewFilterDefinition(
-// 			"created_at",
-// 			"Created Date",
-// 			contracts.FilterTypeDate,
-// 			nil,                    // nil = use all date operators (equals, before, after, between, etc.)
-// 		),
-//
-// 		// Boolean field example
-// 		contracts.NewFilterDefinition(
-// 			"is_active",
-// 			"Active Status",
-// 			contracts.FilterTypeBoolean,
-// 			nil,
-// 		),
-// 	}
-// }
+func (s *EventService) GetFilterDefinitions() []contracts.FilterDefinition {
+	// Get all districts as strings for the enum
+	districts := requests.GetAllDistricts()
+	sort.Slice(districts, func(i, j int) bool {
+		return districts[i] < districts[j]
+	})
+	districtStrings := make([]string, len(districts))
+	for i, d := range districts {
+		districtStrings[i] = string(d)
+	}
+
+	return []contracts.FilterDefinition{
+		// Title - string search
+		contracts.NewFilterDefinition(
+			"title",
+			"Event Title",
+			contracts.FilterTypeString,
+			nil,
+		),
+		// Venue - string search
+		contracts.NewFilterDefinition(
+			"venue",
+			"Event Venue",
+			contracts.FilterTypeString,
+			nil,
+		),
+		// District - enum with all 28 Malawian districts
+		contracts.NewFilterDefinition(
+			"district",
+			"District",
+			contracts.FilterTypeEnum,
+			&districtStrings,
+		),
+		// Event Date - date filter
+		contracts.NewFilterDefinition(
+			"date",
+			"Event Date",
+			contracts.FilterTypeDate,
+			nil,
+		),
+		// Created Date - datetime filter
+		contracts.NewFilterDefinition(
+			"created_at",
+			"Date Created",
+			contracts.FilterTypeDateTime,
+			nil,
+		),
+	}
+}
 
 // Add domain-specific methods below this line
 // Examples:
