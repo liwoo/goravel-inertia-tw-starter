@@ -58,8 +58,8 @@ export function SmeSectorChart({ data, isLoading = false }: SmeSectorChartProps)
         percentage: item.percentage,
         fill: BAR_COLORS[index % BAR_COLORS.length],
         // Truncate long labels for Y-axis display
-        shortLabel: item.label.length > 20
-          ? item.label.substring(0, 17) + "..."
+        shortLabel: item.label.length > 10
+          ? item.label.substring(0, 8) + "..."
           : item.label,
       }));
   }, [data]);
@@ -95,19 +95,19 @@ export function SmeSectorChart({ data, isLoading = false }: SmeSectorChartProps)
   }
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col overflow-hidden">
       <CardHeader>
         <CardTitle>Economic Sector Distribution</CardTitle>
         <CardDescription>SMEs by economic sector (sorted by count)</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
+      <CardContent className="overflow-hidden w-full">
+        <ChartContainer config={chartConfig} className="h-[300px] w-full max-w-full">
           <BarChart
             data={chartData}
             layout="vertical"
             margin={{
               left: 0,
-              right: 16,
+              right: 4,
               top: 0,
               bottom: 0,
             }}
@@ -117,10 +117,10 @@ export function SmeSectorChart({ data, isLoading = false }: SmeSectorChartProps)
               dataKey="shortLabel"
               type="category"
               tickLine={false}
-              tickMargin={8}
+              tickMargin={2}
               axisLine={false}
-              width={140}
-              tick={{ fontSize: 11 }}
+              width={70}
+              tick={{ fontSize: 9 }}
             />
             <XAxis
               dataKey="value"
@@ -128,9 +128,12 @@ export function SmeSectorChart({ data, isLoading = false }: SmeSectorChartProps)
               tickLine={false}
               axisLine={false}
               tickMargin={8}
+              tick={{ fontSize: 10 }}
             />
             <ChartTooltip
               cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+              wrapperStyle={{ zIndex: 1000 }}
+              allowEscapeViewBox={{ x: false, y: true }}
               content={({ active, payload }) => {
                 if (!active || !payload || !payload.length) return null;
                 const data = payload[0]?.payload;
@@ -139,24 +142,24 @@ export function SmeSectorChart({ data, isLoading = false }: SmeSectorChartProps)
                   ? data.percentage.toFixed(1)
                   : String(data.percentage ?? 0);
                 return (
-                  <div className="rounded-lg border bg-background p-2 shadow-sm">
-                    <div className="flex min-w-[150px] flex-col gap-1 text-xs">
+                  <div className="rounded-lg border bg-background p-2 shadow-sm max-w-[200px]">
+                    <div className="flex flex-col gap-1 text-xs">
                       <div className="flex items-center gap-2">
                         <div
                           className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
                           style={{ backgroundColor: data.fill }}
                         />
-                        <span className="font-medium text-foreground">
+                        <span className="font-medium text-foreground truncate">
                           {data.sector}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-muted-foreground">
+                      <div className="flex items-center justify-between text-muted-foreground gap-2">
                         <span>Count:</span>
                         <span className="font-mono font-medium tabular-nums text-foreground">
                           {data.value}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-muted-foreground">
+                      <div className="flex items-center justify-between text-muted-foreground gap-2">
                         <span>Share:</span>
                         <span className="font-mono font-medium tabular-nums text-foreground">
                           {pct}%

@@ -70,23 +70,33 @@ func NewBusinessFormalisationService() *BusinessFormalisationService {
 			return nil
 		}).
 		WithAfterCreate(func(model *models.BusinessFormalisation) error {
-			// Recalculate formalisation score after creating a business formalisation record
+			// Recalculate formalisation score and classification after creating a business formalisation record
 			if model != nil && model.SmeID > 0 {
 				smeService := NewSmeService()
 				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
 				if err != nil {
 					facades.Log().Warningf("Failed to recalculate formalisation score after create: %v", err)
 				}
+				// Recalculate classification (uses turnover and assets from BusinessFormalisation)
+				_, err = smeService.CalculateClassification(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate classification after create: %v", err)
+				}
 			}
 			return nil
 		}).
 		WithAfterUpdate(func(model *models.BusinessFormalisation) error {
-			// Recalculate formalisation score after updating a business formalisation record
+			// Recalculate formalisation score and classification after updating a business formalisation record
 			if model != nil && model.SmeID > 0 {
 				smeService := NewSmeService()
 				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
 				if err != nil {
 					facades.Log().Warningf("Failed to recalculate formalisation score after update: %v", err)
+				}
+				// Recalculate classification (uses turnover and assets from BusinessFormalisation)
+				_, err = smeService.CalculateClassification(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate classification after update: %v", err)
 				}
 			}
 			return nil

@@ -2,18 +2,16 @@ import React from "react";
 import { Head, usePage } from "@inertiajs/react";
 import Admin from "@/layouts/Admin";
 import type { SharedData } from "@/types/app";
-import { DistributionPoint } from "@/types/sme";
+import { DistributionPoint, AgeGenderDistributionPoint } from "@/types/sme";
 import { usePermissions } from "@/contexts/PermissionsContext";
 import { PermissionGate } from "@/components/Permissions/PermissionGate";
 import {
   DashboardKpiCards,
-  SmeSectorChart,
-  SmeGenderChart,
+  SmeOwnerChartsCarousel,
+  SmeLocationChartsCarousel,
+  SmeBusinessChartsCarousel,
+  BdspChartsCarousel,
 } from "./sections";
-import {
-  SmeRegionChart,
-  SmeCategoryChart,
-} from "@/pages/Sme/sections";
 import {
   UpcomingEventsWidget,
   UpcomingProcurementsWidget,
@@ -34,9 +32,16 @@ interface DashboardStats {
   activeProcurements: number;
   // Distribution data
   byRegion: DistributionPoint[];
+  byDistrict: DistributionPoint[];
   byCategory: DistributionPoint[];
   bySector: DistributionPoint[];
   byGender: DistributionPoint[];
+  byYouth: DistributionPoint[];
+  byAgeGender: AgeGenderDistributionPoint[];
+  byClassification: DistributionPoint[];
+  // BDSP distributions
+  bdspByStatus: DistributionPoint[];
+  bdspByServices: DistributionPoint[];
 }
 
 // Dashboard page props
@@ -58,9 +63,15 @@ const defaultStats: DashboardStats = {
   totalProcurements: 0,
   activeProcurements: 0,
   byRegion: [],
+  byDistrict: [],
   byCategory: [],
   bySector: [],
   byGender: [],
+  byYouth: [],
+  byAgeGender: [],
+  byClassification: [],
+  bdspByStatus: [],
+  bdspByServices: [],
 };
 
 const DashboardPage: React.FC = () => {
@@ -127,16 +138,30 @@ const DashboardPage: React.FC = () => {
             {/* Charts Section - Only show if user can view SMEs */}
             {canViewSmeCharts && (
               <>
-                {/* First Row of Charts: Region (Donut) + Sector (Bar) */}
+                {/* First Row of Charts: Location Carousel (Region/District) + Business Carousel (Sector/Category/Classification) */}
                 <div className="grid gap-4 lg:grid-cols-2">
-                  <SmeRegionChart data={stats.byRegion} />
-                  <SmeSectorChart data={stats.bySector} />
+                  <SmeLocationChartsCarousel
+                    regionData={stats.byRegion}
+                    districtData={stats.byDistrict}
+                  />
+                  <SmeBusinessChartsCarousel
+                    sectorData={stats.bySector}
+                    categoryData={stats.byCategory}
+                    classificationData={stats.byClassification}
+                  />
                 </div>
 
-                {/* Second Row of Charts: Category (Bar) + Gender (Donut) */}
+                {/* Second Row of Charts: Owner Demographics Carousel + BDSP Carousel */}
                 <div className="grid gap-4 lg:grid-cols-2">
-                  <SmeCategoryChart data={stats.byCategory} />
-                  <SmeGenderChart data={stats.byGender} />
+                  <SmeOwnerChartsCarousel
+                    genderData={stats.byGender}
+                    youthData={stats.byYouth}
+                    ageGenderData={stats.byAgeGender}
+                  />
+                  <BdspChartsCarousel
+                    statusData={stats.bdspByStatus}
+                    servicesData={stats.bdspByServices}
+                  />
                 </div>
               </>
             )}

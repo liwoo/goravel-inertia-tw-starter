@@ -6,7 +6,8 @@ import {
   Send,
   Plus,
   Loader2,
-  Megaphone
+  Megaphone,
+  RefreshCw
 } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useMessages, Conversation, MessageUser } from "@/contexts/MessageContext";
+import { usePresence } from "@/contexts/PresenceContext";
 import { BroadcastToRole } from "./BroadcastToRole";
+import { OnlineIndicator } from "@/components/ui/online-indicator";
 
 interface User extends MessageUser {
   is_super_admin?: boolean;
@@ -55,6 +58,8 @@ export function MessageSidebar({ user, showNewMessage, onShowNewMessageChange, o
     loadConversations,
     loadMessagableUsers
   } = useMessages();
+
+  const { refreshPresence, isRefreshing, onlineCount } = usePresence();
 
   // Switch to users view when requested externally
   React.useEffect(() => {
@@ -180,12 +185,19 @@ export function MessageSidebar({ user, showNewMessage, onShowNewMessageChange, o
         )}
         onClick={() => handleConversationSelect(conversation)}
       >
-        <Avatar className="h-10 w-10 shrink-0">
-          <AvatarImage src={`/avatars/${conversation.user.id}.jpg`} />
-          <AvatarFallback className="text-xs">
-            {getInitials(conversation.user.name)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative shrink-0">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={`/avatars/${conversation.user.id}.jpg`} />
+            <AvatarFallback className="text-xs">
+              {getInitials(conversation.user.name)}
+            </AvatarFallback>
+          </Avatar>
+          <OnlineIndicator
+            userId={conversation.user.id}
+            size="sm"
+            className="absolute bottom-0 right-0 border-2 border-background"
+          />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-0.5">
             <span className="font-medium truncate">{conversation.user.name}</span>
@@ -235,18 +247,22 @@ export function MessageSidebar({ user, showNewMessage, onShowNewMessageChange, o
         className="flex w-full items-center gap-3 p-3 text-left text-sm transition-colors hover:bg-accent rounded-lg"
         onClick={() => handleUserSelect(msgUser)}
       >
-        <Avatar className="h-10 w-10 shrink-0">
-          <AvatarImage src={`/avatars/${msgUser.id}.jpg`} />
-          <AvatarFallback className="text-xs">
-            {getInitials(msgUser.name)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative shrink-0">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={`/avatars/${msgUser.id}.jpg`} />
+            <AvatarFallback className="text-xs">
+              {getInitials(msgUser.name)}
+            </AvatarFallback>
+          </Avatar>
+          <OnlineIndicator
+            userId={msgUser.id}
+            size="sm"
+            className="absolute bottom-0 right-0 border-2 border-background"
+          />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-0.5">
             <span className="font-medium truncate">{msgUser.name}</span>
-            {msgUser.is_active && (
-              <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
-            )}
           </div>
           <p className="text-xs text-muted-foreground truncate">
             {msgUser.email}
@@ -279,15 +295,33 @@ export function MessageSidebar({ user, showNewMessage, onShowNewMessageChange, o
               </Badge>
             )}
           </div>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleNewMessageClick}
-            className="h-8"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            New
-          </Button>
+          <div className="flex items-center gap-1">
+            {/* Online count indicator */}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mr-1">
+              <span className="h-2 w-2 rounded-full bg-green-500" />
+              <span>{onlineCount}</span>
+            </div>
+            {/* Refresh presence button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={refreshPresence}
+              disabled={isRefreshing}
+              className="h-8 w-8"
+              title="Refresh online status"
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleNewMessageClick}
+              className="h-8"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}

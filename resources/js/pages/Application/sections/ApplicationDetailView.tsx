@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Tag, FileText, User, Mail, Phone, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Tag, FileText, User, Mail, Phone, CheckCircle, XCircle, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -179,9 +179,15 @@ export function ApplicationDetailView({
           </div>
         )}
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="basic">Basic Information</TabsTrigger>
-            <TabsTrigger value="owner">Primary Owner</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="basic" title="Basic Information">
+              <Building2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Basic Info</span>
+            </TabsTrigger>
+            <TabsTrigger value="owner" title="Primary Owner">
+              <User className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Primary Owner</span>
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="basic" className="space-y-6">
             {/* Basic Information */}

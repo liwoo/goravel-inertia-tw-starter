@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Building2, FileText, Hash, Users, MapPin, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Building2, FileText, Hash, Users, MapPin, CheckCircle, XCircle, ClipboardList } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CrudDetailViewProps } from '@/types/crud';
@@ -88,8 +88,14 @@ export function ProcurementNoticeDetailView({
 
             <Tabs defaultValue="general" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="general">General Information</TabsTrigger>
-                    <TabsTrigger value="application">Application Details</TabsTrigger>
+                    <TabsTrigger value="general" title="General Information">
+                        <FileText className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">General Info</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="application" title="Application Details">
+                        <ClipboardList className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Application</span>
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general" className="space-y-6 mt-4">

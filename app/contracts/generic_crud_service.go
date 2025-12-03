@@ -634,6 +634,13 @@ func (s *GenericCrudService[T]) Update(id uint, data map[string]interface{}) (in
 					"error":    err.Error(),
 				})
 			}
+		} else {
+			facades.Log().Warning("After update hook: type assertion failed", map[string]interface{}{
+				"resource":    s.BaseCrudService.tableName,
+				"id":          id,
+				"actualType":  fmt.Sprintf("%T", updated),
+				"expectedPtr": fmt.Sprintf("*%T", *new(T)),
+			})
 		}
 	}
 

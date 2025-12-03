@@ -62,6 +62,19 @@ func (c *SSEController) Stream(ctx http.Context) http.Response {
 		flusher.Flush()
 	}
 
+	// Send initial presence state (list of online users)
+	onlineUserIDs := c.sseService.GetOnlineUserIDs()
+	presenceEvent := map[string]interface{}{
+		"type":         "presence:initial",
+		"online_users": onlineUserIDs,
+		"time":         time.Now(),
+	}
+	presenceData, _ := json.Marshal(presenceEvent)
+	fmt.Fprintf(writer, "event: presence:initial\ndata: %s\n\n", presenceData)
+	if flusher, ok := writer.(nethttp.Flusher); ok {
+		flusher.Flush()
+	}
+
 	// Keep-alive ticker
 	keepAliveTicker := time.NewTicker(30 * time.Second)
 	defer keepAliveTicker.Stop()

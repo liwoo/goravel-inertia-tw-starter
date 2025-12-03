@@ -19,9 +19,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useMessages, MessageUser, Message, Conversation } from "@/contexts/MessageContext";
+import { usePresence } from "@/contexts/PresenceContext";
+import { OnlineIndicator } from "@/components/ui/online-indicator";
 
 // Use MessageUser for compatibility
 type User = MessageUser;
+
+// Helper component for online status text
+function OnlineStatusText({ userId, email }: { userId: number; email: string }) {
+  const { isUserOnline } = usePresence();
+  const online = isUserOnline(userId);
+
+  return (
+    <div className="text-sm text-muted-foreground">
+      {online ? (
+        <span className="text-green-600 font-medium">Online</span>
+      ) : (
+        email
+      )}
+    </div>
+  );
+}
 
 interface MessageChatProps {
   currentUser: User;
@@ -201,15 +219,22 @@ export function MessageChat({ currentUser, conversation, className, onComposeCli
     <div className={cn("flex flex-col h-full", className)}>
       {/* Chat Header */}
       <div className="flex items-center gap-3 p-4 border-b">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={`/avatars/${conversation.user.id}.jpg`} />
-          <AvatarFallback>
-            {getInitials(conversation.user.name)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={`/avatars/${conversation.user.id}.jpg`} />
+            <AvatarFallback>
+              {getInitials(conversation.user.name)}
+            </AvatarFallback>
+          </Avatar>
+          <OnlineIndicator
+            userId={conversation.user.id}
+            size="sm"
+            className="absolute bottom-0 right-0 border-2 border-background"
+          />
+        </div>
         <div className="flex-1">
           <div className="font-medium">{conversation.user.name}</div>
-          <div className="text-sm text-muted-foreground">{conversation.user.email}</div>
+          <OnlineStatusText userId={conversation.user.id} email={conversation.user.email} />
         </div>
         {conversation.user.roles && conversation.user.roles.length > 0 && (
           <div className="flex gap-1">

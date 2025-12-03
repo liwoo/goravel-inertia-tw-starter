@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Pencil, User } from 'lucide-react';
 import { NATIONALITY_OPTIONS } from '@/types/nationalities';
 import {
   validateMalawiPhone,
@@ -268,15 +268,16 @@ export const SmeEditAdditionalMembersTab: React.FC<SmeEditAdditionalMembersTabPr
               }}
             >
               {members.map((member, index) => (
-                <TabsTrigger key={`member-${index}`} value={`member-${index}`}>
-                  <span className="truncate max-w-[120px]">
-                    {member.firstName} {member.lastName}
+                <TabsTrigger key={`member-${index}`} value={`member-${index}`} title={`${member.firstName} ${member.lastName}`}>
+                  <User className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline truncate max-w-[80px]">
+                    {member.firstName}
                   </span>
                 </TabsTrigger>
               ))}
-              <TabsTrigger value="new-member">
-                <Plus className="h-4 w-4 mr-1" />
-                Add New
+              <TabsTrigger value="new-member" title="Add New Member">
+                <Plus className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Add New</span>
               </TabsTrigger>
             </TabsList>
 

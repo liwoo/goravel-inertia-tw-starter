@@ -65,6 +65,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251127151630AlterPhoneColumnsSize{},
 		&migrations.M20251128054945AddEventEndDate{},
 		&migrations.M20251201170115CreateUserActivitiesTable{},
+		&migrations.M20251203100000AddClassificationToSmesTable{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {

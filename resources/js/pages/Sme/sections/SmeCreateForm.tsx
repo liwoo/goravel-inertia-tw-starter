@@ -1504,15 +1504,16 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${additionalMembers.length + 1}, 1fr)` }}>
                     {additionalMembers.map((member, index) => (
-                      <TabsTrigger key={`member-${index}`} value={`member-${index}`}>
-                        <span className="truncate max-w-[120px]">
-                          {member.firstName} {member.lastName}
+                      <TabsTrigger key={`member-${index}`} value={`member-${index}`} title={`${member.firstName} ${member.lastName}`}>
+                        <User className="h-4 w-4 sm:mr-1" />
+                        <span className="hidden sm:inline truncate max-w-[80px]">
+                          {member.firstName}
                         </span>
                       </TabsTrigger>
                     ))}
-                    <TabsTrigger value="new-member">
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add New
+                    <TabsTrigger value="new-member" title="Add New Member">
+                      <Plus className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Add New</span>
                     </TabsTrigger>
                   </TabsList>
 

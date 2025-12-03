@@ -427,7 +427,16 @@ func (s *DashboardService) GetDashboardStats(smeService *SmeService) map[string]
 
 	// Get additional distributions
 	bySector := smeService.GetDistributionBySector()
+	byDistrict := smeService.GetDistributionByDistrict()
 	byGender := smeService.GetDistributionByGender()
+	byYouth := smeService.GetDistributionByYouth()
+	byAgeGender := smeService.GetAgeGenderDistribution()
+	byClassification := smeService.GetDistributionByClassification()
+
+	// Get BDSP distributions
+	bdspService := NewBdspService()
+	bdspByStatus := bdspService.GetDistributionByStatus()
+	bdspByServices := bdspService.GetTopServicesDistribution()
 
 	// Combine all statistics
 	return map[string]interface{}{
@@ -439,8 +448,14 @@ func (s *DashboardService) GetDashboardStats(smeService *SmeService) map[string]
 		"totalProcurements":  procurementStats.TotalProcurements,
 		"activeProcurements": procurementStats.ActiveProcurements,
 		"byRegion":           smeStats["byRegion"],
+		"byDistrict":         byDistrict,
 		"byCategory":         smeStats["byCategory"],
 		"bySector":           bySector,
 		"byGender":           byGender,
+		"byYouth":            byYouth,
+		"byAgeGender":        byAgeGender,
+		"byClassification":   byClassification,
+		"bdspByStatus":       bdspByStatus,
+		"bdspByServices":     bdspByServices,
 	}
 }

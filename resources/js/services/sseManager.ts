@@ -32,17 +32,26 @@ class SSEManager {
   }
 
   private getAuthToken(): string | null {
-    // Try to get token from sse_token cookie (non-HttpOnly, accessible to JS)
+    // Try to get token from cookies
     const cookies = document.cookie.split(';');
     for (const cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
-      if (name === 'sse_token') {
+      // Try sse_token first (non-HttpOnly, specifically for SSE)
+      if (name === 'sse_token' && value) {
+        console.log('SSE: Found sse_token cookie');
         return decodeURIComponent(value);
       }
     }
 
     // Try localStorage as fallback
-    return localStorage.getItem('jwt_token') || localStorage.getItem('token');
+    const localToken = localStorage.getItem('jwt_token') || localStorage.getItem('token');
+    if (localToken) {
+      console.log('SSE: Found token in localStorage');
+      return localToken;
+    }
+
+    console.warn('SSE: No auth token found in cookies or localStorage');
+    return null;
   }
 
   private handleAuthChange(event: CustomEvent) {
@@ -57,19 +66,24 @@ class SSEManager {
       return;
     }
 
+    // Re-fetch token in case it was set after initial load
+    this.authToken = this.getAuthToken();
+
     if (!this.authToken) {
-      console.warn('SSE: No auth token available');
+      console.warn('SSE: No auth token available, will retry on next page load');
       return;
     }
 
     this.isConnecting = true;
+    console.log('SSE: Attempting to connect...');
 
     try {
       // Create SSE connection with auth token as query parameter
       const url = new URL('/api/sse/stream', window.location.origin);
       url.searchParams.append('token', this.authToken);
-      
-      this.eventSource = new EventSource(url.toString());
+
+      console.log('SSE: Connecting to', url.toString().replace(this.authToken, '[REDACTED]'));
+      this.eventSource = new EventSource(url.toString(), { withCredentials: true });
 
       this.eventSource.onopen = () => {
         console.log('SSE: Connected');
@@ -177,6 +191,17 @@ class SSEManager {
     this.eventSource.addEventListener('notification:initial', (event: MessageEvent) => {
       const data = JSON.parse(event.data);
       this.emit('notification:initial', data);
+    });
+
+    // Presence events
+    this.eventSource.addEventListener('presence:initial', (event: MessageEvent) => {
+      const data = JSON.parse(event.data);
+      this.emit('presence:initial', data);
+    });
+
+    this.eventSource.addEventListener('presence:change', (event: MessageEvent) => {
+      const data = JSON.parse(event.data);
+      this.emit('presence:change', data);
     });
   }
 

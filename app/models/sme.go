@@ -8,12 +8,42 @@ import (
 	"gorm.io/gorm"
 )
 
+// SME Classification Constants based on Malawi MSME Policy
+const (
+	// Classification categories
+	ClassificationMicro        = "Micro"
+	ClassificationSmall        = "Small"
+	ClassificationMedium       = "Medium"
+	ClassificationUnclassified = "Unclassified"
+
+	// Employee thresholds
+	MicroEmployeeMin  = 1
+	MicroEmployeeMax  = 4
+	SmallEmployeeMin  = 5
+	SmallEmployeeMax  = 20
+	MediumEmployeeMin = 21
+	MediumEmployeeMax = 99
+
+	// Annual Turnover thresholds (MWK)
+	MicroTurnoverMax  = 5000000.0    // Up to 5,000,000
+	SmallTurnoverMin  = 5000000.0    // Above 5,000,000
+	SmallTurnoverMax  = 50000000.0   // Up to 50,000,000
+	MediumTurnoverMin = 50000000.0   // Above 50,000,000
+	MediumTurnoverMax = 500000000.0  // Up to 500,000,000
+
+	// Maximum Assets thresholds (MWK)
+	MicroAssetsMax  = 1000000.0   // 1,000,000
+	SmallAssetsMax  = 20000000.0  // 20,000,000
+	MediumAssetsMax = 250000000.0 // 250,000,000
+)
+
 type Sme struct {
 	orm.Model
 	orm.SoftDeletes
 	UsmeNumber                string                     `json:"usme_number" db:"usme_number"`
 	Name                      string                     `json:"name" db:"name"`
 	IsActive                  bool                       `json:"is_active" db:"is_active" gorm:"default:true"`
+	Classification            string                     `json:"classification" db:"classification" gorm:"default:Unclassified"`
 	RegistrationNumber        *string                    `json:"registration_number" db:"registration_number"`
 	TaxIdentificationNumber   *string                    `json:"tax_identification_number" db:"tax_identification_number"`
 	OperationalStartDate      *carbon.DateTime           `json:"operational_start_date" db:"operational_start_date"`

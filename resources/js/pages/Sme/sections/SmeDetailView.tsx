@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CrudDetailViewProps } from '@/types/crud';
-import { Sme } from '@/types/sme';
+import { Sme, SmeClassification } from '@/types/sme';
 import { BusinessFormalisation } from '@/types/business_formalisation';
 import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -87,22 +87,50 @@ export function SmeDetailView({
     </Badge>
   );
 
+  const getClassificationBadge = (classification: SmeClassification | undefined) => {
+    switch (classification) {
+      case 'Micro':
+        return { variant: 'outline' as const, className: 'border-blue-500 text-blue-600 bg-blue-50' };
+      case 'Small':
+        return { variant: 'outline' as const, className: 'border-emerald-500 text-emerald-600 bg-emerald-50' };
+      case 'Medium':
+        return { variant: 'outline' as const, className: 'border-purple-500 text-purple-600 bg-purple-50' };
+      default:
+        return { variant: 'secondary' as const, className: 'text-muted-foreground' };
+    }
+  };
+
+  const classificationBadgeStyle = getClassificationBadge(sme.classification as SmeClassification);
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="business" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="business">Business</TabsTrigger>
-          <TabsTrigger value="owner">Primary Owner</TabsTrigger>
-          <TabsTrigger value="members">
-            Members
+          <TabsTrigger value="business" title="Business">
+            <Building2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Business</span>
+          </TabsTrigger>
+          <TabsTrigger value="owner" title="Primary Owner">
+            <User className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Owner</span>
+          </TabsTrigger>
+          <TabsTrigger value="members" title="Members">
+            <Users className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Members</span>
             {additionalMembers.length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+              <Badge variant="secondary" className="ml-1 sm:ml-2 h-5 px-1 sm:px-1.5 text-xs">
                 {additionalMembers.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="employees">Employees</TabsTrigger>
-          <TabsTrigger value="formalisation">Formalisation</TabsTrigger>
+          <TabsTrigger value="employees" title="Employees">
+            <Briefcase className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Employees</span>
+          </TabsTrigger>
+          <TabsTrigger value="formalisation" title="Formalisation">
+            <Shield className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Formal</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Business Details Tab */}
@@ -120,6 +148,13 @@ export function SmeDetailView({
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">USME Number</p>
                   <CopyableText value={sme.usmeNumber || sme.usme_number} className="font-mono font-medium text-foreground" iconSize="md" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Classification</p>
+                  <Badge variant={classificationBadgeStyle.variant} className={`text-sm ${classificationBadgeStyle.className}`}>
+                    {sme.classification || 'Unclassified'}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground mt-1">Based on employees, turnover & assets</p>
                 </div>
                 {/* Formalisation Score - inline after USME */}
                 {!loading && formalisation && (

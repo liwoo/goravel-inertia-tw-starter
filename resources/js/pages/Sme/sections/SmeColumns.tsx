@@ -1,10 +1,26 @@
 import React from 'react';
-import { Sme } from '@/types/sme';
+import { Sme, SmeClassification } from '@/types/sme';
 import { CrudColumn, CrudFilter } from '@/types/crud';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, CircleCheck, CircleX } from 'lucide-react';
 import { ScoreMeter } from '@/components/ui/score-meter';
 import { CopyableText } from '@/components/ui/copyable-text';
+
+/**
+ * Get badge variant and styling for SME classification
+ */
+const getClassificationBadge = (classification: SmeClassification | undefined) => {
+  switch (classification) {
+    case 'Micro':
+      return { variant: 'outline' as const, className: 'border-blue-500 text-blue-600 bg-blue-50' };
+    case 'Small':
+      return { variant: 'outline' as const, className: 'border-emerald-500 text-emerald-600 bg-emerald-50' };
+    case 'Medium':
+      return { variant: 'outline' as const, className: 'border-purple-500 text-purple-600 bg-purple-50' };
+    default:
+      return { variant: 'secondary' as const, className: 'text-muted-foreground' };
+  }
+};
 
 /**
  * Sme table columns configuration
@@ -48,6 +64,23 @@ export const smeColumns: CrudColumn<Sme>[] = [
       return (
         <div className="flex justify-center">
           <ScoreMeter score={score} size="sm" showLabel={true} />
+        </div>
+      );
+    },
+  },
+  {
+    key: 'classification',
+    label: 'Classification',
+    sortable: true,
+    className: 'w-28 text-center',
+    render: (sme) => {
+      const classification = sme.classification as SmeClassification;
+      const badgeStyle = getClassificationBadge(classification);
+      return (
+        <div className="flex justify-center">
+          <Badge variant={badgeStyle.variant} className={badgeStyle.className}>
+            {classification || 'Unclassified'}
+          </Badge>
         </div>
       );
     },
@@ -210,6 +243,15 @@ export const smeColumnsMobile: CrudColumn<Sme>[] = [
             <Badge variant="outline" className="text-xs">
               {sme.sector}
             </Badge>
+            {(() => {
+              const classification = sme.classification as SmeClassification;
+              const badgeStyle = getClassificationBadge(classification);
+              return (
+                <Badge variant={badgeStyle.variant} className={`text-xs ${badgeStyle.className}`}>
+                  {classification || 'Unclassified'}
+                </Badge>
+              );
+            })()}
             {sme.district && (
               <span className="text-xs text-muted-foreground">
                 {sme.district}
@@ -233,6 +275,18 @@ export const smeColumnsMobile: CrudColumn<Sme>[] = [
  * These match the filter fields configured in sme_service.go
  */
 export const smeFilters: CrudFilter[] = [
+  {
+    key: 'classification',
+    label: 'Classification',
+    type: 'select',
+    options: [
+      { value: 'Micro', label: 'Micro' },
+      { value: 'Small', label: 'Small' },
+      { value: 'Medium', label: 'Medium' },
+      { value: 'Unclassified', label: 'Unclassified' },
+    ],
+    placeholder: 'Filter by classification',
+  },
   {
     key: 'businessCategory',
     label: 'Category',

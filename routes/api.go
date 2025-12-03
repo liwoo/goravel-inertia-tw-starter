@@ -59,6 +59,7 @@ func Api(router route.Router) {
 	applicationController := applications.NewApplicationController()
 	accountController := account.NewAccountController()
 	sseController := controllers.NewSSEController()
+	presenceController := controllers.NewPresenceController()
 
 	jwtAuth := middleware.JwtAuth()
 	optionalAuth := middleware.OptionalJwtAuth()
@@ -169,6 +170,8 @@ func Api(router route.Router) {
 		protectedRouter.Delete("/smes/{id}", smeController.Delete)
 		protectedRouter.Post("/smes/bulk-deactivate", smeController.BulkDeactivate)
 		protectedRouter.Post("/smes/bulk-activate", smeController.BulkActivate)
+		protectedRouter.Post("/smes/{id}/recalculate-classification", smeController.RecalculateClassification)
+		protectedRouter.Post("/smes/recalculate-all-classifications", smeController.RecalculateAllClassifications)
 
 		// Primary Business Owner routes
 		protectedRouter.Post("/primary-business-owners", primaryBusinessOwnerController.Store)
@@ -307,4 +310,13 @@ func Api(router route.Router) {
 
 	// SSE (Server-Sent Events) for real-time updates
 	router.Middleware(jwtAuth).Get("/sse/stream", sseController.Stream)
+
+	// Presence (online status) routes
+	router.Middleware(jwtAuth).Prefix("presence").Group(func(presenceRouter route.Router) {
+		presenceRouter.Get("/online", presenceController.GetOnlineUsers)
+		presenceRouter.Get("/stats", presenceController.GetStats)
+		presenceRouter.Get("/check", presenceController.CheckOnline)
+		presenceRouter.Get("/user/{id}", presenceController.GetUserStatus)
+		presenceRouter.Post("/bulk", presenceController.GetBulkStatus)
+	})
 }

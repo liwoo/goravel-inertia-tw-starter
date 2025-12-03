@@ -7,6 +7,7 @@ import {SharedData} from "@/types/app";
 import {MessageProvider} from "@/contexts/MessageContext";
 import {NotificationProvider} from "@/contexts/NotificationContext";
 import {UIProvider} from "@/contexts/UIContext";
+import {PresenceProvider} from "@/contexts/PresenceContext";
 
 interface AdminLayoutProps {
     title?: string;
@@ -22,9 +23,10 @@ export default function AdminLayout({title, children}: AdminLayoutProps) {
 
     return (
         <UIProvider>
-            <MessageProvider>
-                <NotificationProvider>
-                    <SidebarProvider>
+            <PresenceProvider>
+                <MessageProvider>
+                    <NotificationProvider>
+                        <SidebarProvider>
                         <AppSidebar variant="inset" user={user} />
                         <SidebarInset>
                             <SiteHeader title={title || "Dashboard"}/>
@@ -46,9 +48,10 @@ export default function AdminLayout({title, children}: AdminLayoutProps) {
                                 </footer>
                             </div>
                         </SidebarInset>
-                    </SidebarProvider>
-                </NotificationProvider>
-            </MessageProvider>
+                        </SidebarProvider>
+                    </NotificationProvider>
+                </MessageProvider>
+            </PresenceProvider>
         </UIProvider>
     );
 }

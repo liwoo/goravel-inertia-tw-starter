@@ -24,9 +24,9 @@ type SmeService struct {
 func NewSmeService() *SmeService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.Sme]("smes", "id").
-		WithSearchFields("usme_number", "name", "registration_number", "tax_identification_number", "business_category", "sector", "contact_email", "contact_phone", "region", "district"). // Fields that will be searchable via the search query parameter
-		WithSortFields("id", "created_at", "updated_at", "usme_number", "name", "operational_start_date", "business_category", "sector", "region", "district", "formalisation_score").       // Fields that can be used for sorting results
-		WithFilterFields("business_category", "sector", "region", "district", "created_by", "is_active", "formalisation_score").                                                             // Fields that can be filtered on
+		WithSearchFields("usme_number", "name", "registration_number", "tax_identification_number", "business_category", "sector", "contact_email", "contact_phone", "region", "district", "classification"). // Fields that will be searchable via the search query parameter
+		WithSortFields("id", "created_at", "updated_at", "usme_number", "name", "operational_start_date", "business_category", "sector", "region", "district", "formalisation_score", "classification").       // Fields that can be used for sorting results
+		WithFilterFields("business_category", "sector", "region", "district", "created_by", "is_active", "formalisation_score", "classification").                                                             // Fields that can be filtered on
 		WithValidationRules(map[string]interface{}{                                                                                                                                          // Validation rules for create/update operations
 			// usme_number is omitted from validation - will be auto-generated in BeforeCreate hook if not provided
 			"name":                           "required|string|max:255",
@@ -182,6 +182,46 @@ func NewSmeService() *SmeService {
 				delete(data, "business_accessed_financing") // Remove the array field to avoid column conflict
 			}
 
+			return nil
+		}).
+		WithAfterCreate(func(model *models.Sme) error {
+			// Calculate classification after creating an SME
+			facades.Log().Info("AfterCreate hook triggered for SME classification", map[string]interface{}{
+				"sme_id": model.ID,
+			})
+			svc := &SmeService{}
+			classification, err := svc.CalculateClassification(model.ID)
+			if err != nil {
+				facades.Log().Warning("Failed to calculate classification after create", map[string]interface{}{
+					"sme_id": model.ID,
+					"error":  err.Error(),
+				})
+			} else {
+				facades.Log().Info("Classification calculated after create", map[string]interface{}{
+					"sme_id":         model.ID,
+					"classification": classification,
+				})
+			}
+			return nil
+		}).
+		WithAfterUpdate(func(model *models.Sme) error {
+			// Recalculate classification after updating an SME
+			facades.Log().Info("AfterUpdate hook triggered for SME classification", map[string]interface{}{
+				"sme_id": model.ID,
+			})
+			svc := &SmeService{}
+			classification, err := svc.CalculateClassification(model.ID)
+			if err != nil {
+				facades.Log().Warning("Failed to calculate classification after update", map[string]interface{}{
+					"sme_id": model.ID,
+					"error":  err.Error(),
+				})
+			} else {
+				facades.Log().Info("Classification calculated after update", map[string]interface{}{
+					"sme_id":         model.ID,
+					"classification": classification,
+				})
+			}
 			return nil
 		}).
 		Build() // Returns a fully configured CrudServiceContract
@@ -347,6 +387,18 @@ func (s *SmeService) GetFilterDefinitions() []contracts.FilterDefinition {
 			"Formalisation Score",
 			contracts.FilterTypeNumber,
 			nil, // Use all number operators (equals, greater_than, less_than, between, etc.)
+		),
+		// Classification - enum filter with all classification categories
+		contracts.NewFilterDefinition(
+			"classification",
+			"Classification",
+			contracts.FilterTypeEnum,
+			&[]string{
+				models.ClassificationMicro,
+				models.ClassificationSmall,
+				models.ClassificationMedium,
+				models.ClassificationUnclassified,
+			},
 		),
 	}
 }
@@ -786,7 +838,7 @@ func (s *SmeService) getDistributionByField(field string) []map[string]interface
 
 	// Build the query based on field type
 	var query string
-	if field == "region" || field == "business_category" || field == "sector" {
+	if field == "region" || field == "business_category" || field == "sector" || field == "district" || field == "classification" {
 		query = fmt.Sprintf(`
 			SELECT COALESCE(%s, 'Unknown') as label, COUNT(*) as value
 			FROM smes
@@ -821,6 +873,11 @@ func (s *SmeService) getDistributionByField(field string) []map[string]interface
 // GetDistributionBySector returns SME distribution by sector field
 func (s *SmeService) GetDistributionBySector() []map[string]interface{} {
 	return s.getDistributionByField("sector")
+}
+
+// GetDistributionByDistrict returns SME distribution by district field
+func (s *SmeService) GetDistributionByDistrict() []map[string]interface{} {
+	return s.getDistributionByField("district")
 }
 
 // BulkUpdateStatus updates the is_active status for multiple SMEs
@@ -910,6 +967,152 @@ func (s *SmeService) GetDistributionByGender() []map[string]interface{} {
 			"label":      r.Label,
 			"value":      r.Value,
 			"percentage": percentage,
+		}
+	}
+
+	return distribution
+}
+
+// GetDistributionByYouth returns SME distribution by youth status (18-35 years = Youth)
+func (s *SmeService) GetDistributionByYouth() []map[string]interface{} {
+	// Get total count for percentage calculation
+	// Count SMEs that have primary business owners with valid date_of_birth
+	var total int64
+	query := `
+		SELECT COUNT(DISTINCT s.id)
+		FROM smes s
+		INNER JOIN primary_business_owner p ON p.sme_id = s.id
+		WHERE s.deleted_at IS NULL AND p.deleted_at IS NULL AND p.date_of_birth IS NOT NULL
+	`
+	err := facades.Orm().Query().Raw(query).Scan(&total)
+	if err != nil || total == 0 {
+		return []map[string]interface{}{}
+	}
+
+	// Query for youth vs non-youth distribution
+	// Youth is defined as 18-35 years old
+	// Using PostgreSQL syntax: EXTRACT(YEAR FROM AGE(CURRENT_DATE, date_of_birth))
+	type YouthResult struct {
+		Label string
+		Value int64
+	}
+
+	var results []YouthResult
+	youthQuery := `
+		SELECT
+			CASE
+				WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.date_of_birth)) BETWEEN 18 AND 35 THEN 'Youth'
+				ELSE 'Non-Youth'
+			END as label,
+			COUNT(*) as value
+		FROM smes s
+		INNER JOIN primary_business_owner p ON p.sme_id = s.id
+		WHERE s.deleted_at IS NULL AND p.deleted_at IS NULL AND p.date_of_birth IS NOT NULL
+		GROUP BY 1
+		ORDER BY label
+	`
+
+	err = facades.Orm().Query().Raw(youthQuery).Scan(&results)
+	if err != nil {
+		return []map[string]interface{}{}
+	}
+
+	// Convert to response format with percentages
+	distribution := make([]map[string]interface{}, len(results))
+	for i, r := range results {
+		percentage := float64(r.Value) / float64(total) * 100
+		distribution[i] = map[string]interface{}{
+			"label":      r.Label,
+			"value":      r.Value,
+			"percentage": percentage,
+		}
+	}
+
+	return distribution
+}
+
+// GetAgeGenderDistribution returns SME distribution by age groups and gender for population pyramid
+func (s *SmeService) GetAgeGenderDistribution() []map[string]interface{} {
+	// Get total count for percentage calculation
+	var total int64
+	query := `
+		SELECT COUNT(DISTINCT s.id)
+		FROM smes s
+		INNER JOIN primary_business_owner p ON p.sme_id = s.id
+		WHERE s.deleted_at IS NULL AND p.deleted_at IS NULL
+		AND p.date_of_birth IS NOT NULL AND p.gender IS NOT NULL AND p.gender != ''
+	`
+	err := facades.Orm().Query().Raw(query).Scan(&total)
+	if err != nil || total == 0 {
+		return []map[string]interface{}{}
+	}
+
+	// Query for age-gender distribution
+	// Using PostgreSQL syntax: EXTRACT(YEAR FROM AGE(CURRENT_DATE, date_of_birth))
+	type AgeGenderResult struct {
+		AgeGroup string
+		Gender   string
+		Value    int64
+	}
+
+	var results []AgeGenderResult
+	ageGenderQuery := `
+		SELECT
+			CASE
+				WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.date_of_birth)) BETWEEN 18 AND 25 THEN '18-25'
+				WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.date_of_birth)) BETWEEN 26 AND 35 THEN '26-35'
+				WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.date_of_birth)) BETWEEN 36 AND 45 THEN '36-45'
+				WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.date_of_birth)) BETWEEN 46 AND 55 THEN '46-55'
+				WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, p.date_of_birth)) BETWEEN 56 AND 65 THEN '56-65'
+				ELSE '65+'
+			END as age_group,
+			p.gender as gender,
+			COUNT(*) as value
+		FROM smes s
+		INNER JOIN primary_business_owner p ON p.sme_id = s.id
+		WHERE s.deleted_at IS NULL AND p.deleted_at IS NULL
+		AND p.date_of_birth IS NOT NULL AND p.gender IS NOT NULL AND p.gender != ''
+		GROUP BY 1, p.gender
+		ORDER BY 1
+	`
+
+	err = facades.Orm().Query().Raw(ageGenderQuery).Scan(&results)
+	if err != nil {
+		return []map[string]interface{}{}
+	}
+
+	// Define age groups in order (reversed for pyramid - oldest at top)
+	ageGroups := []string{"65+", "56-65", "46-55", "36-45", "26-35", "18-25"}
+
+	// Build a map for easy lookup
+	// Keys are uppercase to match database values (MALE, FEMALE)
+	dataMap := make(map[string]map[string]int64)
+	for _, ag := range ageGroups {
+		dataMap[ag] = map[string]int64{"MALE": 0, "FEMALE": 0}
+	}
+
+	for _, r := range results {
+		if _, exists := dataMap[r.AgeGroup]; exists {
+			// Normalize gender to uppercase for consistent lookup
+			gender := strings.ToUpper(r.Gender)
+			dataMap[r.AgeGroup][gender] = r.Value
+		}
+	}
+
+	// Convert to response format
+	distribution := make([]map[string]interface{}, len(ageGroups))
+	for i, ag := range ageGroups {
+		maleCount := dataMap[ag]["MALE"]
+		femaleCount := dataMap[ag]["FEMALE"]
+		malePercentage := float64(maleCount) / float64(total) * 100
+		femalePercentage := float64(femaleCount) / float64(total) * 100
+
+		distribution[i] = map[string]interface{}{
+			"ageGroup":         ag,
+			"male":             maleCount,
+			"female":           femaleCount,
+			"malePercentage":   malePercentage,
+			"femalePercentage": femalePercentage,
 		}
 	}
 
@@ -1128,4 +1331,165 @@ func (s *SmeService) RecalculateAllFormalisationScores() (int, error) {
 	}
 
 	return processedCount, nil
+}
+
+// ============================================================================
+// SME Classification Functions (Malawi MSME Policy)
+// ============================================================================
+
+// CalculateClassification calculates and updates the classification for a given SME
+// Classification is based on:
+// - Employment criteria (must be met)
+// - At least one of: Annual Turnover OR Maximum Assets criteria
+//
+// Classification Rules:
+// | Size   | Employees | Annual Turnover (MWK)          | Max Assets (MWK) |
+// |--------|-----------|--------------------------------|------------------|
+// | Micro  | 1-4       | Up to 5,000,000                | 1,000,000        |
+// | Small  | 5-20      | 5,000,001 - 50,000,000         | 20,000,000       |
+// | Medium | 21-99     | 50,000,001 - 500,000,000       | 250,000,000      |
+//
+// Returns the classification string and any error encountered
+func (s *SmeService) CalculateClassification(smeID uint) (string, error) {
+	// Load SME with BusinessFormalisation and BusinessEmployeeSummary relationships
+	var sme models.Sme
+	err := facades.Orm().Query().
+		With("BusinessFormalisation").
+		With("BusinessEmployeeSummary").
+		Where("id = ?", smeID).
+		First(&sme)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to load SME: %w", err)
+	}
+
+	if sme.ID == 0 {
+		return "", errors.New("SME not found")
+	}
+
+	// Calculate total employees from BusinessEmployeeSummary
+	totalEmployees := 0
+	if sme.BusinessEmployeeSummary != nil {
+		bes := sme.BusinessEmployeeSummary
+		totalEmployees = bes.FullTimeMales + bes.FullTimeFemales +
+			bes.PartTimeMales + bes.PartTimeFemales +
+			bes.InternMales + bes.InternFemales
+	}
+
+	// Get turnover and assets from BusinessFormalisation
+	var turnover, assets float64
+	if sme.BusinessFormalisation != nil {
+		turnover = sme.BusinessFormalisation.AnnualTurnover
+		assets = sme.BusinessFormalisation.EstimatedValueOfAssets
+	}
+
+	// Determine classification
+	classification := s.DetermineClassification(totalEmployees, turnover, assets)
+
+	// Update the SME record with the classification
+	_, err = facades.Orm().Query().
+		Model(&models.Sme{}).
+		Where("id = ?", smeID).
+		Update(map[string]interface{}{
+			"classification": classification,
+		})
+	if err != nil {
+		return classification, fmt.Errorf("failed to update classification: %w", err)
+	}
+
+	return classification, nil
+}
+
+// DetermineClassification applies the classification rules based on Malawi MSME Policy
+// An SME meets a classification if it satisfies:
+// - Employment criteria AND
+// - At least one of (Turnover OR Assets) criteria
+// This method is exported to allow unit testing of the classification logic
+func (s *SmeService) DetermineClassification(employees int, turnover, assets float64) string {
+	// Check Medium classification first (highest)
+	// Employees: 21-99
+	// Turnover: Above 50,000,000 - 500,000,000
+	// Assets: Up to 250,000,000
+	if employees >= models.MediumEmployeeMin && employees <= models.MediumEmployeeMax {
+		// Check if turnover OR assets criteria is met
+		turnoverMet := turnover > models.MediumTurnoverMin && turnover <= models.MediumTurnoverMax
+		assetsMet := assets <= models.MediumAssetsMax && assets > 0
+		if turnoverMet || assetsMet {
+			return models.ClassificationMedium
+		}
+	}
+
+	// Check Small classification
+	// Employees: 5-20
+	// Turnover: Above 5,000,000 - 50,000,000
+	// Assets: Up to 20,000,000
+	if employees >= models.SmallEmployeeMin && employees <= models.SmallEmployeeMax {
+		// Check if turnover OR assets criteria is met
+		turnoverMet := turnover > models.SmallTurnoverMin && turnover <= models.SmallTurnoverMax
+		assetsMet := assets <= models.SmallAssetsMax && assets > 0
+		if turnoverMet || assetsMet {
+			return models.ClassificationSmall
+		}
+	}
+
+	// Check Micro classification
+	// Employees: 1-4
+	// Turnover: Up to 5,000,000
+	// Assets: Up to 1,000,000
+	if employees >= models.MicroEmployeeMin && employees <= models.MicroEmployeeMax {
+		// For Micro, "up to" includes 0, so if employee count is met and
+		// financial data is within thresholds (including 0/missing), classify as Micro
+		turnoverMet := turnover <= models.MicroTurnoverMax // 0 is valid for "up to"
+		assetsMet := assets <= models.MicroAssetsMax       // 0 is valid for "up to"
+		if turnoverMet && assetsMet {
+			return models.ClassificationMicro
+		}
+	}
+
+	// Default to Unclassified if no criteria are met
+	return models.ClassificationUnclassified
+}
+
+// RecalculateAllClassifications recalculates classifications for all SMEs
+// This is useful for batch processing when the classification algorithm changes
+// Returns the number of SMEs processed and any error encountered
+func (s *SmeService) RecalculateAllClassifications() (int, error) {
+	// Get all SME IDs
+	var smes []models.Sme
+	err := facades.Orm().Query().
+		Model(&models.Sme{}).
+		Select("id").
+		Find(&smes)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch SME IDs: %w", err)
+	}
+
+	processedCount := 0
+	var lastError error
+
+	for _, sme := range smes {
+		_, err := s.CalculateClassification(sme.ID)
+		if err != nil {
+			// Log the error but continue processing
+			facades.Log().Warning("Failed to calculate classification", map[string]interface{}{
+				"sme_id": sme.ID,
+				"error":  err.Error(),
+			})
+			lastError = err
+		} else {
+			processedCount++
+		}
+	}
+
+	if lastError != nil && processedCount == 0 {
+		return 0, fmt.Errorf("failed to process any SMEs: %w", lastError)
+	}
+
+	return processedCount, nil
+}
+
+// GetDistributionByClassification returns SME distribution by classification
+func (s *SmeService) GetDistributionByClassification() []map[string]interface{} {
+	return s.getDistributionByField("classification")
 }

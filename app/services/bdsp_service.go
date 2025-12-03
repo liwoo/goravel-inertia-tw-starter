@@ -295,3 +295,130 @@ func (s *BdspService) GetBdspStatistics() (map[string]interface{}, error) {
 		"suspendedBdsps": stats.SuspendedBdsps,
 	}, nil
 }
+
+// GetDistributionByStatus returns BDSP distribution by registration status
+func (s *BdspService) GetDistributionByStatus() []map[string]interface{} {
+	// Get total count for percentage calculation
+	var total int64
+	total, _ = facades.Orm().Query().Model(&models.Bdsp{}).Count()
+
+	if total == 0 {
+		return []map[string]interface{}{}
+	}
+
+	type DistributionResult struct {
+		Label string
+		Value int64
+	}
+
+	var results []DistributionResult
+
+	query := `
+		SELECT COALESCE(registration_status, 'Unknown') as label, COUNT(*) as value
+		FROM bdsps
+		WHERE deleted_at IS NULL
+		GROUP BY registration_status
+		ORDER BY value DESC
+	`
+
+	err := facades.Orm().Query().Raw(query).Scan(&results)
+	if err != nil {
+		return []map[string]interface{}{}
+	}
+
+	// Convert to response format with percentages
+	distribution := make([]map[string]interface{}, len(results))
+	for i, r := range results {
+		percentage := float64(r.Value) / float64(total) * 100
+		distribution[i] = map[string]interface{}{
+			"label":      r.Label,
+			"value":      r.Value,
+			"percentage": percentage,
+		}
+	}
+
+	return distribution
+}
+
+// GetTopServicesDistribution returns distribution of services offered by BDSPs
+func (s *BdspService) GetTopServicesDistribution() []map[string]interface{} {
+	// Get all BDSPs with their service list
+	var bdsps []models.Bdsp
+	err := facades.Orm().Query().
+		Model(&models.Bdsp{}).
+		Select("service_list_json").
+		Find(&bdsps)
+
+	if err != nil {
+		return []map[string]interface{}{}
+	}
+
+	// Count service occurrences
+	serviceCount := make(map[string]int)
+	totalServices := 0
+
+	for _, bdsp := range bdsps {
+		if bdsp.ServiceListJSON == "" {
+			continue
+		}
+
+		var services []models.BdspService
+		if err := json.Unmarshal([]byte(bdsp.ServiceListJSON), &services); err != nil {
+			continue
+		}
+
+		for _, svc := range services {
+			if svc.Name != "" {
+				serviceCount[svc.Name]++
+				totalServices++
+			}
+		}
+	}
+
+	if totalServices == 0 {
+		return []map[string]interface{}{}
+	}
+
+	// Convert to slice and sort by count
+	type serviceEntry struct {
+		name  string
+		count int
+	}
+
+	entries := make([]serviceEntry, 0, len(serviceCount))
+	for name, count := range serviceCount {
+		entries = append(entries, serviceEntry{name: name, count: count})
+	}
+
+	// Sort by count descending
+	for i := 0; i < len(entries)-1; i++ {
+		for j := i + 1; j < len(entries); j++ {
+			if entries[j].count > entries[i].count {
+				entries[i], entries[j] = entries[j], entries[i]
+			}
+		}
+	}
+
+	// Take top 15 services
+	maxServices := 15
+	if len(entries) < maxServices {
+		maxServices = len(entries)
+	}
+
+	// Get total BDSPs for percentage calculation
+	var totalBdsps int64
+	totalBdsps, _ = facades.Orm().Query().Model(&models.Bdsp{}).Count()
+
+	distribution := make([]map[string]interface{}, maxServices)
+	for i := 0; i < maxServices; i++ {
+		// Percentage is based on how many BDSPs offer this service
+		percentage := float64(entries[i].count) / float64(totalBdsps) * 100
+		distribution[i] = map[string]interface{}{
+			"label":      entries[i].name,
+			"value":      entries[i].count,
+			"percentage": percentage,
+		}
+	}
+
+	return distribution
+}

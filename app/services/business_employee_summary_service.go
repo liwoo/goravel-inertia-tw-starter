@@ -48,23 +48,33 @@ func NewBusinessEmployeeSummaryService() *BusinessEmployeeSummaryService {
 			return nil
 		}).
 		WithAfterCreate(func(model *models.BusinessEmployeeSummary) error {
-			// Recalculate formalisation score after creating an employee summary record
+			// Recalculate formalisation score and classification after creating an employee summary record
 			if model != nil && model.SmeID > 0 {
 				smeService := NewSmeService()
 				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
 				if err != nil {
 					facades.Log().Warningf("Failed to recalculate formalisation score after employee summary create: %v", err)
 				}
+				// Recalculate classification (uses employee count from BusinessEmployeeSummary)
+				_, err = smeService.CalculateClassification(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate classification after employee summary create: %v", err)
+				}
 			}
 			return nil
 		}).
 		WithAfterUpdate(func(model *models.BusinessEmployeeSummary) error {
-			// Recalculate formalisation score after updating an employee summary record
+			// Recalculate formalisation score and classification after updating an employee summary record
 			if model != nil && model.SmeID > 0 {
 				smeService := NewSmeService()
 				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
 				if err != nil {
 					facades.Log().Warningf("Failed to recalculate formalisation score after employee summary update: %v", err)
+				}
+				// Recalculate classification (uses employee count from BusinessEmployeeSummary)
+				_, err = smeService.CalculateClassification(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate classification after employee summary update: %v", err)
 				}
 			}
 			return nil

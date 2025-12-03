@@ -383,21 +383,21 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full">
-          <TabsTrigger value="business-info" className="flex-1">
-            <Building2 className="h-4 w-4 mr-2" />
-            Business Info
+          <TabsTrigger value="business-info" className="flex-1" title="Business Info">
+            <Building2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Business Info</span>
           </TabsTrigger>
-          <TabsTrigger value="primary-owner" className="flex-1">
-            <User className="h-4 w-4 mr-2" />
-            Primary Owner
+          <TabsTrigger value="primary-owner" className="flex-1" title="Primary Owner">
+            <User className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Primary Owner</span>
           </TabsTrigger>
-          <TabsTrigger value="formalization" className="flex-1">
-            <FileText className="h-4 w-4 mr-2" />
-            Formalization
+          <TabsTrigger value="formalization" className="flex-1" title="Formalization">
+            <FileText className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Formalization</span>
           </TabsTrigger>
-          <TabsTrigger value="additional-members" className="flex-1">
-            <Users className="h-4 w-4 mr-2" />
-            Team Members
+          <TabsTrigger value="additional-members" className="flex-1" title="Team Members">
+            <Users className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Team Members</span>
           </TabsTrigger>
         </TabsList>
 

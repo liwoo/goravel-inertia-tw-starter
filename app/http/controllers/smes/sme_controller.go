@@ -267,3 +267,46 @@ func (c *SmeController) BulkActivate(ctx http.Context) http.Response {
 		"affected": affected,
 	}, fmt.Sprintf("%d SME(s) activated successfully", affected))
 }
+
+// RecalculateClassification POST /api/smes/{id}/recalculate-classification
+func (c *SmeController) RecalculateClassification(ctx http.Context) http.Response {
+	// Get ID from URL
+	id, err := c.ValidateID(ctx, "id")
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid SME ID", nil)
+	}
+
+	// Check permissions
+	if err := c.CheckAuth(ctx, "update", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Call service layer
+	classification, err := c.smeService.CalculateClassification(id)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Failed to calculate classification: "+err.Error(), nil)
+	}
+
+	return c.SuccessResponse(ctx, map[string]interface{}{
+		"id":             id,
+		"classification": classification,
+	}, "Classification recalculated successfully")
+}
+
+// RecalculateAllClassifications POST /api/smes/recalculate-all-classifications
+func (c *SmeController) RecalculateAllClassifications(ctx http.Context) http.Response {
+	// Check permissions (require manage permission for bulk operation)
+	if err := c.CheckAuth(ctx, "update", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Call service layer
+	count, err := c.smeService.RecalculateAllClassifications()
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Failed to recalculate classifications: "+err.Error(), nil)
+	}
+
+	return c.SuccessResponse(ctx, map[string]interface{}{
+		"processed": count,
+	}, fmt.Sprintf("%d SME(s) classifications recalculated", count))
+}

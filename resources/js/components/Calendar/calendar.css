@@ -783,3 +783,139 @@ button.rbc-input::-moz-focus-inner {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+
+/* ============================================================================
+   MOBILE RESPONSIVE STYLES
+   ============================================================================ */
+
+/* Mobile: Stack toolbar elements vertically */
+@media (max-width: 640px) {
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .rbc-toolbar .rbc-toolbar-label {
+    order: -1;
+    font-size: 16px;
+    width: 100%;
+  }
+
+  .rbc-toolbar .rbc-btn-group {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .rbc-toolbar button {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  /* View toggle buttons - more compact */
+  .rbc-toolbar > span:last-child .rbc-btn-group {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rbc-toolbar > span:last-child .rbc-btn-group button {
+    padding: 0 10px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  /* Smaller header cells */
+  .rbc-header {
+    padding: 8px 4px;
+    font-size: 11px;
+  }
+
+  /* Shorter day names on mobile */
+  .rbc-header span {
+    display: inline-block;
+    max-width: 3ch;
+    overflow: hidden;
+    text-overflow: clip;
+  }
+
+  /* Smaller date cells */
+  .rbc-date-cell {
+    padding: 2px 4px;
+    font-size: 12px;
+  }
+
+  /* More compact row content */
+  .rbc-row-content {
+    min-height: 50px;
+  }
+
+  /* Smaller events */
+  .rbc-event {
+    font-size: 10px;
+    padding: 2px 4px;
+    line-height: 1.2;
+  }
+
+  .rbc-event-content {
+    font-size: 10px;
+  }
+
+  .event-component {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+
+  /* Show more link */
+  .rbc-show-more {
+    font-size: 10px;
+  }
+
+  /* Time gutter - narrower */
+  .rbc-time-gutter {
+    min-width: 40px;
+  }
+
+  .rbc-time-gutter .rbc-label {
+    font-size: 10px;
+    padding: 0 4px;
+  }
+
+  /* Agenda view - more compact */
+  .rbc-agenda-view table {
+    font-size: 12px;
+  }
+
+  .rbc-agenda-date-cell,
+  .rbc-agenda-time-cell {
+    padding: 8px 4px;
+    white-space: nowrap;
+  }
+
+  .rbc-agenda-event-cell {
+    padding: 8px 4px;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 641px) and (max-width: 768px) {
+  .rbc-toolbar {
+    gap: 12px;
+  }
+
+  .rbc-toolbar button {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .rbc-header {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+
+  .rbc-event {
+    font-size: 12px;
+  }
+}

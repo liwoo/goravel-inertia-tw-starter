@@ -1,6 +1,9 @@
 // TypeScript interfaces for Sme entities and operations
 import { BaseModel, PaginatedResult, ListRequest } from './crud';
 
+// SME Classification type based on Malawi MSME Policy
+export type SmeClassification = 'Micro' | 'Small' | 'Medium' | 'Unclassified';
+
 // Core Sme interface matching the backend model
 // Includes both camelCase (frontend) and snake_case (API response) variants
 export interface Sme extends BaseModel {
@@ -29,6 +32,7 @@ export interface Sme extends BaseModel {
   userAgent?: string;
   businessImprovementAspects: string[];
   businessAccessedFinancing: string[];
+  classification: SmeClassification;
 
   // Snake_case variants (from API responses)
   usme_number?: string;
@@ -51,6 +55,7 @@ export interface Sme extends BaseModel {
   user_agent?: string;
   business_improvement_aspects?: string[];
   business_accessed_financing?: string[];
+  // classification is same in both cases (single word)
 
   // Relationships (optional, loaded via eager loading)
   primaryBusinessOwner?: any; // PrimaryBusinessOwner type
@@ -160,6 +165,15 @@ export interface DistributionPoint {
   percentage: number;
 }
 
+// Age and gender distribution point (for population pyramid chart)
+export interface AgeGenderDistributionPoint {
+  ageGroup: string;
+  male: number;
+  female: number;
+  malePercentage: number;
+  femalePercentage: number;
+}
+
 // Sme statistics (for dashboard charts and KPIs)
 export interface SmeStats {
   totalSmes: number;
@@ -170,4 +184,8 @@ export interface SmeStats {
   registrationTrend: RegistrationTrendPoint[];
   byRegion: DistributionPoint[];
   byCategory: DistributionPoint[];
+  byGender?: DistributionPoint[];
+  byYouth?: DistributionPoint[];
+  byAgeGender?: AgeGenderDistributionPoint[];
+  byClassification?: DistributionPoint[];
 }
