@@ -16,11 +16,17 @@ interface SmeYouthChartProps {
   isLoading?: boolean;
 }
 
-// Define specific colors for youth categories
+// Define specific colors for youth categories (lowercase keys for case-insensitive lookup)
+// Youth in pink (contrast) to highlight them as the focus group
 const YOUTH_COLORS: Record<string, string> = {
-  Youth: "hsl(var(--chart-3))",
-  "Non-Youth": "hsl(var(--chart-4))",
-  Unknown: "hsl(var(--chart-5))",
+  youth: "var(--chart-contrast)",
+  "non-youth": "hsl(var(--primary))",
+  unknown: "hsl(var(--muted-foreground))",
+};
+
+// Helper to get color with case-insensitive lookup
+const getYouthColor = (label: string): string | undefined => {
+  return YOUTH_COLORS[label.toLowerCase()];
 };
 
 // Fallback colors for unknown labels
@@ -44,7 +50,7 @@ const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
     const key = item.label.toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
     config[key] = {
       label: item.label,
-      color: YOUTH_COLORS[item.label] || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+      color: getYouthColor(item.label) || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
     };
   });
 
@@ -59,7 +65,7 @@ export function SmeYouthChart({ data, isLoading = false }: SmeYouthChartProps) {
       label: item.label,
       value: item.value,
       percentage: item.percentage,
-      fill: YOUTH_COLORS[item.label] || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+      fill: getYouthColor(item.label) || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
     }));
   }, [data]);
 

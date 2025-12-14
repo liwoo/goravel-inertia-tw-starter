@@ -141,12 +141,17 @@ func (s *AdditionalBusinessMemberService) Create(data map[string]interface{}) (i
 			facades.Log().Warningf("Failed to dispatch AdditionalBusinessMemberCreated event: %v", err)
 		}
 
-		// Recalculate formalisation score after creating an additional business member
+		// Recalculate formalisation score and classification after creating an additional business member
 		if member.SmeId > 0 {
 			smeService := NewSmeService()
 			_, err := smeService.CalculateFormalisationScore(uint(member.SmeId))
 			if err != nil {
 				facades.Log().Warningf("Failed to recalculate formalisation score after additional member create: %v", err)
+			}
+			// Recalculate classification (additional members count as employees)
+			_, err = smeService.CalculateClassification(uint(member.SmeId))
+			if err != nil {
+				facades.Log().Warningf("Failed to recalculate classification after additional member create: %v", err)
 			}
 		}
 	}
@@ -171,12 +176,17 @@ func (s *AdditionalBusinessMemberService) Update(id uint, data map[string]interf
 			facades.Log().Warningf("Failed to dispatch AdditionalBusinessMemberUpdated event: %v", err)
 		}
 
-		// Recalculate formalisation score after updating an additional business member
+		// Recalculate formalisation score and classification after updating an additional business member
 		if member.SmeId > 0 {
 			smeService := NewSmeService()
 			_, err := smeService.CalculateFormalisationScore(uint(member.SmeId))
 			if err != nil {
 				facades.Log().Warningf("Failed to recalculate formalisation score after additional member update: %v", err)
+			}
+			// Recalculate classification (additional members count as employees)
+			_, err = smeService.CalculateClassification(uint(member.SmeId))
+			if err != nil {
+				facades.Log().Warningf("Failed to recalculate classification after additional member update: %v", err)
 			}
 		}
 	}
@@ -208,12 +218,17 @@ func (s *AdditionalBusinessMemberService) Delete(id uint) error {
 			facades.Log().Warningf("Failed to dispatch AdditionalBusinessMemberDeleted event: %v", err)
 		}
 
-		// Recalculate formalisation score after deleting an additional business member
+		// Recalculate formalisation score and classification after deleting an additional business member
 		if member.SmeId > 0 {
 			smeService := NewSmeService()
 			_, err := smeService.CalculateFormalisationScore(uint(member.SmeId))
 			if err != nil {
 				facades.Log().Warningf("Failed to recalculate formalisation score after additional member delete: %v", err)
+			}
+			// Recalculate classification (additional members count as employees)
+			_, err = smeService.CalculateClassification(uint(member.SmeId))
+			if err != nil {
+				facades.Log().Warningf("Failed to recalculate classification after additional member delete: %v", err)
 			}
 		}
 	}

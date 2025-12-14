@@ -166,6 +166,7 @@ export function SmeDetailView({
                         additionalMembers.length,
                         employeeSummary
                       )}
+                      score={(formalisation as any).formalisation_score ?? formalisation.formalisationScore}
                     />
                   </div>
                 )}

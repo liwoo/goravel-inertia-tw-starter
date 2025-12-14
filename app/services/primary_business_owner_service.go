@@ -52,23 +52,33 @@ func NewPrimaryBusinessOwnerService() *PrimaryBusinessOwnerService {
 		WithScopeFiltering("primary_business_owner", "created_by").
 		WithSoftDeletes().
 		WithAfterCreate(func(model *models.PrimaryBusinessOwner) error {
-			// Recalculate formalisation score after creating a primary business owner
+			// Recalculate formalisation score and classification after creating a primary business owner
 			if model != nil && model.SmeID > 0 {
 				smeService := NewSmeService()
 				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
 				if err != nil {
 					facades.Log().Warningf("Failed to recalculate formalisation score after primary owner create: %v", err)
 				}
+				// Recalculate classification (primary owner counts as employee)
+				_, err = smeService.CalculateClassification(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate classification after primary owner create: %v", err)
+				}
 			}
 			return nil
 		}).
 		WithAfterUpdate(func(model *models.PrimaryBusinessOwner) error {
-			// Recalculate formalisation score after updating a primary business owner
+			// Recalculate formalisation score and classification after updating a primary business owner
 			if model != nil && model.SmeID > 0 {
 				smeService := NewSmeService()
 				_, err := smeService.CalculateFormalisationScore(uint(model.SmeID))
 				if err != nil {
 					facades.Log().Warningf("Failed to recalculate formalisation score after primary owner update: %v", err)
+				}
+				// Recalculate classification (primary owner counts as employee)
+				_, err = smeService.CalculateClassification(uint(model.SmeID))
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate classification after primary owner update: %v", err)
 				}
 			}
 			return nil
@@ -83,12 +93,18 @@ func NewPrimaryBusinessOwnerService() *PrimaryBusinessOwnerService {
 			return nil
 		}).
 		WithAfterDelete(func(id uint) error {
-			// Recalculate formalisation score after deleting a primary business owner
+			// Recalculate formalisation score and classification after deleting a primary business owner
 			if primaryBusinessOwnerServiceInstance.pendingDeleteSmeID > 0 {
 				smeService := NewSmeService()
-				_, err := smeService.CalculateFormalisationScore(uint(primaryBusinessOwnerServiceInstance.pendingDeleteSmeID))
+				smeID := uint(primaryBusinessOwnerServiceInstance.pendingDeleteSmeID)
+				_, err := smeService.CalculateFormalisationScore(smeID)
 				if err != nil {
 					facades.Log().Warningf("Failed to recalculate formalisation score after primary owner delete: %v", err)
+				}
+				// Recalculate classification (primary owner counts as employee)
+				_, err = smeService.CalculateClassification(smeID)
+				if err != nil {
+					facades.Log().Warningf("Failed to recalculate classification after primary owner delete: %v", err)
 				}
 				primaryBusinessOwnerServiceInstance.pendingDeleteSmeID = 0 // Reset after use
 			}

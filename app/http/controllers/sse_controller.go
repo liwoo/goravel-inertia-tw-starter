@@ -87,6 +87,19 @@ func (c *SSEController) Stream(ctx http.Context) http.Response {
 		done <- true
 	}()
 
+	// Helper function to safely write to the response writer
+	writeToClient := func(data string) bool {
+		_, err := fmt.Fprint(writer, data)
+		if err != nil {
+			// Write failed - connection is broken
+			return false
+		}
+		if flusher, ok := writer.(nethttp.Flusher); ok {
+			flusher.Flush()
+		}
+		return true
+	}
+
 	// Listen for events
 	for {
 		select {
@@ -103,16 +116,14 @@ func (c *SSEController) Stream(ctx http.Context) http.Response {
 			}
 
 			// Write SSE event
-			fmt.Fprintf(writer, "event: %s\ndata: %s\n\n", event.Type, eventData)
-			if flusher, ok := writer.(nethttp.Flusher); ok {
-				flusher.Flush()
+			if !writeToClient(fmt.Sprintf("event: %s\ndata: %s\n\n", event.Type, eventData)) {
+				return nil
 			}
 
 		case <-keepAliveTicker.C:
-			// Send keep-alive comment
-			fmt.Fprintf(writer, ": keep-alive\n\n")
-			if flusher, ok := writer.(nethttp.Flusher); ok {
-				flusher.Flush()
+			// Send keep-alive comment - this also detects broken connections
+			if !writeToClient(": keep-alive\n\n") {
+				return nil
 			}
 
 		case <-done:

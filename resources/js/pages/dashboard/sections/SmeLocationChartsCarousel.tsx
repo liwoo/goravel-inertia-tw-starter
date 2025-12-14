@@ -30,6 +30,7 @@ export interface SmeLocationChartsCarouselProps {
 // Region Chart (Chart 1) - Donut chart for regions
 // ============================================================================
 
+// Use purple shade variations for charts
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",

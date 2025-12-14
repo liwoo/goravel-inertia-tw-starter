@@ -29,6 +29,7 @@ export interface SmeBusinessChartsCarouselProps {
 // Sector Chart Content (Bar Chart)
 // ============================================================================
 
+// Use purple shade variations for bar charts
 const BAR_COLORS = [
   "hsl(var(--chart-2))",
   "hsl(var(--chart-3))",
