@@ -4,7 +4,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ThemeToggleIcon } from "@/components/ThemeToggleIcon"
 import { NotificationDrawer } from "@/components/Notifications/NotificationDrawer"
 import { Button } from "@/components/ui/button"
-import { MessageCircle } from "lucide-react"
+import { MessageCircle, ArrowLeft } from "lucide-react"
 import { MessageSidebar } from "@/components/Messages/MessageSidebar"
 import { MessageChat } from "@/components/Messages/MessageChat"
 import { BroadcastHistory } from "@/components/Messages/BroadcastHistory"
@@ -16,6 +16,7 @@ import {
   Drawer,
   DrawerContent,
 } from "@/components/ui/drawer"
+import { cn } from "@/lib/utils"
 
 export function SiteHeader({ title }: { title: string }) {
   const { props } = usePage<SharedData>();
@@ -74,9 +75,14 @@ export function SiteHeader({ title }: { title: string }) {
 
       {/* Messages Drawer */}
       <Drawer open={isMessagesOpen} onOpenChange={(open) => open ? openMessages() : closeMessages()}>
-        <DrawerContent className="max-w-5xl mx-auto h-[85vh]">
+        <DrawerContent className="w-full max-w-5xl mx-auto h-[85vh]">
           <div className="flex h-full overflow-hidden">
-            <div className="w-96 border-r shrink-0">
+            {/* Sidebar - full width on mobile, fixed width on desktop */}
+            <div className={cn(
+              "w-full md:w-96 border-r shrink-0 md:block",
+              // On mobile: hide sidebar when conversation or broadcast is active (show chat/broadcast instead)
+              (selectedConversation || isBroadcastMode) ? "hidden" : "block"
+            )}>
               {user && (
                 <MessageSidebar
                   user={user as any}
@@ -87,7 +93,29 @@ export function SiteHeader({ title }: { title: string }) {
                 />
               )}
             </div>
-            <div className="flex-1 min-w-0">
+            {/* Chat area - full width on mobile, flex on desktop */}
+            <div className={cn(
+              "flex-1 min-w-0 flex flex-col",
+              // On mobile: hide chat when no conversation selected
+              !selectedConversation && !isBroadcastMode ? "hidden md:flex" : "flex"
+            )}>
+              {/* Mobile back button */}
+              {(selectedConversation || isBroadcastMode) && (
+                <div className="md:hidden border-b p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedConversation(null);
+                      setIsBroadcastMode(false);
+                    }}
+                    className="gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to messages
+                  </Button>
+                </div>
+              )}
               {isBroadcastMode ? (
                 <BroadcastHistory refreshTrigger={broadcastRefreshTrigger} />
               ) : (

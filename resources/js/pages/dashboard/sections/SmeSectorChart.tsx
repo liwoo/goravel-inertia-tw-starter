@@ -21,7 +21,7 @@ interface SmeSectorChartProps {
   isLoading?: boolean;
 }
 
-// Use subtle shade variations for bar charts (2-3 shades)
+// Use purple shade variations for bar charts
 const BAR_COLORS = [
   "hsl(var(--chart-2))",
   "hsl(var(--chart-3))",

@@ -10,10 +10,13 @@ interface ScoreBreakdown {
 interface ScoreBreakdownBarProps {
   breakdown: ScoreBreakdown;
   className?: string;
+  /** When provided, uses this score from API instead of calculating from breakdown */
+  score?: number;
 }
 
-export function ScoreBreakdownBar({ breakdown, className }: ScoreBreakdownBarProps) {
-  const totalScore = breakdown.formalisation + breakdown.teamStructure + breakdown.financialData;
+export function ScoreBreakdownBar({ breakdown, className, score }: ScoreBreakdownBarProps) {
+  // Use API score when provided (source of truth), otherwise fall back to calculated
+  const totalScore = score ?? (breakdown.formalisation + breakdown.teamStructure + breakdown.financialData);
 
   const categories = [
     {

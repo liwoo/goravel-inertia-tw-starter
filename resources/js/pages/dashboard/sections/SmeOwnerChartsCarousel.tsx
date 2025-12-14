@@ -33,11 +33,17 @@ export interface SmeOwnerChartsCarouselProps {
 // Gender Chart (Chart 1) - Reused logic from existing SmeGenderChart
 // ============================================================================
 
+// Define specific colors for gender categories (lowercase keys for case-insensitive lookup)
 const GENDER_COLORS: Record<string, string> = {
-  Male: "hsl(var(--chart-1))",
-  Female: "hsl(var(--chart-2))",
-  Other: "hsl(var(--chart-4))",
-  Unknown: "hsl(var(--chart-5))",
+  male: "hsl(var(--primary))",
+  female: "var(--chart-contrast)",
+  other: "hsl(var(--chart-5))",
+  unknown: "hsl(var(--muted-foreground))",
+};
+
+// Helper to get color with case-insensitive lookup
+const getGenderColor = (label: string): string | undefined => {
+  return GENDER_COLORS[label.toLowerCase()];
 };
 
 const FALLBACK_COLORS = [
@@ -59,7 +65,7 @@ const generateGenderChartConfig = (data: DistributionPoint[]): ChartConfig => {
     const key = item.label.toLowerCase().replace(/\s+/g, "_");
     config[key] = {
       label: item.label,
-      color: GENDER_COLORS[item.label] || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+      color: getGenderColor(item.label) || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
     };
   });
 
@@ -77,7 +83,7 @@ function GenderChartContent({ data }: GenderChartContentProps) {
       label: item.label,
       value: item.value,
       percentage: item.percentage,
-      fill: GENDER_COLORS[item.label] || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+      fill: getGenderColor(item.label) || FALLBACK_COLORS[index % FALLBACK_COLORS.length],
     }));
   }, [data]);
 

@@ -19,6 +19,13 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # SSE (Server-Sent Events) support - long-lived connections
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    # Disable request buffering for streaming
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
   hosts:
     - host: smedi.dartsmw.com
       paths:

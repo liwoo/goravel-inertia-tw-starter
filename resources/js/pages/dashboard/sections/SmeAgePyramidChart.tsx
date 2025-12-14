@@ -30,9 +30,9 @@ interface SmeAgePyramidChartProps {
   isLoading?: boolean;
 }
 
-// Colors for male and female
-const MALE_COLOR = "hsl(var(--chart-1))";
-const FEMALE_COLOR = "hsl(var(--chart-2))";
+// Colors for male and female - using primary/contrast for binary distinction
+const MALE_COLOR = "hsl(var(--primary))";
+const FEMALE_COLOR = "var(--chart-contrast)";
 
 const chartConfig: ChartConfig = {
   male: {

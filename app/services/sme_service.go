@@ -1385,11 +1385,13 @@ func (s *SmeService) RecalculateAllFormalisationScores() (int, error) {
 //
 // Returns the classification string and any error encountered
 func (s *SmeService) CalculateClassification(smeID uint) (string, error) {
-	// Load SME with BusinessFormalisation and BusinessEmployeeSummary relationships
+	// Load SME with all relationships needed for classification
 	var sme models.Sme
 	err := facades.Orm().Query().
 		With("BusinessFormalisation").
 		With("BusinessEmployeeSummary").
+		With("PrimaryBusinessOwner").
+		With("AdditionalBusinessMembers").
 		Where("id = ?", smeID).
 		First(&sme)
 
@@ -1401,11 +1403,21 @@ func (s *SmeService) CalculateClassification(smeID uint) (string, error) {
 		return "", errors.New("SME not found")
 	}
 
-	// Calculate total employees from BusinessEmployeeSummary
+	// Calculate total employees from all sources
 	totalEmployees := 0
+
+	// Count primary business owner as 1 employee
+	if sme.PrimaryBusinessOwner != nil && sme.PrimaryBusinessOwner.ID != 0 {
+		totalEmployees += 1
+	}
+
+	// Count additional business members
+	totalEmployees += len(sme.AdditionalBusinessMembers)
+
+	// Add employees from BusinessEmployeeSummary
 	if sme.BusinessEmployeeSummary != nil {
 		bes := sme.BusinessEmployeeSummary
-		totalEmployees = bes.FullTimeMales + bes.FullTimeFemales +
+		totalEmployees += bes.FullTimeMales + bes.FullTimeFemales +
 			bes.PartTimeMales + bes.PartTimeFemales +
 			bes.InternMales + bes.InternFemales
 	}
@@ -1522,6 +1534,117 @@ func (s *SmeService) RecalculateAllClassifications() (int, error) {
 	}
 
 	return processedCount, nil
+}
+
+// SyncEmployeeSummaryFromTeam calculates and syncs the BusinessEmployeeSummary
+// based on PrimaryBusinessOwner and AdditionalBusinessMembers.
+// This ensures the employee summary reflects the current team composition.
+func (s *SmeService) SyncEmployeeSummaryFromTeam(smeID uint) error {
+	// Load PrimaryBusinessOwner and AdditionalBusinessMembers
+	var primaryOwner models.PrimaryBusinessOwner
+	err := facades.Orm().Query().
+		Where("sme_id = ?", smeID).
+		First(&primaryOwner)
+	hasPrimaryOwner := err == nil && primaryOwner.ID != 0
+
+	var additionalMembers []models.AdditionalBusinessMember
+	err = facades.Orm().Query().
+		Where("sme_id = ?", smeID).
+		Find(&additionalMembers)
+	if err != nil {
+		return fmt.Errorf("failed to load additional business members: %w", err)
+	}
+
+	// Initialize counters
+	fullTimeMales := 0
+	fullTimeFemales := 0
+	partTimeMales := 0
+	partTimeFemales := 0
+	internMales := 0
+	internFemales := 0
+
+	// Count primary owner (assumed to be full-time)
+	if hasPrimaryOwner {
+		gender := primaryOwner.Gender
+		if gender == "MALE" || gender == "Male" || gender == "male" {
+			fullTimeMales++
+		} else if gender == "FEMALE" || gender == "Female" || gender == "female" {
+			fullTimeFemales++
+		} else {
+			// Default to male if gender not specified
+			fullTimeMales++
+		}
+	}
+
+	// Count additional members by category
+	for _, member := range additionalMembers {
+		gender := ""
+		if member.Gender != nil {
+			gender = *member.Gender
+		}
+		isMale := gender == "MALE" || gender == "Male" || gender == "male"
+
+		if member.IsIntern {
+			if isMale {
+				internMales++
+			} else {
+				internFemales++
+			}
+		} else if member.IsPartTime {
+			if isMale {
+				partTimeMales++
+			} else {
+				partTimeFemales++
+			}
+		} else {
+			// Full-time
+			if isMale {
+				fullTimeMales++
+			} else {
+				fullTimeFemales++
+			}
+		}
+	}
+
+	// Check if BusinessEmployeeSummary exists
+	var existingSummary models.BusinessEmployeeSummary
+	err = facades.Orm().Query().
+		Where("sme_id = ?", smeID).
+		First(&existingSummary)
+
+	if err != nil || existingSummary.ID == 0 {
+		// Create new summary
+		newSummary := models.BusinessEmployeeSummary{
+			SmeID:           int(smeID),
+			FullTimeMales:   fullTimeMales,
+			FullTimeFemales: fullTimeFemales,
+			PartTimeMales:   partTimeMales,
+			PartTimeFemales: partTimeFemales,
+			InternMales:     internMales,
+			InternFemales:   internFemales,
+		}
+		if err := facades.Orm().Query().Create(&newSummary); err != nil {
+			return fmt.Errorf("failed to create business employee summary: %w", err)
+		}
+	} else {
+		// Update existing summary
+		_, err := facades.Orm().Query().
+			Model(&models.BusinessEmployeeSummary{}).
+			Where("id = ?", existingSummary.ID).
+			Update(map[string]interface{}{
+				"full_time_males":   fullTimeMales,
+				"full_time_females": fullTimeFemales,
+				"part_time_males":   partTimeMales,
+				"part_time_females": partTimeFemales,
+				"intern_males":      internMales,
+				"intern_females":    internFemales,
+			})
+		if err != nil {
+			return fmt.Errorf("failed to update business employee summary: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // GetDistributionByClassification returns SME distribution by classification

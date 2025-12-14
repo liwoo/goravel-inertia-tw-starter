@@ -14,7 +14,7 @@ interface SmeDistrictChartProps {
   isLoading?: boolean;
 }
 
-// Use subtle shade variations for bar charts
+// Use purple shade variations for bar charts
 const BAR_COLORS = [
   "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
