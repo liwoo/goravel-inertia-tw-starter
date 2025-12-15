@@ -167,7 +167,8 @@ func (c *ApplicationController) ApproveApplication(ctx http.Context) http.Respon
 	}
 
 	// Call service method to approve application
-	if err := c.applicationService.ApproveApplication(id, approvalRequest.SmeID, uint(user.ID)); err != nil {
+	userData, err := c.applicationService.ApproveApplication(id, approvalRequest.SmeID, uint(user.ID))
+	if err != nil {
 		facades.Log().Error("Failed to approve application", map[string]interface{}{
 			"application_id": id,
 			"sme_id":         approvalRequest.SmeID,
@@ -177,7 +178,7 @@ func (c *ApplicationController) ApproveApplication(ctx http.Context) http.Respon
 		return c.BadRequestResponse(ctx, "Failed to approve application: "+err.Error(), nil)
 	}
 
-	return c.SuccessResponse(ctx, nil, "Application approved successfully")
+	return c.SuccessResponse(ctx, userData, "Application approved successfully")
 }
 
 // RejectApplication POST /api/applications/{id}/reject

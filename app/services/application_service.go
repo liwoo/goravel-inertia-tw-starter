@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"math/rand"
+	"smedi-sme-db/app/auth"
 	"smedi-sme-db/app/contracts"
 	"smedi-sme-db/app/models"
 
@@ -99,30 +100,30 @@ func NewApplicationService() *ApplicationService {
 // Add domain-specific methods below this line
 
 // ApproveApplication approves an application, creates a user account, and adds primary business owner to the selected SME
-func (s *ApplicationService) ApproveApplication(applicationID uint, smeID uint, approverUserID uint) error {
-	// Start a transaction
+// Returns the created user data including the plain text password
+func (s *ApplicationService) ApproveApplication(applicationID uint, smeID uint, approverUserID uint) (map[string]interface{}, error) {
 	// 1. Fetch and validate the application
 	var application models.Application
 	if err := facades.Orm().Query().Where("id = ?", applicationID).First(&application); err != nil {
-		return fmt.Errorf("application not found: %w", err)
+		return nil, fmt.Errorf("application not found: %w", err)
 	}
 
 	// Check if application is in Pending status
 	if application.Status != "Pending" {
-		return fmt.Errorf("application is not in Pending status (current status: %s)", application.Status)
+		return nil, fmt.Errorf("application is not in Pending status (current status: %s)", application.Status)
 	}
 
 	// 2. Validate that the SME exists
 	var sme models.Sme
 	if err := facades.Orm().Query().Where("id = ?", smeID).First(&sme); err != nil {
-		return fmt.Errorf("SME not found: %w", err)
+		return nil, fmt.Errorf("SME not found: %w", err)
 	}
 
 	// 3. Check if user with this email already exists
 	var existingUser models.User
 	err := facades.Orm().Query().Where("email = ?", application.Email).First(&existingUser)
 	if err == nil && existingUser.ID > 0 {
-		return fmt.Errorf("user with email %s already exists", application.Email)
+		return nil, fmt.Errorf("user with email %s already exists", application.Email)
 	}
 
 	// 4. Create user account from application data
@@ -130,7 +131,7 @@ func (s *ApplicationService) ApproveApplication(applicationID uint, smeID uint, 
 	randomPassword := generateRandomPassword(12)
 	hashedPassword, err := facades.Hash().Make(randomPassword)
 	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
+		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
 	user := models.User{
@@ -138,10 +139,25 @@ func (s *ApplicationService) ApproveApplication(applicationID uint, smeID uint, 
 		Email:    application.Email,
 		Password: hashedPassword,
 		IsActive: true,
+		Role:     "User",
 	}
 
 	if err := facades.Orm().Query().Create(&user); err != nil {
-		return fmt.Errorf("failed to create user: %w", err)
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	permissionService := auth.GetPermissionService()
+	if err := permissionService.AssignRole(&user, "sme-user", nil); err != nil {
+		facades.Log().Warning("Failed to assign sme-user role to new user", map[string]interface{}{
+			"user_id": user.ID,
+			"email":   user.Email,
+			"error":   err.Error(),
+		})
+	} else {
+		facades.Log().Info("Assigned sme-user role to new user", map[string]interface{}{
+			"user_id": user.ID,
+			"email":   user.Email,
+		})
 	}
 
 	// Log the generated password (in production, this should be emailed to the user)
@@ -180,7 +196,7 @@ func (s *ApplicationService) ApproveApplication(applicationID uint, smeID uint, 
 	}
 
 	if err := facades.Orm().Query().Create(&primaryOwner); err != nil {
-		return fmt.Errorf("failed to create primary business owner: %w", err)
+		return nil, fmt.Errorf("failed to create primary business owner: %w", err)
 	}
 
 	updateData := map[string]interface{}{
@@ -188,7 +204,7 @@ func (s *ApplicationService) ApproveApplication(applicationID uint, smeID uint, 
 	}
 	// 6. Update application status to Approved
 	if _, err := s.Update(applicationID, updateData); err != nil {
-		return fmt.Errorf("failed to update application status: %w", err)
+		return nil, fmt.Errorf("failed to update application status: %w", err)
 	}
 
 	facades.Log().Info("Application approved successfully", map[string]interface{}{
@@ -199,7 +215,14 @@ func (s *ApplicationService) ApproveApplication(applicationID uint, smeID uint, 
 		"approver_user_id": approverUserID,
 	})
 
-	return nil
+	return map[string]interface{}{
+		"user": map[string]interface{}{
+			"id":       user.ID,
+			"name":     user.Name,
+			"email":    user.Email,
+			"password": randomPassword,
+		},
+	}, nil
 }
 
 // RejectApplication rejects an application by updating its status
