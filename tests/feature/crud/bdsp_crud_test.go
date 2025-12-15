@@ -187,6 +187,22 @@ func (s *BdspCRUDTestSuite) TestCreateBdsp() {
 	data := result["data"].(map[string]interface{})
 	s.NotNil(data["id"])
 	s.Equal(float64(s.testUser.ID), data["created_by"])
+	s.Equal(bdspData["name"], data["name"])
+	s.Equal(bdspData["postal_address"], data["postal_address"])
+	s.Equal(bdspData["physical_address"], data["physical_address"])
+	s.Equal(bdspData["registration_status"], data["registration_status"])
+
+	expectedPartners, _ := json.Marshal(bdspData["partners"])
+	actualPartners, _ := json.Marshal(data["partners"])
+	s.JSONEq(string(expectedPartners), string(actualPartners))
+
+	expectedProductTypes, _ := json.Marshal(bdspData["product_types"])
+	actualProductTypes, _ := json.Marshal(data["product_types"])
+	s.JSONEq(string(expectedProductTypes), string(actualProductTypes))
+
+	expectedServiceList, _ := json.Marshal(bdspData["service_list"])
+	actualServiceList, _ := json.Marshal(data["service_list"])
+	s.JSONEq(string(expectedServiceList), string(actualServiceList))
 }
 
 func (s *BdspCRUDTestSuite) TestCreateBdspValidation() {
@@ -273,6 +289,25 @@ func (s *BdspCRUDTestSuite) TestUpdateBdsp() {
 
 	s.Equal(http.StatusOK, resp.StatusCode)
 	s.True(result["success"].(bool))
+
+	data := result["data"].(map[string]interface{})
+	s.Equal(float64(createdBy), data["created_by"])
+	s.Equal(updateData["name"], data["name"])
+	s.Equal(postal, data["postal_address"])
+	s.Equal(physical, data["physical_address"])
+	s.Equal(status, data["registration_status"])
+
+	expectedPartners, _ := json.Marshal(bdsp.Partners)
+	actualPartners, _ := json.Marshal(data["partners"])
+	s.JSONEq(string(expectedPartners), string(actualPartners))
+
+	expectedProductTypes, _ := json.Marshal(bdsp.ProductTypes)
+	actualProductTypes, _ := json.Marshal(data["product_types"])
+	s.JSONEq(string(expectedProductTypes), string(actualProductTypes))
+
+	expectedServiceList, _ := json.Marshal(bdsp.ServiceList)
+	actualServiceList, _ := json.Marshal(data["service_list"])
+	s.JSONEq(string(expectedServiceList), string(actualServiceList))
 }
 
 // ============================================================================

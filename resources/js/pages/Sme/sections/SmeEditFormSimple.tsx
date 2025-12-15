@@ -83,7 +83,7 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
     name: sme.name,
     registrationNumber: sme.registration_number || sme.registrationNumber || undefined,
     taxIdentificationNumber: sme.tax_identification_number || sme.taxIdentificationNumber || undefined,
-    operationalStartDate: sme.operational_start_date || sme.operationalStartDate || '',
+    operationalStartDate: sme.operational_start_date ? sme.operational_start_date.slice(0, 10) : '',
     businessCategory: sme.business_category || sme.businessCategory || '',
     sector: sme.sector,
     subSector: sme.sub_sector || sme.subSector || undefined,

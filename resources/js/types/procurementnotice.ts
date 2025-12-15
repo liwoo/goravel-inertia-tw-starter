@@ -41,8 +41,24 @@ export interface ProcurementNoticeCreateData {
   minimum_qualifying_score: number;
 }
 
-// ProcurementNotice update data (matches ProcurementNoticeUpdateRequest - all optional)
-export interface ProcurementNoticeUpdateData extends Partial<ProcurementNoticeCreateData> { }
+export interface ProcurementNoticeUpdateData {
+  procured_by: string;
+  procurement_type: string;
+  market_approach: string;
+  invitation: string;
+  ref_no: string;
+  open_date: string;
+  close_date: string;
+  partners: string[];
+  qualifying_districts: string[];
+  is_published: boolean;
+  organization: string;
+  classification: string[];
+  interested_smes: string[];
+  details: string;
+  application_details: string;
+  minimum_qualifying_score: number;
+}
 
 // ProcurementNotice list response (matches service GetList response)
 export interface ProcurementNoticeListResponse extends PaginatedResult<ProcurementNotice> { }
