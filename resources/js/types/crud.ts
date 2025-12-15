@@ -49,6 +49,7 @@ export interface CrudAction<T = any> {
   confirm?: boolean;
   confirmMessage?: string;
   disabled?: (item: T) => boolean;
+  hidden?: (item: T) => boolean;
 }
 
 export interface CrudFilter {

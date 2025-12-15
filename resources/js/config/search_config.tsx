@@ -18,7 +18,7 @@ import {
  * 3. Ensure the backend search controller handles the entity type
  */
 
-export type SearchEntityType = 'sme' | 'bdsp' | 'event' | 'procurement' | 'user' | 'config';
+export type SearchEntityType = 'sme' | 'bdsp' | 'event' | 'procurement' | 'user' | 'config' | 'application';
 
 export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage';
 
@@ -112,6 +112,18 @@ export const SEARCH_ENTITIES: SearchEntityConfig[] = [
       dark: 'dark:bg-gray-900/30 dark:text-gray-400',
     },
     urlPrefix: '/admin/configs',
+  },
+  {
+    type: 'application',
+    label: 'Applications',
+    icon: <FileText className="h-4 w-4" />,
+    permissionService: 'applications',
+    permissionAction: 'read',
+    colors: {
+      light: 'bg-amber-100 text-amber-800',
+      dark: 'dark:bg-amber-900/30 dark:text-amber-400',
+    },
+    urlPrefix: '/admin/applications',
   },
 ];
 

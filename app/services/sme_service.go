@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -61,11 +62,44 @@ func NewSmeService() *SmeService {
 		WithBeforeCreate(func(data map[string]interface{}) error { // Handle JSON array fields and UBI generation
 			// Generate UBI if usme_number is not provided
 			if _, exists := data["usme_number"]; !exists || data["usme_number"] == "" {
-				ubi, err := generateUBI(data)
-				if err != nil {
-					return fmt.Errorf("failed to generate UBI: %w", err)
+				// Generate with retry logic to ensure uniqueness
+				maxRetries := 5
+				var ubi string
+				var err error
+
+				for i := 0; i < maxRetries; i++ {
+					ubi, err = generateUBI(data)
+					if err != nil {
+						return fmt.Errorf("failed to generate UBI: %w", err)
+					}
+
+					// Check if USME number already exists
+					var existingSme models.Sme
+					checkErr := facades.Orm().Query().Where("usme_number = ?", ubi).First(&existingSme)
+					if checkErr != nil || existingSme.ID == 0 {
+						// USME number doesn't exist, we can use it
+						break
+					}
+
+					// USME number exists, log and retry
+					facades.Log().Warning("USME number already exists, regenerating", map[string]interface{}{
+						"usme_number": ubi,
+						"attempt":     i + 1,
+					})
+
+					if i == maxRetries-1 {
+						return fmt.Errorf("failed to generate unique USME number after %d attempts", maxRetries)
+					}
 				}
 				data["usme_number"] = ubi
+			} else {
+				// USME number provided, check if it already exists
+				providedUsme := data["usme_number"]
+				var existingSme models.Sme
+				checkErr := facades.Orm().Query().Where("usme_number = ?", providedUsme).First(&existingSme)
+				if checkErr == nil && existingSme.ID > 0 {
+					return fmt.Errorf("USME number %v already exists", providedUsme)
+				}
 			}
 
 			// Handle business_improvement_aspects array to JSON conversion
@@ -617,6 +651,12 @@ func getCategoryCode(data map[string]interface{}) (string, error) {
 	default:
 		return "", fmt.Errorf("business_category must be a string, got %T", category)
 	}
+
+	// Remove parentheses and their content, then clean up extra spaces
+	// e.g., "Primary (Manufacturing)" -> "Primary"
+	// This prevents getting "(" as the first letter of a word
+	categoryStr = regexp.MustCompile(`\s*\([^)]*\)\s*`).ReplaceAllString(categoryStr, " ")
+	categoryStr = strings.TrimSpace(categoryStr)
 
 	// if category has spaces we get the first letter of the first two words, e.g., "Micro Enterprise" -> "ME"
 	// else we get the first two letters, e.g., "Micro" -> "MI"

@@ -252,14 +252,15 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
     setIsSaving?.(true);
 
     try {
-      // If formalization has an id, update it; otherwise create new
+      // If formalization has an id, update it; otherwise use upsert to handle potential duplicates
+      // The upsert endpoint will create if none exists or update an existing record for this SME
       const isUpdate = formalization.id !== undefined;
       const url = isUpdate
         ? `/api/business-formalisations/${formalization.id}`
-        : `/api/business-formalisations`;
+        : `/api/business-formalisations/upsert`;
       const method = isUpdate ? 'PUT' : 'POST';
 
-      // For POST, add sme_id
+      // For upsert/POST, add sme_id
       const payload = isUpdate
         ? snakefiyKeys(formalization)
         : snakefiyKeys({ ...formalization, sme_id: sme.id });
@@ -276,11 +277,11 @@ export const SmeEditFormSimple = forwardRef<any, SmeEditFormSimpleProps>(({
 
       if (response.ok) {
         const data = await response.json();
-        // Update formalization with the newly created id if it was a create
-        if (!isUpdate && data.data?.id) {
+        // Update formalization with the id (from create or upsert)
+        if (data.data?.id) {
           setFormalization({ ...formalization, id: data.data.id });
         }
-        onSuccess(isUpdate ? 'Formalization updated successfully' : 'Formalization created successfully');
+        onSuccess(isUpdate ? 'Formalization updated successfully' : 'Formalization saved successfully');
       } else {
         const errorData = await response.json().catch(() => ({}));
         onError?.(errorData);

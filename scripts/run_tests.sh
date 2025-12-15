@@ -80,6 +80,9 @@ export APP_DEBUG=true
 export APP_KEY=testkeyfortestingonlyabc12345678
 export APP_NAME=smedi_test
 
+# Disable 2FA requirement for tests (allows simple JWT auth without TOTP)
+export AUTH_REQUIRE_2FA=false
+
 # Database - use the test container
 export DB_CONNECTION=postgres
 export DB_HOST=127.0.0.1

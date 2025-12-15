@@ -54,9 +54,14 @@ networkPolicy:
   enabled: false
 
 app:
+  name: "[STG] SMEDI Database"
   env: "staging"
   debug: true
   url: "https://smedi.dartsmw.com"
+
+  # Auth configuration
+  auth:
+    require_2fa: true
 
   database:
     connection: "postgres"

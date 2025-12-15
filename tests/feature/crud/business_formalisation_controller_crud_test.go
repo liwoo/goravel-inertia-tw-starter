@@ -522,3 +522,170 @@ func (s *BusinessFormalisationControllerCRUDTestSuite) TestSearch() {
 	// Search functionality would need text fields like notes/descriptions to be meaningful.
 	s.T().Skip("BusinessFormalisation has no text fields - search requires text columns for ILIKE operations")
 }
+
+// ============================================================================
+// UPSERT Tests - Critical for preventing duplicate BusinessFormalisation records
+// ============================================================================
+
+// TestUpsertCreatesNewFormalisation verifies the upsert endpoint creates a new record
+// when no existing record exists for the SME
+func (s *BusinessFormalisationControllerCRUDTestSuite) TestUpsertCreatesNewFormalisation() {
+	formalisationData := s.getValidFormalisationData()
+
+	resp, result := s.makeRequest("POST", "/api/business-formalisations/upsert", formalisationData)
+
+	// Debug output if not successful
+	if resp.StatusCode != http.StatusOK {
+		s.T().Logf("Response status: %d", resp.StatusCode)
+		s.T().Logf("Response body: %+v", result)
+	}
+
+	s.Equal(http.StatusOK, resp.StatusCode)
+	s.NotNil(result)
+	s.True(result["success"].(bool))
+
+	data := result["data"].(map[string]interface{})
+	s.NotNil(data["id"])
+	s.Equal(float64(s.testSme.ID), data["sme_id"])
+	s.Equal(true, data["has_bank_account"])
+	s.Equal(true, data["has_tax_clarification"])
+
+	// Verify only one record exists for this SME
+	count, err := facades.Orm().Query().Model(&models.BusinessFormalisation{}).Where("sme_id = ?", s.testSme.ID).Count()
+	s.Nil(err)
+	s.Equal(int64(1), count, "Should have exactly one BusinessFormalisation for the SME")
+}
+
+// TestUpsertUpdatesExistingFormalisation verifies the upsert endpoint updates an existing record
+// instead of creating a duplicate when a record already exists for the SME
+func (s *BusinessFormalisationControllerCRUDTestSuite) TestUpsertUpdatesExistingFormalisation() {
+	// First, create an existing formalisation for this SME
+	createdBy := int(s.testUser.ID)
+	existingFormalisation := &models.BusinessFormalisation{
+		SmeID:                  int(s.testSme.ID),
+		HasBankAccount:         false, // Initially false
+		HasTaxClarification:    false,
+		IsRegisteredForVat:     false,
+		IsMemberOfAssociation:  false,
+		IsAffiliated:           false,
+		HasExportLicense:       false,
+		HasAccessedBds:         false,
+		AnnualTurnover:         0,
+		EstimatedValueOfAssets: 0,
+		CreatedBy:              &createdBy,
+	}
+	s.Nil(facades.Orm().Query().Create(existingFormalisation))
+
+	// Now call upsert with updated data for the same SME
+	upsertData := map[string]interface{}{
+		"sme_id":                    s.testSme.ID,
+		"has_bank_account":          true, // Changed to true
+		"has_tax_clarification":     true,
+		"is_registered_for_vat":     true,
+		"is_member_of_association":  true,
+		"is_affiliated":             true,
+		"has_export_license":        true,
+		"has_accessed_bds":          true,
+		"annual_turnover":           100000.00,
+		"estimated_value_of_assets": 500000.00,
+	}
+
+	resp, result := s.makeRequest("POST", "/api/business-formalisations/upsert", upsertData)
+
+	if resp.StatusCode != http.StatusOK {
+		s.T().Logf("Response status: %d", resp.StatusCode)
+		s.T().Logf("Response body: %+v", result)
+	}
+
+	s.Equal(http.StatusOK, resp.StatusCode)
+	s.True(result["success"].(bool))
+
+	data := result["data"].(map[string]interface{})
+	// Should return the same ID (updated existing record, not created new one)
+	s.Equal(float64(existingFormalisation.ID), data["id"].(float64), "Upsert should update existing record, not create new one")
+	s.Equal(true, data["has_bank_account"])
+	s.Equal(true, data["has_tax_clarification"])
+	s.Equal(100000.00, data["annual_turnover"])
+
+	// CRITICAL: Verify NO duplicate was created - should still be exactly one record
+	count, err := facades.Orm().Query().Model(&models.BusinessFormalisation{}).Where("sme_id = ?", s.testSme.ID).Count()
+	s.Nil(err)
+	s.Equal(int64(1), count, "CRITICAL: Upsert should NOT create duplicate - must have exactly one record for SME")
+}
+
+// TestUpsertPreventsDuplicateOnConcurrentRequests simulates the scenario where
+// PrimaryBusinessOwner AfterCreate hook creates a BusinessFormalisation automatically,
+// then frontend also tries to create one - upsert should handle this gracefully
+func (s *BusinessFormalisationControllerCRUDTestSuite) TestUpsertPreventsDuplicateOnConcurrentRequests() {
+	// Simulate the auto-created record from PrimaryBusinessOwner hook
+	createdBy := int(s.testUser.ID)
+	autoCreated := &models.BusinessFormalisation{
+		SmeID:          int(s.testSme.ID),
+		HasBankAccount: false,
+		CreatedBy:      &createdBy,
+	}
+	s.Nil(facades.Orm().Query().Create(autoCreated))
+
+	// Simulate frontend trying to create BusinessFormalisation with user-provided data
+	frontendData := map[string]interface{}{
+		"sme_id":                    s.testSme.ID,
+		"has_bank_account":          true,
+		"has_tax_clarification":     true,
+		"annual_turnover":           75000.00,
+		"estimated_value_of_assets": 200000.00,
+	}
+
+	resp, result := s.makeRequest("POST", "/api/business-formalisations/upsert", frontendData)
+
+	s.Equal(http.StatusOK, resp.StatusCode)
+	s.True(result["success"].(bool))
+
+	// Verify the auto-created record was updated with frontend data
+	var updated models.BusinessFormalisation
+	err := facades.Orm().Query().Find(&updated, autoCreated.ID)
+	s.Nil(err)
+	s.Equal(true, updated.HasBankAccount, "Should update has_bank_account from frontend data")
+	s.Equal(true, updated.HasTaxClarification, "Should update has_tax_clarification from frontend data")
+	s.Equal(75000.00, updated.AnnualTurnover, "Should update annual_turnover from frontend data")
+
+	// CRITICAL: Ensure NO duplicate was created
+	count, err := facades.Orm().Query().Model(&models.BusinessFormalisation{}).Where("sme_id = ?", s.testSme.ID).Count()
+	s.Nil(err)
+	s.Equal(int64(1), count, "CRITICAL: Must have exactly one BusinessFormalisation record")
+}
+
+// TestUpsertRequiresSmeId verifies that upsert fails without sme_id
+func (s *BusinessFormalisationControllerCRUDTestSuite) TestUpsertRequiresSmeId() {
+	dataWithoutSmeId := map[string]interface{}{
+		"has_bank_account":      true,
+		"has_tax_clarification": true,
+	}
+
+	resp, result := s.makeRequest("POST", "/api/business-formalisations/upsert", dataWithoutSmeId)
+
+	s.Equal(http.StatusInternalServerError, resp.StatusCode)
+	s.False(result["success"].(bool))
+	s.Contains(result["message"].(string), "sme_id")
+}
+
+// TestRegularCreateStillAllowsDuplicateButUpsertPreventsIt demonstrates the difference
+// between the regular POST endpoint and the upsert endpoint
+func (s *BusinessFormalisationControllerCRUDTestSuite) TestRegularCreateVsUpsertBehavior() {
+	// First, create a record using upsert
+	upsertData := s.getValidFormalisationData()
+	resp, _ := s.makeRequest("POST", "/api/business-formalisations/upsert", upsertData)
+	s.Equal(http.StatusOK, resp.StatusCode)
+
+	// Count records
+	countAfterUpsert, err := facades.Orm().Query().Model(&models.BusinessFormalisation{}).Where("sme_id = ?", s.testSme.ID).Count()
+	s.Nil(err)
+	s.Equal(int64(1), countAfterUpsert)
+
+	// Call upsert again - should update, not create duplicate
+	resp, _ = s.makeRequest("POST", "/api/business-formalisations/upsert", upsertData)
+	s.Equal(http.StatusOK, resp.StatusCode)
+
+	countAfterSecondUpsert, err := facades.Orm().Query().Model(&models.BusinessFormalisation{}).Where("sme_id = ?", s.testSme.ID).Count()
+	s.Nil(err)
+	s.Equal(int64(1), countAfterSecondUpsert, "Upsert should NOT create duplicate")
+}

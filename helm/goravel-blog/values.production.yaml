@@ -55,9 +55,14 @@ networkPolicy:
   enabled: true
 
 app:
+  name: "SMEDI Database"
   env: "production"
   debug: false
   url: "https://smedi.example.com"
+
+  # Auth configuration
+  auth:
+    require_2fa: true
 
   database:
     connection: "postgres"

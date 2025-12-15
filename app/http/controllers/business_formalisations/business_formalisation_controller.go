@@ -80,24 +80,32 @@ func NewBusinessFormalisationController() *BusinessFormalisationController {
 	return controller
 }
 
-// Add custom domain-specific methods below this line
-// Examples:
-//
-// // CustomAction GET /api/business-formalisations/{id}/custom-action
-// func (c *BusinessFormalisationController) CustomAction(ctx http.Context) http.Response {
-//     // Get ID from URL
-//     id, err := c.ValidateID(ctx, "id")
-//     if err != nil {
-//         return c.BadRequestResponse(ctx, "Invalid business_formalisation ID", nil)
-//     }
-//
-//     // Check permissions
-//     if err := c.CheckAuth(ctx, "view", nil); err != nil {
-//         return c.ForbiddenResponse(ctx, "Access denied")
-//     }
-//
-//     // Your custom logic here
-//     // result, err := c.businessFormalisationService.CustomMethod(id)
-//
-//     return c.SuccessResponse(ctx, nil, "Action completed successfully")
-// }
+// StoreOrUpdate creates a new business_formalisation or updates an existing one for the given SME
+// This is an upsert operation that prevents duplicate records
+// POST /api/business-formalisations/upsert
+func (c *BusinessFormalisationController) StoreOrUpdate(ctx http.Context) http.Response {
+	// Check permissions
+	if err := c.CheckAuth(ctx, "create", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	// Parse request body
+	var data map[string]interface{}
+	if err := ctx.Request().Bind(&data); err != nil {
+		return c.BadRequestResponse(ctx, "Invalid request body", nil)
+	}
+
+	// Set created_by from authenticated user
+	var user models.User
+	if err := facades.Auth(ctx).User(&user); err == nil && user.ID > 0 {
+		data["created_by"] = user.ID
+	}
+
+	// Use the service's CreateOrUpdate method
+	result, err := c.businessFormalisationService.CreateOrUpdate(data)
+	if err != nil {
+		return c.InternalErrorResponse(ctx, "Failed to create or update business formalisation: "+err.Error())
+	}
+
+	return c.SuccessResponse(ctx, result, "Business formalisation saved successfully")
+}

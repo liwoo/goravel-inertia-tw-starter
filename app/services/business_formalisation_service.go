@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+
 	"github.com/goravel/framework/facades"
 
 	"smedi-sme-db/app/contracts"
@@ -38,6 +40,31 @@ func NewBusinessFormalisationService() *BusinessFormalisationService {
 		WithSoftDeletes().                                          // Optional
 		WithScopeFiltering("business_formalisation", "created_by"). // Optional
 		WithBeforeCreate(func(data map[string]interface{}) error {  // Optional
+			// Check if a BusinessFormalisation already exists for this SME
+			// to prevent duplicate records
+			if smeID, exists := data["sme_id"]; exists && smeID != nil {
+				var smeIDInt int
+				switch v := smeID.(type) {
+				case int:
+					smeIDInt = v
+				case int64:
+					smeIDInt = int(v)
+				case float64:
+					smeIDInt = int(v)
+				case uint:
+					smeIDInt = int(v)
+				}
+
+				if smeIDInt > 0 {
+					var existing models.BusinessFormalisation
+					err := facades.Orm().Query().Where("sme_id = ?", smeIDInt).First(&existing)
+					if err == nil && existing.ID > 0 {
+						// Record already exists - return error with existing ID for upsert handling
+						return fmt.Errorf("EXISTING_RECORD:%d", existing.ID)
+					}
+				}
+			}
+
 			// Ensure boolean fields have default values
 			boolFields := []string{
 				"has_bank_account", "has_tax_clarification", "is_registered_for_vat",
@@ -103,7 +130,55 @@ func NewBusinessFormalisationService() *BusinessFormalisationService {
 		}).
 		Build()
 
-	return &BusinessFormalisationService{
+	businessFormalisationServiceInstance := &BusinessFormalisationService{
 		CrudServiceContract: service,
 	}
+
+	// Set the actual service instance for proper method resolution
+	contracts.SetActualServiceHelper(service, businessFormalisationServiceInstance, "BusinessFormalisationService")
+
+	return businessFormalisationServiceInstance
+}
+
+// CreateOrUpdate creates a new BusinessFormalisation or updates an existing one for the given SME
+// This is the recommended method to use from frontend to avoid duplicate records
+func (s *BusinessFormalisationService) CreateOrUpdate(data map[string]interface{}) (interface{}, error) {
+	// Extract sme_id
+	smeID, exists := data["sme_id"]
+	if !exists || smeID == nil {
+		return nil, fmt.Errorf("sme_id is required")
+	}
+
+	var smeIDInt int
+	switch v := smeID.(type) {
+	case int:
+		smeIDInt = v
+	case int64:
+		smeIDInt = int(v)
+	case float64:
+		smeIDInt = int(v)
+	case uint:
+		smeIDInt = int(v)
+	}
+
+	if smeIDInt <= 0 {
+		return nil, fmt.Errorf("invalid sme_id")
+	}
+
+	// Check if a record already exists for this SME
+	var existing models.BusinessFormalisation
+	err := facades.Orm().Query().Where("sme_id = ?", smeIDInt).First(&existing)
+
+	if err == nil && existing.ID > 0 {
+		// Record exists - update it
+		facades.Log().Info("BusinessFormalisation already exists for SME, updating instead of creating", map[string]interface{}{
+			"sme_id":      smeIDInt,
+			"existing_id": existing.ID,
+		})
+		return s.Update(uint(existing.ID), data)
+	}
+
+	// No existing record - create new one
+	// Remove the sme_id check since we've already verified
+	return s.Create(data)
 }

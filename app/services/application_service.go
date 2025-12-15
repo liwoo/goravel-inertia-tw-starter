@@ -20,9 +20,9 @@ type ApplicationService struct {
 func NewApplicationService() *ApplicationService {
 	// Build the service with all required configurations
 	service := contracts.NewServiceBuilder[models.Application]("applications", "id").
-		WithSearchFields("sme", "registrantname", "email", "phone", "smeregistrationnumber", "smetaxidentificationnumber", "status").                                 // Fields that will be searchable via the search query parameter
-		WithSortFields("id", "created_at", "updated_at", "sme", "registrantname", "email", "phone", "smeregistrationnumber", "smetaxidentificationnumber", "status"). // Fields that can be used for sorting results
-		WithFilterFields("sme", "registrantname", "email", "phone", "smeregistrationnumber", "smetaxidentificationnumber", "status").                                 // Fields that can be filtered on
+		WithSearchFields("sme", "registrant_name", "email", "phone", "sme_registration_number", "sme_tax_identification_number", "status").                                 // Fields that will be searchable via the search query parameter
+		WithSortFields("id", "created_at", "updated_at", "sme", "registrant_name", "email", "phone", "sme_registration_number", "sme_tax_identification_number", "status"). // Fields that can be used for sorting results
+		WithFilterFields("sme", "registrant_name", "email", "phone", "sme_registration_number", "sme_tax_identification_number", "status").                                 // Fields that can be filtered on
 		WithValidationRules(map[string]interface{}{                                                                                                                   // Validation rules for create/update operations
 			"sme":                           "required|string|max:255",
 			"registrant_name":               "required|string|max:255",
@@ -168,35 +168,49 @@ func (s *ApplicationService) ApproveApplication(applicationID uint, smeID uint, 
 		"password":       randomPassword, // TODO: Email this to the user instead of logging
 	})
 
-	// 5. Create PrimaryBusinessOwner record from application data
-	primaryOwner := models.PrimaryBusinessOwner{
-		FirstName:              application.FirstName,
-		LastName:               application.LastName,
-		OtherNames:             stringToPointer(application.OtherNames),
-		Nationality:            application.Nationality,
-		NationalIdNumber:       application.NationalIDNumber,
-		DateOfBirth:            parseDate(application.DateOfBirth),
-		Gender:                 application.Gender,
-		EducationLevel:         application.EducationLevel,
-		MalawianStatus:         application.MalawianStatus,
-		HasSpecialNeeds:        application.HasSpecialNeeds,
-		PhoneNumber:            application.Phone,
-		LandlineNumber:         stringToPointer(application.LandlineNumber),
-		Email:                  stringToPointer(application.Email),
-		PhysicalAddress:        stringToPointer(application.PhysicalAddress),
-		PostalAddress:          stringToPointer(application.PostalAddress),
-		Region:                 stringToPointer(application.Region),
-		District:               stringToPointer(application.District),
-		TraditionalAuthority:   stringToPointer(application.TraditionalAuthority),
-		AltContactName:         stringToPointer(application.AltContactName),
-		AltContactRelationship: stringToPointer(application.AltContactRelationship),
-		AltContactPhone:        stringToPointer(application.AltContactPhone),
-		SmeID:                  int(smeID),
-		CreatedBy:              intToPointer(int(approverUserID)),
-	}
+	// 5. Check if PrimaryBusinessOwner already exists for this SME (may have been created during SME creation)
+	var existingOwner models.PrimaryBusinessOwner
+	ownerErr := facades.Orm().Query().Where("sme_id = ?", smeID).First(&existingOwner)
+	if ownerErr != nil || existingOwner.ID == 0 {
+		// No existing owner, create one from application data
+		primaryOwner := models.PrimaryBusinessOwner{
+			FirstName:              application.FirstName,
+			LastName:               application.LastName,
+			OtherNames:             stringToPointer(application.OtherNames),
+			Nationality:            application.Nationality,
+			NationalIdNumber:       application.NationalIDNumber,
+			DateOfBirth:            parseDate(application.DateOfBirth),
+			Gender:                 application.Gender,
+			EducationLevel:         application.EducationLevel,
+			MalawianStatus:         application.MalawianStatus,
+			HasSpecialNeeds:        application.HasSpecialNeeds,
+			PhoneNumber:            application.Phone,
+			LandlineNumber:         stringToPointer(application.LandlineNumber),
+			Email:                  stringToPointer(application.Email),
+			PhysicalAddress:        stringToPointer(application.PhysicalAddress),
+			PostalAddress:          stringToPointer(application.PostalAddress),
+			Region:                 stringToPointer(application.Region),
+			District:               stringToPointer(application.District),
+			TraditionalAuthority:   stringToPointer(application.TraditionalAuthority),
+			AltContactName:         stringToPointer(application.AltContactName),
+			AltContactRelationship: stringToPointer(application.AltContactRelationship),
+			AltContactPhone:        stringToPointer(application.AltContactPhone),
+			SmeID:                  int(smeID),
+			CreatedBy:              intToPointer(int(approverUserID)),
+		}
 
-	if err := facades.Orm().Query().Create(&primaryOwner); err != nil {
-		return nil, fmt.Errorf("failed to create primary business owner: %w", err)
+		if err := facades.Orm().Query().Create(&primaryOwner); err != nil {
+			return nil, fmt.Errorf("failed to create primary business owner: %w", err)
+		}
+		facades.Log().Info("Created new primary business owner for SME", map[string]interface{}{
+			"primary_owner_id": primaryOwner.ID,
+			"sme_id":           smeID,
+		})
+	} else {
+		facades.Log().Info("Primary business owner already exists for SME, skipping creation", map[string]interface{}{
+			"existing_owner_id": existingOwner.ID,
+			"sme_id":            smeID,
+		})
 	}
 
 	updateData := map[string]interface{}{
@@ -211,7 +225,6 @@ func (s *ApplicationService) ApproveApplication(applicationID uint, smeID uint, 
 		"application_id":   applicationID,
 		"sme_id":           smeID,
 		"user_id":          user.ID,
-		"primary_owner_id": primaryOwner.ID,
 		"approver_user_id": approverUserID,
 	})
 

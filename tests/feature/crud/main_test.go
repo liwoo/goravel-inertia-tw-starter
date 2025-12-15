@@ -12,6 +12,9 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	// Disable 2FA requirement for tests to allow simple JWT authentication
+	os.Setenv("AUTH_REQUIRE_2FA", "false")
+
 	// Boot the Goravel application
 	app := foundation.NewApplication()
 	app.Boot()

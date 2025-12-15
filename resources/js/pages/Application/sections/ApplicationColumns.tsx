@@ -20,6 +20,26 @@ export const applicationColumns: CrudColumn<Application>[] = [
     ),
   },
   {
+    key: 'status',
+    label: 'Status',
+    sortable: true,
+    className: 'min-w-[120px]',
+    render: (application) => {
+      const status = application.status;
+      const variant = status === 'Approved' ? 'default' :
+                      status === 'Rejected' ? 'destructive' :
+                      'secondary';
+      const className = status === 'Approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                        status === 'Rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      return (
+        <Badge variant={variant} className={className}>
+          {status}
+        </Badge>
+      );
+    },
+  },
+  {
     key: 'registrant_name',
     label: 'Registrant Name',
     sortable: true,
@@ -75,17 +95,6 @@ export const applicationColumns: CrudColumn<Application>[] = [
     ),
   },
   {
-    key: 'status',
-    label: 'Status',
-    sortable: true,
-    className: 'min-w-[150px]',
-    render: (application) => (
-      <div className="flex-1 space-y-1">
-        <p className="font-medium text-foreground">{application.status}</p>
-      </div>
-    ),
-  },
-  {
     key: 'createdAt',
     label: 'Created',
     sortable: true,
@@ -116,14 +125,23 @@ export const applicationColumnsMobile: CrudColumn<Application>[] = [
     key: 'combined',
     label: 'Application',
     sortable: false,
-    render: (application) => (
-      <div className="space-y-2">
-        <div className="font-medium text-foreground">{application.sme}</div>
-        <div className="text-sm text-muted-foreground">
-          {new Date(application.createdAt || application.created_at || '').toLocaleDateString()}
+    render: (application) => {
+      const status = application.status;
+      const badgeClassName = status === 'Approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                             status === 'Rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                             'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="font-medium text-foreground">{application.sme}</div>
+            <Badge className={badgeClassName}>{status}</Badge>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {new Date(application.createdAt || application.created_at || '').toLocaleDateString()}
+          </div>
         </div>
-      </div>
-    ),
+      );
+    },
   },
 ];
 

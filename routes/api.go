@@ -188,6 +188,7 @@ func Api(router route.Router) {
 
 		// Business Formalisation routes
 		protectedRouter.Post("/business-formalisations", businessFormalisationController.Store)
+		protectedRouter.Post("/business-formalisations/upsert", businessFormalisationController.StoreOrUpdate)
 		protectedRouter.Put("/business-formalisations/{id}", businessFormalisationController.Update)
 		protectedRouter.Delete("/business-formalisations/{id}", businessFormalisationController.Delete)
 
@@ -240,6 +241,7 @@ func Api(router route.Router) {
 		protectedRouter.Post("/users", userController.Store)
 		protectedRouter.Put("/users/{id}", userController.Update)
 		protectedRouter.Delete("/users/{id}", userController.Delete)
+		protectedRouter.Post("/users/{id}/assign-sme", userController.AssignToSme)
 		// protectedRouter.Get("/users/roles", userController.GetRoles) // TODO: implement
 
 		// Messaging routes

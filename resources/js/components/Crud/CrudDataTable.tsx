@@ -188,6 +188,11 @@ const createActionsColumn = <T extends { id: number }>(
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           {actions.map((action, actionIndex) => {
+            // Skip rendering if action should be hidden for this item
+            if (action.hidden?.(item)) {
+              return null;
+            }
+
             const isDisabled = action.disabled?.(item) || false;
             const isDestructive = action.key === 'delete' || action.className?.includes('destructive');
 

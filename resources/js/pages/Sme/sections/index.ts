@@ -1,5 +1,5 @@
 export { SmeDetailView } from './SmeDetailView';
-export { SmeCreateForm } from './SmeCreateForm';
+export { SmeCreateForm, type InitialSmeData } from './SmeCreateForm';
 export { SmeEditForm } from './SmeEditForm';
 export {
   smeColumns,

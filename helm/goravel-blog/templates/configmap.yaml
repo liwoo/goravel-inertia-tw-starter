@@ -39,6 +39,11 @@ data:
   JWT_TTL: {{ .Values.app.jwt.ttl | quote }}
   JWT_REFRESH_TTL: {{ .Values.app.jwt.refresh_ttl | quote }}
 
+  # Auth configuration
+  {{- if .Values.app.auth }}
+  AUTH_REQUIRE_2FA: {{ .Values.app.auth.require_2fa | default true | quote }}
+  {{- end }}
+
   # Session configuration
   SESSION_DRIVER: {{ .Values.app.session.driver | quote }}
   SESSION_LIFETIME: {{ .Values.app.session.lifetime | quote }}

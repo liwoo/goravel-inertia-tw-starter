@@ -44,8 +44,46 @@ import {
 } from '@/types/business_formalisation';
 import { Switch } from '@/components/ui/switch';
 
+export interface InitialSmeData {
+  // Business Information (Step 1)
+  name?: string;
+  registrationNumber?: string;
+  taxIdentificationNumber?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  physicalAddress?: string;
+  postalAddress?: string;
+  district?: string;
+  traditionalAuthority?: string;
+  // Primary Owner (Step 2)
+  ownerFirstName?: string;
+  ownerLastName?: string;
+  ownerOtherNames?: string;
+  ownerNationality?: string;
+  ownerNationalIdNumber?: string;
+  ownerDateOfBirth?: string;
+  ownerGender?: string;
+  ownerEducationLevel?: string;
+  ownerMalawianStatus?: string;
+  ownerHasSpecialNeeds?: boolean;
+  ownerPhoneNumber?: string;
+  ownerLandlineNumber?: string;
+  ownerEmail?: string;
+  ownerPhysicalAddress?: string;
+  ownerPostalAddress?: string;
+  ownerDistrict?: string;
+  ownerTraditionalAuthority?: string;
+  ownerAltContactName?: string;
+  ownerAltContactRelationship?: string;
+  ownerAltContactPhone?: string;
+}
+
 interface SmeCreateFormProps extends CrudFormProps {
   setIsSaving?: (saving: boolean) => void;
+  initialData?: InitialSmeData;
+  // Callback for when SME is created - provides the SME data object
+  // Use this instead of onSuccess when you need the SME data (e.g., for auto-approval workflow)
+  onSmeCreated?: (sme: { id: number; name: string; usme_number: string }) => void;
 }
 
 interface PrimaryOwnerData {
@@ -98,10 +136,13 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
   onError,
   onCancel,
   isLoading = false,
-  setIsSaving
+  setIsSaving,
+  initialData,
+  onSmeCreated
 }, ref) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false); // Guard against double submission
 
   // Step 1: Business Information
   const [businessData, setBusinessData] = useState<SmeCreateData>({
@@ -185,6 +226,50 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
   const [loadingConfigs, setLoadingConfigs] = useState(false);
 
   const progress = (currentStep / STEPS.length) * 100;
+
+  // Apply initial data when provided (e.g., from application)
+  useEffect(() => {
+    if (initialData) {
+      // Prefill business data (Step 1)
+      setBusinessData(prev => ({
+        ...prev,
+        name: initialData.name || prev.name,
+        registrationNumber: initialData.registrationNumber || prev.registrationNumber,
+        taxIdentificationNumber: initialData.taxIdentificationNumber || prev.taxIdentificationNumber,
+        contactPhone: initialData.contactPhone || prev.contactPhone,
+        contactEmail: initialData.contactEmail || prev.contactEmail,
+        physicalAddress: initialData.physicalAddress || prev.physicalAddress,
+        postalAddress: initialData.postalAddress || prev.postalAddress,
+        district: initialData.district || prev.district,
+        traditionalAuthority: initialData.traditionalAuthority || prev.traditionalAuthority,
+      }));
+
+      // Prefill primary owner data (Step 2)
+      setPrimaryOwner(prev => ({
+        ...prev,
+        firstName: initialData.ownerFirstName || prev.firstName,
+        lastName: initialData.ownerLastName || prev.lastName,
+        otherNames: initialData.ownerOtherNames || prev.otherNames,
+        nationality: initialData.ownerNationality || prev.nationality,
+        nationalIdNumber: initialData.ownerNationalIdNumber || prev.nationalIdNumber,
+        dateOfBirth: initialData.ownerDateOfBirth || prev.dateOfBirth,
+        gender: initialData.ownerGender || prev.gender,
+        educationLevel: initialData.ownerEducationLevel || prev.educationLevel,
+        malawianStatus: initialData.ownerMalawianStatus || prev.malawianStatus,
+        hasSpecialNeeds: initialData.ownerHasSpecialNeeds ?? prev.hasSpecialNeeds,
+        phoneNumber: initialData.ownerPhoneNumber || prev.phoneNumber,
+        landlineNumber: initialData.ownerLandlineNumber || prev.landlineNumber,
+        email: initialData.ownerEmail || prev.email,
+        physicalAddress: initialData.ownerPhysicalAddress || prev.physicalAddress,
+        postalAddress: initialData.ownerPostalAddress || prev.postalAddress,
+        district: initialData.ownerDistrict || prev.district,
+        traditionalAuthority: initialData.ownerTraditionalAuthority || prev.traditionalAuthority,
+        altContactName: initialData.ownerAltContactName || prev.altContactName,
+        altContactRelationship: initialData.ownerAltContactRelationship || prev.altContactRelationship,
+        altContactPhone: initialData.ownerAltContactPhone || prev.altContactPhone,
+      }));
+    }
+  }, [initialData]);
 
   // Fetch config options on mount
   useEffect(() => {
@@ -440,6 +525,13 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
   };
 
   const handleSubmit = async () => {
+    // Prevent double submission
+    if (isSubmitting) {
+      console.log('Submission already in progress, ignoring duplicate call');
+      return;
+    }
+
+    setIsSubmitting(true);
     setIsSaving?.(true);
     setErrors({});
 
@@ -486,7 +578,10 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
         return;
       }
 
-      // Step 3: Create Business Formalization
+      // Step 3: Create or Update Business Formalization (upsert to prevent duplicates)
+      // Note: A BusinessFormalisation may have already been auto-created by the PrimaryBusinessOwner's
+      // AfterCreate hook which triggers CalculateFormalisationScore. Using upsert ensures we update
+      // any existing record rather than creating a duplicate.
       const formalizationPayload = {
         sme_id: smeId,
         has_bank_account: formalizationData.hasBankAccount,
@@ -500,7 +595,7 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
         estimated_value_of_assets: formalizationData.estimatedValueOfAssets ? parseFloat(formalizationData.estimatedValueOfAssets) : 0,
       };
 
-      const formalizationResponse = await fetch('/api/business-formalisations', {
+      const formalizationResponse = await fetch('/api/business-formalisations/upsert', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -512,7 +607,7 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
 
       if (!formalizationResponse.ok) {
         const errorData = await formalizationResponse.json().catch(() => ({}));
-        console.error('Failed to create formalization data:', errorData);
+        console.error('Failed to save formalization data:', errorData);
         // Continue with the process even if formalization fails (it's optional data)
       }
 
@@ -536,10 +631,21 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
         await Promise.all(memberPromises);
       }
 
-      onSuccess('SME and related information created successfully');
+      // Call onSuccess with a string message (for CrudPage toast display)
+      onSuccess?.('SME created successfully');
+
+      // Call onSmeCreated with the SME data object (for approval workflow)
+      if (onSmeCreated) {
+        onSmeCreated({
+          id: smeData.data.id,
+          name: smeData.data.name,
+          usme_number: smeData.data.usme_number,
+        });
+      }
     } catch (error: any) {
       onError?.(error.message || 'Failed to create SME');
     } finally {
+      setIsSubmitting(false);
       setIsSaving?.(false);
     }
   };

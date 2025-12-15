@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Shield, User as UserIcon, CheckCircle, XCircle } from 'lucide-react';
+import { Shield, User as UserIcon, CheckCircle, XCircle, Building2 } from 'lucide-react';
 import { User } from '@/types/user';
 import { CrudColumn, CrudAction } from '@/types/crud';
 
@@ -162,6 +162,7 @@ export const createUserAdditionalActions = (callbacks: {
   onResetPassword?: (id: number) => void;
   onImpersonate?: (id: number) => void;
   onSendWelcomeEmail?: (id: number) => void;
+  onAssignToSme?: (user: User) => void;
 }): CrudAction<User>[] => {
   const actions: CrudAction<User>[] = [];
 
@@ -211,6 +212,17 @@ export const createUserAdditionalActions = (callbacks: {
       icon: <UserIcon className="h-4 w-4 text-blue-500" />,
       onClick: (user: User) => callbacks.onSendWelcomeEmail!(user.id),
       disabled: (user: User) => !user.is_active,
+    });
+  }
+
+  if (callbacks.onAssignToSme) {
+    actions.push({
+      key: 'assign-to-sme',
+      label: 'Assign to SME',
+      icon: <Building2 className="h-4 w-4 text-emerald-600" />,
+      onClick: (user: User) => callbacks.onAssignToSme!(user),
+      // Only show for users with SME User role
+      hidden: (user: User) => !user.roles?.some(r => r.slug === 'sme-user'),
     });
   }
 

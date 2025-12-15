@@ -11,7 +11,7 @@ import (
 	"smedi-sme-db/app/services"
 )
 
-// Note: This controller searches SMEs, BDSPs, Events, Procurements, Users, and Configs
+// Note: This controller searches SMEs, BDSPs, Events, Procurements, Users, Configs, and Applications
 
 type SearchController struct{}
 
@@ -91,6 +91,12 @@ func (c *SearchController) GlobalSearch(ctx http.Context) http.Response {
 	if permHelper.CheckServicePermission(ctx, auth.ServiceConfig, auth.PermissionRead) {
 		configResults := c.searchConfigs(query)
 		results = append(results, configResults...)
+	}
+
+	// Search Applications if user has permission
+	if permHelper.CheckServicePermission(ctx, auth.ServiceApplications, auth.PermissionRead) {
+		applicationResults := c.searchApplications(query)
+		results = append(results, applicationResults...)
 	}
 
 	return ctx.Response().Json(http.StatusOK, SearchResponse{
@@ -311,6 +317,43 @@ func (c *SearchController) searchConfigs(query string) []SearchResult {
 				Subtitle: subtitle,
 				Type:     "config",
 				URL:      fmt.Sprintf("/admin/configs?search=%s", query),
+			})
+		}
+	}
+
+	return results
+}
+
+// searchApplications performs fuzzy search on applications using the ApplicationService
+func (c *SearchController) searchApplications(query string) []SearchResult {
+	results := []SearchResult{}
+
+	applicationService := services.NewApplicationService()
+
+	// Use the service's search functionality
+	paginatedResult, err := applicationService.Search(query, contracts.ListRequest{
+		Page:     1,
+		PageSize: 10,
+	})
+
+	if err != nil || paginatedResult == nil {
+		return results
+	}
+
+	// Convert service results to search results
+	for _, item := range paginatedResult.Data {
+		if application, ok := item.(models.Application); ok {
+			subtitle := application.Status
+			if application.SME != "" {
+				subtitle = fmt.Sprintf("%s • %s", application.SME, application.Status)
+			}
+
+			results = append(results, SearchResult{
+				ID:       application.ID,
+				Title:    application.RegistrantName,
+				Subtitle: subtitle,
+				Type:     "application",
+				URL:      fmt.Sprintf("/admin/applications?search=%s", query),
 			})
 		}
 	}
