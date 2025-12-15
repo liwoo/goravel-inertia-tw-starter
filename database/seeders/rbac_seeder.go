@@ -96,6 +96,24 @@ func (s *RBACSeeder) Run() error {
 		}
 	}
 
+	var permissions []models.Permission
+	err = facades.Orm().Query().Where("resource = ?", "additional_business_members").Find(&permissions)
+	if err != nil {
+		facades.Log().Error("Failed to find permissions", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return err
+	}
+
+	var role models.Role
+	err = facades.Orm().Query().Where("slug = ?", "sme-user").First(&role)
+	if err != nil {
+		return err
+	}
+	for _, permission := range permissions {
+		s.assignPermissionToRole(role.ID, permission.ID)
+	}
+
 	facades.Log().Info("RBAC seeding completed")
 	return nil
 }
@@ -405,7 +423,7 @@ func (s *RBACSeeder) assignPermissionToRole(roleID, permissionID uint) error {
 	// Check if relationship already exists
 	var existing models.RolePermission
 	err := facades.Orm().Query().Where("role_id = ? AND permission_id = ?", roleID, permissionID).First(&existing)
-	if err != nil {
+	if err != nil || existing.ID == 0 {
 		// Relationship doesn't exist, create it
 		rolePermission := models.RolePermission{
 			RoleID:       roleID,
@@ -445,12 +463,25 @@ func (s *RBACSeeder) createPermissionsFromServices() error {
 			slug := fmt.Sprintf("%s_%s", string(service), string(action))
 			name := fmt.Sprintf("%s %s", actionName, serviceName)
 			description := fmt.Sprintf("%s %s in the system", actionName, string(service))
+			existing := models.Permission{}
+			err := facades.Orm().Query().Where("slug = ?", slug).First(&existing)
+			if err != nil {
+				facades.Log().Error("Failed to find permission", map[string]interface{}{
+					"error": err.Error(),
+				})
+			}
+			if existing.ID > 0 {
+				facades.Log().Info("Permission already exists", map[string]interface{}{
+					"slug": slug,
+				})
+				continue
+			}
 
 			// Create permission using raw SQL
 			sql := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at)
 			       VALUES ($1, $2, $3, $4, $5, $6, true, false, false, NOW(), NOW())`
 
-			_, err := facades.Orm().Query().Exec(sql, name, slug, description, string(service), string(service), string(action))
+			_, err = facades.Orm().Query().Exec(sql, name, slug, description, string(service), string(service), string(action))
 			if err != nil {
 				facades.Log().Error("Failed to create permission", map[string]interface{}{
 					"error":   err.Error(),
@@ -581,6 +612,24 @@ func (s *RBACSeeder) ensureRBACSetup() error {
 		facades.Log().Error("Failed to assign new permissions to super-admin", map[string]interface{}{
 			"error": err.Error(),
 		})
+	}
+
+	var permissions []models.Permission
+	err = facades.Orm().Query().Where("resource = ?", "additional_business_members").Find(&permissions)
+	if err != nil {
+		facades.Log().Error("Failed to find permissions", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return err
+	}
+	var role models.Role
+	err = facades.Orm().Query().Where("slug = ?", "sme-user").First(&role)
+	if err != nil {
+		return err
+	}
+
+	for _, permission := range permissions {
+		s.assignPermissionToRole(role.ID, permission.ID)
 	}
 
 	facades.Log().Info("RBAC setup verification completed")
