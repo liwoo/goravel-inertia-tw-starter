@@ -2,12 +2,14 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { router } from '@inertiajs/react';
 
 interface SmeDashboardProps {
     user: any;
 }
 
 export const SmeDashboard: React.FC<SmeDashboardProps> = ({ user }) => {
+    router.visit('/portal', { replace: true });
     return (
         <div className="flex flex-col gap-6 p-4 md:p-6">
             {/* Welcome Header */}
