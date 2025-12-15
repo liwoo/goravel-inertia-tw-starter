@@ -30,8 +30,8 @@ export const EventEditForm = forwardRef<any, EventEditFormProps>(({
   const [formData, setFormData] = useState<EventUpdateData>({
     title: event.title,
     description: event.description,
-    date: event.date,
-    end_date: event.end_date,
+    date: event.date ? event.date.slice(0, 10) : '',
+    end_date: event.end_date ? event.end_date.slice(0, 10) : '',
     venue: event.venue,
     partners: event.partners || [],
     district: event.district,
@@ -178,7 +178,7 @@ export const EventEditForm = forwardRef<any, EventEditFormProps>(({
   useImperativeHandle(ref, () => ({
     handleSubmit
   }));
-
+  console.log(formData)
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
       <div className="space-y-6">

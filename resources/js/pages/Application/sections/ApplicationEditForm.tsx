@@ -38,7 +38,7 @@ export const ApplicationEditForm = forwardRef<any, ApplicationEditFormProps>(({
     other_names: application.other_names,
     nationality: application.nationality,
     national_id_number: application.national_id_number,
-    date_of_birth: application.date_of_birth,
+    date_of_birth: application.date_of_birth ? application.date_of_birth.slice(0, 10) : '',
     gender: application.gender,
     education_level: application.education_level,
     malawian_status: application.malawian_status,

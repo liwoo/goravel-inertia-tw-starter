@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { CrudFormProps } from '@/types/crud';
-import { ProcurementNoticeCreateData } from '@/types/procurementnotice';
+import { CrudEditFormProps } from '@/types/crud';
+import { ProcurementNoticeUpdateData, ProcurementNotice } from '@/types/procurementnotice';
 import { DISTRICT_OPTIONS } from '@/types/district';
 import { Plus, X, Check, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -18,9 +18,8 @@ import axios from 'axios';
 import MarkdownEditor from '@uiw/react-markdown-editor';
 import { cn } from '@/lib/utils';
 
-interface ProcurementNoticeEditFormProps extends CrudFormProps {
+interface ProcurementNoticeEditFormProps extends CrudEditFormProps<ProcurementNotice> {
     setIsSaving?: (saving: boolean) => void;
-    initialData?: any;
 }
 
 const STEPS = [
@@ -34,24 +33,26 @@ export const ProcurementNoticeEditForm = forwardRef<any, ProcurementNoticeEditFo
     onCancel,
     isLoading = false,
     setIsSaving,
-    initialData
+    item: initialData
 }, ref) => {
     const [currentStep, setCurrentStep] = useState(1);
-    const [formData, setFormData] = useState<ProcurementNoticeCreateData>({
-        procured_by: '',
-        procurement_type: '',
-        market_approach: '',
-        invitation: '',
-        open_date: '',
-        close_date: '',
-        organization: '',
-        details: '',
-        application_details: '',
-        minimum_qualifying_score: 0,
-        ...initialData,
+    const [formData, setFormData] = useState<ProcurementNoticeUpdateData>({
+        procured_by: initialData.procured_by,
+        procurement_type: initialData.procurement_type,
+        market_approach: initialData.market_approach,
+        invitation: initialData.invitation,
+        ref_no: initialData.ref_no,
+        open_date: initialData.open_date ? initialData.open_date.slice(0, 10) : '',
+        close_date: initialData?.close_date ? initialData.close_date.slice(0, 10) : '',
         partners: initialData?.partners || [],
         qualifying_districts: initialData?.qualifying_districts || [],
+        is_published: initialData?.is_published || false,
+        organization: initialData?.organization || '',
         classification: initialData?.classification || [],
+        interested_smes: initialData?.interested_smes || [],
+        details: initialData?.details || '',
+        application_details: initialData?.application_details || '',
+        minimum_qualifying_score: initialData?.minimum_qualifying_score || 0,
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -117,7 +118,7 @@ export const ProcurementNoticeEditForm = forwardRef<any, ProcurementNoticeEditFo
     }, []);
 
     // Generic Array Handlers
-    const addItem = (field: keyof ProcurementNoticeCreateData, value: string) => {
+    const addItem = (field: keyof ProcurementNoticeUpdateData, value: string) => {
         const currentArray = formData[field] as string[];
         if (value && !currentArray.includes(value)) {
             setFormData({
@@ -127,7 +128,7 @@ export const ProcurementNoticeEditForm = forwardRef<any, ProcurementNoticeEditFo
         }
     };
 
-    const removeItem = (field: keyof ProcurementNoticeCreateData, value: string) => {
+    const removeItem = (field: keyof ProcurementNoticeUpdateData, value: string) => {
         const currentArray = formData[field] as string[];
         setFormData({
             ...formData,
@@ -135,7 +136,7 @@ export const ProcurementNoticeEditForm = forwardRef<any, ProcurementNoticeEditFo
         });
     };
 
-    const toggleItem = (field: keyof ProcurementNoticeCreateData, value: string) => {
+    const toggleItem = (field: keyof ProcurementNoticeUpdateData, value: string) => {
         const currentArray = formData[field] as string[];
         if (currentArray.includes(value)) {
             removeItem(field, value);

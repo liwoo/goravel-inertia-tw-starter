@@ -1,16 +1,18 @@
 package contracts
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
 	"time"
 
+	"smedi-sme-db/app/auth"
+
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/str"
-	"smedi-sme-db/app/auth"
 )
 
 // GenericCrudService provides a complete CRUD service implementation with minimal code
@@ -609,6 +611,17 @@ func (s *GenericCrudService[T]) Update(id uint, data map[string]interface{}) (in
 		if err := s.beforeUpdate(id, mappedData); err != nil {
 			return nil, err
 		}
+	}
+
+	// Serialize JSON fields if needed
+	// This fixes issues where GORM updates via map don't trigger serializer hooks correctly for some drivers
+	if err := s.serializeJsonFields(mappedData); err != nil {
+		facades.Log().Error("Failed to serialize JSON fields", map[string]interface{}{
+			"service": s.tableName,
+			"id":      id,
+			"error":   err.Error(),
+		})
+		// Continue anyway, maybe it works without serialization or it's not critical
 	}
 
 	// Update using GORM
@@ -1332,4 +1345,49 @@ func (s *GenericCrudService[T]) applyFieldMapping(data map[string]interface{}) m
 	}
 
 	return result
+}
+
+// serializeJsonFields handles manual serialization of fields tagged with serializer:json or type:json
+// This is needed because GORM's Update with map bypasses some serializer hooks or treats slices as DB arrays
+func (s *GenericCrudService[T]) serializeJsonFields(data map[string]interface{}) error {
+	var model T
+	modelType := reflect.TypeOf(model)
+
+	for i := 0; i < modelType.NumField(); i++ {
+		field := modelType.Field(i)
+
+		// Extract json field name
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "" || jsonTag == "-" {
+			continue
+		}
+		fieldName := strings.Split(jsonTag, ",")[0]
+
+		// Check if field needs JSON serialization
+		gormTag := field.Tag.Get("gorm")
+		if !strings.Contains(gormTag, "serializer:json") && !strings.Contains(gormTag, "type:json") {
+			continue
+		}
+
+		// Serialize field value if present
+		value, exists := data[fieldName]
+		if !exists || value == nil {
+			continue
+		}
+
+		// Skip if already serialized
+		switch value.(type) {
+		case []byte, string:
+			continue
+		}
+
+		// Marshal to JSON
+		jsonBytes, err := json.Marshal(value)
+		if err != nil {
+			return fmt.Errorf("failed to marshal field %s: %w", fieldName, err)
+		}
+		data[fieldName] = jsonBytes
+	}
+
+	return nil
 }
