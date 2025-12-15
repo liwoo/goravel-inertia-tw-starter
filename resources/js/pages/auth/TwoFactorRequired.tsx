@@ -144,8 +144,14 @@ const TwoFactorRequired: React.FC = () => {
     router.visit('/dashboard');
   };
 
-  const handleCancel = () => {
-    router.post('/logout');
+  const handleCancel = async () => {
+    try {
+      await axios.post('/logout');
+    } catch {
+      // Ignore errors - logout might return a redirect which axios doesn't follow well
+    }
+    // Do a full page redirect to ensure clean state
+    window.location.href = '/';
   };
 
   const renderPasswordStep = () => (

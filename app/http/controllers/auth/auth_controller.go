@@ -3,10 +3,11 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	nethttp "net/http"
 	"smedi-sme-db/app/models"
 	"smedi-sme-db/app/services"
-	"sync"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -17,27 +18,76 @@ import (
 type AuthController struct {
 	activityService *services.UserActivityService
 	totpService     *services.TOTPService
-
-	// In-memory storage for pending 2FA logins (web route)
-	pending2FALogins     map[string]pending2FALoginWeb
-	pending2FALoginsLock sync.RWMutex
 }
 
-// pending2FALoginWeb stores user info during the 2FA verification step for web login
+// pending2FALoginWeb stores user info during the 2FA verification step for web login (stored in Redis)
 type pending2FALoginWeb struct {
-	UserID    uint
-	ExpiresAt time.Time
+	UserID    uint      `json:"user_id"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
+
+// Redis key prefix for pending 2FA logins
+const pending2FALoginKeyPrefix = "2fa_login_pending:"
 
 func NewAuthController() *AuthController {
-	controller := &AuthController{
-		activityService:  services.NewUserActivityService(),
-		totpService:      services.NewTOTPService(),
-		pending2FALogins: make(map[string]pending2FALoginWeb),
+	return &AuthController{
+		activityService: services.NewUserActivityService(),
+		totpService:     services.NewTOTPService(),
 	}
-	// Start cleanup goroutine
-	go controller.cleanupExpired2FALogins()
-	return controller
+}
+
+// getPending2FALogin retrieves a pending 2FA login from Redis
+func (r *AuthController) getPending2FALogin(token string) (*pending2FALoginWeb, error) {
+	key := pending2FALoginKeyPrefix + token
+	value := facades.Cache().Get(key)
+	if value == nil {
+		return nil, fmt.Errorf("pending 2FA login not found")
+	}
+
+	var data []byte
+	switch v := value.(type) {
+	case string:
+		data = []byte(v)
+	case []byte:
+		data = v
+	default:
+		return nil, fmt.Errorf("unexpected cache value type")
+	}
+
+	var login pending2FALoginWeb
+	if err := json.Unmarshal(data, &login); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal pending 2FA login: %w", err)
+	}
+
+	// Check if expired (redundant with TTL but good for safety)
+	if time.Now().After(login.ExpiresAt) {
+		facades.Cache().Forget(key)
+		return nil, fmt.Errorf("pending 2FA login expired")
+	}
+
+	return &login, nil
+}
+
+// setPending2FALogin stores a pending 2FA login in Redis
+func (r *AuthController) setPending2FALogin(token string, userID uint, ttl time.Duration) error {
+	key := pending2FALoginKeyPrefix + token
+	login := pending2FALoginWeb{
+		UserID:    userID,
+		ExpiresAt: time.Now().Add(ttl),
+	}
+
+	data, err := json.Marshal(login)
+	if err != nil {
+		return fmt.Errorf("failed to marshal pending 2FA login: %w", err)
+	}
+
+	return facades.Cache().Put(key, string(data), ttl)
+}
+
+// deletePending2FALogin removes a pending 2FA login from Redis
+func (r *AuthController) deletePending2FALogin(token string) {
+	key := pending2FALoginKeyPrefix + token
+	facades.Cache().Forget(key)
 }
 
 // generateTempToken generates a secure random token
@@ -47,21 +97,6 @@ func (r *AuthController) generateTempToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
-}
-
-// cleanupExpired2FALogins removes expired pending 2FA logins periodically
-func (r *AuthController) cleanupExpired2FALogins() {
-	ticker := time.NewTicker(5 * time.Minute)
-	for range ticker.C {
-		r.pending2FALoginsLock.Lock()
-		now := time.Now()
-		for token, login := range r.pending2FALogins {
-			if now.After(login.ExpiresAt) {
-				delete(r.pending2FALogins, token)
-			}
-		}
-		r.pending2FALoginsLock.Unlock()
-	}
 }
 
 // LoginRequest defines the structure for login requests.
@@ -164,13 +199,17 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 			return ctx.Response().Redirect(http.StatusFound, "/login")
 		}
 
-		// Store pending 2FA login (expires in 5 minutes)
-		r.pending2FALoginsLock.Lock()
-		r.pending2FALogins[tempToken] = pending2FALoginWeb{
-			UserID:    user.ID,
-			ExpiresAt: time.Now().Add(5 * time.Minute),
+		// Store pending 2FA login in Redis (expires in 5 minutes)
+		if err := r.setPending2FALogin(tempToken, user.ID, 5*time.Minute); err != nil {
+			facades.Log().Error("Failed to store pending 2FA login", map[string]interface{}{
+				"error":   err.Error(),
+				"user_id": user.ID,
+			})
+			ctx.Request().Session().Flash("errors", map[string]interface{}{
+				"general": "Failed to process login",
+			})
+			return ctx.Response().Redirect(http.StatusFound, "/login")
 		}
-		r.pending2FALoginsLock.Unlock()
 
 		// For Inertia, return with 2FA required props
 		// The frontend will handle showing the 2FA form
@@ -185,7 +224,76 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	}
 
 	// No 2FA - proceed with normal login
+	// Check if this is an AJAX request (from axios)
+	isAjax := ctx.Request().Header("X-Requested-With") == "XMLHttpRequest" ||
+		ctx.Request().Header("Accept") == "application/json"
+
+	if isAjax {
+		return r.completeLoginJSON(ctx, &user)
+	}
 	return r.completeLogin(ctx, &user)
+}
+
+// completeLoginJSON finalizes the login process and returns JSON (for AJAX requests)
+func (r *AuthController) completeLoginJSON(ctx http.Context, user *models.User) http.Response {
+	// Log the user in and get the token
+	token, err := facades.Auth(ctx).Login(user)
+	if err != nil {
+		return ctx.Response().Json(nethttp.StatusInternalServerError, http.Json{
+			"success": false,
+			"message": "Error during login: " + err.Error(),
+		})
+	}
+
+	// Set token in HTTP-only cookie
+	ttl := facades.Config().GetInt("jwt.ttl", 720) // Default to 12 hours (720 minutes) if not set
+	expiry := time.Now().Add(time.Duration(ttl) * time.Minute)
+	ctx.Response().Cookie(http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Expires:  expiry,
+		Path:     "/",
+		HttpOnly: true,
+	})
+
+	// Set a non-HttpOnly cookie for SSE connections (JavaScript needs to read this)
+	ctx.Response().Cookie(http.Cookie{
+		Name:     "sse_token",
+		Value:    token,
+		Expires:  expiry,
+		Path:     "/",
+		HttpOnly: false,
+	})
+
+	// Update last login timestamp
+	now := time.Now()
+	facades.Orm().Query().Model(user).Update("last_login_at", now)
+
+	// Log login activity
+	r.activityService.LogActivity(
+		ctx,
+		user.ID,
+		models.ActivityLogin,
+		"User logged in",
+		map[string]interface{}{
+			"email": user.Email,
+		},
+	)
+
+	// Determine redirect URL
+	redirectURL := "/dashboard"
+
+	// Check if 2FA is required globally but user hasn't enabled it
+	require2FA := facades.Config().GetBool("auth.require_2fa", false)
+	if require2FA && !user.TOTPEnabled {
+		redirectURL = "/2fa-required"
+	}
+
+	return ctx.Response().Json(nethttp.StatusOK, http.Json{
+		"success":  true,
+		"message":  "Login successful",
+		"redirect": redirectURL,
+	})
 }
 
 // completeLogin finalizes the login process
@@ -258,12 +366,10 @@ func (r *AuthController) Verify2FA(ctx http.Context) http.Response {
 		})
 	}
 
-	// Find pending 2FA login
-	r.pending2FALoginsLock.RLock()
-	pendingLogin, exists := r.pending2FALogins[tempToken]
-	r.pending2FALoginsLock.RUnlock()
-
-	if !exists || time.Now().After(pendingLogin.ExpiresAt) {
+	// Find pending 2FA login from Redis
+	pendingLogin, err := r.getPending2FALogin(tempToken)
+	if err != nil {
+		facades.Log().Warningf("Failed to get pending 2FA login: %v", err)
 		return ctx.Response().Json(http.StatusGone, http.Json{
 			"success": false,
 			"message": "Login session expired. Please log in again.",
@@ -299,10 +405,8 @@ func (r *AuthController) Verify2FA(ctx http.Context) http.Response {
 		})
 	}
 
-	// Remove pending login
-	r.pending2FALoginsLock.Lock()
-	delete(r.pending2FALogins, tempToken)
-	r.pending2FALoginsLock.Unlock()
+	// Remove pending login from Redis
+	r.deletePending2FALogin(tempToken)
 
 	// Log activity
 	if isBackup {

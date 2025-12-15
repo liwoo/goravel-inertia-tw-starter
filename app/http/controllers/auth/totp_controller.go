@@ -1,8 +1,9 @@
 package auth
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	goravelhttp "github.com/goravel/framework/contracts/http"
@@ -17,26 +18,79 @@ import (
 type TOTPController struct {
 	totpService     *services.TOTPService
 	activityService *services.UserActivityService
-
-	// In-memory storage for pending TOTP setup (secret key before verification)
-	// In production, consider using Redis or database for this
-	pendingSetups     map[uint]pendingSetup
-	pendingSetupsLock sync.RWMutex
 }
 
-// pendingSetup stores the TOTP key during the setup process
+// pendingSetup stores the TOTP key during the setup process (serialized to Redis)
 type pendingSetup struct {
-	Secret    string
-	ExpiresAt time.Time
+	Secret    string    `json:"secret"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
+
+// Redis key prefix for pending TOTP setups
+const pendingSetupKeyPrefix = "totp_pending_setup:"
 
 // NewTOTPController creates a new TOTP controller
 func NewTOTPController() *TOTPController {
 	return &TOTPController{
 		totpService:     services.NewTOTPService(),
 		activityService: services.NewUserActivityService(),
-		pendingSetups:   make(map[uint]pendingSetup),
 	}
+}
+
+// getPendingSetup retrieves a pending TOTP setup from Redis
+func (c *TOTPController) getPendingSetup(userID uint) (*pendingSetup, error) {
+	key := fmt.Sprintf("%s%d", pendingSetupKeyPrefix, userID)
+	value := facades.Cache().Get(key)
+	if value == nil {
+		return nil, fmt.Errorf("pending setup not found")
+	}
+
+	// Value could be string or []byte depending on cache driver
+	var data []byte
+	switch v := value.(type) {
+	case string:
+		data = []byte(v)
+	case []byte:
+		data = v
+	default:
+		return nil, fmt.Errorf("unexpected cache value type")
+	}
+
+	var setup pendingSetup
+	if err := json.Unmarshal(data, &setup); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal pending setup: %w", err)
+	}
+
+	// Check if expired (redundant with TTL but good for safety)
+	if time.Now().After(setup.ExpiresAt) {
+		// Clean up expired entry
+		facades.Cache().Forget(key)
+		return nil, fmt.Errorf("pending setup expired")
+	}
+
+	return &setup, nil
+}
+
+// setPendingSetup stores a pending TOTP setup in Redis
+func (c *TOTPController) setPendingSetup(userID uint, secret string, ttl time.Duration) error {
+	key := fmt.Sprintf("%s%d", pendingSetupKeyPrefix, userID)
+	setup := pendingSetup{
+		Secret:    secret,
+		ExpiresAt: time.Now().Add(ttl),
+	}
+
+	data, err := json.Marshal(setup)
+	if err != nil {
+		return fmt.Errorf("failed to marshal pending setup: %w", err)
+	}
+
+	return facades.Cache().Put(key, string(data), ttl)
+}
+
+// deletePendingSetup removes a pending TOTP setup from Redis
+func (c *TOTPController) deletePendingSetup(userID uint) {
+	key := fmt.Sprintf("%s%d", pendingSetupKeyPrefix, userID)
+	facades.Cache().Forget(key)
 }
 
 // Status godoc
@@ -161,16 +215,14 @@ func (c *TOTPController) Setup(ctx goravelhttp.Context) goravelhttp.Response {
 		})
 	}
 
-	// Store pending setup (expires in 10 minutes)
-	c.pendingSetupsLock.Lock()
-	c.pendingSetups[user.ID] = pendingSetup{
-		Secret:    key.Secret(),
-		ExpiresAt: time.Now().Add(10 * time.Minute),
+	// Store pending setup in Redis (expires in 10 minutes)
+	if err := c.setPendingSetup(user.ID, key.Secret(), 10*time.Minute); err != nil {
+		facades.Log().Errorf("Failed to store pending TOTP setup: %v", err)
+		return ctx.Response().Json(http.StatusInternalServerError, goravelhttp.Json{
+			"success": false,
+			"message": "Failed to save setup data",
+		})
 	}
-	c.pendingSetupsLock.Unlock()
-
-	// Clean up expired setups periodically
-	go c.cleanupExpiredSetups()
 
 	return ctx.Response().Json(http.StatusOK, goravelhttp.Json{
 		"success": true,
@@ -223,12 +275,10 @@ func (c *TOTPController) Verify(ctx goravelhttp.Context) goravelhttp.Response {
 		})
 	}
 
-	// Get pending setup
-	c.pendingSetupsLock.RLock()
-	setup, exists := c.pendingSetups[user.ID]
-	c.pendingSetupsLock.RUnlock()
-
-	if !exists || time.Now().After(setup.ExpiresAt) {
+	// Get pending setup from Redis
+	setup, err := c.getPendingSetup(user.ID)
+	if err != nil {
+		facades.Log().Warningf("Failed to get pending TOTP setup for user %d: %v", user.ID, err)
 		return ctx.Response().Json(http.StatusBadRequest, goravelhttp.Json{
 			"success": false,
 			"message": "2FA setup has expired. Please start the setup process again.",
@@ -271,10 +321,8 @@ func (c *TOTPController) Verify(ctx goravelhttp.Context) goravelhttp.Response {
 		})
 	}
 
-	// Remove pending setup
-	c.pendingSetupsLock.Lock()
-	delete(c.pendingSetups, user.ID)
-	c.pendingSetupsLock.Unlock()
+	// Remove pending setup from Redis
+	c.deletePendingSetup(user.ID)
 
 	// Log activity
 	c.activityService.LogActivity(ctx, user.ID, models.ActivityTwoFAEnabled, "Two-factor authentication enabled", nil)
@@ -497,15 +545,3 @@ func (c *TOTPController) RegenerateBackupCodes(ctx goravelhttp.Context) goravelh
 	})
 }
 
-// cleanupExpiredSetups removes expired pending TOTP setups
-func (c *TOTPController) cleanupExpiredSetups() {
-	c.pendingSetupsLock.Lock()
-	defer c.pendingSetupsLock.Unlock()
-
-	now := time.Now()
-	for userID, setup := range c.pendingSetups {
-		if now.After(setup.ExpiresAt) {
-			delete(c.pendingSetups, userID)
-		}
-	}
-}

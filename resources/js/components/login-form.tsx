@@ -69,9 +69,9 @@ export function LoginForm({
         return;
       }
 
-      // If no 2FA required, the backend redirects - this shouldn't normally happen
-      // But handle it just in case by refreshing
-      router.visit('/dashboard', { replace: true });
+      // Successful login - use the redirect URL from the response
+      const redirectUrl = response.data?.redirect || '/dashboard';
+      router.visit(redirectUrl, { replace: true });
     } catch (error: unknown) {
       reset('password');
 
