@@ -58,10 +58,12 @@ func Api(router route.Router) {
 	lenderController := lenders.NewLenderController()
 	applicationController := applications.NewApplicationController()
 	accountController := account.NewAccountController()
+	totpController := auth.NewTOTPController()
 	sseController := controllers.NewSSEController()
 	presenceController := controllers.NewPresenceController()
 
 	jwtAuth := middleware.JwtAuth()
+	require2FA := middleware.Require2FA()
 	optionalAuth := middleware.OptionalJwtAuth()
 
 	// Swagger API documentation routes (public access)
@@ -145,8 +147,8 @@ func Api(router route.Router) {
 		optionalAuthRouter.Post("/applications", applicationController.PublicStore)
 	})
 
-	// Protected routes (require authentication)
-	router.Middleware(jwtAuth).Group(func(protectedRouter route.Router) {
+	// Protected routes (require authentication and 2FA when enabled)
+	router.Middleware(jwtAuth, require2FA).Group(func(protectedRouter route.Router) {
 		// Global search
 		protectedRouter.Get("/search", searchController.GlobalSearch)
 
@@ -299,21 +301,31 @@ func Api(router route.Router) {
 			accountRouter.Get("/recent-activities", accountController.GetRecentActivities)
 		})
 
+		// Two-factor authentication routes
+		protectedRouter.Prefix("2fa").Group(func(twoFaRouter route.Router) {
+			twoFaRouter.Get("/status", totpController.Status)
+			twoFaRouter.Post("/setup", totpController.Setup)
+			twoFaRouter.Post("/verify", totpController.Verify)
+			twoFaRouter.Post("/disable", totpController.Disable)
+			twoFaRouter.Post("/backup-codes", totpController.RegenerateBackupCodes)
+		})
+
 	})
 
 	// This Prefix("auth") group will also be relative to the router passed in.
 	// If called from RouteServiceProvider's /api group, this becomes /api/auth
 	router.Prefix("auth").Group(func(authRouter route.Router) {
 		authRouter.Post("/login", apiAuthController.Login)
-		authRouter.Middleware(jwtAuth).Post("/logout", apiAuthController.Logout)
-		authRouter.Middleware(jwtAuth).Get("/me", apiAuthController.Me)
+		authRouter.Post("/verify-2fa", apiAuthController.Verify2FA) // 2FA verification during login (no auth required)
+		authRouter.Middleware(jwtAuth, require2FA).Post("/logout", apiAuthController.Logout)
+		authRouter.Middleware(jwtAuth, require2FA).Get("/me", apiAuthController.Me)
 	})
 
 	// SSE (Server-Sent Events) for real-time updates
-	router.Middleware(jwtAuth).Get("/sse/stream", sseController.Stream)
+	router.Middleware(jwtAuth, require2FA).Get("/sse/stream", sseController.Stream)
 
 	// Presence (online status) routes
-	router.Middleware(jwtAuth).Prefix("presence").Group(func(presenceRouter route.Router) {
+	router.Middleware(jwtAuth, require2FA).Prefix("presence").Group(func(presenceRouter route.Router) {
 		presenceRouter.Get("/online", presenceController.GetOnlineUsers)
 		presenceRouter.Get("/stats", presenceController.GetStats)
 		presenceRouter.Get("/check", presenceController.CheckOnline)

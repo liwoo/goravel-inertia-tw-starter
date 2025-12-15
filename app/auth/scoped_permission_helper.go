@@ -15,6 +15,7 @@ type ScopedPermissionChecker struct {
 }
 
 // CheckScopedPermission checks if a user has permission with the appropriate scope
+// Note: This returns bool, so 2FA check is not enforced here (use RequireScopedPermission for that)
 func (h *ScopedPermissionChecker) CheckScopedPermission(
 	ctx http.Context,
 	service ServiceRegistry,
@@ -26,7 +27,12 @@ func (h *ScopedPermissionChecker) CheckScopedPermission(
 		return false
 	}
 
-	// Super admins bypass all scope checks
+	// Check 2FA requirement - if not met, return false
+	if h.Is2FARequired() && !h.Check2FAEnabled(user) {
+		return false
+	}
+
+	// Super admins bypass all scope checks (but still need 2FA if required)
 	if user.IsSuperAdminUser() {
 		return true
 	}
@@ -180,6 +186,7 @@ func (h *ScopedPermissionChecker) getUserMaxRoleLevel(user *models.User) int {
 }
 
 // RequireScopedPermission checks permission and returns error if denied
+// Also enforces 2FA if enabled in config
 func (h *ScopedPermissionChecker) RequireScopedPermission(
 	ctx http.Context,
 	service ServiceRegistry,
@@ -189,6 +196,12 @@ func (h *ScopedPermissionChecker) RequireScopedPermission(
 	user := h.GetAuthenticatedUser(ctx)
 	if user == nil {
 		return nil, fmt.Errorf("authentication required")
+	}
+
+	// Check 2FA requirement for permission-protected resources
+	// Even super admins must have 2FA enabled when required
+	if h.Is2FARequired() && !h.Check2FAEnabled(user) {
+		return nil, NewTwoFactorRequiredError()
 	}
 
 	if !h.CheckScopedPermission(ctx, service, action, resource) {

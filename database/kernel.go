@@ -67,6 +67,8 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251201170115CreateUserActivitiesTable{},
 		&migrations.M20251203100000AddClassificationToSmesTable{},
 		&migrations.M20251214150511AlterCurrencyFieldsPrecision{},
+		&migrations.M20251214160000AddTotpFieldsToUsersTable{},
+		&migrations.M20251214160001CreateTotpBackupCodesTable{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {

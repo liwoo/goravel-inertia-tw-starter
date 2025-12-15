@@ -96,3 +96,88 @@ export interface ApiErrorResponse {
   message: string;
   errors?: Record<string, string[]>;
 }
+
+// =============================================================================
+// TOTP Two-Factor Authentication Types
+// =============================================================================
+
+// Generic API response wrapper
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+// Status data from GET /api/2fa/status
+export interface TOTPStatusData {
+  enabled: boolean;
+  verified_at: string | null;
+  backup_codes_remaining: number;
+}
+
+// Status response (wrapped)
+export type TOTPStatus = ApiResponse<TOTPStatusData>;
+
+// Setup data from POST /api/2fa/setup
+export interface TOTPSetupData {
+  qr_code: string;  // base64 PNG data URI
+  secret: string;   // Manual entry key
+}
+
+// Setup response (wrapped)
+export type TOTPSetupResponse = ApiResponse<TOTPSetupData>;
+
+// Verify data from POST /api/2fa/verify
+export interface TOTPVerifyData {
+  backup_codes: string[];
+  enabled_at: string;
+}
+
+// Verify response (wrapped)
+export type TOTPVerifyResponse = ApiResponse<TOTPVerifyData>;
+
+// Backup codes data from POST /api/2fa/backup-codes
+export interface TOTPBackupCodesData {
+  backup_codes: string[];
+  generated_at: string;
+}
+
+// Backup codes response (wrapped)
+export type TOTPBackupCodesResponse = ApiResponse<TOTPBackupCodesData>;
+
+// Request payloads
+export interface TOTPSetupRequest {
+  password: string;
+}
+
+export interface TOTPVerifyRequest {
+  code: string;
+}
+
+export interface TOTPDisableRequest {
+  password: string;
+  code: string;
+}
+
+export interface TOTPBackupCodesRequest {
+  password: string;
+}
+
+// Login 2FA verification
+export interface TwoFactorLoginRequest {
+  temp_token: string;
+  code: string;
+}
+
+// Login response when 2FA is required
+export interface TwoFactorRequiredResponse {
+  requires_2fa: boolean;
+  temp_token: string;
+}
+
+// Form error types for 2FA
+export interface TOTPFormErrors {
+  password?: string;
+  code?: string;
+  general?: string;
+}

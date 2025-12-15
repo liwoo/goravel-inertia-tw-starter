@@ -16,6 +16,12 @@ const (
 	ActivityEmailChange    = "email_change"
 	ActivityRoleChange     = "role_change"
 	ActivityAccountCreated = "account_created"
+
+	// Two-factor authentication activities
+	ActivityTwoFAEnabled   = "two_fa_enabled"
+	ActivityTwoFADisabled  = "two_fa_disabled"
+	ActivityTwoFAUsed      = "two_fa_used"
+	ActivityBackupCodeUsed = "backup_code_used"
 )
 
 // UserActivity tracks user activities for audit purposes

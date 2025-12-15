@@ -103,10 +103,14 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 	// Add authenticated user information
 	var authUser *models.User
 
+	// Check if 2FA is required globally
+	require2FA := facades.Config().GetBool("auth.require_2fa", false)
+
 	// Default to no authenticated user in shared props
 	sharedProps["auth"] = map[string]interface{}{
 		"user":        nil,
 		"permissions": map[string]interface{}{}, // Empty permissions object
+		"require_2fa": require2FA,
 	}
 
 	err := facades.Auth(ctx).User(&authUser)
@@ -153,8 +157,10 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 					"permissions":  []string{},                 // Empty permissions array
 					"isSuperAdmin": authUser.Role == "ADMIN",   // Check legacy role
 					"isAdmin":      authUser.Role == "ADMIN",
+					"totpEnabled":  authUser.TOTPEnabled,
 				},
 				"permissions": allPermissions,
+				"require_2fa": require2FA,
 			}
 		} else {
 			// Get permission helper to build permissions map
@@ -196,8 +202,10 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 					"permissions":  userPermissions,
 					"isSuperAdmin": userWithRoles.IsSuperAdminUser(),
 					"isAdmin":      userWithRoles.IsAdmin(),
+					"totpEnabled":  userWithRoles.TOTPEnabled,
 				},
 				"permissions": allPermissions,
+				"require_2fa": require2FA,
 			}
 		}
 	}

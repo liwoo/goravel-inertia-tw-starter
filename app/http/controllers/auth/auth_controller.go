@@ -1,9 +1,12 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"smedi-sme-db/app/models"
 	"smedi-sme-db/app/services"
+	"sync"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -13,11 +16,51 @@ import (
 
 type AuthController struct {
 	activityService *services.UserActivityService
+	totpService     *services.TOTPService
+
+	// In-memory storage for pending 2FA logins (web route)
+	pending2FALogins     map[string]pending2FALoginWeb
+	pending2FALoginsLock sync.RWMutex
+}
+
+// pending2FALoginWeb stores user info during the 2FA verification step for web login
+type pending2FALoginWeb struct {
+	UserID    uint
+	ExpiresAt time.Time
 }
 
 func NewAuthController() *AuthController {
-	return &AuthController{
-		activityService: services.NewUserActivityService(),
+	controller := &AuthController{
+		activityService:  services.NewUserActivityService(),
+		totpService:      services.NewTOTPService(),
+		pending2FALogins: make(map[string]pending2FALoginWeb),
+	}
+	// Start cleanup goroutine
+	go controller.cleanupExpired2FALogins()
+	return controller
+}
+
+// generateTempToken generates a secure random token
+func (r *AuthController) generateTempToken() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+// cleanupExpired2FALogins removes expired pending 2FA logins periodically
+func (r *AuthController) cleanupExpired2FALogins() {
+	ticker := time.NewTicker(5 * time.Minute)
+	for range ticker.C {
+		r.pending2FALoginsLock.Lock()
+		now := time.Now()
+		for token, login := range r.pending2FALogins {
+			if now.After(login.ExpiresAt) {
+				delete(r.pending2FALogins, token)
+			}
+		}
+		r.pending2FALoginsLock.Unlock()
 	}
 }
 
@@ -98,8 +141,57 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
 
+	// Check if user is active
+	if !user.IsActive {
+		ctx.Request().Session().Flash("errors", map[string]interface{}{
+			"general": "Account is deactivated",
+		})
+		return ctx.Response().Redirect(http.StatusFound, "/login")
+	}
+
+	// Check if 2FA is enabled
+	if user.TOTPEnabled {
+		// Generate a temporary token for 2FA verification
+		tempToken, err := r.generateTempToken()
+		if err != nil {
+			facades.Log().Error("Failed to generate temp token", map[string]interface{}{
+				"error":   err.Error(),
+				"user_id": user.ID,
+			})
+			ctx.Request().Session().Flash("errors", map[string]interface{}{
+				"general": "Failed to process login",
+			})
+			return ctx.Response().Redirect(http.StatusFound, "/login")
+		}
+
+		// Store pending 2FA login (expires in 5 minutes)
+		r.pending2FALoginsLock.Lock()
+		r.pending2FALogins[tempToken] = pending2FALoginWeb{
+			UserID:    user.ID,
+			ExpiresAt: time.Now().Add(5 * time.Minute),
+		}
+		r.pending2FALoginsLock.Unlock()
+
+		// For Inertia, return with 2FA required props
+		// The frontend will handle showing the 2FA form
+		ctx.Request().Session().Flash("requires_2fa", true)
+		ctx.Request().Session().Flash("temp_token", tempToken)
+
+		// Return JSON for Inertia to handle
+		return ctx.Response().Json(http.StatusOK, http.Json{
+			"requires_2fa": true,
+			"temp_token":   tempToken,
+		})
+	}
+
+	// No 2FA - proceed with normal login
+	return r.completeLogin(ctx, &user)
+}
+
+// completeLogin finalizes the login process
+func (r *AuthController) completeLogin(ctx http.Context, user *models.User) http.Response {
 	// Log the user in and get the token
-	token, err := facades.Auth(ctx).Login(&user)
+	token, err := facades.Auth(ctx).Login(user)
 	if err != nil {
 		ctx.Request().Session().Flash("errors", map[string]interface{}{
 			"general": "Error during login: " + err.Error(),
@@ -129,7 +221,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 
 	// Update last login timestamp
 	now := time.Now()
-	facades.Orm().Query().Model(&user).Update("last_login_at", now)
+	facades.Orm().Query().Model(user).Update("last_login_at", now)
 
 	// Log login activity
 	r.activityService.LogActivity(
@@ -142,9 +234,135 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 		},
 	)
 
+	// Check if 2FA is required globally but user hasn't enabled it
+	require2FA := facades.Config().GetBool("auth.require_2fa", false)
+	if require2FA && !user.TOTPEnabled {
+		// Redirect to 2FA setup page
+		return ctx.Response().Redirect(http.StatusSeeOther, "/2fa-required")
+	}
+
 	// Redirect to dashboard on successful login.
 	// Use 303 See Other to ensure the next request is a GET, which is best practice for Inertia.
 	return ctx.Response().Redirect(http.StatusSeeOther, "/dashboard")
+}
+
+// Verify2FA handles 2FA verification for web login
+func (r *AuthController) Verify2FA(ctx http.Context) http.Response {
+	tempToken := ctx.Request().Input("temp_token")
+	code := ctx.Request().Input("code")
+
+	if tempToken == "" || code == "" {
+		return ctx.Response().Json(http.StatusBadRequest, http.Json{
+			"success": false,
+			"message": "Missing required fields",
+		})
+	}
+
+	// Find pending 2FA login
+	r.pending2FALoginsLock.RLock()
+	pendingLogin, exists := r.pending2FALogins[tempToken]
+	r.pending2FALoginsLock.RUnlock()
+
+	if !exists || time.Now().After(pendingLogin.ExpiresAt) {
+		return ctx.Response().Json(http.StatusGone, http.Json{
+			"success": false,
+			"message": "Login session expired. Please log in again.",
+		})
+	}
+
+	// Load user
+	var user models.User
+	if err := facades.Orm().Query().Find(&user, pendingLogin.UserID); err != nil {
+		return ctx.Response().Json(http.StatusInternalServerError, http.Json{
+			"success": false,
+			"message": "Failed to load user",
+		})
+	}
+
+	// Validate TOTP code or backup code
+	valid, isBackup, err := r.totpService.ValidateTOTPForUser(&user, code)
+	if err != nil {
+		facades.Log().Error("Failed to validate 2FA code", map[string]interface{}{
+			"error":   err.Error(),
+			"user_id": user.ID,
+		})
+		return ctx.Response().Json(http.StatusInternalServerError, http.Json{
+			"success": false,
+			"message": "Failed to validate 2FA code",
+		})
+	}
+
+	if !valid {
+		return ctx.Response().Json(http.StatusUnauthorized, http.Json{
+			"success": false,
+			"message": "Invalid 2FA code",
+		})
+	}
+
+	// Remove pending login
+	r.pending2FALoginsLock.Lock()
+	delete(r.pending2FALogins, tempToken)
+	r.pending2FALoginsLock.Unlock()
+
+	// Log activity
+	if isBackup {
+		r.activityService.LogActivity(ctx, user.ID, models.ActivityBackupCodeUsed, "Backup code used during login", nil)
+	} else {
+		r.activityService.LogActivity(ctx, user.ID, models.ActivityTwoFAUsed, "2FA code used during login", nil)
+	}
+
+	// Complete login - generate token and set cookies
+	token, err := facades.Auth(ctx).Login(&user)
+	if err != nil {
+		return ctx.Response().Json(http.StatusInternalServerError, http.Json{
+			"success": false,
+			"message": "Failed to complete login",
+		})
+	}
+
+	// Set token in HTTP-only cookie
+	ttl := facades.Config().GetInt("jwt.ttl", 720)
+	expiry := time.Now().Add(time.Duration(ttl) * time.Minute)
+	ctx.Response().Cookie(http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Expires:  expiry,
+		Path:     "/",
+		HttpOnly: true,
+	})
+
+	// Set a non-HttpOnly cookie for SSE connections
+	ctx.Response().Cookie(http.Cookie{
+		Name:     "sse_token",
+		Value:    token,
+		Expires:  expiry,
+		Path:     "/",
+		HttpOnly: false,
+	})
+
+	// Update last login timestamp
+	now := time.Now()
+	facades.Orm().Query().Model(&user).Update("last_login_at", now)
+
+	// Log login activity
+	r.activityService.LogActivity(
+		ctx,
+		user.ID,
+		models.ActivityLogin,
+		"User logged in with 2FA",
+		map[string]interface{}{
+			"email":            user.Email,
+			"used_backup_code": isBackup,
+		},
+	)
+
+	return ctx.Response().Json(http.StatusOK, http.Json{
+		"success": true,
+		"message": "Login successful",
+		"data": http.Json{
+			"redirect": "/dashboard",
+		},
+	})
 }
 
 func (r *AuthController) Logout(ctx http.Context) http.Response {

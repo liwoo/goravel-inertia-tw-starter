@@ -8,6 +8,28 @@ import (
 	"smedi-sme-db/app/models"
 )
 
+// TwoFactorRequiredError is returned when 2FA is required but not enabled
+type TwoFactorRequiredError struct {
+	Message string
+}
+
+func (e *TwoFactorRequiredError) Error() string {
+	return e.Message
+}
+
+// NewTwoFactorRequiredError creates a new 2FA required error
+func NewTwoFactorRequiredError() *TwoFactorRequiredError {
+	return &TwoFactorRequiredError{
+		Message: "Two-factor authentication is required to access this resource",
+	}
+}
+
+// IsTwoFactorRequiredError checks if an error is a 2FA required error
+func IsTwoFactorRequiredError(err error) bool {
+	_, ok := err.(*TwoFactorRequiredError)
+	return ok
+}
+
 // PermissionHelper provides permission checking utilities
 type PermissionHelper struct {
 	permissionService *PermissionService
@@ -43,11 +65,44 @@ func (h *PermissionHelper) RequireAuthentication(ctx http.Context) (*models.User
 	return user, nil
 }
 
+// Is2FARequired checks if 2FA is required for permission-protected resources
+// This is controlled by the "auth.require_2fa" config setting
+func (h *PermissionHelper) Is2FARequired() bool {
+	return facades.Config().GetBool("auth.require_2fa", false)
+}
+
+// Check2FAEnabled checks if the user has 2FA enabled
+func (h *PermissionHelper) Check2FAEnabled(user *models.User) bool {
+	return user.TOTPEnabled
+}
+
+// Require2FA ensures user has 2FA enabled (if 2FA is required by config)
+// Returns TwoFactorRequiredError if 2FA is required but not enabled
+func (h *PermissionHelper) Require2FA(ctx http.Context) (*models.User, error) {
+	user, err := h.RequireAuthentication(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if 2FA is required globally
+	if h.Is2FARequired() && !h.Check2FAEnabled(user) {
+		return nil, NewTwoFactorRequiredError()
+	}
+
+	return user, nil
+}
+
 // RequirePermission ensures user has specific permission
+// Also enforces 2FA if enabled in config
 func (h *PermissionHelper) RequirePermission(ctx http.Context, permission string) (*models.User, error) {
 	user, err := h.RequireAuthentication(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check 2FA requirement for permission-protected resources
+	if h.Is2FARequired() && !h.Check2FAEnabled(user) {
+		return nil, NewTwoFactorRequiredError()
 	}
 
 	if !h.permissionService.HasPermission(user, permission) {
@@ -58,10 +113,16 @@ func (h *PermissionHelper) RequirePermission(ctx http.Context, permission string
 }
 
 // RequireRole ensures user has specific role
+// Also enforces 2FA if enabled in config
 func (h *PermissionHelper) RequireRole(ctx http.Context, role string) (*models.User, error) {
 	user, err := h.RequireAuthentication(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check 2FA requirement for role-protected resources
+	if h.Is2FARequired() && !h.Check2FAEnabled(user) {
+		return nil, NewTwoFactorRequiredError()
 	}
 
 	if !h.permissionService.HasRole(user, role) {
@@ -72,10 +133,16 @@ func (h *PermissionHelper) RequireRole(ctx http.Context, role string) (*models.U
 }
 
 // RequireResourceAccess ensures user can access specific resource
+// Also enforces 2FA if enabled in config
 func (h *PermissionHelper) RequireResourceAccess(ctx http.Context, action string, resourceType string, resourceID uint) (*models.User, error) {
 	user, err := h.RequireAuthentication(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check 2FA requirement for resource-protected access
+	if h.Is2FARequired() && !h.Check2FAEnabled(user) {
+		return nil, NewTwoFactorRequiredError()
 	}
 
 	if !h.permissionService.CanAccessResource(user, action, resourceType, resourceID) {
@@ -205,10 +272,17 @@ func (h *PermissionHelper) CheckServicePermission(ctx http.Context, service Serv
 }
 
 // RequireServicePermission ensures user has permission for a specific service and action
+// Also enforces 2FA if enabled in config
 func (h *PermissionHelper) RequireServicePermission(ctx http.Context, service ServiceRegistry, action CorePermissionAction) (*models.User, error) {
 	user, err := h.RequireAuthentication(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check 2FA requirement for permission-protected resources
+	// Even super admins must have 2FA enabled when required
+	if h.Is2FARequired() && !h.Check2FAEnabled(user) {
+		return nil, NewTwoFactorRequiredError()
 	}
 
 	// Super admin has all permissions

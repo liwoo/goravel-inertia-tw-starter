@@ -20,8 +20,16 @@ type User struct {
 	EmailVerified bool       `gorm:"default:false" json:"email_verified"`
 	LastLoginAt   *time.Time `json:"last_login_at,omitempty"`
 
+	// TOTP 2FA fields
+	TOTPEnabled    bool       `gorm:"default:false;index" json:"totp_enabled"`
+	TOTPSecret     string     `gorm:"type:text" json:"-"`
+	TOTPVerifiedAt *time.Time `json:"totp_verified_at,omitempty"`
+
 	// Many-to-many relationships
 	Roles []Role `gorm:"many2many:user_roles" json:"roles,omitempty"`
+
+	// One-to-many relationship with backup codes
+	TOTPBackupCodes []TOTPBackupCode `gorm:"foreignKey:UserID" json:"-"`
 }
 
 // TableName returns the table name for User model

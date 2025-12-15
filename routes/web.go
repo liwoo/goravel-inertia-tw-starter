@@ -68,6 +68,7 @@ func Web() {
 	membersPageController := members.NewMemberPageController()
 
 	facades.Route().Post("/login", authController.Login)
+	facades.Route().Post("/verify-2fa", authController.Verify2FA) // 2FA verification during web login
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
 		return inertiaHelper.Render(ctx, "auth/Login", map[string]interface{}{
 			"version": support.Version,
@@ -86,9 +87,19 @@ func Web() {
 	// Public Application Page
 	facades.Route().Get("/apply", applicationsPageController.ShowPublicApply)
 
-	// Authenticated routes
-	facades.Route().Middleware(middleware.JwtAuth()).Group(func(router route.Router) {
+	// Authenticated routes with 2FA enforcement
+	// The Require2FA middleware checks if AUTH_REQUIRE_2FA is enabled and redirects
+	// users without 2FA to /2fa-required
+	facades.Route().Middleware(middleware.JwtAuth(), middleware.Require2FA()).Group(func(router route.Router) {
 		router.Post("/logout", authController.Logout)
+
+		// 2FA required setup page - accessible by authenticated users who need to set up 2FA
+		// (Require2FA middleware allows this path even without 2FA)
+		router.Get("/2fa-required", func(ctx http.Context) http.Response {
+			return inertiaHelper.Render(ctx, "auth/TwoFactorRequired", map[string]interface{}{
+				"version": support.Version,
+			})
+		})
 
 		router.Get("/settings", func(ctx http.Context) http.Response {
 			return inertiaHelper.Render(ctx, "settings/Index", map[string]interface{}{
