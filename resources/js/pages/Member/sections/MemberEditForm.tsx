@@ -27,7 +27,7 @@ export const MemberEditForm = forwardRef<any, MemberEditFormProps>(({
     gender: member.gender,
     nationality: member.nationality,
     national_id_number: member.national_id_number,
-    date_of_birth: member.date_of_birth,
+    date_of_birth: member.date_of_birth ? member.date_of_birth.slice(0, 10) : '',
     email: member.email,
     phone_number: member.phone_number,
     is_intern: member.is_intern,

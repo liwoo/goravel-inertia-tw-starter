@@ -45,36 +45,60 @@ func NewBdspService() *BdspService {
 			}
 
 			// Handle partners array to JSON conversion
-			if partners, ok := data["partners"]; ok {
-				if partnersSlice, ok := partners.([]interface{}); ok {
-					bytes, err := json.Marshal(partnersSlice)
-					if err == nil {
-						data["partners_json"] = string(bytes)
+			if partners, exists := data["partners"]; exists && partners != nil {
+				if partnersArray, ok := partners.([]interface{}); ok && len(partnersArray) > 0 {
+					stringPartners := make([]string, len(partnersArray))
+					for i, partner := range partnersArray {
+						stringPartners[i] = fmt.Sprintf("%v", partner)
 					}
+					partnersJSON, _ := json.Marshal(stringPartners)
+					data["partners_json"] = string(partnersJSON)
+				} else if partnersArray, ok := partners.([]string); ok && len(partnersArray) > 0 {
+					partnersJSON, _ := json.Marshal(partnersArray)
+					data["partners_json"] = string(partnersJSON)
+				} else {
+					data["partners_json"] = "[]"
 				}
-				delete(data, "partners")
+			} else {
+				data["partners_json"] = "[]"
 			}
 
 			// Handle product_types array to JSON conversion
-			if productTypes, ok := data["product_types"]; ok {
-				if productTypesSlice, ok := productTypes.([]interface{}); ok {
-					bytes, err := json.Marshal(productTypesSlice)
-					if err == nil {
-						data["product_types_json"] = string(bytes)
+			if productTypes, exists := data["product_types"]; exists && productTypes != nil {
+				if productTypesArray, ok := productTypes.([]interface{}); ok && len(productTypesArray) > 0 {
+					stringProductTypes := make([]string, len(productTypesArray))
+					for i, productType := range productTypesArray {
+						stringProductTypes[i] = fmt.Sprintf("%v", productType)
 					}
+					productTypesJSON, _ := json.Marshal(stringProductTypes)
+					data["product_types_json"] = string(productTypesJSON)
+				} else if productTypesArray, ok := productTypes.([]string); ok && len(productTypesArray) > 0 {
+					productTypesJSON, _ := json.Marshal(productTypesArray)
+					data["product_types_json"] = string(productTypesJSON)
+				} else {
+					data["product_types_json"] = "[]"
 				}
-				delete(data, "product_types")
+			} else {
+				data["product_types_json"] = "[]"
 			}
 
 			// Handle service_list array to JSON conversion
-			if serviceList, ok := data["service_list"]; ok {
-				if serviceListSlice, ok := serviceList.([]interface{}); ok {
-					bytes, err := json.Marshal(serviceListSlice)
-					if err == nil {
-						data["service_list_json"] = string(bytes)
+			if serviceList, exists := data["service_list"]; exists && serviceList != nil {
+				if serviceListArray, ok := serviceList.([]interface{}); ok && len(serviceListArray) > 0 {
+					stringServiceList := make([]string, len(serviceListArray))
+					for i, service := range serviceListArray {
+						stringServiceList[i] = fmt.Sprintf("%v", service)
 					}
+					serviceListJSON, _ := json.Marshal(stringServiceList)
+					data["service_list_json"] = string(serviceListJSON)
+				} else if serviceListArray, ok := serviceList.([]string); ok && len(serviceListArray) > 0 {
+					serviceListJSON, _ := json.Marshal(serviceListArray)
+					data["service_list_json"] = string(serviceListJSON)
+				} else {
+					data["service_list_json"] = "[]"
 				}
-				delete(data, "service_list")
+			} else {
+				data["service_list_json"] = "[]"
 			}
 
 			return nil
@@ -94,32 +118,68 @@ func NewBdspService() *BdspService {
 			}
 			// Note: If existing record already has a ubdsp_number, we don't overwrite it
 
-			if partners, ok := data["partners"]; ok {
-				if partnersSlice, ok := partners.([]interface{}); ok {
-					bytes, err := json.Marshal(partnersSlice)
-					if err == nil {
-						data["partners_json"] = string(bytes)
+			if aspects, exists := data["business_improvement_aspects"]; exists && aspects != nil {
+				if aspectsArray, ok := aspects.([]interface{}); ok && len(aspectsArray) > 0 {
+					stringAspects := make([]string, len(aspectsArray))
+					for i, aspect := range aspectsArray {
+						stringAspects[i] = fmt.Sprintf("%v", aspect)
 					}
+					aspectsJSON, _ := json.Marshal(stringAspects)
+					data["business_improvement_aspect_json"] = string(aspectsJSON)
+				} else if aspectsArray, ok := aspects.([]string); ok && len(aspectsArray) > 0 {
+					aspectsJSON, _ := json.Marshal(aspectsArray)
+					data["business_improvement_aspect_json"] = string(aspectsJSON)
+				} else {
+					data["business_improvement_aspect_json"] = "[]"
+				}
+				delete(data, "business_improvement_aspects") // Remove the array field to avoid column conflict
+			}
+
+			if partners, exists := data["partners"]; exists && partners != nil {
+				if partnersArray, ok := partners.([]interface{}); ok && len(partnersArray) > 0 {
+					stringPartners := make([]string, len(partnersArray))
+					for i, partner := range partnersArray {
+						stringPartners[i] = fmt.Sprintf("%v", partner)
+					}
+					partnersJSON, _ := json.Marshal(stringPartners)
+					data["partners_json"] = string(partnersJSON)
+				} else if partnersArray, ok := partners.([]string); ok && len(partnersArray) > 0 {
+					partnersJSON, _ := json.Marshal(partnersArray)
+					data["partners_json"] = string(partnersJSON)
+				} else {
+					data["partners_json"] = "[]"
 				}
 				delete(data, "partners")
 			}
-
-			if productTypes, ok := data["product_types"]; ok {
-				if productTypesSlice, ok := productTypes.([]interface{}); ok {
-					bytes, err := json.Marshal(productTypesSlice)
-					if err == nil {
-						data["product_types_json"] = string(bytes)
+			if productTypes, exists := data["product_types"]; exists && productTypes != nil {
+				if productTypesArray, ok := productTypes.([]interface{}); ok && len(productTypesArray) > 0 {
+					stringProductTypes := make([]string, len(productTypesArray))
+					for i, productType := range productTypesArray {
+						stringProductTypes[i] = fmt.Sprintf("%v", productType)
 					}
+					productTypesJSON, _ := json.Marshal(stringProductTypes)
+					data["product_types_json"] = string(productTypesJSON)
+				} else if productTypesArray, ok := productTypes.([]string); ok && len(productTypesArray) > 0 {
+					productTypesJSON, _ := json.Marshal(productTypesArray)
+					data["product_types_json"] = string(productTypesJSON)
+				} else {
+					data["product_types_json"] = "[]"
 				}
 				delete(data, "product_types")
 			}
-
-			if serviceList, ok := data["service_list"]; ok {
-				if serviceListSlice, ok := serviceList.([]interface{}); ok {
-					bytes, err := json.Marshal(serviceListSlice)
-					if err == nil {
-						data["service_list_json"] = string(bytes)
+			if serviceList, exists := data["service_list"]; exists && serviceList != nil {
+				if serviceListArray, ok := serviceList.([]interface{}); ok && len(serviceListArray) > 0 {
+					stringServiceList := make([]string, len(serviceListArray))
+					for i, service := range serviceListArray {
+						stringServiceList[i] = fmt.Sprintf("%v", service)
 					}
+					serviceListJSON, _ := json.Marshal(stringServiceList)
+					data["service_list_json"] = string(serviceListJSON)
+				} else if serviceListArray, ok := serviceList.([]string); ok && len(serviceListArray) > 0 {
+					serviceListJSON, _ := json.Marshal(serviceListArray)
+					data["service_list_json"] = string(serviceListJSON)
+				} else {
+					data["service_list_json"] = "[]"
 				}
 				delete(data, "service_list")
 			}
