@@ -1,10 +1,12 @@
 package events
 
 import (
+	"github.com/goravel/framework/contracts/event"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"smedi-sme-db/app/auth"
 	"smedi-sme-db/app/contracts"
+	appEvents "smedi-sme-db/app/events"
 	"smedi-sme-db/app/http/requests"
 	"smedi-sme-db/app/models"
 	"smedi-sme-db/app/services"
@@ -75,6 +77,39 @@ func NewEventController() *EventController {
 	controller.SetBeforeUpdate(func(ctx http.Context, id uint, data map[string]interface{}) error {
 		// Any custom logic before updating a event
 		return nil
+	})
+
+	// Set afterStore hook to dispatch event for broadcasting notifications to eligible SMEs
+	controller.SetAfterStore(func(ctx http.Context, result interface{}) http.Response {
+		// Get the created event
+		createdEvent, ok := result.(*models.Event)
+		if !ok {
+			facades.Log().Warning("Failed to cast result to Event for notification broadcast")
+			return controller.ResourceCreatedResponse(ctx, result, "event")
+		}
+
+		// Get the creator's user ID
+		var senderID uint
+		var user models.User
+		if err := facades.Auth(ctx).User(&user); err == nil && user.ID > 0 {
+			senderID = user.ID
+		}
+
+		// Dispatch event for async notification broadcast
+		if senderID > 0 {
+			if err := facades.Event().Job(&appEvents.EventCreated{}, []event.Arg{
+				{Type: "uint", Value: senderID},
+				{Type: "uint", Value: createdEvent.ID},
+				{Type: "string", Value: createdEvent.Title},
+				{Type: "string", Value: createdEvent.Date.ToDateTimeString()},
+				{Type: "string", Value: createdEvent.Venue},
+				{Type: "string", Value: createdEvent.District},
+			}).Dispatch(); err != nil {
+				facades.Log().Warningf("Failed to dispatch EventCreated event: %v", err)
+			}
+		}
+
+		return controller.ResourceCreatedResponse(ctx, result, "event")
 	})
 
 	return controller

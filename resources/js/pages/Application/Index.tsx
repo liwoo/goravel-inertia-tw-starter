@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { CheckCircle, XCircle, Plus, Copy, Mail } from 'lucide-react';
+import { CheckCircle, XCircle, Plus, Copy, Mail, FileEdit } from 'lucide-react';
 import {
   Application,
   ApplicationListResponse,
-  ApplicationListRequest
+  ApplicationListRequest,
+  ApplicationType
 } from '@/types/application';
 import { CrudPage } from '@/components/Crud/CrudPage';
 import {
   ApplicationDetailView,
   applicationColumns,
   applicationColumnsMobile,
+  applicationFilters,
 } from './sections';
 import { useIsMobile } from '@/hooks/use-mobile';
 import Admin from '@/layouts/Admin';
@@ -77,6 +79,9 @@ export default function ApplicationIndex({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSmes, setIsLoadingSmes] = useState(false);
   const [needsReload, setNeedsReload] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState<string>('');
+  const [showAmendmentConfirmDialog, setShowAmendmentConfirmDialog] = useState(false);
+  const [showSignupRejectConfirmDialog, setShowSignupRejectConfirmDialog] = useState(false);
   const [welcomeEmailData, setWelcomeEmailData] = useState<{
     username: string;
     password: string;
@@ -89,10 +94,16 @@ export default function ApplicationIndex({
     router.reload({ only: ['data'] });
   };
 
-  const fetchSmes = async () => {
+  // Fetch SMEs that match the applicant's email (primary owner email match)
+  const fetchSmes = async (applicantEmail?: string) => {
     setIsLoadingSmes(true);
     try {
-      const response = await fetch('/api/smes', {
+      // If we have an applicant email, filter by primary owner email
+      const url = applicantEmail
+        ? `/api/smes/by-owner-email?email=${encodeURIComponent(applicantEmail)}`
+        : '/api/smes';
+
+      const response = await fetch(url, {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
@@ -101,7 +112,13 @@ export default function ApplicationIndex({
 
       if (response.ok) {
         const data = await response.json();
-        setSmes(data.data?.data || []);
+        // Handle both filtered response (array) and paginated response (nested data)
+        const smesData = Array.isArray(data.data) ? data.data : (data.data?.data || []);
+        setSmes(smesData);
+
+        if (applicantEmail && smesData.length === 0) {
+          toast.info('No SMEs found matching the applicant\'s email. You can create a new SME.');
+        }
       } else {
         toast.info('Failed to load SMEs');
       }
@@ -119,8 +136,47 @@ export default function ApplicationIndex({
       return;
     }
     setSelectedApplication(application);
+
+    // Amendment applications don't need SME selection - show confirmation first
+    if (application.type === 'amend_formalisation') {
+      setShowAmendmentConfirmDialog(true);
+      return;
+    }
+
+    // Signup applications need SME selection
+    // Filter SMEs by applicant's email to only show SMEs they own
     setShowApprovalDialog(true);
-    fetchSmes();
+    fetchSmes(application.email);
+  };
+
+  const handleApproveAmendment = async (application: Application) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/applications/${application.id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message || 'Amendment application approved successfully');
+        setSelectedApplication(null);
+        router.reload({ only: ['data'] });
+      } else {
+        toast.error(data.message || 'Failed to approve amendment application');
+      }
+    } catch (error) {
+      console.error('Error approving amendment application:', error);
+      toast.error('Failed to approve amendment application');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleApprove = async () => {
@@ -181,12 +237,26 @@ export default function ApplicationIndex({
       return;
     }
     setSelectedApplication(application);
+    setRejectionReason('');
+
+    // Signup applications need confirmation before showing rejection dialog
+    if (application.type === 'signup') {
+      setShowSignupRejectConfirmDialog(true);
+      return;
+    }
+
+    // Amendment applications go directly to rejection reason dialog
     setShowRejectionDialog(true);
   };
 
   // Handle reject submission
   const handleReject = async () => {
     if (!selectedApplication) return;
+
+    if (!rejectionReason.trim()) {
+      toast.info('Please provide a reason for rejection');
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -197,6 +267,7 @@ export default function ApplicationIndex({
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
         },
+        body: JSON.stringify({ reason: rejectionReason.trim() }),
       });
 
       const data = await response.json();
@@ -205,6 +276,7 @@ export default function ApplicationIndex({
         toast.success(data.message || 'Application rejected successfully');
         setShowRejectionDialog(false);
         setSelectedApplication(null);
+        setRejectionReason('');
         router.reload({ only: ['data'] });
       } else {
         toast.error(data.message || 'Failed to reject application');
@@ -397,6 +469,7 @@ SMEDI Team`;
             title="Applications"
             resourceName="applications"
             columns={isMobile ? applicationColumnsMobile : applicationColumns}
+            customFilters={applicationFilters}
             paginationConfig={meta?.pagination}
             detailView={ApplicationDetailView}
             onRefresh={handleRefresh}
@@ -413,7 +486,8 @@ SMEDI Team`;
           <DialogHeader>
             <DialogTitle>Approve Application</DialogTitle>
             <DialogDescription>
-              Select an SME to associate with this application. A user account will be created for the applicant.
+              Select an SME to link with this applicant. Only SMEs where the primary owner's email matches
+              the applicant's email ({selectedApplication?.email}) are shown. A user account will be created.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -460,14 +534,28 @@ SMEDI Team`;
           <DialogHeader>
             <DialogTitle>Reject Application</DialogTitle>
             <DialogDescription>
-              Are you sure you want to reject this application? This action cannot be undone.
+              {selectedApplication?.type === 'amend_formalisation'
+                ? 'Reject this formalisation amendment request. The applicant will be notified.'
+                : 'Reject this signup application. This action cannot be undone.'}
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Reason for Rejection *</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Please provide a reason for rejecting this application..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRejectionDialog(false)} disabled={isLoading}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleReject} disabled={isLoading}>
+            <Button variant="destructive" onClick={handleReject} disabled={isLoading || !rejectionReason.trim()}>
               {isLoading ? 'Rejecting...' : 'Reject Application'}
             </Button>
           </DialogFooter>
@@ -521,6 +609,92 @@ SMEDI Team`;
             onCancel={() => setShowCreateSmeDialog(false)}
             initialData={getInitialSmeDataFromApplication(selectedApplication)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Amendment Approval Confirmation Dialog */}
+      <Dialog open={showAmendmentConfirmDialog} onOpenChange={setShowAmendmentConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Amendment Request</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve this formalisation amendment request?
+              This will update the SME's formalisation data with the proposed changes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedApplication && (
+              <div className="bg-muted p-3 rounded-md text-sm space-y-1">
+                <p><strong>SME:</strong> {selectedApplication.sme}</p>
+                <p><strong>Submitted by:</strong> {selectedApplication.email}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAmendmentConfirmDialog(false);
+                setSelectedApplication(null);
+              }}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowAmendmentConfirmDialog(false);
+                if (selectedApplication) {
+                  handleApproveAmendment(selectedApplication);
+                }
+              }}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Approving...' : 'Yes, Approve Amendment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Signup Rejection Confirmation Dialog */}
+      <Dialog open={showSignupRejectConfirmDialog} onOpenChange={setShowSignupRejectConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Signup Application</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reject this signup application?
+              The applicant will not be able to access the system.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedApplication && (
+              <div className="bg-muted p-3 rounded-md text-sm space-y-1">
+                <p><strong>SME:</strong> {selectedApplication.sme}</p>
+                <p><strong>Applicant:</strong> {selectedApplication.registrant_name || `${selectedApplication.first_name} ${selectedApplication.last_name}`}</p>
+                <p><strong>Email:</strong> {selectedApplication.email}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSignupRejectConfirmDialog(false);
+                setSelectedApplication(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowSignupRejectConfirmDialog(false);
+                setShowRejectionDialog(true);
+              }}
+            >
+              Yes, Proceed to Rejection
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Admin>

@@ -2,6 +2,8 @@ package requests
 
 import (
 	"errors"
+	"regexp"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/support/carbon"
 )
@@ -28,39 +30,40 @@ func (r *AdditionalBusinessMemberCreateRequest) Rules(ctx http.Context) map[stri
 		"first_name":         "required|max_len:100",
 		"last_name":          "required|max_len:100",
 		"other_names":        "max_len:100",
+		"gender":             "required",
 		"nationality":        "required|max_len:100",
-		"national_id_number": "required|max_len:50",
+		"national_id_number": "max_len:50",
 		// Note: date_of_birth validation removed because the 'date' validator doesn't work with *string
 		// Date parsing/validation happens in ToCreateData() method instead
-		"email":       "email|max_len:100",
+		// Note: email validation handled in PrepareForValidation since 'nullable' validator doesn't exist
 		"phone_number": "required|max_len:20",
-		"is_intern":   "boolean",
+		"is_intern":    "boolean",
 		"is_part_time": "boolean",
-		"sme_id":      "required|numeric",
+		"sme_id":       "required|numeric",
 	}
 }
 
 // Messages defines custom validation messages
 func (r *AdditionalBusinessMemberCreateRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"first_name.required":         "First Name is required",
-		"first_name.max_len":          "First Name cannot exceed 100 characters",
-		"last_name.required":          "Last Name is required",
-		"last_name.max_len":           "Last Name cannot exceed 100 characters",
-		"other_names.max_len":         "Other Names cannot exceed 100 characters",
-		"nationality.required":        "Nationality is required",
-		"nationality.max_len":         "Nationality cannot exceed 100 characters",
-		"national_id_number.required": "National ID Number is required",
-		"national_id_number.max_len":  "National ID Number cannot exceed 50 characters",
-		"date_of_birth.date":          "Date of Birth must be a valid date",
-		"email.email":                 "Email must be a valid email address",
-		"email.max_len":               "Email cannot exceed 100 characters",
-		"phone_number.required":       "Phone Number is required",
-		"phone_number.max_len":        "Phone Number cannot exceed 20 characters",
-		"is_intern.boolean":           "Is Intern must be true or false",
-		"is_part_time.boolean":        "Is Part Time must be true or false",
-		"sme_id.required":             "SME ID is required",
-		"sme_id.numeric":              "SME ID must be a number",
+		"first_name.required":        "First Name is required",
+		"first_name.max_len":         "First Name cannot exceed 100 characters",
+		"last_name.required":         "Last Name is required",
+		"last_name.max_len":          "Last Name cannot exceed 100 characters",
+		"other_names.max_len":        "Other Names cannot exceed 100 characters",
+		"gender.required":            "Gender is required",
+		"nationality.required":       "Nationality is required",
+		"nationality.max_len":        "Nationality cannot exceed 100 characters",
+		"national_id_number.max_len": "National ID Number cannot exceed 50 characters",
+		"date_of_birth.date":         "Date of Birth must be a valid date",
+		"email.email":                "Email must be a valid email address",
+		"email.max_len":              "Email cannot exceed 100 characters",
+		"phone_number.required":      "Phone Number is required",
+		"phone_number.max_len":       "Phone Number cannot exceed 20 characters",
+		"is_intern.boolean":          "Is Intern must be true or false",
+		"is_part_time.boolean":       "Is Part Time must be true or false",
+		"sme_id.required":            "SME ID is required",
+		"sme_id.numeric":             "SME ID must be a number",
 	}
 }
 
@@ -86,10 +89,23 @@ func (r *AdditionalBusinessMemberCreateRequest) PrepareForValidation(ctx http.Co
 	if r.DateOfBirth != nil && *r.DateOfBirth != "" {
 		parsedDate := carbon.Parse(*r.DateOfBirth)
 		if parsedDate.Error != nil {
-			// Return a validation error that will be caught by the framework
 			return errors.New("date_of_birth: Date of Birth must be a valid date")
 		}
 	}
+
+	// Validate email format if provided (since 'nullable' validator doesn't exist)
+	if r.Email != nil && *r.Email != "" {
+		// Basic email validation using regex
+		emailRegex := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+		matched, _ := regexp.MatchString(emailRegex, *r.Email)
+		if !matched {
+			return errors.New("email: Email must be a valid email address")
+		}
+		if len(*r.Email) > 100 {
+			return errors.New("email: Email cannot exceed 100 characters")
+		}
+	}
+
 	return nil
 }
 

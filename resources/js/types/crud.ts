@@ -69,6 +69,7 @@ export interface CrudPageProps<T = any> {
   // Configuration
   title: string;
   resourceName: string; // e.g., 'teams', 'players'
+  displayName?: string; // Optional display name override (e.g., 'Additional Members' instead of 'additional_business_members')
   route?: string; // Optional route override (e.g., '/admin/permissions' for roles)
   columns: CrudColumn<T>[];
   actions?: CrudAction<T>[];

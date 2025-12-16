@@ -96,26 +96,49 @@ func (s *RBACSeeder) Run() error {
 		}
 	}
 
-	var permissions []models.Permission
-	err = facades.Orm().Query().Where("resource = ?", "additional_business_members").Find(&permissions)
-	if err != nil {
-		facades.Log().Error("Failed to find permissions", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return err
-	}
-
-	var role models.Role
-	err = facades.Orm().Query().Where("slug = ?", "sme-user").First(&role)
-	if err != nil {
-		return err
-	}
-	for _, permission := range permissions {
-		s.assignPermissionToRole(role.ID, permission.ID)
-	}
+	// Assign SME-related permissions to sme-user role
+	s.assignSmeUserPermissions()
 
 	facades.Log().Info("RBAC seeding completed")
 	return nil
+}
+
+// assignSmeUserPermissions assigns SME-related permissions to the sme-user role
+func (s *RBACSeeder) assignSmeUserPermissions() {
+	var role models.Role
+	err := facades.Orm().Query().Where("slug = ?", "sme-user").First(&role)
+	if err != nil {
+		facades.Log().Error("Failed to find sme-user role", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// Resources that SME users should have access to for their own data
+	smeResources := []string{
+		"additional_business_members",
+		"smes",
+		"primary_business_owners",
+		"business_formalisations",
+	}
+
+	// Actions SME users can perform on their own data
+	smeActions := []string{"read", "update", "create"}
+
+	for _, resource := range smeResources {
+		for _, action := range smeActions {
+			var permission models.Permission
+			err := facades.Orm().Query().
+				Where("resource = ? AND action = ?", resource, action).
+				First(&permission)
+			if err != nil {
+				continue
+			}
+			s.assignPermissionToRole(role.ID, permission.ID)
+		}
+	}
+
+	facades.Log().Info("Assigned SME permissions to sme-user role")
 }
 
 // createPermissions creates default permissions
@@ -614,23 +637,8 @@ func (s *RBACSeeder) ensureRBACSetup() error {
 		})
 	}
 
-	var permissions []models.Permission
-	err = facades.Orm().Query().Where("resource = ?", "additional_business_members").Find(&permissions)
-	if err != nil {
-		facades.Log().Error("Failed to find permissions", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return err
-	}
-	var role models.Role
-	err = facades.Orm().Query().Where("slug = ?", "sme-user").First(&role)
-	if err != nil {
-		return err
-	}
-
-	for _, permission := range permissions {
-		s.assignPermissionToRole(role.ID, permission.ID)
-	}
+	// Ensure SME user permissions are assigned
+	s.assignSmeUserPermissions()
 
 	facades.Log().Info("RBAC setup verification completed")
 	return nil

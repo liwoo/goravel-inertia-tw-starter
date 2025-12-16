@@ -142,47 +142,68 @@ func (r *LoginRequest) PrepareForValidation(data validation.Data) error {
 	return nil
 }
 
+// isAjaxRequest checks if the request is an AJAX/JSON request
+func (r *AuthController) isAjaxRequest(ctx http.Context) bool {
+	xRequestedWith := ctx.Request().Header("X-Requested-With")
+	acceptHeader := ctx.Request().Header("Accept")
+	facades.Log().Infof("[Login] Headers - X-Requested-With: '%s', Accept: '%s'", xRequestedWith, acceptHeader)
+	return xRequestedWith == "XMLHttpRequest" || acceptHeader == "application/json"
+}
+
+// loginError returns an appropriate error response based on request type
+func (r *AuthController) loginError(ctx http.Context, field string, message string) http.Response {
+	isAjax := r.isAjaxRequest(ctx)
+	facades.Log().Infof("[Login] loginError called - field: %s, message: %s, isAjax: %v", field, message, isAjax)
+
+	if isAjax {
+		facades.Log().Info("[Login] Returning JSON error response")
+		return ctx.Response().Json(http.StatusUnauthorized, http.Json{
+			"success": false,
+			"message": message,
+			"errors": map[string]string{
+				field: message,
+			},
+		})
+	}
+	facades.Log().Info("[Login] Returning redirect response")
+	ctx.Request().Session().Flash("errors", map[string]interface{}{
+		field: message,
+	})
+	return ctx.Response().Redirect(http.StatusFound, "/login")
+}
+
 func (r *AuthController) Login(ctx http.Context) http.Response {
 	var loginRequest LoginRequest
 	errors, err := ctx.Request().ValidateRequest(&loginRequest)
 	if err != nil {
-		// Flash general error message and redirect back
-		ctx.Request().Session().Flash("errors", map[string]interface{}{
-			"general": "Error validating request: " + err.Error(),
-		})
-		return ctx.Response().Redirect(http.StatusFound, "/login")
+		return r.loginError(ctx, "general", "Error validating request: "+err.Error())
 	}
 	if errors != nil {
-		// Flash validation errors directly
+		if r.isAjaxRequest(ctx) {
+			return ctx.Response().Json(http.StatusBadRequest, http.Json{
+				"success": false,
+				"message": "Validation failed",
+				"errors":  errors.All(),
+			})
+		}
 		ctx.Request().Session().Flash("errors", errors.All())
 		return ctx.Response().Redirect(http.StatusFound, "/login")
 	}
 
 	var user models.User
 	// Find user by email
-	if err := facades.Orm().Query().Where("email", loginRequest.Email).First(&user); err != nil {
-		// Flash field-specific error
-		ctx.Request().Session().Flash("errors", map[string]interface{}{
-			"email": "Invalid credentials (Email not found)",
-		})
-		return ctx.Response().Redirect(http.StatusFound, "/login")
+	if err := facades.Orm().Query().Where("email", loginRequest.Email).First(&user); err != nil || user.ID == 0 {
+		return r.loginError(ctx, "email", "No account found with this email address")
 	}
 
 	// Check password
 	if !facades.Hash().Check(loginRequest.Password, user.Password) {
-		// Flash field-specific error
-		ctx.Request().Session().Flash("errors", map[string]interface{}{
-			"password": "Password is incorrect",
-		})
-		return ctx.Response().Redirect(http.StatusFound, "/login")
+		return r.loginError(ctx, "password", "Incorrect password")
 	}
 
 	// Check if user is active
 	if !user.IsActive {
-		ctx.Request().Session().Flash("errors", map[string]interface{}{
-			"general": "Account is deactivated",
-		})
-		return ctx.Response().Redirect(http.StatusFound, "/login")
+		return r.loginError(ctx, "general", "Your account has been deactivated. Please contact support.")
 	}
 
 	// Check if 2FA is enabled
@@ -225,11 +246,7 @@ func (r *AuthController) Login(ctx http.Context) http.Response {
 	}
 
 	// No 2FA - proceed with normal login
-	// Check if this is an AJAX request (from axios)
-	isAjax := ctx.Request().Header("X-Requested-With") == "XMLHttpRequest" ||
-		ctx.Request().Header("Accept") == "application/json"
-
-	if isAjax {
+	if r.isAjaxRequest(ctx) {
 		return r.completeLoginJSON(ctx, &user)
 	}
 	return r.completeLogin(ctx, &user)

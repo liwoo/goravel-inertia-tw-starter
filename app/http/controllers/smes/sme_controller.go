@@ -310,3 +310,159 @@ func (c *SmeController) RecalculateAllClassifications(ctx http.Context) http.Res
 		"processed": count,
 	}, fmt.Sprintf("%d SME(s) classifications recalculated", count))
 }
+
+// FetchByUserEmail GET /api/smes/by-email - Returns the SME linked to the authenticated user's email
+func (c *SmeController) FetchByUserEmail(ctx http.Context) http.Response {
+	// Get the authenticated user
+	var user models.User
+	if err := facades.Auth(ctx).User(&user); err != nil || user.ID == 0 {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Call service layer to get SME by user's email
+	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
+	if err != nil {
+		return c.NotFoundResponse(ctx, "No SME linked to this user")
+	}
+
+	if sme == nil {
+		return c.NotFoundResponse(ctx, "No SME linked to this user")
+	}
+
+	return c.SuccessResponse(ctx, sme, "SME retrieved successfully")
+}
+
+// FetchMySme GET /api/my-sme - Returns the full SME details for the authenticated user's linked SME
+// This endpoint bypasses admin permissions and allows SME users to view their own SME
+func (c *SmeController) FetchMySme(ctx http.Context) http.Response {
+	// Get the authenticated user
+	var user models.User
+	if err := facades.Auth(ctx).User(&user); err != nil || user.ID == 0 {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Call service layer to get SME by user's email
+	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
+	if err != nil {
+		return c.NotFoundResponse(ctx, "No SME linked to this user")
+	}
+
+	if sme == nil {
+		return c.NotFoundResponse(ctx, "No SME linked to this user")
+	}
+
+	return c.SuccessResponse(ctx, sme, "SME retrieved successfully")
+}
+
+// FetchMySmeOwner GET /api/my-sme/primary-owner - Returns the primary owner of the user's linked SME
+func (c *SmeController) FetchMySmeOwner(ctx http.Context) http.Response {
+	// Get the authenticated user
+	var user models.User
+	if err := facades.Auth(ctx).User(&user); err != nil || user.ID == 0 {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Get the user's linked SME
+	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
+	if err != nil || sme == nil {
+		return c.NotFoundResponse(ctx, "No SME linked to this user")
+	}
+
+	// Get the primary owner for this SME
+	owner, err := c.smeService.GetPrimaryBusinessOwner(sme.ID)
+	if err != nil {
+		return c.NotFoundResponse(ctx, "Primary owner not found")
+	}
+
+	if owner == nil {
+		return c.SuccessResponse(ctx, nil, "No primary business owner found for this SME")
+	}
+
+	return c.SuccessResponse(ctx, owner, "Primary business owner retrieved successfully")
+}
+
+// UpdateMySme PUT /api/my-sme - Updates the authenticated user's linked SME
+func (c *SmeController) UpdateMySme(ctx http.Context) http.Response {
+	// Get the authenticated user
+	var user models.User
+	if err := facades.Auth(ctx).User(&user); err != nil || user.ID == 0 {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Get the user's linked SME
+	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
+	if err != nil || sme == nil {
+		return c.NotFoundResponse(ctx, "No SME linked to this user")
+	}
+
+	// Parse request body
+	var updateData map[string]interface{}
+	if err := ctx.Request().Bind(&updateData); err != nil {
+		return c.BadRequestResponse(ctx, "Invalid request body", nil)
+	}
+
+	// Update the SME
+	updatedSme, err := c.smeService.Update(sme.ID, updateData)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Failed to update SME: "+err.Error(), nil)
+	}
+
+	return c.SuccessResponse(ctx, updatedSme, "SME updated successfully")
+}
+
+// FetchSmesByPrimaryOwnerEmail GET /api/smes/by-owner-email - Returns SMEs where primary owner email matches
+// This is used during application approval to show only SMEs that belong to the applicant
+func (c *SmeController) FetchSmesByPrimaryOwnerEmail(ctx http.Context) http.Response {
+	// Check permissions - user must have read permission on applications
+	if err := c.CheckAuth(ctx, "read", nil); err != nil {
+		return c.ForbiddenResponse(ctx, "Access denied")
+	}
+
+	email := ctx.Request().Query("email", "")
+	if email == "" {
+		return c.BadRequestResponse(ctx, "Email parameter is required", nil)
+	}
+
+	// Find SMEs where primary owner email matches
+	smes, err := c.smeService.GetSmesByPrimaryOwnerEmail(email)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Failed to fetch SMEs: "+err.Error(), nil)
+	}
+
+	return c.SuccessResponse(ctx, smes, "SMEs retrieved successfully")
+}
+
+// UpdateMySmeOwner PUT /api/my-sme/primary-owner - Updates the primary owner of the user's linked SME
+func (c *SmeController) UpdateMySmeOwner(ctx http.Context) http.Response {
+	// Get the authenticated user
+	var user models.User
+	if err := facades.Auth(ctx).User(&user); err != nil || user.ID == 0 {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Get the user's linked SME
+	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
+	if err != nil || sme == nil {
+		return c.NotFoundResponse(ctx, "No SME linked to this user")
+	}
+
+	// Get the primary owner for this SME
+	owner, err := c.smeService.GetPrimaryBusinessOwner(sme.ID)
+	if err != nil || owner == nil {
+		return c.NotFoundResponse(ctx, "Primary owner not found")
+	}
+
+	// Parse request body
+	var updateData map[string]interface{}
+	if err := ctx.Request().Bind(&updateData); err != nil {
+		return c.BadRequestResponse(ctx, "Invalid request body", nil)
+	}
+
+	// Update the primary owner using the service
+	updatedOwner, err := c.smeService.UpdatePrimaryBusinessOwner(owner.ID, updateData)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Failed to update primary owner: "+err.Error(), nil)
+	}
+
+	return c.SuccessResponse(ctx, updatedOwner, "Primary owner updated successfully")
+}

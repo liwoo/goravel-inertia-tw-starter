@@ -459,6 +459,33 @@ func (s *SmeService) GetPrimaryBusinessOwner(smeID uint) (*models.PrimaryBusines
 	return sme.PrimaryBusinessOwner, nil
 }
 
+// UpdatePrimaryBusinessOwner updates a primary business owner by ID
+func (s *SmeService) UpdatePrimaryBusinessOwner(ownerID uint, data map[string]interface{}) (*models.PrimaryBusinessOwner, error) {
+	var owner models.PrimaryBusinessOwner
+	err := facades.Orm().Query().Where("id = ?", ownerID).First(&owner)
+	if err != nil {
+		return nil, err
+	}
+
+	if owner.ID == 0 {
+		return nil, errors.New("primary business owner not found")
+	}
+
+	// Update the owner with provided data
+	_, err = facades.Orm().Query().Model(&owner).Where("id = ?", ownerID).Update(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch updated owner
+	err = facades.Orm().Query().Where("id = ?", ownerID).First(&owner)
+	if err != nil {
+		return nil, err
+	}
+
+	return &owner, nil
+}
+
 // GetAdditionalBusinessMembers retrieves all additional business members for a given SME
 func (s *SmeService) GetAdditionalBusinessMembers(smeID uint) ([]models.AdditionalBusinessMember, error) {
 	var sme models.Sme
@@ -942,6 +969,26 @@ func (s *SmeService) GetSmeByUserEmail(email string) (*models.Sme, error) {
 	}
 
 	return &sme, nil
+}
+
+// GetSmesByPrimaryOwnerEmail returns all SMEs where the primary owner's email matches
+// This is used during application approval to filter SMEs that belong to the applicant
+func (s *SmeService) GetSmesByPrimaryOwnerEmail(email string) ([]models.Sme, error) {
+	var smes []models.Sme
+
+	err := facades.Orm().Query().
+		Model(&models.Sme{}).
+		Join("INNER JOIN primary_business_owner ON primary_business_owner.sme_id = smes.id").
+		Where("primary_business_owner.email = ?", email).
+		Where("primary_business_owner.deleted_at IS NULL").
+		Where("smes.deleted_at IS NULL").
+		Find(&smes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return smes, nil
 }
 
 // GetDistributionBySector returns SME distribution by sector field

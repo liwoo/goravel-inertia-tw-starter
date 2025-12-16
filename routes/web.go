@@ -12,6 +12,8 @@ import (
 	"smedi-sme-db/app/http/controllers/directory"
 	"smedi-sme-db/app/http/controllers/events"
 	"smedi-sme-db/app/http/controllers/members"
+	"smedi-sme-db/app/http/controllers/myapplications"
+	"smedi-sme-db/app/http/controllers/opportunities"
 	"smedi-sme-db/app/http/controllers/procurementnotices"
 	"smedi-sme-db/app/http/controllers/smes"
 	inertiaHelper "smedi-sme-db/app/http/inertia"
@@ -67,6 +69,8 @@ func Web() {
 	procurementnoticesPageController := procurementnotices.NewProcurementNoticePageController()
 	applicationsPageController := applications.NewApplicationPageController()
 	membersPageController := members.NewMemberPageController()
+	opportunitiesPageController := opportunities.NewOpportunitiesPageController()
+	myApplicationsPageController := myapplications.NewMyApplicationsPageController()
 	directoryController := directory.NewDirectoryController()
 
 	facades.Route().Post("/login", authController.Login)
@@ -148,6 +152,12 @@ func Web() {
 		router.Get("/admin/users", userPageController.Index)
 
 		router.Get("/portal", membersPageController.Index)
+
+		// Opportunities page (for SME users)
+		router.Get("/opportunities", opportunitiesPageController.Index)
+
+		// My Applications page (for SME users to track their formalisation change requests)
+		router.Get("/applications", myApplicationsPageController.Index)
 
 		// SME Directory (accessible to all authenticated users)
 		router.Get("/directory", directoryController.ShowDirectory)

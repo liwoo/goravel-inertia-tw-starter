@@ -15,8 +15,10 @@ axios.interceptors.response.use(
   response => response,
   error => {
     if (error.response?.status === 401) {
-      // Redirect to login page
-      window.location.href = '/login';
+      // Don't redirect if already on login page (let the login form handle its own errors)
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

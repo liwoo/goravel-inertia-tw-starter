@@ -1,10 +1,12 @@
 package procurement_notices
 
 import (
+	"github.com/goravel/framework/contracts/event"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"smedi-sme-db/app/auth"
 	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/events"
 	"smedi-sme-db/app/http/requests"
 	"smedi-sme-db/app/models"
 	"smedi-sme-db/app/services"
@@ -77,6 +79,42 @@ func NewProcurementNoticeController() *ProcurementNoticeController {
 		return nil
 	})
 
+	// Set afterStore hook to dispatch event for broadcasting notifications when procurement is published
+	controller.SetAfterStore(func(ctx http.Context, result interface{}) http.Response {
+		// Get the created procurement notice
+		procurement, ok := result.(*models.ProcurementNotice)
+		if !ok {
+			facades.Log().Warning("Failed to cast result to ProcurementNotice for notification broadcast")
+			return controller.ResourceCreatedResponse(ctx, result, "procurement_notice")
+		}
+
+		// Only broadcast if the procurement is published
+		if procurement.IsPublished {
+			// Get the creator's user ID
+			var senderID uint
+			var user models.User
+			if err := facades.Auth(ctx).User(&user); err == nil && user.ID > 0 {
+				senderID = user.ID
+			}
+
+			// Dispatch event for async notification broadcast
+			if senderID > 0 {
+				if err := facades.Event().Job(&events.ProcurementPublished{}, []event.Arg{
+					{Type: "uint", Value: senderID},
+					{Type: "uint", Value: procurement.ID},
+					{Type: "string", Value: procurement.Organization},
+					{Type: "string", Value: procurement.RefNo},
+					{Type: "string", Value: procurement.ProcurementType},
+					{Type: "string", Value: procurement.CloseDate.ToDateTimeString()},
+				}).Dispatch(); err != nil {
+					facades.Log().Warningf("Failed to dispatch ProcurementPublished event: %v", err)
+				}
+			}
+		}
+
+		return controller.ResourceCreatedResponse(ctx, result, "procurement_notice")
+	})
+
 	return controller
 }
 
@@ -122,6 +160,26 @@ func (c *ProcurementNoticeController) TogglePublish(ctx http.Context) http.Respo
 	statusText := "unpublished"
 	if newStatus {
 		statusText = "published"
+
+		// Dispatch event for async notification broadcast when procurement is published
+		var senderID uint
+		var user models.User
+		if err := facades.Auth(ctx).User(&user); err == nil && user.ID > 0 {
+			senderID = user.ID
+		}
+
+		if senderID > 0 {
+			if err := facades.Event().Job(&events.ProcurementPublished{}, []event.Arg{
+				{Type: "uint", Value: senderID},
+				{Type: "uint", Value: item.ID},
+				{Type: "string", Value: item.Organization},
+				{Type: "string", Value: item.RefNo},
+				{Type: "string", Value: item.ProcurementType},
+				{Type: "string", Value: item.CloseDate.ToDateTimeString()},
+			}).Dispatch(); err != nil {
+				facades.Log().Warningf("Failed to dispatch ProcurementPublished event: %v", err)
+			}
+		}
 	}
 
 	return c.SuccessResponse(ctx, map[string]interface{}{

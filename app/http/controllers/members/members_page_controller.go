@@ -31,12 +31,22 @@ func NewMemberPageController() *MemberPageController {
 		memberService: memberService,
 	}
 
-	controller.AddExtraDataProvider("events", func(ctx http.Context) (interface{}, error) {
-		return dashboardService.GetUpcomingEvents(3), nil
-	})
+	controller.AddExtraDataProvider("calendarEvents", func(ctx http.Context) (interface{}, error) {
+		user := auth.GetPermissionHelper().GetAuthenticatedUser(ctx)
+		if user == nil {
+			return dashboardService.GetEventsForDistrict(""), nil
+		}
 
-	controller.AddExtraDataProvider("procurements", func(ctx http.Context) (interface{}, error) {
-		return dashboardService.GetUpcomingProcurements(3), nil
+		sme, err := smeService.GetSmeByUserEmail(user.Email)
+		if err != nil || sme == nil {
+			return dashboardService.GetEventsForDistrict(""), nil
+		}
+
+		district := ""
+		if sme.District != nil {
+			district = *sme.District
+		}
+		return dashboardService.GetEventsForDistrict(district), nil
 	})
 
 	// Helper function to get user's linked SME
@@ -109,6 +119,76 @@ func NewMemberPageController() *MemberPageController {
 		}
 
 		return formalisation, nil
+	})
+
+	controller.AddExtraDataProvider("registrationNumber", func(ctx http.Context) (interface{}, error) {
+		user := auth.GetPermissionHelper().GetAuthenticatedUser(ctx)
+		if user == nil {
+			return nil, nil
+		}
+
+		sme, err := smeService.GetSmeByUserEmail(user.Email)
+		if err != nil || sme == nil {
+			return nil, nil
+		}
+
+		return sme.RegistrationNumber, nil
+	})
+
+	controller.AddExtraDataProvider("taxIdentificationNumber", func(ctx http.Context) (interface{}, error) {
+		user := auth.GetPermissionHelper().GetAuthenticatedUser(ctx)
+		if user == nil {
+			return nil, nil
+		}
+
+		sme, err := smeService.GetSmeByUserEmail(user.Email)
+		if err != nil || sme == nil {
+			return nil, nil
+		}
+
+		return sme.TaxIdentificationNumber, nil
+	})
+
+	controller.AddExtraDataProvider("classification", func(ctx http.Context) (interface{}, error) {
+		user := auth.GetPermissionHelper().GetAuthenticatedUser(ctx)
+		if user == nil {
+			return nil, nil
+		}
+
+		sme, err := smeService.GetSmeByUserEmail(user.Email)
+		if err != nil || sme == nil {
+			return nil, nil
+		}
+
+		return sme.Classification, nil
+	})
+
+	controller.AddExtraDataProvider("usmeNumber", func(ctx http.Context) (interface{}, error) {
+		user := auth.GetPermissionHelper().GetAuthenticatedUser(ctx)
+		if user == nil {
+			return nil, nil
+		}
+
+		sme, err := smeService.GetSmeByUserEmail(user.Email)
+		if err != nil || sme == nil {
+			return nil, nil
+		}
+
+		return sme.UsmeNumber, nil
+	})
+
+	controller.AddExtraDataProvider("district", func(ctx http.Context) (interface{}, error) {
+		user := auth.GetPermissionHelper().GetAuthenticatedUser(ctx)
+		if user == nil {
+			return nil, nil
+		}
+
+		sme, err := smeService.GetSmeByUserEmail(user.Email)
+		if err != nil || sme == nil {
+			return nil, nil
+		}
+
+		return sme.District, nil
 	})
 
 	return controller

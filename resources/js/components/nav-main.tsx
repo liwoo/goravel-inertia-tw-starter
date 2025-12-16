@@ -31,6 +31,7 @@ export function NavMain({
     url: string
     icon?: LucideIcon
     variant?: "default" | "primary"
+    action?: "openMySmeModal"
   }[]
 }) {
   const { url } = usePage();
@@ -48,6 +49,17 @@ export function NavMain({
   };
 
   const primaryCta = items.find(item => item.variant === 'primary');
+
+  // Handle primary CTA click - either dispatch action or navigate
+  const handlePrimaryCtaClick = () => {
+    if (primaryCta?.action) {
+      // Dispatch custom event for actions
+      window.dispatchEvent(new CustomEvent('nav-action', { detail: { action: primaryCta.action } }));
+    } else if (primaryCta?.url) {
+      router.visit(primaryCta.url);
+    }
+  };
+
   // Check if user can create any entity
   const canCreateAnything =
     canPerformAction('smes', 'create') ||
@@ -77,9 +89,9 @@ export function NavMain({
         {primaryCta != null ? <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
-              tooltip="Quick Create"
+              tooltip={primaryCta.title}
               className="min-w-16 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
-              onClick={() => router.visit(primaryCta.url)}
+              onClick={handlePrimaryCtaClick}
             >
               <PlusCircleIcon />
               <span>{primaryCta.title}</span>

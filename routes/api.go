@@ -172,7 +172,15 @@ func Api(router route.Router) {
 		protectedRouter.Put("/configs/{id}", configController.Update)
 		protectedRouter.Delete("/configs/{id}", configController.Delete)
 
+		// My SME routes (for SME users to access their own SME without admin permissions)
+		protectedRouter.Get("/my-sme", smeController.FetchMySme)
+		protectedRouter.Put("/my-sme", smeController.UpdateMySme)
+		protectedRouter.Get("/my-sme/primary-owner", smeController.FetchMySmeOwner)
+		protectedRouter.Put("/my-sme/primary-owner", smeController.UpdateMySmeOwner)
+
 		// SME routes
+		protectedRouter.Get("/smes/by-email", smeController.FetchByUserEmail)           // Must be before {id} routes
+		protectedRouter.Get("/smes/by-owner-email", smeController.FetchSmesByPrimaryOwnerEmail) // For application approval filtering
 		protectedRouter.Post("/smes", smeController.Store)
 		protectedRouter.Put("/smes/{id}", smeController.Update)
 		protectedRouter.Delete("/smes/{id}", smeController.Delete)
@@ -226,6 +234,8 @@ func Api(router route.Router) {
 		protectedRouter.Delete("/applications/{id}", applicationController.Delete)
 		protectedRouter.Post("/applications/{id}/approve", applicationController.ApproveApplication)
 		protectedRouter.Post("/applications/{id}/reject", applicationController.RejectApplication)
+		protectedRouter.Post("/applications/amendment", applicationController.SubmitAmendment)
+		protectedRouter.Get("/applications/amendment/pending/{smeId}", applicationController.CheckPendingAmendment)
 
 		// Role management routes
 		protectedRouter.Get("/roles", rolesController.Index)

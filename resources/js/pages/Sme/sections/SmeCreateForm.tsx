@@ -871,7 +871,12 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
                       onChange={(e) => setBusinessData({ ...businessData, contactEmail: e.target.value })}
                       placeholder="Enter email"
                       className={errors.contactEmail ? 'border-destructive' : ''}
+                      readOnly={!!initialData?.contactEmail}
+                      disabled={!!initialData?.contactEmail}
                     />
+                    {initialData?.contactEmail && (
+                      <p className="text-sm text-muted-foreground">Email is locked to match the applicant's email</p>
+                    )}
                     {errors.contactEmail && <p className="text-sm text-destructive">{errors.contactEmail}</p>}
                   </div>
 
@@ -1336,14 +1341,19 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">Email {initialData?.ownerEmail ? '*' : ''}</Label>
                     <Input
                       id="email"
                       type="email"
                       value={primaryOwner.email}
                       onChange={(e) => setPrimaryOwner({ ...primaryOwner, email: e.target.value })}
                       placeholder="Enter email"
+                      readOnly={!!initialData?.ownerEmail}
+                      disabled={!!initialData?.ownerEmail}
                     />
+                    {initialData?.ownerEmail && (
+                      <p className="text-sm text-muted-foreground">Email is locked to match the applicant's email</p>
+                    )}
                   </div>
 
                   {/* Region is inferred from district - removed from form */}

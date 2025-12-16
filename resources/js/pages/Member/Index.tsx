@@ -17,18 +17,14 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import Admin from '@/layouts/Admin';
 import {
-  UpcomingEventsWidget,
-  UpcomingProcurementsWidget,
   FormalisationScoreWidget,
-  UpcomingEvent,
-  UpcomingProcurement,
-  FormalisationData
+  EventsCalendarWidget,
+  FormalisationData,
+  CalendarEvent
 } from '@/components/widgets';
+import { FormalisationEditSheet } from '@/components/FormalisationEditSheet';
 import axios from 'axios';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MySmeModal } from '@/components/MySmeModal';
-import { Building2 } from 'lucide-react';
 
 // Props interface for the Member Index page
 interface MemberIndexProps {
@@ -49,12 +45,16 @@ interface MemberIndexProps {
   stats?: {
     [key: string]: any;
   };
-  events?: UpcomingEvent[];
-  procurements?: UpcomingProcurement[];
+  calendarEvents?: CalendarEvent[];
   formalisation?: FormalisationData;
+  district?: string;
   smeId?: number;
   userName?: string;
   smeName?: string;
+  registrationNumber?: string;
+  taxIdentificationNumber?: string;
+  classification?: string;
+  usmeNumber?: string;
 }
 
 export default function MemberIndex({
@@ -62,33 +62,40 @@ export default function MemberIndex({
   filters,
   permissions,
   meta,
-  events = [],
-  procurements = [],
+  calendarEvents = [],
   formalisation,
+  district,
   smeId,
   userName,
-  smeName
+  smeName,
+  registrationNumber,
+  taxIdentificationNumber,
+  classification,
+  usmeNumber
 }: MemberIndexProps) {
   const isMobile = useIsMobile();
   const [primaryOwner, setPrimaryOwner] = useState<any>(null);
   const [additionalMembers, setAdditionalMembers] = useState<any[]>([]);
   const [employeeSummary, setEmployeeSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isMySmeModalOpen, setIsMySmeModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [hasPendingAmendment, setHasPendingAmendment] = useState(false);
 
   useEffect(() => {
     if (smeId) {
       const fetchRelatedData = async () => {
         try {
-          const [ownerRes, membersRes, summaryRes] = await Promise.all([
+          const [ownerRes, membersRes, summaryRes, pendingRes] = await Promise.all([
             axios.get(`/api/smes/${smeId}/primary_business_owner`).catch(() => ({ data: { data: null } })),
             axios.get(`/api/smes/${smeId}/additional_business_members`).catch(() => ({ data: { data: [] } })),
             axios.get(`/api/smes/${smeId}/business_employee_summary`).catch(() => ({ data: { data: null } })),
+            axios.get(`/api/applications/amendment/pending/${smeId}`).catch(() => ({ data: { data: { has_pending_amendment: false } } })),
           ]);
 
           setPrimaryOwner(ownerRes.data.data);
           setAdditionalMembers(membersRes.data.data || []);
           setEmployeeSummary(summaryRes.data.data);
+          setHasPendingAmendment(pendingRes.data.data?.has_pending_amendment ?? false);
         } catch (error) {
           console.error('Error fetching related data:', error);
         } finally {
@@ -126,29 +133,34 @@ export default function MemberIndex({
               Manage your team, track opportunities, and monitor your business progress.
             </p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            {smeName && (
-              <Badge variant="secondary" className="text-lg px-4 py-2 font-medium">
-                {smeName}
-              </Badge>
-            )}
-            {smeId && (
-              <Button
-                type="button"
-                variant="outline"
-                size="default"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setIsMySmeModalOpen(true);
-                }}
-                className="gap-2"
-              >
-                <Building2 className="h-4 w-4" />
-                My SME
-              </Button>
-            )}
-          </div>
+          {smeName && (
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <div className="text-lg font-semibold text-right">{smeName}</div>
+              <div className="flex items-center gap-2">
+                {usmeNumber && (
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {usmeNumber}
+                  </Badge>
+                )}
+                {classification && (
+                  <Badge
+                    variant="default"
+                    className={`text-sm px-3 py-1 font-semibold ${
+                      classification === 'Micro'
+                        ? 'bg-blue-600 hover:bg-blue-700'
+                        : classification === 'Small'
+                        ? 'bg-emerald-600 hover:bg-emerald-700'
+                        : classification === 'Medium'
+                        ? 'bg-amber-600 hover:bg-amber-700'
+                        : ''
+                    }`}
+                  >
+                    {classification} Enterprise
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Main Content + Sidebar Row */}
@@ -162,6 +174,8 @@ export default function MemberIndex({
               additionalMembers={additionalMembers}
               employeeSummary={employeeSummary}
               isLoading={loading}
+              canEdit={!!smeId}
+              onEditClick={() => setIsEditModalOpen(true)}
             />
 
             {/* Main CRUD Component */}
@@ -171,6 +185,7 @@ export default function MemberIndex({
                 filters={filters}
                 title="Team Members"
                 resourceName="additional_business_members"
+                displayName="Additional Member"
                 columns={isMobile ? memberColumnsMobile : memberColumns}
                 customFilters={memberFilters}
                 paginationConfig={meta?.pagination}
@@ -186,20 +201,37 @@ export default function MemberIndex({
             </div>
           </div>
 
-          {/* Right Sidebar - Widgets (top-aligned with content) */}
-          <aside className="w-full xl:w-[380px] 2xl:w-[420px] flex flex-col gap-4 shrink-0">
-            <UpcomingEventsWidget events={events} />
-            <UpcomingProcurementsWidget procurements={procurements} />
+          {/* Right Sidebar - Calendar Widget */}
+          <aside className="w-full xl:w-[380px] 2xl:w-[420px] shrink-0">
+            <EventsCalendarWidget events={calendarEvents} district={district} />
           </aside>
         </div>
       </div>
 
-      {/* My SME Modal */}
+      {/* Formalisation Edit Sheet */}
       {smeId && (
-        <MySmeModal
-          open={isMySmeModalOpen}
-          onOpenChange={setIsMySmeModalOpen}
+        <FormalisationEditSheet
+          isOpen={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
           smeId={smeId}
+          hasPendingAmendment={hasPendingAmendment}
+          currentData={{
+            registrationNumber: registrationNumber,
+            taxIdentificationNumber: taxIdentificationNumber,
+            hasBankAccount: formalisation?.has_bank_account ?? formalisation?.hasBankAccount,
+            hasTaxClarification: formalisation?.has_tax_clarification ?? formalisation?.hasTaxClarification,
+            isRegisteredForVat: formalisation?.is_registered_for_vat ?? formalisation?.isRegisteredForVat,
+            isMemberOfAssociation: formalisation?.is_member_of_association ?? formalisation?.isMemberOfAssociation,
+            isAffiliated: formalisation?.is_affiliated ?? formalisation?.isAffiliated,
+            hasExportLicense: formalisation?.has_export_license ?? formalisation?.hasExportLicense,
+            hasAccessedBds: formalisation?.has_accessed_bds ?? formalisation?.hasAccessedBds,
+            annualTurnover: formalisation?.annual_turnover ?? formalisation?.annualTurnover,
+            estimatedValueOfAssets: formalisation?.estimated_value_of_assets ?? formalisation?.estimatedValueOfAssets,
+          }}
+          onSuccess={() => {
+            // Reload the page to fetch updated data
+            router.reload();
+          }}
         />
       )}
     </Admin>

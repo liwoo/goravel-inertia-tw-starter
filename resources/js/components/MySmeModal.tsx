@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { DISTRICT_NAMES } from '@/constants/districts';
 import { NATIONALITY_OPTIONS } from '@/types/nationalities';
 import { GENDER_OPTIONS } from '@/types/gender';
@@ -28,6 +29,39 @@ import {
 } from '@/lib/malawi-validators';
 import { snakefiyKeys, camelifyKeys } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+
+// Helper to parse date from various formats (carbon.DateTime returns "2003-07-16 16:22:02")
+const parseDateForInput = (dateValue: any): string => {
+  if (!dateValue) return '';
+
+  // If it's already in YYYY-MM-DD format, return as-is
+  if (typeof dateValue === 'string') {
+    // Handle carbon.DateTime format "2003-07-16 16:22:02"
+    if (dateValue.includes(' ')) {
+      return dateValue.split(' ')[0];
+    }
+    // Handle ISO format "2003-07-16T16:22:02Z"
+    if (dateValue.includes('T')) {
+      return dateValue.split('T')[0];
+    }
+    // Already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+    // Try to parse and format
+    const parsed = new Date(dateValue);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().split('T')[0];
+    }
+  }
+
+  // Handle date object
+  if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+    return dateValue.toISOString().split('T')[0];
+  }
+
+  return '';
+};
 
 interface MySmeModalProps {
   open: boolean;
@@ -80,9 +114,10 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
   // Configuration options
   const [sectorOptions, setSectorOptions] = useState<string[]>([]);
 
-  // Fetch SME and Owner Data
+  // Fetch SME and Owner Data when modal opens
   useEffect(() => {
     if (open && smeId) {
+      console.log('MySmeModal: Fetching data for smeId:', smeId);
       fetchData();
       fetchConfigs();
     }
@@ -91,40 +126,51 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      console.log('MySmeModal: Making API calls for my-sme');
+      // Use /api/my-sme endpoints which bypass admin permissions
       const [smeRes, ownerRes] = await Promise.all([
-        axios.get(`/api/smes/${smeId}`),
-        axios.get(`/api/smes/${smeId}/primary_business_owner`)
+        axios.get('/api/my-sme'),
+        axios.get('/api/my-sme/primary-owner')
       ]);
 
-      const smeDataRaw = smeRes.data.data;
-      setSmeData({
-        id: smeDataRaw.id,
-        name: smeDataRaw.name || '',
-        sector: smeDataRaw.sector || '',
-        subSector: smeDataRaw.sub_sector || smeDataRaw.subSector || '',
-        contactPhone: smeDataRaw.contact_phone || smeDataRaw.contactPhone || '',
-        contactEmail: smeDataRaw.contact_email || smeDataRaw.contactEmail || '',
-        website: smeDataRaw.website || '',
-        district: smeDataRaw.district || '',
-        physicalAddress: smeDataRaw.physical_address || smeDataRaw.physicalAddress || '',
-        businessDescription: smeDataRaw.business_description || smeDataRaw.businessDescription || ''
-      });
+      console.log('MySmeModal: SME Response:', smeRes.data);
+      console.log('MySmeModal: Owner Response:', ownerRes.data);
 
-      const ownerDataRaw = ownerRes.data.data;
-      if (ownerDataRaw) {
-        setOwnerData({
-          id: ownerDataRaw.id,
-          firstName: ownerDataRaw.first_name || ownerDataRaw.firstName || '',
-          lastName: ownerDataRaw.last_name || ownerDataRaw.lastName || '',
-          nationalIdNumber: ownerDataRaw.national_id_number || ownerDataRaw.nationalIdNumber || '',
-          dateOfBirth: ownerDataRaw.date_of_birth || ownerDataRaw.dateOfBirth || '',
-          gender: ownerDataRaw.gender || '',
-          phoneNumber: ownerDataRaw.phone_number || ownerDataRaw.phoneNumber || '',
-          email: ownerDataRaw.email || ''
+      // Handle nested data structure - API returns { success, data, message }
+      const smeDataRaw = smeRes.data?.data || smeRes.data;
+      if (smeDataRaw) {
+        setSmeData({
+          id: smeDataRaw.id || smeDataRaw.ID,
+          name: smeDataRaw.name || smeDataRaw.Name || '',
+          sector: smeDataRaw.sector || smeDataRaw.Sector || '',
+          subSector: smeDataRaw.sub_sector || smeDataRaw.subSector || smeDataRaw.SubSector || '',
+          contactPhone: smeDataRaw.contact_phone || smeDataRaw.contactPhone || smeDataRaw.ContactPhone || '',
+          contactEmail: smeDataRaw.contact_email || smeDataRaw.contactEmail || smeDataRaw.ContactEmail || '',
+          website: smeDataRaw.website || smeDataRaw.Website || '',
+          district: smeDataRaw.district || smeDataRaw.District || '',
+          physicalAddress: smeDataRaw.physical_address || smeDataRaw.physicalAddress || smeDataRaw.PhysicalAddress || '',
+          businessDescription: smeDataRaw.business_description || smeDataRaw.businessDescription || smeDataRaw.BusinessDescription || ''
         });
+        console.log('MySmeModal: SME Data set:', smeDataRaw);
+      }
+
+      const ownerDataRaw = ownerRes.data?.data || ownerRes.data;
+      if (ownerDataRaw) {
+        const rawDateOfBirth = ownerDataRaw.date_of_birth || ownerDataRaw.dateOfBirth || ownerDataRaw.DateOfBirth;
+        setOwnerData({
+          id: ownerDataRaw.id || ownerDataRaw.ID,
+          firstName: ownerDataRaw.first_name || ownerDataRaw.firstName || ownerDataRaw.FirstName || '',
+          lastName: ownerDataRaw.last_name || ownerDataRaw.lastName || ownerDataRaw.LastName || '',
+          nationalIdNumber: ownerDataRaw.national_id_number || ownerDataRaw.nationalIdNumber || ownerDataRaw.NationalIdNumber || '',
+          dateOfBirth: parseDateForInput(rawDateOfBirth),
+          gender: ownerDataRaw.gender || ownerDataRaw.Gender || '',
+          phoneNumber: ownerDataRaw.phone_number || ownerDataRaw.phoneNumber || ownerDataRaw.PhoneNumber || '',
+          email: ownerDataRaw.email || ownerDataRaw.Email || ''
+        });
+        console.log('MySmeModal: Owner Data set:', ownerDataRaw, 'Parsed dateOfBirth:', parseDateForInput(rawDateOfBirth));
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('MySmeModal: Error fetching data:', error);
       toast.error('Failed to load SME details');
     } finally {
       setIsLoading(false);
@@ -136,9 +182,27 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
       const sectorRes = await axios.get('/api/configs', {
         params: { config_type: 'Sectors', pageSize: 100, sort: 'name', direction: 'ASC' }
       });
-      setSectorOptions(sectorRes.data.data?.data?.map((s: any) => s.name) || []);
+      console.log('MySmeModal: Sector configs response:', sectorRes.data);
+
+      // Handle various response formats
+      let sectors: string[] = [];
+      const responseData = sectorRes.data;
+
+      if (responseData?.data?.data && Array.isArray(responseData.data.data)) {
+        // Format: { data: { data: [...] } }
+        sectors = responseData.data.data.map((s: any) => s.name || s.Name).filter(Boolean);
+      } else if (responseData?.data && Array.isArray(responseData.data)) {
+        // Format: { data: [...] }
+        sectors = responseData.data.map((s: any) => s.name || s.Name).filter(Boolean);
+      } else if (Array.isArray(responseData)) {
+        // Format: [...]
+        sectors = responseData.map((s: any) => s.name || s.Name).filter(Boolean);
+      }
+
+      console.log('MySmeModal: Parsed sector options:', sectors);
+      setSectorOptions(sectors);
     } catch (error) {
-      console.error('Error fetching configs:', error);
+      console.error('MySmeModal: Error fetching configs:', error);
     }
   };
 
@@ -207,7 +271,8 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
         businessDescription: smeData.businessDescription
       });
 
-      await axios.put(`/api/smes/${smeId}`, payload);
+      // Use /api/my-sme endpoint which bypasses admin permissions
+      await axios.put('/api/my-sme', payload);
       toast.success('Business details updated successfully');
       setSmeErrors({});
     } catch (error: any) {
@@ -236,7 +301,8 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
         email: ownerData.email
       });
 
-      await axios.put(`/api/primary-business-owners/${ownerData.id}`, payload);
+      // Use /api/my-sme/primary-owner endpoint which bypasses admin permissions
+      await axios.put('/api/my-sme/primary-owner', payload);
       toast.success('Owner details updated successfully');
       setOwnerErrors({});
     } catch (error: any) {
@@ -254,26 +320,35 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
     setActiveTab('business');
   };
 
+  // Ensure current sector is included in options for display
+  const effectiveSectorOptions = useMemo(() => {
+    const options = [...sectorOptions];
+    if (smeData.sector && !options.includes(smeData.sector)) {
+      options.unshift(smeData.sector);
+    }
+    return options;
+  }, [sectorOptions, smeData.sector]);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">My SME Details</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-xl md:max-w-2xl overflow-hidden flex flex-col">
+        <SheetHeader className="flex-shrink-0 pb-4">
+          <SheetTitle className="text-2xl">My SME Details</SheetTitle>
+        </SheetHeader>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center flex-1">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+              <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
                 <TabsTrigger value="business">Business Details</TabsTrigger>
                 <TabsTrigger value="owner">Primary Owner</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="business" className="space-y-4 mt-4">
+              <TabsContent value="business" className="flex-1 overflow-y-auto space-y-4 mt-4 pr-2">
                 <Card>
                   <CardHeader>
                     <CardTitle>Business Information</CardTitle>
@@ -303,7 +378,7 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
                             <SelectValue placeholder="Select sector" />
                           </SelectTrigger>
                           <SelectContent>
-                            {sectorOptions.map((sec) => (
+                            {effectiveSectorOptions.map((sec) => (
                               <SelectItem key={sec} value={sec}>{sec}</SelectItem>
                             ))}
                           </SelectContent>
@@ -401,7 +476,7 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
                   </CardContent>
                 </Card>
 
-                <DialogFooter>
+                <SheetFooter className="pt-4 border-t">
                   <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
                     Cancel
                   </Button>
@@ -409,10 +484,10 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
                     {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                   </Button>
-                </DialogFooter>
+                </SheetFooter>
               </TabsContent>
 
-              <TabsContent value="owner" className="space-y-4 mt-4">
+              <TabsContent value="owner" className="flex-1 overflow-y-auto space-y-4 mt-4 pr-2">
                 {!ownerData ? (
                   <Card>
                     <CardHeader>
@@ -528,7 +603,7 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
                       </CardContent>
                     </Card>
 
-                    <DialogFooter>
+                    <SheetFooter className="pt-4 border-t">
                       <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
                         Cancel
                       </Button>
@@ -536,14 +611,14 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save Changes
                       </Button>
-                    </DialogFooter>
+                    </SheetFooter>
                   </>
                 )}
               </TabsContent>
             </Tabs>
-          </>
+          </div>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };

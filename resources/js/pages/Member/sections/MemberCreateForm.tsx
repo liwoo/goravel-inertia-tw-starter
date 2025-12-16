@@ -2,11 +2,22 @@ import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { CrudFormProps } from '@/types/crud';
 import { MemberCreateData } from '@/types/member';
-import { User, Mail } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  validateNationalID,
+  formatMalawiPhone,
+  VALIDATION_MESSAGES,
+  EXAMPLE_FORMATS,
+} from '@/lib/malawi-validators';
+import { NATIONALITIES } from '@/constants/nationalities';
 
 interface MemberCreateFormProps extends CrudFormProps {
   setIsSaving?: (saving: boolean) => void;
@@ -42,15 +53,21 @@ export const MemberCreateForm = forwardRef<any, MemberCreateFormProps>(({
     // Basic validation
     const newErrors: Record<string, string> = {};
 
-    // TODO: Add validation rules
     if (!formData.first_name) {
       newErrors.first_name = 'First Name is required';
     }
     if (!formData.last_name) {
       newErrors.last_name = 'Last Name is required';
     }
-    if (!formData.national_id_number) {
-      newErrors.national_id_number = 'National ID is required';
+    if (!formData.gender) {
+      newErrors.gender = 'Gender is required';
+    }
+    if (!formData.nationality) {
+      newErrors.nationality = 'Nationality is required';
+    }
+    // National ID is optional, but if provided must be valid format
+    if (formData.national_id_number && !validateNationalID(formData.national_id_number)) {
+      newErrors.national_id_number = VALIDATION_MESSAGES.NATIONAL_ID;
     }
     if (!formData.phone_number) {
       newErrors.phone_number = 'Phone Number is required';
@@ -92,6 +109,12 @@ export const MemberCreateForm = forwardRef<any, MemberCreateFormProps>(({
   useImperativeHandle(ref, () => ({
     handleSubmit
   }));
+
+  // Format national ID as user types (uppercase, alphanumeric only)
+  const handleNationalIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    setFormData({ ...formData, national_id_number: value });
+  };
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
@@ -138,40 +161,57 @@ export const MemberCreateForm = forwardRef<any, MemberCreateFormProps>(({
 
             {/* Gender */}
             <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <select
-                id="gender"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              <Label htmlFor="gender">Gender *</Label>
+              <Select
                 value={formData.gender || ''}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                onValueChange={(value) => setFormData({ ...formData, gender: value })}
               >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
+                <SelectTrigger className={errors.gender ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.gender && <p className="text-sm text-destructive">{errors.gender}</p>}
             </div>
 
             {/* Nationality */}
             <div className="space-y-2">
               <Label htmlFor="nationality">Nationality *</Label>
-              <Input
-                id="nationality"
+              <Select
                 value={formData.nationality}
-                onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                placeholder="Enter nationality"
-              />
+                onValueChange={(value) => setFormData({ ...formData, nationality: value })}
+              >
+                <SelectTrigger className={errors.nationality ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Select nationality" />
+                </SelectTrigger>
+                <SelectContent>
+                  {NATIONALITIES.map((nationality) => (
+                    <SelectItem key={nationality} value={nationality}>
+                      {nationality}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.nationality && <p className="text-sm text-destructive">{errors.nationality}</p>}
             </div>
 
             {/* National ID */}
             <div className="space-y-2">
-              <Label htmlFor="national_id_number">National ID Number *</Label>
+              <Label htmlFor="national_id_number">National ID Number</Label>
               <Input
                 id="national_id_number"
                 value={formData.national_id_number}
-                onChange={(e) => setFormData({ ...formData, national_id_number: e.target.value })}
-                placeholder="Enter national ID"
+                onChange={handleNationalIdChange}
+                placeholder={`e.g., ${EXAMPLE_FORMATS.NATIONAL_ID}`}
+                maxLength={8}
                 className={errors.national_id_number ? 'border-destructive' : ''}
               />
+              <p className="text-xs text-muted-foreground">
+                8 alphanumeric characters (e.g., {EXAMPLE_FORMATS.NATIONAL_ID})
+              </p>
               {errors.national_id_number && <p className="text-sm text-destructive">{errors.national_id_number}</p>}
             </div>
 
@@ -192,8 +232,11 @@ export const MemberCreateForm = forwardRef<any, MemberCreateFormProps>(({
               <Input
                 id="phone_number"
                 value={formData.phone_number}
-                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                placeholder="Enter phone number"
+                onChange={(e) => {
+                  const formatted = formatMalawiPhone(e.target.value);
+                  setFormData({ ...formData, phone_number: formatted });
+                }}
+                placeholder={EXAMPLE_FORMATS.PHONE}
                 className={errors.phone_number ? 'border-destructive' : ''}
               />
               {errors.phone_number && <p className="text-sm text-destructive">{errors.phone_number}</p>}
@@ -207,7 +250,7 @@ export const MemberCreateForm = forwardRef<any, MemberCreateFormProps>(({
                 type="email"
                 value={formData.email || ''}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Enter email"
+                placeholder="Enter email address"
                 className={errors.email ? 'border-destructive' : ''}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}

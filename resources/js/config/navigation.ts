@@ -14,6 +14,7 @@ import {
     SettingsIcon,
     ShieldIcon, User2Icon,
     UsersIcon,
+    SparklesIcon,
 } from "lucide-react"
 
 // Navigation item types
@@ -26,6 +27,7 @@ export interface BaseNavItem {
     requiredRole?: string;
     requireSuperAdmin?: boolean;
     variant?: "default" | "primary";
+    action?: "openMySmeModal"; // Custom action instead of navigation
 }
 
 export type NavItem = BaseNavItem;
@@ -183,10 +185,11 @@ export const navigationConfig: NavigationConfig = {
     navSme: [
         {
             title: "My MSME",
-            url: "/dashboard",
+            url: "#",
             icon: LayoutDashboardIcon,
             requiredRole: "sme-user",
             variant: "primary",
+            action: "openMySmeModal",
         },
         {
             title: "Portal",
@@ -204,6 +207,12 @@ export const navigationConfig: NavigationConfig = {
             title: "My Applications",
             url: "/applications",
             icon: NotebookTabsIcon,
+            requiredRole: "sme-user",
+        },
+        {
+            title: "Opportunities",
+            url: "/opportunities",
+            icon: SparklesIcon,
             requiredRole: "sme-user",
         },
     ],

@@ -31,5 +31,17 @@ func (receiver *EventServiceProvider) listen() map[event.Event][]event.Listener 
 		&events.AdditionalBusinessMemberDeleted{}: {
 			&listeners.UpdateBusinessEmployeeSummary{},
 		},
+		&events.EventCreated{}: {
+			&listeners.BroadcastEventNotification{},
+		},
+		&events.ProcurementPublished{}: {
+			&listeners.BroadcastProcurementNotification{},
+		},
+		&events.ApplicationApproved{}: {
+			&listeners.NotifyApplicationApproved{},
+		},
+		&events.ApplicationRejected{}: {
+			&listeners.NotifyApplicationRejected{},
+		},
 	}
 }

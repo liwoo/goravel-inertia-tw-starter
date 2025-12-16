@@ -21,7 +21,7 @@ func (r *RoleCreateRequest) Rules(ctx http.Context) map[string]string {
 		"name":        "required|string|min_len:3|max_len:255|unique:roles,name",
 		"description": "string|max_len:1000",
 		"slug":        "required|string|min_len:3|max_len:255|unique:roles,slug",
-		"level":       "required|integer|min:1|max:100",
+		"level":       "required|numeric|min:1|max:100",
 		"permissions": "array",
 	}
 }

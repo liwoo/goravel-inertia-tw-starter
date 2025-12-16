@@ -9,3 +9,6 @@ export type { RecentActivity } from "./RecentActivitiesWidget";
 
 export { FormalisationScoreWidget } from "./FormalisationScoreWidget";
 export type { FormalisationData } from "./FormalisationScoreWidget";
+
+export { EventsCalendarWidget } from "./EventsCalendarWidget";
+export type { CalendarEvent } from "./EventsCalendarWidget";

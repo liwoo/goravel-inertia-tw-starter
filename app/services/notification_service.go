@@ -469,3 +469,363 @@ func (s *NotificationService) BatchDismiss(notificationIDs []uint, userID uint) 
 		})
 	return err
 }
+
+// BroadcastEventNotificationSync sends notifications and messages to eligible SMEs when an event is created
+// This is the synchronous version called by the event listener (async is handled by the queue)
+// Eligible SMEs are those in the event's district OR if event has no district (nationwide)
+func (s *NotificationService) BroadcastEventNotificationSync(senderID uint, eventID uint, eventTitle string, eventDate string, eventVenue string, eventDistrict string) {
+	facades.Log().Info("Starting event broadcast notification", map[string]interface{}{
+		"event_id":       eventID,
+		"event_title":    eventTitle,
+		"event_district": eventDistrict,
+		"sender_id":      senderID,
+	})
+
+	// Get eligible SME users
+	userIDs := s.getEligibleSMEUsersForEvent(eventDistrict)
+	if len(userIDs) == 0 {
+		facades.Log().Info("No eligible SME users found for event notification", map[string]interface{}{
+			"event_id": eventID,
+		})
+		return
+	}
+
+	facades.Log().Info("Found eligible SME users for event notification", map[string]interface{}{
+		"event_id":   eventID,
+		"user_count": len(userIDs),
+	})
+
+	// Prepare notification content
+	title := "New Event: " + eventTitle
+	message := fmt.Sprintf("A new event \"%s\" has been scheduled", eventTitle)
+	if eventDate != "" {
+		message += fmt.Sprintf(" on %s", eventDate)
+	}
+	if eventVenue != "" {
+		message += fmt.Sprintf(" at %s", eventVenue)
+	}
+	if eventDistrict != "" {
+		message += fmt.Sprintf(" in %s", eventDistrict)
+	}
+	message += ". Check it out!"
+
+	// Send notifications to all eligible users
+	relatedType := "event"
+	for _, userID := range userIDs {
+		_, err := s.CreateNotification(
+			userID,
+			title,
+			message,
+			"event",
+			&senderID,
+			&relatedType,
+			&eventID,
+			"normal",
+			nil,
+			"",
+		)
+		if err != nil {
+			facades.Log().Warning("Failed to create event notification for user", map[string]interface{}{
+				"user_id":  userID,
+				"event_id": eventID,
+				"error":    err.Error(),
+			})
+		}
+	}
+
+	// Also send messages to users
+	messageService := NewMessageService()
+	messageContent := fmt.Sprintf("📅 **New Event Announcement**\n\n**%s**\n\n", eventTitle)
+	if eventDate != "" {
+		messageContent += fmt.Sprintf("🗓️ Date: %s\n", eventDate)
+	}
+	if eventVenue != "" {
+		messageContent += fmt.Sprintf("📍 Venue: %s\n", eventVenue)
+	}
+	if eventDistrict != "" {
+		messageContent += fmt.Sprintf("🌍 District: %s\n", eventDistrict)
+	}
+	messageContent += "\nDon't miss out on this opportunity!"
+
+	_, err := messageService.SendBroadcast(senderID, userIDs, messageContent, "New Event: "+eventTitle)
+	if err != nil {
+		facades.Log().Warning("Failed to send event broadcast messages", map[string]interface{}{
+			"event_id": eventID,
+			"error":    err.Error(),
+		})
+	}
+
+	facades.Log().Info("Event broadcast notification completed", map[string]interface{}{
+		"event_id":       eventID,
+		"notified_users": len(userIDs),
+	})
+}
+
+// BroadcastProcurementNotificationSync sends notifications and messages to all active SME users when a procurement is published
+// This is the synchronous version called by the event listener (async is handled by the queue)
+func (s *NotificationService) BroadcastProcurementNotificationSync(senderID uint, procurementID uint, organization string, refNo string, procurementType string, closeDate string) {
+	facades.Log().Info("Starting procurement broadcast notification", map[string]interface{}{
+		"procurement_id": procurementID,
+		"organization":   organization,
+		"ref_no":         refNo,
+		"sender_id":      senderID,
+	})
+
+	// Get all active SME users
+	userIDs := s.getAllActiveSMEUsers()
+	if len(userIDs) == 0 {
+		facades.Log().Info("No active SME users found for procurement notification", map[string]interface{}{
+			"procurement_id": procurementID,
+		})
+		return
+	}
+
+	facades.Log().Info("Found active SME users for procurement notification", map[string]interface{}{
+		"procurement_id": procurementID,
+		"user_count":     len(userIDs),
+	})
+
+	// Prepare notification content
+	title := "New Procurement Opportunity"
+	message := fmt.Sprintf("New procurement notice from %s (Ref: %s)", organization, refNo)
+	if procurementType != "" {
+		message = fmt.Sprintf("New %s opportunity from %s (Ref: %s)", procurementType, organization, refNo)
+	}
+	if closeDate != "" {
+		message += fmt.Sprintf(". Closing date: %s", closeDate)
+	}
+
+	// Send notifications to all active SME users
+	relatedType := "procurement"
+	for _, userID := range userIDs {
+		_, err := s.CreateNotification(
+			userID,
+			title,
+			message,
+			"procurement",
+			&senderID,
+			&relatedType,
+			&procurementID,
+			"normal",
+			nil,
+			"",
+		)
+		if err != nil {
+			facades.Log().Warning("Failed to create procurement notification for user", map[string]interface{}{
+				"user_id":        userID,
+				"procurement_id": procurementID,
+				"error":          err.Error(),
+			})
+		}
+	}
+
+	// Also send messages to users
+	messageService := NewMessageService()
+	messageContent := fmt.Sprintf("📋 **New Procurement Opportunity**\n\n**%s**\nRef: %s\n", organization, refNo)
+	if procurementType != "" {
+		messageContent += fmt.Sprintf("Type: %s\n", procurementType)
+	}
+	if closeDate != "" {
+		messageContent += fmt.Sprintf("⏰ Closing Date: %s\n", closeDate)
+	}
+	messageContent += "\nSubmit your bid before the deadline!"
+
+	_, err := messageService.SendBroadcast(senderID, userIDs, messageContent, "New Procurement: "+organization)
+	if err != nil {
+		facades.Log().Warning("Failed to send procurement broadcast messages", map[string]interface{}{
+			"procurement_id": procurementID,
+			"error":          err.Error(),
+		})
+	}
+
+	facades.Log().Info("Procurement broadcast notification completed", map[string]interface{}{
+		"procurement_id": procurementID,
+		"notified_users": len(userIDs),
+	})
+}
+
+// getEligibleSMEUsersForEvent returns user IDs linked to SMEs eligible for an event
+// Eligible: SMEs in the event's district OR if event has no district (available to all)
+func (s *NotificationService) getEligibleSMEUsersForEvent(eventDistrict string) []uint {
+	var userIDs []uint
+
+	// Build query based on district
+	var query string
+	var args []interface{}
+
+	if eventDistrict == "" {
+		// Event has no district - notify all active SME users
+		query = `
+			SELECT DISTINCT u.id
+			FROM users u
+			INNER JOIN smes s ON LOWER(s.contact_email) = LOWER(u.email)
+			WHERE u.is_active = true
+			AND u.deleted_at IS NULL
+			AND s.is_active = true
+			AND s.deleted_at IS NULL
+		`
+	} else {
+		// Event has district - notify SMEs in that district OR SMEs with no district
+		query = `
+			SELECT DISTINCT u.id
+			FROM users u
+			INNER JOIN smes s ON LOWER(s.contact_email) = LOWER(u.email)
+			WHERE u.is_active = true
+			AND u.deleted_at IS NULL
+			AND s.is_active = true
+			AND s.deleted_at IS NULL
+			AND (s.district = ? OR s.district IS NULL OR s.district = '')
+		`
+		args = append(args, eventDistrict)
+	}
+
+	err := facades.Orm().Query().Raw(query, args...).Pluck("id", &userIDs)
+	if err != nil {
+		facades.Log().Error("Failed to get eligible SME users for event", map[string]interface{}{
+			"district": eventDistrict,
+			"error":    err.Error(),
+		})
+		return []uint{}
+	}
+
+	return userIDs
+}
+
+// getAllActiveSMEUsers returns user IDs for all active SMEs
+func (s *NotificationService) getAllActiveSMEUsers() []uint {
+	var userIDs []uint
+
+	query := `
+		SELECT DISTINCT u.id
+		FROM users u
+		INNER JOIN smes s ON LOWER(s.contact_email) = LOWER(u.email)
+		WHERE u.is_active = true
+		AND u.deleted_at IS NULL
+		AND s.is_active = true
+		AND s.deleted_at IS NULL
+	`
+
+	err := facades.Orm().Query().Raw(query).Pluck("id", &userIDs)
+	if err != nil {
+		facades.Log().Error("Failed to get all active SME users", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return []uint{}
+	}
+
+	return userIDs
+}
+
+// NotifyApplicationStatusSync sends notification and message to an SME when their application is approved/rejected
+// This is the synchronous version called by the event listener (async is handled by the queue)
+func (s *NotificationService) NotifyApplicationStatusSync(
+	senderUserID uint,
+	applicationID uint,
+	applicationType string,
+	smeName string,
+	recipientEmail string,
+	status string, // "approved" or "rejected"
+	reason string, // rejection reason (empty for approvals)
+) {
+	facades.Log().Info("Starting application status notification", map[string]interface{}{
+		"application_id":   applicationID,
+		"application_type": applicationType,
+		"sme_name":         smeName,
+		"recipient_email":  recipientEmail,
+		"status":           status,
+		"sender_id":        senderUserID,
+	})
+
+	// Find the user by email
+	var user models.User
+	if err := facades.Orm().Query().Where("LOWER(email) = LOWER(?) AND is_active = ?", recipientEmail, true).First(&user); err != nil {
+		facades.Log().Warning("User not found for application notification - may be a signup rejection", map[string]interface{}{
+			"email":          recipientEmail,
+			"application_id": applicationID,
+			"status":         status,
+		})
+		return
+	}
+
+	// Build notification content based on status and type
+	var title, message, messageContent string
+	var priority string = "normal"
+
+	if status == "approved" {
+		if applicationType == "amend_formalisation" {
+			title = "Amendment Approved"
+			message = fmt.Sprintf("Your formalisation amendment for %s has been approved. The changes have been applied to your SME profile.", smeName)
+			messageContent = fmt.Sprintf("✅ **Amendment Approved**\n\nYour formalisation amendment request for **%s** has been approved.\n\nThe requested changes have been applied to your SME profile. You can view your updated profile in the Member Portal.", smeName)
+		} else {
+			title = "Application Approved"
+			message = fmt.Sprintf("Your application for %s has been approved. Welcome to SMEDI!", smeName)
+			messageContent = fmt.Sprintf("✅ **Application Approved**\n\nCongratulations! Your application for **%s** has been approved.\n\nWelcome to the SME Database! You can now access all the features available in the Member Portal.", smeName)
+		}
+	} else { // rejected
+		priority = "high"
+		if applicationType == "amend_formalisation" {
+			title = "Amendment Rejected"
+			message = fmt.Sprintf("Your formalisation amendment for %s has been rejected.", smeName)
+			if reason != "" {
+				message += fmt.Sprintf(" Reason: %s", reason)
+			}
+			messageContent = fmt.Sprintf("❌ **Amendment Rejected**\n\nYour formalisation amendment request for **%s** has been rejected.", smeName)
+			if reason != "" {
+				messageContent += fmt.Sprintf("\n\n**Reason:** %s", reason)
+			}
+			messageContent += "\n\nIf you have questions about this decision, please contact our support team."
+		} else {
+			title = "Application Rejected"
+			message = fmt.Sprintf("Your application for %s has been rejected.", smeName)
+			if reason != "" {
+				message += fmt.Sprintf(" Reason: %s", reason)
+			}
+			messageContent = fmt.Sprintf("❌ **Application Rejected**\n\nWe regret to inform you that your application for **%s** has been rejected.", smeName)
+			if reason != "" {
+				messageContent += fmt.Sprintf("\n\n**Reason:** %s", reason)
+			}
+			messageContent += "\n\nIf you believe this decision was made in error or have questions, please contact our support team."
+		}
+	}
+
+	// Create notification
+	relatedType := "application"
+	_, err := s.CreateNotification(
+		user.ID,
+		title,
+		message,
+		"application_"+status,
+		&senderUserID,
+		&relatedType,
+		&applicationID,
+		priority,
+		nil,
+		"",
+	)
+	if err != nil {
+		facades.Log().Warning("Failed to create application status notification", map[string]interface{}{
+			"user_id":        user.ID,
+			"application_id": applicationID,
+			"status":         status,
+			"error":          err.Error(),
+		})
+	}
+
+	// Send message to the user
+	messageService := NewMessageService()
+	_, err = messageService.SendMessage(senderUserID, user.ID, messageContent, models.MessageTypeDirect)
+	if err != nil {
+		facades.Log().Warning("Failed to send application status message", map[string]interface{}{
+			"user_id":        user.ID,
+			"application_id": applicationID,
+			"status":         status,
+			"error":          err.Error(),
+		})
+	}
+
+	facades.Log().Info("Application status notification completed", map[string]interface{}{
+		"application_id": applicationID,
+		"user_id":        user.ID,
+		"status":         status,
+	})
+}

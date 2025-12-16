@@ -8,6 +8,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme="system"
       className="toaster group"
+      style={{ zIndex: 9999 }} // Ensure toasts appear above Sheet overlays (z-50)
       toastOptions={{
         classNames: {
           toast:

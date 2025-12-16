@@ -2,7 +2,6 @@ import React from 'react';
 import { Member } from '@/types/member';
 import { CrudColumn, CrudFilter } from '@/types/crud';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail } from 'lucide-react';
 
 /**
  * Member table columns configuration
@@ -14,14 +13,9 @@ export const memberColumns: CrudColumn<Member>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (member) => (
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-muted">
-          <User className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-foreground">{member.first_name} {member.last_name}</p>
-          {member.other_names && <p className="text-xs text-muted-foreground">{member.other_names}</p>}
-        </div>
+      <div className="space-y-1">
+        <p className="font-medium text-foreground">{member.first_name} {member.last_name}</p>
+        {member.other_names && <p className="text-xs text-muted-foreground">{member.other_names}</p>}
       </div>
     ),
   },
@@ -31,14 +25,9 @@ export const memberColumns: CrudColumn<Member>[] = [
     sortable: true,
     className: 'min-w-[150px]',
     render: (member) => (
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-muted">
-          <Mail className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1 space-y-1">
-          <p className="font-medium text-foreground">{member.email || '-'}</p>
-          <p className="text-xs text-muted-foreground">{member.phone_number}</p>
-        </div>
+      <div className="space-y-1">
+        <p className="font-medium text-foreground">{member.email || '-'}</p>
+        <p className="text-xs text-muted-foreground">{member.phone_number}</p>
       </div>
     ),
   },
@@ -48,7 +37,7 @@ export const memberColumns: CrudColumn<Member>[] = [
     sortable: true,
     className: 'min-w-[120px]',
     render: (member) => (
-      <div className="text-sm font-medium">{member.national_id_number}</div>
+      <div className="text-sm font-medium">{member.national_id_number || '-'}</div>
     ),
   },
   {

@@ -130,6 +130,57 @@ func (s *DashboardService) GetUpcomingEvents(limit int) []UpcomingEventDTO {
 	return result
 }
 
+// CalendarEventDTO represents event data for the calendar widget
+type CalendarEventDTO struct {
+	ID       uint   `json:"id"`
+	Title    string `json:"title"`
+	Date     string `json:"date"`
+	EndDate  string `json:"endDate,omitempty"`
+	Venue    string `json:"venue"`
+	District string `json:"district,omitempty"`
+}
+
+// GetEventsForDistrict returns events visible to an SME in a specific district
+// Events are visible if they match the SME's district OR have no district (available to all)
+func (s *DashboardService) GetEventsForDistrict(district string) []CalendarEventDTO {
+	now := time.Now()
+	var events []models.Event
+
+	// Get events where:
+	// 1. Date is in the future (or ongoing - end_date > now)
+	// 2. District matches OR district is empty/null (available to all)
+	query := facades.Orm().Query().Model(&models.Event{}).
+		Where("(date > ? OR end_date > ?)", now, now)
+
+	if district != "" {
+		// Events in SME's district OR events with no district (available to all)
+		query = query.Where("(district = ? OR district = '' OR district IS NULL)", district)
+	}
+
+	err := query.Order("date ASC").Find(&events)
+
+	if err != nil {
+		return []CalendarEventDTO{}
+	}
+
+	// Convert to DTOs
+	result := make([]CalendarEventDTO, len(events))
+	for i, event := range events {
+		result[i] = CalendarEventDTO{
+			ID:       event.ID,
+			Title:    event.Title,
+			Date:     event.Date.ToDateTimeString(),
+			Venue:    event.Venue,
+			District: event.District,
+		}
+		if !event.EndDate.IsZero() {
+			result[i].EndDate = event.EndDate.ToDateTimeString()
+		}
+	}
+
+	return result
+}
+
 // GetUpcomingProcurements returns the next N upcoming procurement notices ordered by close date
 func (s *DashboardService) GetUpcomingProcurements(limit int) []UpcomingProcurementDTO {
 	now := time.Now()

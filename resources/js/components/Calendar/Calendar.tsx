@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar as BigCalendar, CalendarProps, dateFnsLocalizer } from 'react-big-calendar';
+import { Calendar as BigCalendar, CalendarProps, dateFnsLocalizer, View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -21,6 +21,9 @@ const localizer = dateFnsLocalizer({
 export default function Calendar<TEvent extends object = object, TResource extends object = object>(
     props: Omit<CalendarProps<TEvent, TResource>, 'localizer'>
 ) {
+    // Only show month view - remove week/day/agenda views
+    const allowedViews: View[] = ['month'];
+
     return (
         <Card className="shadow-sm">
             <CardHeader className="pb-4">
@@ -30,6 +33,8 @@ export default function Calendar<TEvent extends object = object, TResource exten
                 <BigCalendar
                     className="bg-card"
                     localizer={localizer}
+                    views={allowedViews}
+                    defaultView="month"
                     {...props}
                 />
             </CardContent>

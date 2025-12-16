@@ -37,6 +37,7 @@ export function CrudPage<T extends { id: number }>({
                                                        filters,
                                                        title,
                                                        resourceName,
+                                                       displayName,
                                                        route,
                                                        columns,
                                                        actions = [],
@@ -77,6 +78,10 @@ export function CrudPage<T extends { id: number }>({
 
     // Use provided route or default to /admin/{resourceName}
     const baseRoute = route || `/admin/${resourceName}`;
+
+    // Compute the singular display name for UI elements
+    // Use displayName if provided, otherwise format resourceName
+    const singularDisplayName = displayName || resourceName.slice(0, -1).replace(/_/g, ' ');
 
     // In readOnly mode, disable create, edit, and delete regardless of permissions
     const canCreate = readOnly ? false : (propCanCreate !== undefined ? propCanCreate : canPerformAction(resourceName, 'create'));
@@ -596,7 +601,7 @@ export function CrudPage<T extends { id: number }>({
     }, []);
 
     const handleDelete = React.useCallback(async (item: T) => {
-        const confirmMessage = `Are you sure you want to delete this ${resourceName.slice(0, -1)}?`;
+        const confirmMessage = `Are you sure you want to delete this ${singularDisplayName}?`;
         if (confirm(confirmMessage)) {
             try {
                 // Get CSRF token from meta tag
@@ -614,7 +619,7 @@ export function CrudPage<T extends { id: number }>({
                 });
 
                 if (response.ok) {
-                    toast.success(`${resourceName.slice(0, -1)} deleted successfully`);
+                    toast.success(`${singularDisplayName} deleted successfully`);
                     // Close drawer first if it's open
                     if (drawerState.isOpen) {
                         closeDrawer();
@@ -631,11 +636,11 @@ export function CrudPage<T extends { id: number }>({
                 } else {
                     const errorData = await response.json().catch(() => ({}));
                     console.error('Delete error:', errorData);
-                    toast.error(`Failed to delete ${resourceName.slice(0, -1)}: ${errorData.message || 'Unknown error'}`);
+                    toast.error(`Failed to delete ${singularDisplayName}: ${errorData.message || 'Unknown error'}`);
                 }
             } catch (error) {
                 console.error('Delete error:', error);
-                toast.error(`Failed to delete ${resourceName.slice(0, -1)}: Network error`);
+                toast.error(`Failed to delete ${singularDisplayName}: Network error`);
             }
         }
     }, [resourceName, selectedIds, clearSelection]);
@@ -779,7 +784,7 @@ export function CrudPage<T extends { id: number }>({
                 onClick: handleDelete,
                 className: 'text-destructive focus:text-destructive',
                 confirm: true,
-                confirmMessage: `Are you sure you want to delete this ${resourceName.slice(0, -1)}?`,
+                confirmMessage: `Are you sure you want to delete this ${singularDisplayName}?`,
             });
         }
 
@@ -824,8 +829,8 @@ export function CrudPage<T extends { id: number }>({
     // Keyboard shortcuts
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Cmd/Ctrl + N to create new
-            if ((e.metaKey || e.ctrlKey) && e.key === 'n' && canCreate && CreateForm) {
+            // Cmd/Ctrl + C to create new
+            if ((e.metaKey || e.ctrlKey) && e.key === 'c' && canCreate && CreateForm) {
                 e.preventDefault();
                 handleCreate();
             }
@@ -917,11 +922,11 @@ export function CrudPage<T extends { id: number }>({
                             <Button onClick={handleCreate} className="group">
                                 <Plus className="h-4 w-4"/>
                                 <span className="hidden lg:inline ml-2 whitespace-nowrap">
-                  Add {resourceName.slice(0, -1)}
+                  Add {singularDisplayName}
                 </span>
                                 <kbd
                                     className="ml-2 pointer-events-none hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100">
-                                    <Command className="h-3 w-3"/>N
+                                    <Command className="h-3 w-3"/>C
                                 </kbd>
                             </Button>
                         )}
@@ -1158,6 +1163,7 @@ export function CrudPage<T extends { id: number }>({
                 title={title}
                 type={drawerState.type}
                 resourceName={resourceName}
+                displayName={singularDisplayName}
                 size={drawerState.type === 'view' ? 'lg' : 'lg'}
                 canEdit={drawerState.type === 'view' ? canEdit : false}
                 canSave={drawerState.type === 'create' ? canCreate : drawerState.type === 'edit' ? canEdit : false}
