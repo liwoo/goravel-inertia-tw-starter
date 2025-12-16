@@ -26,6 +26,9 @@ import {
 } from '@/components/widgets';
 import axios from 'axios';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { MySmeModal } from '@/components/MySmeModal';
+import { Building2 } from 'lucide-react';
 
 // Props interface for the Member Index page
 interface MemberIndexProps {
@@ -71,6 +74,7 @@ export default function MemberIndex({
   const [additionalMembers, setAdditionalMembers] = useState<any[]>([]);
   const [employeeSummary, setEmployeeSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isMySmeModalOpen, setIsMySmeModalOpen] = useState(false);
 
   useEffect(() => {
     if (smeId) {
@@ -122,11 +126,29 @@ export default function MemberIndex({
               Manage your team, track opportunities, and monitor your business progress.
             </p>
           </div>
-          {smeName && (
-            <Badge variant="secondary" className="text-lg px-4 py-2 font-medium shrink-0">
-              {smeName}
-            </Badge>
-          )}
+          <div className="flex items-center gap-3 shrink-0">
+            {smeName && (
+              <Badge variant="secondary" className="text-lg px-4 py-2 font-medium">
+                {smeName}
+              </Badge>
+            )}
+            {smeId && (
+              <Button
+                type="button"
+                variant="outline"
+                size="default"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsMySmeModalOpen(true);
+                }}
+                className="gap-2"
+              >
+                <Building2 className="h-4 w-4" />
+                My SME
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Main Content + Sidebar Row */}
@@ -171,6 +193,15 @@ export default function MemberIndex({
           </aside>
         </div>
       </div>
+
+      {/* My SME Modal */}
+      {smeId && (
+        <MySmeModal
+          open={isMySmeModalOpen}
+          onOpenChange={setIsMySmeModalOpen}
+          smeId={smeId}
+        />
+      )}
     </Admin>
   );
 }
