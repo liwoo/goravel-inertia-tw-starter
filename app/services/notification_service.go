@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
+	"smedi-sme-db/app/auth"
 	"smedi-sme-db/app/contracts"
 	"smedi-sme-db/app/models"
 )
@@ -272,59 +274,88 @@ func (s *NotificationService) GetUnreadNotificationCount(userID uint) (int64, er
 }
 
 // GetNotificationCounts returns various notification counts for a user
-func (s *NotificationService) GetNotificationCounts(userID uint) (map[string]int64, error) {
-	// Try to get from Redis cache first
+// ctx is optional - if provided, it's used to check permissions for pending applications
+func (s *NotificationService) GetNotificationCounts(userID uint, ctx ...http.Context) (map[string]int64, error) {
+	counts := make(map[string]int64)
+
+	// Try to get notification counts from Redis cache first
 	if cachedCounts, found := s.cacheService.GetNotificationCounts(userID); found {
 		facades.Log().Debug("Notification counts cache hit", map[string]interface{}{
 			"user_id": userID,
 		})
-		return cachedCounts, nil
+		// Copy cached notification counts
+		for k, v := range cachedCounts {
+			counts[k] = v
+		}
+	} else {
+		// Cache miss - fetch notification counts from database
+		// Total unread
+		unread, err := facades.Orm().Query().Model(&models.Notification{}).
+			Where("user_id = ? AND is_read = ? AND is_dismissed = ?", userID, false, false).
+			Count()
+		if err != nil {
+			return nil, err
+		}
+		counts["unread"] = unread
+
+		// Unread high priority
+		unreadHigh, err := facades.Orm().Query().Model(&models.Notification{}).
+			Where("user_id = ? AND is_read = ? AND is_dismissed = ? AND priority = ?", userID, false, false, "high").
+			Count()
+		if err != nil {
+			return nil, err
+		}
+		counts["unread_high"] = unreadHigh
+
+		// Unread messages
+		unreadMessages, err := facades.Orm().Query().Model(&models.Notification{}).
+			Where("user_id = ? AND is_read = ? AND is_dismissed = ? AND type = ?", userID, false, false, "message").
+			Count()
+		if err != nil {
+			return nil, err
+		}
+		counts["unread_messages"] = unreadMessages
+
+		// Unread mentions
+		unreadMentions, err := facades.Orm().Query().Model(&models.Notification{}).
+			Where("user_id = ? AND is_read = ? AND is_dismissed = ? AND type = ?", userID, false, false, "mention").
+			Count()
+		if err != nil {
+			return nil, err
+		}
+		counts["unread_mentions"] = unreadMentions
+
+		// Cache the notification counts in Redis (excluding pending_applications)
+		if err := s.cacheService.SetNotificationCounts(userID, counts); err != nil {
+			facades.Log().Warning("Failed to cache notification counts", map[string]interface{}{
+				"user_id": userID,
+				"error":   err.Error(),
+			})
+		}
 	}
 
-	counts := make(map[string]int64)
-
-	// Total unread
-	unread, err := facades.Orm().Query().Model(&models.Notification{}).
-		Where("user_id = ? AND is_read = ? AND is_dismissed = ?", userID, false, false).
-		Count()
-	if err != nil {
-		return nil, err
+	// Check if user has permission to manage applications before including pending count
+	// Only users with update permission on applications can see pending applications count
+	canManageApplications := false
+	if len(ctx) > 0 && ctx[0] != nil {
+		scopedHelper := auth.GetScopedPermissionHelper()
+		canManageApplications = scopedHelper.CheckScopedPermission(ctx[0], auth.ServiceApplications, auth.PermissionUpdate, nil)
 	}
-	counts["unread"] = unread
 
-	// Unread high priority
-	unreadHigh, err := facades.Orm().Query().Model(&models.Notification{}).
-		Where("user_id = ? AND is_read = ? AND is_dismissed = ? AND priority = ?", userID, false, false, "high").
-		Count()
-	if err != nil {
-		return nil, err
-	}
-	counts["unread_high"] = unreadHigh
-
-	// Unread messages
-	unreadMessages, err := facades.Orm().Query().Model(&models.Notification{}).
-		Where("user_id = ? AND is_read = ? AND is_dismissed = ? AND type = ?", userID, false, false, "message").
-		Count()
-	if err != nil {
-		return nil, err
-	}
-	counts["unread_messages"] = unreadMessages
-
-	// Unread mentions
-	unreadMentions, err := facades.Orm().Query().Model(&models.Notification{}).
-		Where("user_id = ? AND is_read = ? AND is_dismissed = ? AND type = ?", userID, false, false, "mention").
-		Count()
-	if err != nil {
-		return nil, err
-	}
-	counts["unread_mentions"] = unreadMentions
-
-	// Cache the counts in Redis
-	if err := s.cacheService.SetNotificationCounts(userID, counts); err != nil {
-		facades.Log().Warning("Failed to cache notification counts", map[string]interface{}{
-			"user_id": userID,
-			"error":   err.Error(),
-		})
+	if canManageApplications {
+		// Fetch pending applications count fresh (not cached per-user)
+		// This ensures the count is always up-to-date when applications are created/processed
+		pendingApplications, err := facades.Orm().Query().Model(&models.Application{}).
+			Where("status = ?", "Pending").
+			Count()
+		if err != nil {
+			// Log but don't fail - this is optional
+			facades.Log().Warning("Failed to get pending applications count", map[string]interface{}{
+				"error": err.Error(),
+			})
+			pendingApplications = 0
+		}
+		counts["pending_applications"] = pendingApplications
 	}
 
 	return counts, nil

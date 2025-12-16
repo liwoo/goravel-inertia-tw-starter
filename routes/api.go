@@ -13,6 +13,7 @@ import (
 	"smedi-sme-db/app/http/controllers/books"
 	"smedi-sme-db/app/http/controllers/business_formalisations"
 	"smedi-sme-db/app/http/controllers/configs"
+	"smedi-sme-db/app/http/controllers/directory"
 	"smedi-sme-db/app/http/controllers/events"
 	"smedi-sme-db/app/http/controllers/lenders"
 	"smedi-sme-db/app/http/controllers/messages"
@@ -61,6 +62,7 @@ func Api(router route.Router) {
 	totpController := auth.NewTOTPController()
 	sseController := controllers.NewSSEController()
 	presenceController := controllers.NewPresenceController()
+	directoryController := directory.NewDirectoryController()
 
 	jwtAuth := middleware.JwtAuth()
 	require2FA := middleware.Require2FA()
@@ -75,6 +77,9 @@ func Api(router route.Router) {
 		docsRouter.Get("/swagger.json", swaggerController.ServeSwaggerJSON)
 		docsRouter.Get("/swagger.yaml", swaggerController.ServeSwaggerYAML)
 	})
+
+	// Public SME Directory API (no auth required)
+	router.Get("/directory/search", directoryController.SearchDirectory)
 
 	// Book resource routes (with optional auth for scoped permissions)
 	router.Middleware(optionalAuth).Group(func(optionalAuthRouter route.Router) {

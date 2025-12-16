@@ -37,6 +37,7 @@ const TwoFactorRequired: React.FC = () => {
   const [verificationCode, setVerificationCode] = useState('');
   const [setupData, setSetupData] = useState<TOTPSetupData | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [redirectUrl, setRedirectUrl] = useState<string>('/dashboard');
   const [errors, setErrors] = useState<TOTPFormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
@@ -85,6 +86,10 @@ const TwoFactorRequired: React.FC = () => {
     try {
       const response = await verifyTOTP(verificationCode);
       setBackupCodes(response.data.data.backup_codes);
+      // Capture redirect URL from response (defaults to /dashboard)
+      if (response.data.data.redirect) {
+        setRedirectUrl(response.data.data.redirect);
+      }
       setStep('backup-codes');
       toast.success('2FA enabled');
     } catch (error: unknown) {
@@ -141,7 +146,7 @@ const TwoFactorRequired: React.FC = () => {
   };
 
   const handleComplete = () => {
-    router.visit('/dashboard');
+    router.visit(redirectUrl);
   };
 
   const handleCancel = async () => {

@@ -1,21 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { 
-  Bell, 
-  BellRing, 
-  Check, 
-  X, 
-  MessageCircle, 
-  User, 
-  Shield, 
+import {
+  Bell,
+  BellRing,
+  Check,
+  X,
+  MessageCircle,
+  User,
+  Shield,
   AlertTriangle,
   Info,
   CheckCircle,
   Clock,
   MoreHorizontal,
-  Archive
+  Archive,
+  FileText
 } from "lucide-react";
+import { router } from "@inertiajs/react";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,6 +42,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { usePermissions } from "@/contexts/PermissionsContext";
 
 interface Notification {
   id: number;
@@ -87,6 +90,9 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
     batchMarkAsRead,
     batchDismiss
   } = useNotifications();
+
+  const { canPerformAction } = usePermissions();
+  const canManageApplications = canPerformAction('applications', 'update');
 
   // Load notifications when drawer opens
   React.useEffect(() => {
@@ -204,14 +210,19 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
         {children || (
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-1 -right-1 h-5 min-w-5 text-xs px-1"
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </Badge>
-            )}
+            {/* Combined badge for notifications + pending applications (if user can manage applications) */}
+            {(() => {
+              const pendingApps = canManageApplications ? (counts?.pending_applications ?? 0) : 0;
+              const total = unreadCount + pendingApps;
+              return total > 0 ? (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 min-w-5 text-xs px-1"
+                >
+                  {total > 99 ? "99+" : total}
+                </Badge>
+              ) : null;
+            })()}
           </Button>
         )}
       </DrawerTrigger>
@@ -261,6 +272,32 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
         </DrawerHeader>
 
         <div className="px-4">
+          {/* Pending Applications Alert - only show for users with application management permissions */}
+          {canManageApplications && counts?.pending_applications != null && counts.pending_applications > 0 && (
+            <div
+              className="mb-4 p-3 rounded-lg border border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors"
+              onClick={() => {
+                setIsOpen(false);
+                router.visit('/applications');
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-amber-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    {counts.pending_applications} Pending Application{counts.pending_applications !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Click to review and process
+                  </p>
+                </div>
+                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+                  Action Required
+                </Badge>
+              </div>
+            </div>
+          )}
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="all" className="text-xs">

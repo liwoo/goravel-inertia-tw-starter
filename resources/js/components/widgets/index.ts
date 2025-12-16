@@ -6,3 +6,6 @@ export type { UpcomingProcurement } from "./UpcomingProcurementsWidget";
 
 export { RecentActivitiesWidget } from "./RecentActivitiesWidget";
 export type { RecentActivity } from "./RecentActivitiesWidget";
+
+export { FormalisationScoreWidget } from "./FormalisationScoreWidget";
+export type { FormalisationData } from "./FormalisationScoreWidget";

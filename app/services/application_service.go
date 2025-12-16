@@ -14,6 +14,7 @@ import (
 // ApplicationService implements business logic for applications using the builder pattern
 type ApplicationService struct {
 	contracts.CrudServiceContract // Embedded interface - automatically exposes all CRUD methods!
+	cacheService *CacheService
 }
 
 // NewApplicationService creates a new Application service using the builder pattern
@@ -28,8 +29,8 @@ func NewApplicationService() *ApplicationService {
 			"registrant_name":               "required|string|max:255",
 			"email":                         "required|string|max:255",
 			"phone":                         "required|string|max:255",
-			"sme_registration_number":       "required|string|max:255",
-			"sme_tax_identification_number": "required|string|max:255",
+			"sme_registration_number":       "string|max:255",
+			"sme_tax_identification_number": "string|max:255",
 		}).
 		WithDefaultSort("created_at", "DESC").            // Default sorting when none specified
 		WithScopeFiltering("applications", "created_by"). // Enable permission-based filtering
@@ -41,6 +42,7 @@ func NewApplicationService() *ApplicationService {
 
 	applicationServiceInstance := &ApplicationService{
 		CrudServiceContract: service, // Set the embedded interface
+		cacheService:        GetCacheService(),
 	}
 
 	// Set the actual service instance for proper method resolution

@@ -9,6 +9,7 @@ import (
 	goravelhttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
+	authpkg "smedi-sme-db/app/auth"
 	"smedi-sme-db/app/http/requests"
 	"smedi-sme-db/app/models"
 	"smedi-sme-db/app/services"
@@ -327,12 +328,22 @@ func (c *TOTPController) Verify(ctx goravelhttp.Context) goravelhttp.Response {
 	// Log activity
 	c.activityService.LogActivity(ctx, user.ID, models.ActivityTwoFAEnabled, "Two-factor authentication enabled", nil)
 
+	// Determine redirect URL based on user role
+	redirectURL := "/dashboard"
+
+	// SME users should go to /portal instead of /dashboard
+	permissionService := authpkg.GetPermissionService()
+	if permissionService.HasRole(&user, "sme-user") {
+		redirectURL = "/portal"
+	}
+
 	return ctx.Response().Json(http.StatusOK, goravelhttp.Json{
 		"success": true,
 		"message": "2FA has been enabled successfully",
 		"data": goravelhttp.Json{
 			"backup_codes": plainCodes,
 			"enabled_at":   time.Now(),
+			"redirect":     redirectURL,
 		},
 	})
 }

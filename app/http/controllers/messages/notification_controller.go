@@ -146,8 +146,8 @@ func (c *NotificationController) GetCounts(ctx http.Context) http.Response {
 		return c.ForbiddenResponse(ctx, "Authentication required")
 	}
 
-	// Get notification counts
-	counts, err := c.notificationService.GetNotificationCounts(user.ID)
+	// Get notification counts (pass ctx for permission checking)
+	counts, err := c.notificationService.GetNotificationCounts(user.ID, ctx)
 	if err != nil {
 		return c.InternalErrorResponse(ctx, err.Error())
 	}

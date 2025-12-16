@@ -55,6 +55,7 @@ interface NotificationCounts {
   unread_high: number;
   unread_messages: number;
   unread_mentions: number;
+  pending_applications: number;
   total: number;
 }
 

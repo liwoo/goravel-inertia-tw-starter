@@ -9,6 +9,7 @@ import (
 	"smedi-sme-db/app/http/controllers/bdsps"
 	"smedi-sme-db/app/http/controllers/books"
 	"smedi-sme-db/app/http/controllers/configs"
+	"smedi-sme-db/app/http/controllers/directory"
 	"smedi-sme-db/app/http/controllers/events"
 	"smedi-sme-db/app/http/controllers/members"
 	"smedi-sme-db/app/http/controllers/procurementnotices"
@@ -66,6 +67,7 @@ func Web() {
 	procurementnoticesPageController := procurementnotices.NewProcurementNoticePageController()
 	applicationsPageController := applications.NewApplicationPageController()
 	membersPageController := members.NewMemberPageController()
+	directoryController := directory.NewDirectoryController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Post("/verify-2fa", authController.Verify2FA) // 2FA verification during web login
@@ -146,6 +148,9 @@ func Web() {
 		router.Get("/admin/users", userPageController.Index)
 
 		router.Get("/portal", membersPageController.Index)
+
+		// SME Directory (accessible to all authenticated users)
+		router.Get("/directory", directoryController.ShowDirectory)
 
 		// SSE Test page (for development/testing)
 		router.Get("/test/sse", func(ctx http.Context) http.Response {

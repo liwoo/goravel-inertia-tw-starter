@@ -87,10 +87,8 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
       newErrors.sme_registration_number = VALIDATION_MESSAGES.BUSINESS_REG;
     }
 
-    // Tax ID validation
-    if (!formData.sme_tax_identification_number?.trim()) {
-      newErrors.sme_tax_identification_number = 'Tax ID is required';
-    } else if (!validateTIN(formData.sme_tax_identification_number)) {
+    // Tax ID is optional, but validate format if provided
+    if (formData.sme_tax_identification_number?.trim() && !validateTIN(formData.sme_tax_identification_number)) {
       newErrors.sme_tax_identification_number = VALIDATION_MESSAGES.TIN;
     }
 
@@ -238,7 +236,7 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sme_tax_identification_number">Tax Identification Number *</Label>
+                <Label htmlFor="sme_tax_identification_number">Tax Identification Number</Label>
                 <Input
                   id="sme_tax_identification_number"
                   value={formData.sme_tax_identification_number}

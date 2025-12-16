@@ -42,8 +42,8 @@ func (r *ApplicationCreateRequest) Rules(ctx http.Context) map[string]string {
 		"registrant_name":               "required|string|max_len:255",
 		"email":                         "required|string|max_len:255",
 		"phone":                         "required|string|max_len:255",
-		"sme_registration_number":       "required|string|max_len:255",
-		"sme_tax_identification_number": "required|string|max_len:255",
+		"sme_registration_number":       "string|max_len:255",
+		"sme_tax_identification_number": "string|max_len:255",
 		"first_name":                    "required|string|max_len:100",
 		"last_name":                     "required|string|max_len:100",
 		"nationality":                   "required|string|max_len:100",
@@ -66,10 +66,8 @@ func (r *ApplicationCreateRequest) Messages(ctx http.Context) map[string]string 
 		"email.max_len":                          "Email cannot exceed 255 characters",
 		"phone.required":                         "Phone is required",
 		"phone.max_len":                          "Phone cannot exceed 255 characters",
-		"sme_registration_number.required":       "Sme Registration Number is required",
-		"sme_registration_number.max_len":        "Sme Registration Number cannot exceed 255 characters",
-		"sme_tax_identification_number.required": "Sme Tax Identification Number is required",
-		"sme_tax_identification_number.max_len":  "Sme Tax Identification Number cannot exceed 255 characters",
+		"sme_registration_number.max_len":        "Business Registration Number cannot exceed 255 characters",
+		"sme_tax_identification_number.max_len":  "Tax Identification Number cannot exceed 255 characters",
 		"status.required":                        "Status is required",
 	}
 }

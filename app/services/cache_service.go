@@ -175,6 +175,16 @@ func (s *CacheService) InvalidateNotificationCounts(userID uint) error {
 	return s.Forget(key)
 }
 
+// InvalidateAllNotificationCounts removes notification counts for all users
+// This is used when global counts (like pending applications) change
+func (s *CacheService) InvalidateAllNotificationCounts() error {
+	// Use Flush with pattern matching - Goravel's cache may support this
+	// For now, we'll rely on the short TTL to refresh counts
+	// A more robust solution would use Redis SCAN to find and delete matching keys
+	facades.Log().Debug("Invalidating all notification counts (relies on TTL)")
+	return nil
+}
+
 // ========================================
 // Message cache operations
 // ========================================

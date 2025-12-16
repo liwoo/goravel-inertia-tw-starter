@@ -131,6 +131,7 @@ export type TOTPSetupResponse = ApiResponse<TOTPSetupData>;
 export interface TOTPVerifyData {
   backup_codes: string[];
   enabled_at: string;
+  redirect?: string;
 }
 
 // Verify response (wrapped)

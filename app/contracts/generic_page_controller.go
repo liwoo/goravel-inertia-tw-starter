@@ -31,6 +31,9 @@ type GenericPageController struct {
 	// Additional data providers
 	extraDataProviders map[string]func(ctx http.Context) (interface{}, error)
 
+	// Mandatory filter provider - returns filters that are always applied to queries
+	mandatoryFilterProvider func(ctx http.Context) map[string]interface{}
+
 	// Current request context for statistics
 	currentContext http.Context
 }
@@ -79,6 +82,19 @@ func (c *GenericPageController) Index(ctx http.Context) http.Response {
 	if err != nil {
 		req = &ListRequest{Page: 1, PageSize: c.defaultPageSize, Context: ctx}
 		req.SetDefaults()
+	}
+
+	// 2.5 Apply Mandatory Filters (if configured)
+	if c.mandatoryFilterProvider != nil {
+		mandatoryFilters := c.mandatoryFilterProvider(ctx)
+		if mandatoryFilters != nil {
+			if req.Filters == nil {
+				req.Filters = make(map[string]interface{})
+			}
+			for k, v := range mandatoryFilters {
+				req.Filters[k] = v
+			}
+		}
 	}
 
 	// 3. Build Permissions Map
@@ -239,6 +255,12 @@ func (c *GenericPageController) addExtraData(ctx http.Context, props map[string]
 // AddExtraDataProvider registers a function to provide additional data for the page
 func (c *GenericPageController) AddExtraDataProvider(key string, provider func(ctx http.Context) (interface{}, error)) {
 	c.extraDataProviders[key] = provider
+}
+
+// SetMandatoryFilterProvider sets a function that provides filters always applied to queries
+// This is useful for scoping data to the current user's context (e.g., filtering by sme_id)
+func (c *GenericPageController) SetMandatoryFilterProvider(provider func(ctx http.Context) map[string]interface{}) {
+	c.mandatoryFilterProvider = provider
 }
 
 // SetAuthHelper sets the auth helper for the controller
