@@ -327,6 +327,66 @@ func (s *SmeControllerCRUDTestSuite) TestUpdateSmeNotFound() {
 	s.False(result["success"].(bool))
 }
 
+func (s *SmeControllerCRUDTestSuite) TestUpdateSmeValidationError() {
+	// Create an SME first
+	createdBy := int(s.testUser.ID)
+	sme := &models.Sme{
+		UsmeNumber:                 "USME-TEST-VAL-001",
+		Name:                       "Validation Test SME",
+		BusinessCategory:           "Services",
+		Sector:                     "Technology",
+		ContactPhone:               "+265999333555",
+		ContactEmail:               "validation@sme.mw",
+		BusinessImprovementAspects: []string{"Innovation"},
+		BusinessAccessedFinancing:  []string{"Venture Capital"},
+		CreatedBy:                  &createdBy,
+	}
+	s.Nil(facades.Orm().Query().Create(sme))
+
+	// Try to update with an invalid classification value
+	updateData := map[string]interface{}{
+		"classification": "INVALID_CLASS",
+	}
+
+	resp, result := s.makeRequest("PUT", fmt.Sprintf("/api/smes/%d", sme.ID), updateData)
+
+	// Should return 422 Unprocessable Entity due to validation error
+	s.Equal(http.StatusUnprocessableEntity, resp.StatusCode)
+	s.False(result["success"].(bool))
+}
+
+func (s *SmeControllerCRUDTestSuite) TestUpdateSmeValidClassification() {
+	// Create an SME first
+	createdBy := int(s.testUser.ID)
+	sme := &models.Sme{
+		UsmeNumber:                 "USME-TEST-VAL-002",
+		Name:                       "Valid Classification Test SME",
+		BusinessCategory:           "Manufacturing",
+		Sector:                     "Industrial",
+		ContactPhone:               "+265999333666",
+		ContactEmail:               "validclass@sme.mw",
+		BusinessImprovementAspects: []string{"Quality"},
+		BusinessAccessedFinancing:  []string{"Bank Loan"},
+		Classification:             "Unclassified",
+		CreatedBy:                  &createdBy,
+	}
+	s.Nil(facades.Orm().Query().Create(sme))
+
+	// Update with a valid classification value
+	updateData := map[string]interface{}{
+		"classification": "Micro",
+	}
+
+	resp, result := s.makeRequest("PUT", fmt.Sprintf("/api/smes/%d", sme.ID), updateData)
+
+	// Should return 200 OK
+	s.Equal(http.StatusOK, resp.StatusCode)
+	s.True(result["success"].(bool))
+
+	data := result["data"].(map[string]interface{})
+	s.Equal("Micro", data["classification"])
+}
+
 // ============================================================================
 // DELETE Tests
 // ============================================================================

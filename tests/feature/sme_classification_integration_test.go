@@ -109,9 +109,11 @@ func (s *SmeClassificationIntegrationSuite) createPrimaryBusinessOwner(smeID uin
 
 // createAdditionalBusinessMember creates an additional team member for an SME
 func (s *SmeClassificationIntegrationSuite) createAdditionalBusinessMember(smeID uint, firstName string) *models.AdditionalBusinessMember {
+	gender := "Male"
 	member := &models.AdditionalBusinessMember{
 		FirstName:        firstName,
 		LastName:         "Member",
+		Gender:           &gender,
 		Nationality:      "Malawian",
 		NationalIdNumber: "MN" + firstName + "123",
 		PhoneNumber:      "+265999000000",
@@ -422,6 +424,7 @@ func (s *SmeClassificationIntegrationSuite) TestClassificationTrigger_Additional
 	memberData := map[string]interface{}{
 		"first_name":         "MemberA",
 		"last_name":          "Test",
+		"gender":             "Male",
 		"nationality":        "Malawian",
 		"national_id_number": "MNA123456",
 		"phone_number":       "+265999000001",

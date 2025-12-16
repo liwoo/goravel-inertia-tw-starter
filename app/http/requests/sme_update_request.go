@@ -27,6 +27,7 @@ type SmeUpdateRequest struct {
 	UserAgent                  *string   `form:"user_agent" json:"user_agent"`
 	BusinessImprovementAspects *[]string `form:"business_improvement_aspects" json:"business_improvement_aspects"`
 	BusinessAccessedFinancing  *[]string `form:"business_accessed_financing" json:"business_accessed_financing"`
+	Classification             *string   `form:"classification" json:"classification"`
 	ID                         uint      `form:"-" json:"-"` // Set by controller
 }
 
@@ -107,6 +108,10 @@ func (r *SmeUpdateRequest) Rules(ctx http.Context) map[string]string {
 		rules["business_accessed_financing"] = "required|array"
 		rules["business_accessed_financing.*"] = "max_len:100"
 	}
+	// Only validate Classification if provided
+	if r.Classification != nil {
+		rules["classification"] = "in:Micro,Small,Medium,Unclassified"
+	}
 
 	// If no rules were added, add a dummy rule to prevent empty rules error
 	if len(rules) == 0 {
@@ -150,6 +155,7 @@ func (r *SmeUpdateRequest) Messages(ctx http.Context) map[string]string {
 		"business_accessed_financing.required":  "Business Accessed Financing is required",
 		"business_accessed_financing.array":     "Business Accessed Financing must be an array",
 		"business_accessed_financing.*.max":     "Each Business Accessed Financing entry cannot exceed 100 characters",
+		"classification.in":                     "Classification must be one of: Micro, Small, Medium, Unclassified",
 	}
 }
 
@@ -263,6 +269,10 @@ func (r *SmeUpdateRequest) ToUpdateData() map[string]interface{} {
 	// Only include BusinessAccessedFinancing if provided
 	if r.BusinessAccessedFinancing != nil {
 		data["business_accessed_financing"] = *r.BusinessAccessedFinancing
+	}
+	// Only include Classification if provided
+	if r.Classification != nil {
+		data["classification"] = *r.Classification
 	}
 
 	return data

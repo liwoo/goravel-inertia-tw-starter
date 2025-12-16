@@ -212,6 +212,7 @@ func (s *AdditionalBusinessMemberControllerCRUDTestSuite) getValidMemberData() m
 		"first_name":         "John",
 		"last_name":          "Doe",
 		"other_names":        "William",
+		"gender":             "Male",
 		"nationality":        "Malawian",
 		"national_id_number": "MWI123456789",
 		"date_of_birth":      "1990-05-15",
@@ -282,6 +283,7 @@ func (s *AdditionalBusinessMemberControllerCRUDTestSuite) TestCreateMemberValida
 			name: "Missing required last_name",
 			memberData: map[string]interface{}{
 				"first_name":         "John",
+				"gender":             "Male",
 				"nationality":        "Malawian",
 				"national_id_number": "MWI987654321",
 				"phone_number":       "+265991234567",
@@ -295,6 +297,7 @@ func (s *AdditionalBusinessMemberControllerCRUDTestSuite) TestCreateMemberValida
 			memberData: map[string]interface{}{
 				"first_name":         "John",
 				"last_name":          "Doe",
+				"gender":             "Male",
 				"nationality":        "Malawian",
 				"national_id_number": "MWI987654321",
 				"email":              "invalid-email",
@@ -309,6 +312,7 @@ func (s *AdditionalBusinessMemberControllerCRUDTestSuite) TestCreateMemberValida
 			memberData: map[string]interface{}{
 				"first_name":         "John",
 				"last_name":          "Doe",
+				"gender":             "Male",
 				"nationality":        "Malawian",
 				"national_id_number": "MWI987654321",
 				"date_of_birth":      "not-a-date",
@@ -323,6 +327,7 @@ func (s *AdditionalBusinessMemberControllerCRUDTestSuite) TestCreateMemberValida
 			memberData: map[string]interface{}{
 				"first_name":         "John",
 				"last_name":          "Doe",
+				"gender":             "Male",
 				"nationality":        "Malawian",
 				"national_id_number": "MWI987654321",
 				"phone_number":       "+265991234567",
@@ -353,13 +358,14 @@ func (s *AdditionalBusinessMemberControllerCRUDTestSuite) TestCreateMemberWithOp
 	memberData := map[string]interface{}{
 		"first_name":         "Jane",
 		"last_name":          "Smith",
+		"gender":             "Female",
 		"nationality":        "Malawian",
 		"national_id_number": "MWI111222333",
 		"phone_number":       "+265992223333",
 		"is_intern":          true,
 		"is_part_time":       true,
 		"sme_id":             s.testSme.ID,
-		// Optional fields not provided
+		// Optional fields not provided (other_names, email, date_of_birth)
 	}
 
 	resp, result := s.makeRequest("POST", "/api/additional_business_members", memberData)
@@ -1290,6 +1296,7 @@ func (s *AdditionalBusinessMemberControllerCRUDTestSuite) TestSpecialCharactersI
 		"first_name":         "Jean-François",
 		"last_name":          "O'Brien",
 		"other_names":        "María José",
+		"gender":             "Male",
 		"nationality":        "Côte d'Ivoire",
 		"national_id_number": "SP#123-456/789",
 		"email":              "test+special@example.com",
@@ -1330,13 +1337,14 @@ func (s *AdditionalBusinessMemberControllerCRUDTestSuite) TestNullableFields() {
 	memberData := map[string]interface{}{
 		"first_name":         "Minimal",
 		"last_name":          "Member",
+		"gender":             "Female",
 		"nationality":        "Malawian",
 		"national_id_number": "MIN123",
 		"phone_number":       "+265991234567",
 		"is_intern":          false,
 		"is_part_time":       false,
 		"sme_id":             s.testSme.ID,
-		// Nullable fields not provided
+		// Nullable fields not provided (other_names, date_of_birth, email)
 	}
 
 	resp, result := s.makeRequest("POST", "/api/additional_business_members", memberData)
