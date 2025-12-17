@@ -1,7 +1,7 @@
 {
   "name": "smedi-database",
   "private": true,
-  "version": "0.63.1",
+  "version": "0.64.2",
   "type": "module",
   "scripts": {
     "dev": "vite",

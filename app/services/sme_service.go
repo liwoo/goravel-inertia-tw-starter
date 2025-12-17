@@ -1554,50 +1554,34 @@ func (s *SmeService) CalculateClassification(smeID uint) (string, error) {
 }
 
 // DetermineClassification applies the classification rules based on Malawi MSME Policy
-// An SME meets a classification if it satisfies:
-// - Employment criteria AND
-// - At least one of (Turnover OR Assets) criteria
+// An SME meets a classification if it satisfies EITHER:
+// - Employment criteria (number of employees in range) OR
+// - Turnover criteria (annual sales turnover in range)
+// The highest matching classification is returned.
 // This method is exported to allow unit testing of the classification logic
 func (s *SmeService) DetermineClassification(employees int, turnover, assets float64) string {
 	// Check Medium classification first (highest)
-	// Employees: 21-99
-	// Turnover: Above 50,000,000 - 500,000,000
-	// Assets: Up to 250,000,000
-	if employees >= models.MediumEmployeeMin && employees <= models.MediumEmployeeMax {
-		// Check if turnover OR assets criteria is met
-		turnoverMet := turnover > models.MediumTurnoverMin && turnover <= models.MediumTurnoverMax
-		assetsMet := assets <= models.MediumAssetsMax && assets > 0
-		if turnoverMet || assetsMet {
-			return models.ClassificationMedium
-		}
+	// Employees: 21-99 OR Turnover: Above 50,000,000 - 500,000,000
+	employeesMeetsMedium := employees >= models.MediumEmployeeMin && employees <= models.MediumEmployeeMax
+	turnoverMeetsMedium := turnover > models.MediumTurnoverMin && turnover <= models.MediumTurnoverMax
+	if employeesMeetsMedium || turnoverMeetsMedium {
+		return models.ClassificationMedium
 	}
 
 	// Check Small classification
-	// Employees: 5-20
-	// Turnover: Above 5,000,000 - 50,000,000
-	// Assets: Up to 20,000,000
-	if employees >= models.SmallEmployeeMin && employees <= models.SmallEmployeeMax {
-		// Check if turnover OR assets criteria is met
-		turnoverMet := turnover > models.SmallTurnoverMin && turnover <= models.SmallTurnoverMax
-		assetsMet := assets <= models.SmallAssetsMax && assets > 0
-		if turnoverMet || assetsMet {
-			return models.ClassificationSmall
-		}
+	// Employees: 5-20 OR Turnover: Above 5,000,000 - 50,000,000
+	employeesMeetsSmall := employees >= models.SmallEmployeeMin && employees <= models.SmallEmployeeMax
+	turnoverMeetsSmall := turnover > models.SmallTurnoverMin && turnover <= models.SmallTurnoverMax
+	if employeesMeetsSmall || turnoverMeetsSmall {
+		return models.ClassificationSmall
 	}
 
 	// Check Micro classification
-	// Employees: 1-4
-	// Turnover: Up to 5,000,000
-	// Assets: Up to 1,000,000
-	if employees >= models.MicroEmployeeMin && employees <= models.MicroEmployeeMax {
-		// For Micro, we require at least some financial data to classify
-		// Either turnover OR assets criteria can be met (OR logic like Small/Medium)
-		// But at least one must have a positive value to avoid classifying with no data
-		turnoverMet := turnover > 0 && turnover <= models.MicroTurnoverMax
-		assetsMet := assets > 0 && assets <= models.MicroAssetsMax
-		if turnoverMet || assetsMet {
-			return models.ClassificationMicro
-		}
+	// Employees: 1-4 OR Turnover: Up to 5,000,000
+	employeesMeetsMicro := employees >= models.MicroEmployeeMin && employees <= models.MicroEmployeeMax
+	turnoverMeetsMicro := turnover > 0 && turnover <= models.MicroTurnoverMax
+	if employeesMeetsMicro || turnoverMeetsMicro {
+		return models.ClassificationMicro
 	}
 
 	// Default to Unclassified if no criteria are met

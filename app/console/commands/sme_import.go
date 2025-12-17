@@ -489,14 +489,32 @@ func parseOwnerName(fullName string) (title, firstName, lastName string) {
 		return "", "", ""
 	}
 
-	// Common titles to extract
-	titles := []string{"Mr.", "Mr", "Mrs.", "Mrs", "Miss", "Ms.", "Ms", "Dr.", "Dr", "Prof.", "Prof"}
+	// Common titles to extract - ordered by length (longest first) to avoid
+	// matching "Mr" when "Mrs" is intended (since "Mrs" starts with "Mr")
+	titles := []string{
+		"Prof.", "Prof",
+		"Mrs.", "Mrs",
+		"Miss",
+		"Ms.", "Ms",
+		"Mr.", "Mr",
+		"Dr.", "Dr",
+	}
 
+	lowerFullName := strings.ToLower(fullName)
 	for _, t := range titles {
-		if strings.HasPrefix(strings.ToLower(fullName), strings.ToLower(t)) {
-			title = t
-			fullName = strings.TrimSpace(fullName[len(t):])
-			break
+		lowerTitle := strings.ToLower(t)
+		if strings.HasPrefix(lowerFullName, lowerTitle) {
+			// Make sure the title is followed by a space or end of string
+			// to avoid matching "Mr" in "Mrambo" for example
+			afterTitle := len(t)
+			if afterTitle >= len(fullName) || fullName[afterTitle] == ' ' || fullName[afterTitle] == '.' {
+				title = t
+				fullName = strings.TrimSpace(fullName[afterTitle:])
+				// Remove any leading period or space that might remain
+				fullName = strings.TrimPrefix(fullName, ".")
+				fullName = strings.TrimSpace(fullName)
+				break
+			}
 		}
 	}
 
@@ -511,6 +529,44 @@ func parseOwnerName(fullName string) (title, firstName, lastName string) {
 		lastName = strings.Join(parts[1:], " ")
 		return title, firstName, lastName
 	}
+}
+
+// sanitizeName cleans up a name field, handling special characters common in Malawian names
+func sanitizeName(name string) string {
+	// Trim whitespace
+	name = strings.TrimSpace(name)
+
+	// Normalize multiple spaces to single space
+	spaceRe := regexp.MustCompile(`\s+`)
+	name = spaceRe.ReplaceAllString(name, " ")
+
+	// Apostrophes in names like M'bwana, N'goma should be preserved
+	// GORM/database drivers handle escaping via parameterized queries
+
+	return name
+}
+
+// validateParsedName checks if a parsed name looks suspicious and returns a warning message
+// Returns empty string if name looks valid
+func validateParsedName(firstName, lastName, originalFullName string) string {
+	// Check for suspiciously short first names (likely parsing errors)
+	if len(firstName) == 1 && len(lastName) > 2 {
+		// Single character first name with longer last name is suspicious
+		// Likely a title parsing issue
+		return fmt.Sprintf("Suspicious name parse: firstName='%s', lastName='%s' from '%s'",
+			firstName, lastName, originalFullName)
+	}
+
+	// Check if first name looks like a leftover from title
+	suspiciousFirstNames := []string{"s", "r", "rs", "iss", "rof"}
+	for _, sus := range suspiciousFirstNames {
+		if strings.ToLower(firstName) == sus {
+			return fmt.Sprintf("Suspicious name parse (possible title remnant): firstName='%s', lastName='%s' from '%s'",
+				firstName, lastName, originalFullName)
+		}
+	}
+
+	return ""
 }
 
 // normalizeGender normalizes gender values to MALE/FEMALE
@@ -542,30 +598,68 @@ func parseRowData(row []string, columnMap map[string]int, rowNum int) (*SmeImpor
 	data := &SmeImportData{}
 
 	// Parse Primary Business Owner fields
-	ownerFullName := getCellValue(row, columnMap, "BUSINESS OWNER NAME")
+	ownerFullName := sanitizeName(getCellValue(row, columnMap, "BUSINESS OWNER NAME"))
 	data.OwnerFullName = ownerFullName
 	data.OwnerTitle, data.OwnerFirstName, data.OwnerLastName = parseOwnerName(ownerFullName)
 
-	data.OwnerNationality = getCellValue(row, columnMap, "NATIONALITY")
-	data.OwnerNationalID = getCellValue(row, columnMap, "NATIONAL ID NO")
+	// Sanitize the parsed names
+	data.OwnerFirstName = sanitizeName(data.OwnerFirstName)
+	data.OwnerLastName = sanitizeName(data.OwnerLastName)
+
+	// Validate the parsed name and log warning if suspicious
+	if warning := validateParsedName(data.OwnerFirstName, data.OwnerLastName, ownerFullName); warning != "" {
+		facades.Log().Warning(fmt.Sprintf("Row %d: %s", rowNum, warning))
+		// Attempt to fix common parsing issues
+		if len(data.OwnerFirstName) <= 2 && len(data.OwnerLastName) > 2 {
+			// Try re-parsing by treating the suspicious firstName as part of lastName
+			parts := strings.Fields(ownerFullName)
+			if len(parts) >= 2 {
+				// Skip any detected title and use first real word as first name
+				startIdx := 0
+				if data.OwnerTitle != "" {
+					// Find where the title ends in the parts
+					for i, p := range parts {
+						if strings.Contains(strings.ToLower(data.OwnerTitle), strings.ToLower(p)) ||
+							strings.Contains(strings.ToLower(p), strings.ToLower(strings.TrimSuffix(data.OwnerTitle, "."))) {
+							startIdx = i + 1
+							break
+						}
+					}
+				}
+				if startIdx < len(parts) {
+					data.OwnerFirstName = sanitizeName(parts[startIdx])
+					if startIdx+1 < len(parts) {
+						data.OwnerLastName = sanitizeName(strings.Join(parts[startIdx+1:], " "))
+					} else {
+						data.OwnerLastName = ""
+					}
+					facades.Log().Info(fmt.Sprintf("Row %d: Re-parsed name to firstName='%s', lastName='%s'",
+						rowNum, data.OwnerFirstName, data.OwnerLastName))
+				}
+			}
+		}
+	}
+
+	data.OwnerNationality = sanitizeName(getCellValue(row, columnMap, "NATIONALITY"))
+	data.OwnerNationalID = strings.TrimSpace(getCellValue(row, columnMap, "NATIONAL ID NO"))
 	data.OwnerDateOfBirth = parseDate(getCellValue(row, columnMap, "DATE OF BIRTH"))
 	data.OwnerGender = normalizeGender(getCellValue(row, columnMap, "GENDER"))
-	data.OwnerEducation = getCellValue(row, columnMap, "EDUCATION")
-	data.OwnerMalawianStatus = getCellValue(row, columnMap, "MALAWI STATUS")
+	data.OwnerEducation = sanitizeName(getCellValue(row, columnMap, "EDUCATION"))
+	data.OwnerMalawianStatus = sanitizeName(getCellValue(row, columnMap, "MALAWI STATUS"))
 	data.OwnerHasSpecialNeeds = parseYesNo(getCellValue(row, columnMap, "HAS SPECIAL NEED?"))
-	data.OwnerSpecialNeedsDesc = getCellValue(row, columnMap, "SPECIAL NEEDS DESCRIPTION")
-	data.OwnerPhone = getCellValue(row, columnMap, "CONTACT")
-	data.OwnerEmail = getCellValue(row, columnMap, "EMAIL")
-	data.OwnerPhysicalAddress = getCellValue(row, columnMap, "PHYSICAL ADDRESS")
-	data.OwnerPostalAddress = getCellValue(row, columnMap, "POSTAL ADDRESS")
+	data.OwnerSpecialNeedsDesc = sanitizeName(getCellValue(row, columnMap, "SPECIAL NEEDS DESCRIPTION"))
+	data.OwnerPhone = strings.TrimSpace(getCellValue(row, columnMap, "CONTACT"))
+	data.OwnerEmail = strings.TrimSpace(getCellValue(row, columnMap, "EMAIL"))
+	data.OwnerPhysicalAddress = sanitizeName(getCellValue(row, columnMap, "PHYSICAL ADDRESS"))
+	data.OwnerPostalAddress = sanitizeName(getCellValue(row, columnMap, "POSTAL ADDRESS"))
 	data.OwnerRegion = normalizeRegion(getCellValue(row, columnMap, "REGION"))
-	data.OwnerDistrict = getCellValue(row, columnMap, "DISTRICT")
-	data.OwnerTA = getCellValue(row, columnMap, "TRADITIONAL AUTHORITY")
-	data.OwnerNextOfKinName = getCellValue(row, columnMap, "NEXT OF KIN NAME")
-	data.OwnerNextOfKinContact = getCellValue(row, columnMap, "NEXT OF KIN CONTACT")
+	data.OwnerDistrict = sanitizeName(getCellValue(row, columnMap, "DISTRICT"))
+	data.OwnerTA = sanitizeName(getCellValue(row, columnMap, "TRADITIONAL AUTHORITY"))
+	data.OwnerNextOfKinName = sanitizeName(getCellValue(row, columnMap, "NEXT OF KIN NAME"))
+	data.OwnerNextOfKinContact = strings.TrimSpace(getCellValue(row, columnMap, "NEXT OF KIN CONTACT"))
 
 	// Parse SME fields
-	data.BusinessName = getCellValue(row, columnMap, "BUSINESS NAME")
+	data.BusinessName = sanitizeName(getCellValue(row, columnMap, "BUSINESS NAME"))
 	data.BusinessType = getCellValue(row, columnMap, "BUSINESS TYPE")
 	data.IsRegistered = parseYesNo(getCellValue(row, columnMap, "REGISTERED"))
 	data.RegistrationNumber = getCellValue(row, columnMap, "BUSINESS REGISTRATION NO")
@@ -1634,6 +1728,7 @@ func calculateClassificationWithDB(smeID uint, data *SmeImportData, db *gorm.DB)
 }
 
 // determineClassificationForImport applies the classification rules based on Malawi MSME Policy
+// Classification is based on EITHER employees OR turnover meeting the criteria.
 // This mirrors SmeService.DetermineClassification
 func determineClassificationForImport(employees int, turnover, assets float64) string {
 	// Classification thresholds (matching models package constants)
@@ -1642,48 +1737,42 @@ func determineClassificationForImport(employees int, turnover, assets float64) s
 		microEmployeeMin = 1
 		microEmployeeMax = 4
 		microTurnoverMax = 5000000.0
-		microAssetsMax   = 1000000.0
 
 		// Small thresholds
 		smallEmployeeMin = 5
 		smallEmployeeMax = 20
 		smallTurnoverMin = 5000000.0
 		smallTurnoverMax = 50000000.0
-		smallAssetsMax   = 20000000.0
 
 		// Medium thresholds
 		mediumEmployeeMin = 21
 		mediumEmployeeMax = 99
 		mediumTurnoverMin = 50000000.0
 		mediumTurnoverMax = 500000000.0
-		mediumAssetsMax   = 250000000.0
 	)
 
 	// Check Medium classification first (highest)
-	if employees >= mediumEmployeeMin && employees <= mediumEmployeeMax {
-		turnoverMet := turnover > mediumTurnoverMin && turnover <= mediumTurnoverMax
-		assetsMet := assets <= mediumAssetsMax && assets > 0
-		if turnoverMet || assetsMet {
-			return models.ClassificationMedium
-		}
+	// Employees: 21-99 OR Turnover: Above 50,000,000 - 500,000,000
+	employeesMeetsMedium := employees >= mediumEmployeeMin && employees <= mediumEmployeeMax
+	turnoverMeetsMedium := turnover > mediumTurnoverMin && turnover <= mediumTurnoverMax
+	if employeesMeetsMedium || turnoverMeetsMedium {
+		return models.ClassificationMedium
 	}
 
 	// Check Small classification
-	if employees >= smallEmployeeMin && employees <= smallEmployeeMax {
-		turnoverMet := turnover > smallTurnoverMin && turnover <= smallTurnoverMax
-		assetsMet := assets <= smallAssetsMax && assets > 0
-		if turnoverMet || assetsMet {
-			return models.ClassificationSmall
-		}
+	// Employees: 5-20 OR Turnover: Above 5,000,000 - 50,000,000
+	employeesMeetsSmall := employees >= smallEmployeeMin && employees <= smallEmployeeMax
+	turnoverMeetsSmall := turnover > smallTurnoverMin && turnover <= smallTurnoverMax
+	if employeesMeetsSmall || turnoverMeetsSmall {
+		return models.ClassificationSmall
 	}
 
 	// Check Micro classification
-	if employees >= microEmployeeMin && employees <= microEmployeeMax {
-		turnoverMet := turnover > 0 && turnover <= microTurnoverMax
-		assetsMet := assets > 0 && assets <= microAssetsMax
-		if turnoverMet || assetsMet {
-			return models.ClassificationMicro
-		}
+	// Employees: 1-4 OR Turnover: Up to 5,000,000
+	employeesMeetsMicro := employees >= microEmployeeMin && employees <= microEmployeeMax
+	turnoverMeetsMicro := turnover > 0 && turnover <= microTurnoverMax
+	if employeesMeetsMicro || turnoverMeetsMicro {
+		return models.ClassificationMicro
 	}
 
 	// Default to Unclassified

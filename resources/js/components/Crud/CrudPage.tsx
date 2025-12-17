@@ -365,8 +365,40 @@ export function CrudPage<T extends { id: number }>({
     const handleRefresh = React.useCallback(() => {
         setIsRefreshing(true);
         onRefresh?.();
-        setTimeout(() => setIsRefreshing(false), 1000);
-    }, [onRefresh]);
+
+        // Clear all query params and navigate to clean base route
+        setSearchTerm('');
+        setActiveFilters({});
+        setAppliedDynamicFilter(null);
+        setActiveSimpleFilter(undefined);
+
+        router.get(baseRoute, {}, {
+            preserveState: false,
+            preserveScroll: false,
+            onFinish: () => {
+                setIsRefreshing(false);
+            },
+        });
+    }, [onRefresh, baseRoute]);
+
+    // Clear search handler
+    const handleClearSearch = React.useCallback(() => {
+        setSearchTerm('');
+
+        const params = buildNavigationParams({
+            search: undefined,
+            page: 1,
+        });
+
+        // Remove search from params
+        delete params.search;
+
+        router.get(baseRoute, params, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['data', 'filters'],
+        });
+    }, [baseRoute, buildNavigationParams]);
 
     const handleSort = React.useCallback((field: string, direction?: 'asc' | 'desc') => {
         // If direction is explicitly provided, use it; otherwise toggle
@@ -951,9 +983,21 @@ export function CrudPage<T extends { id: number }>({
                                 placeholder={`Search ${resourceName}...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9"
+                                className={cn("pl-9", searchTerm && "pr-9")}
                                 autoFocus
                             />
+                            {searchTerm && !isSearching && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleClearSearch}
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 h-full px-3 py-0 hover:bg-transparent"
+                                >
+                                    <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                    <span className="sr-only">Clear search</span>
+                                </Button>
+                            )}
                         </div>
                     </div>
 
