@@ -17,8 +17,9 @@ type PrimaryBusinessOwner struct {
 	Gender                 string          `json:"gender" db:"gender"`
 	EducationLevel         string          `json:"education_level" db:"education_level"`
 	MalawianStatus         string          `json:"malawian_status" db:"malawian_status"`
-	HasSpecialNeeds        bool            `json:"has_special_needs" db:"has_special_needs"`
-	PhoneNumber            string          `json:"phone_number" db:"phone_number"`
+	HasSpecialNeeds           bool            `json:"has_special_needs" db:"has_special_needs"`
+	SpecialNeedsDescription   *string         `json:"special_needs_description" db:"special_needs_description"`
+	PhoneNumber               string          `json:"phone_number" db:"phone_number"`
 	LandlineNumber         *string         `json:"landline_number" db:"landline_number"`
 	Email                  *string         `json:"email" db:"email"`
 	PhysicalAddress        *string         `json:"physical_address" db:"physical_address"`

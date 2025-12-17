@@ -107,15 +107,14 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
 
     return (
         <>
-            <Sidebar collapsible="offcanvas" {...props}>
+            <Sidebar collapsible="icon" {...props}>
                 <SidebarHeader>
-                    <div className="flex items-center justify-between px-3 py-2">
-                        <a href="/dashboard" className="flex items-center gap-2">
-                            <img src="/images/mw-coat.svg" alt="Logo" className="h-8 w-auto" />
-                            <span className="text-lg font-semibold">MSME Database</span>
+                    <div className="flex items-center justify-between px-1 py-2">
+                        <a href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full">
+                            <img src="/images/mw-coat.svg" alt="Logo" className="h-8 w-auto shrink-0" />
+                            <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">MSME Database</span>
                         </a>
                     </div>
-
                 </SidebarHeader>
                 <SidebarContent>
                     <NavMain items={navigationItems.navMain} />
@@ -123,13 +122,13 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                     <NavSecondary items={navigationItems.navSecondary} className="mt-auto" />
 
                     {/* Hardcoded Search Option */}
-                    <div className="mt-2 px-3 pb-3">
+                    <div className="mt-2 px-3 pb-3 group-data-[collapsible=icon]:px-2">
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <SidebarMenuButton onClick={() => setSearchOpen(true)}>
+                                <SidebarMenuButton tooltip="Search" onClick={() => setSearchOpen(true)}>
                                     <Search className="h-4 w-4" />
                                     <span>Search</span>
-                                    <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
+                                    <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-data-[collapsible=icon]:hidden">
                                         <Command className="h-3 w-3" />K
                                     </kbd>
                                 </SidebarMenuButton>

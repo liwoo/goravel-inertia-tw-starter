@@ -44,6 +44,7 @@ export function NavUser({
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
+                            tooltip={user?.name || "Account"}
                             className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                         >
                             <Avatar className="h-8 w-8 rounded-lg grayscale">
@@ -51,7 +52,7 @@ export function NavUser({
                                 <AvatarFallback
                                     className="rounded-lg">{getInitials(user?.name || "Unknown User")}</AvatarFallback>
                             </Avatar>
-                            <div className="grid flex-1 text-left text-sm leading-tight">
+                            <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                                 <div>
                                     <span className="truncate font-medium">{user?.name} </span>
                                     {isSuperAdmin && (
@@ -64,7 +65,7 @@ export function NavUser({
                   {user?.email}
                 </span>
                             </div>
-                            <MoreVerticalIcon className="ml-auto size-4"/>
+                            <MoreVerticalIcon className="ml-auto size-4 group-data-[collapsible=icon]:hidden"/>
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent

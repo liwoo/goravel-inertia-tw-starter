@@ -71,6 +71,9 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251214160001CreateTotpBackupCodesTable{},
 		&migrations.M20251216102504AddTypeToApplicationsTable{},
 		&migrations.M20251216143111AlterApplicationsNullableFields{},
+		&migrations.M20251216210410AddSpecialNeedsDescriptionToPrimaryBusinessOwner{},
+		&migrations.M20251216210411AddContractFieldsToBusinessEmployeeSummary{},
+		&migrations.M20251216215300ExpandVarcharFields{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {

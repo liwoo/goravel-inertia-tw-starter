@@ -1506,7 +1506,9 @@ func (s *SmeService) CalculateClassification(smeID uint) (string, error) {
 		bes := sme.BusinessEmployeeSummary
 		totalEmployees += bes.FullTimeMales + bes.FullTimeFemales +
 			bes.PartTimeMales + bes.PartTimeFemales +
-			bes.InternMales + bes.InternFemales
+			bes.InternMales + bes.InternFemales +
+			bes.FullTimeWithContractMales + bes.FullTimeWithContractFemales +
+			bes.TemporaryMales + bes.TemporaryFemales
 	}
 
 	// Get turnover and assets from BusinessFormalisation

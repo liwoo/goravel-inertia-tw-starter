@@ -173,6 +173,25 @@ func (s *SmeClassificationIntegrationSuite) createBusinessEmployeeSummary(smeID 
 	return summary
 }
 
+// createBusinessEmployeeSummaryWithContractAndTemp creates an employee summary including contract and temporary workers
+func (s *SmeClassificationIntegrationSuite) createBusinessEmployeeSummaryWithContractAndTemp(smeID uint, fullTimeMales, fullTimeFemales, contractMales, contractFemales, tempMales, tempFemales int) *models.BusinessEmployeeSummary {
+	summary := &models.BusinessEmployeeSummary{
+		SmeID:                       int(smeID),
+		FullTimeMales:               fullTimeMales,
+		FullTimeFemales:             fullTimeFemales,
+		FullTimeWithContractMales:   contractMales,
+		FullTimeWithContractFemales: contractFemales,
+		TemporaryMales:              tempMales,
+		TemporaryFemales:            tempFemales,
+	}
+
+	err := facades.Orm().Query().Create(&summary)
+	s.Require().NoError(err, "Failed to create business employee summary")
+	s.Require().NotZero(summary.ID, "Summary ID should be set after creation")
+
+	return summary
+}
+
 // getSmeClassification retrieves the current classification for an SME
 func (s *SmeClassificationIntegrationSuite) getSmeClassification(smeID uint) string {
 	var sme models.Sme
@@ -341,6 +360,36 @@ func (s *SmeClassificationIntegrationSuite) TestEmployeeCount_NoPrimaryOwner() {
 	// 3 employees from summary only (no primary owner)
 	s.Equal(models.ClassificationMicro, classification,
 		"SME with 3 employees from summary should be classified")
+}
+
+// TestEmployeeCount_ContractAndTemporaryWorkers verifies that contract and temporary
+// workers are counted in classification (regression test for Speed courier bug)
+func (s *SmeClassificationIntegrationSuite) TestEmployeeCount_ContractAndTemporaryWorkers() {
+	// Scenario: SME with only contract and temporary workers (like Speed courier)
+	// No full-time employees in the traditional fields, but has:
+	// - 5 contract males + 1 contract female + 1 temporary male = 7 employees
+	// Plus primary owner = 8 employees total
+	sme := s.createTestSme("ContractAndTempWorkers")
+	s.createPrimaryBusinessOwner(sme.ID) // +1 employee
+
+	// Only contract and temporary workers, no regular full-time
+	s.createBusinessEmployeeSummaryWithContractAndTemp(sme.ID,
+		0, 0, // No regular full-time
+		5, 1, // 5 contract males + 1 contract female = 6
+		1, 0, // 1 temporary male = 1
+	)
+	// Total: 1 (owner) + 6 (contract) + 1 (temp) = 8 employees
+
+	// High turnover and assets (exceeding Micro limits)
+	s.createBusinessFormalisation(sme.ID, 30000.0, 18000.0)
+
+	// Calculate classification
+	classification, err := s.smeService.CalculateClassification(sme.ID)
+
+	s.NoError(err, "Classification calculation should succeed")
+	// 8 employees is in Small range (5-20)
+	s.Equal(models.ClassificationSmall, classification,
+		"SME with 8 employees (including contract and temp) should be Small")
 }
 
 // TestEmployeeCount_ZeroEmployees verifies that an SME with no employees

@@ -172,6 +172,8 @@ require (
 	github.com/quic-go/quic-go v0.55.0 // indirect
 	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	github.com/redis/go-redis/v9 v9.11.0 // indirect
+	github.com/richardlehane/mscfb v1.0.4 // indirect
+	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/rifflock/lfshook v0.0.0-20180920164130-b9218ef580f5 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
@@ -191,6 +193,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.40.0 // indirect
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect
+	github.com/tiendc/go-deepcopy v1.7.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
@@ -202,6 +205,9 @@ require (
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
+	github.com/xuri/efp v0.0.1 // indirect
+	github.com/xuri/excelize/v2 v2.10.0 // indirect
+	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.3 // indirect
