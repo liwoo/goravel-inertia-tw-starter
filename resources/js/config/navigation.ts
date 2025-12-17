@@ -1,17 +1,20 @@
 import {
     BarChartIcon,
-    BookIcon,
+    BookIcon, BuildingIcon, Calendar1Icon,
     CameraIcon,
     ClipboardListIcon,
+    CogIcon,
     DatabaseIcon,
     FileCodeIcon,
     FileIcon,
     FileTextIcon,
+    FolderIcon,
     HelpCircleIcon,
-    LayoutDashboardIcon, PercentSquareIcon, PersonStandingIcon,
+    LayoutDashboardIcon, NotebookTabsIcon, NotepadText, PercentSquareIcon, PersonStandingIcon,
     SettingsIcon,
-    ShieldIcon,
+    ShieldIcon, User2Icon,
     UsersIcon,
+    SparklesIcon,
 } from "lucide-react"
 
 // Navigation item types
@@ -21,7 +24,10 @@ export interface BaseNavItem {
     icon: any;
     requiredService?: string;
     requiredAction?: "read" | "write" | "delete" | "manage" | "create" | "update" | "export" | "bulk_update" | "bulk_delete";
+    requiredRole?: string;
     requireSuperAdmin?: boolean;
+    variant?: "default" | "primary";
+    action?: "openMySmeModal"; // Custom action instead of navigation
 }
 
 export type NavItem = BaseNavItem;
@@ -40,6 +46,7 @@ interface DocumentItem {
     icon: any;
     requiredService?: string;
     requiredAction?: "read" | "write" | "delete" | "manage" | "create" | "update" | "export" | "bulk_update" | "bulk_delete";
+    requiredRole?: string;
 }
 
 export interface NavigationConfig {
@@ -47,6 +54,7 @@ export interface NavigationConfig {
     navClouds: NavItemWithChildren[];
     navSecondary: NavItem[];
     documents: DocumentItem[];
+    navSme: NavItem[];
 }
 
 // Navigation items with permission requirements
@@ -59,25 +67,33 @@ export const navigationConfig: NavigationConfig = {
             // Dashboard is always accessible to authenticated users
         },
         {
-            title: "Books",
-            url: "/admin/books",
-            icon: BookIcon,
-            requiredService: "books",
+            title: "SMEs",
+            url: "/admin/smes",
+            icon: User2Icon,
+            requiredService: "smes",
             requiredAction: "read" as const,
         },
         {
-            title: "Lenders",
-            url: "/admin/lenders",
-            icon: PersonStandingIcon,
-            requiredService: "lenders",
+            title: "BDSPs",
+            url: "/admin/bdsps",
+            icon: BuildingIcon,
+            requiredService: "bdsps",
             requiredAction: "read" as const,
         },
 
         {
-            title: "Analysis",
-            url: "#",
-            icon: BarChartIcon,
-            requiredService: "reports",
+            title: "Events",
+            url: "/admin/events",
+            icon: Calendar1Icon,
+            requiredService: "events",
+            requiredAction: "read" as const,
+        },
+
+        {
+            title: "Procurement",
+            url: "/admin/procurement-notices",
+            icon: ClipboardListIcon,
+            requiredService: "procurement_notices",
             requiredAction: "read" as const,
         },
     ],
@@ -151,24 +167,53 @@ export const navigationConfig: NavigationConfig = {
     ],
     documents: [
         {
-            name: "Data Library",
-            url: "#",
-            icon: DatabaseIcon,
-            requiredService: "reports",
+            name: "Configurations",
+            url: "/admin/configs",
+            icon: CogIcon,
+            requiredService: "config",
             requiredAction: "read" as const,
         },
         {
-            name: "Reports",
-            url: "#",
-            icon: ClipboardListIcon,
-            requiredService: "reports", 
+            name: "Applications",
+            url: "/admin/applications",
+            icon: NotebookTabsIcon,
+            requiredService: "applications",
             requiredAction: "read" as const,
         },
+    ],
+
+    navSme: [
         {
-            name: "Word Assistant",
+            title: "My MSME",
             url: "#",
-            icon: FileIcon,
-            // Always accessible
+            icon: LayoutDashboardIcon,
+            requiredRole: "sme-user",
+            variant: "primary",
+            action: "openMySmeModal",
+        },
+        {
+            title: "Portal",
+            url: "/portal",
+            icon: LayoutDashboardIcon,
+            requiredRole: "sme-user",
+        },
+        {
+            title: "Directory",
+            url: "/directory",
+            icon: FolderIcon,
+            requiredRole: "sme-user",
+        },
+        {
+            title: "My Applications",
+            url: "/applications",
+            icon: NotebookTabsIcon,
+            requiredRole: "sme-user",
+        },
+        {
+            title: "Opportunities",
+            url: "/opportunities",
+            icon: SparklesIcon,
+            requiredRole: "sme-user",
         },
     ],
 }

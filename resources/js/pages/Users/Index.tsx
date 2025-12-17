@@ -1,31 +1,55 @@
 import React, { useState, forwardRef } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { 
-  User, 
+import {
+  User,
   UserIndexProps,
-  UserFormData 
+  UserFormData
 } from '@/types/user';
 import { CrudPage } from '@/components/Crud/CrudPage';
-import { 
-  UserCreateForm, 
-  UserEditForm, 
+import {
+  UserCreateForm,
+  UserEditForm,
   UserDetailView,
-  userColumns, 
-  userColumnsMobile, 
-  userFilters, 
+  userColumns,
+  userColumnsMobile,
+  userFilters,
   createUserAdditionalActions,
   userStatsConfigs,
   userSimpleFilters,
   getUserPageActions,
   userActionHandlers
 } from './sections';
-import { 
-  renderStatsCards, 
-  createPageActions, 
-  createSimpleFilters 
+import {
+  renderStatsCards,
+  createPageActions,
+  createSimpleFilters
 } from '@/lib/crud-page-utils';
 // import { useIsMobile } from '@/hooks/use-mobile';
 import Admin from '@/layouts/Admin';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+
+interface Sme {
+  id: number;
+  name: string;
+  usme_number: string;
+}
 
 export default function UsersIndex({ 
   data, 
@@ -35,11 +59,19 @@ export default function UsersIndex({
   permissions 
 }: UserIndexProps) {
   const isMobile = false; // useIsMobile();
-  
+
   // Dialog states
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+
+  // Assign to SME dialog states
+  const [showAssignSmeDialog, setShowAssignSmeDialog] = useState(false);
+  const [selectedUserForSme, setSelectedUserForSme] = useState<User | null>(null);
+  const [selectedSmeId, setSelectedSmeId] = useState<string>('');
+  const [smes, setSmes] = useState<Sme[]>([]);
+  const [isLoadingSmes, setIsLoadingSmes] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Update user filters with roles
   const updatedUserFilters = userFilters.map(filter => {
@@ -110,6 +142,98 @@ export default function UsersIndex({
     router.reload({ only: ['data', 'stats'] });
   };
 
+  // Fetch SMEs for the assign dialog
+  const fetchSmes = async () => {
+    setIsLoadingSmes(true);
+    try {
+      const response = await fetch('/api/smes', {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSmes(data.data?.data || []);
+      } else {
+        toast.error('Failed to load SMEs');
+      }
+    } catch (error) {
+      console.error('Error fetching SMEs:', error);
+      toast.error('Failed to load SMEs');
+    } finally {
+      setIsLoadingSmes(false);
+    }
+  };
+
+  // Fetch user's currently assigned SME
+  const fetchUserAssignedSme = async (userEmail: string) => {
+    try {
+      const response = await fetch(`/api/primary-business-owners?filter[email]=${encodeURIComponent(userEmail)}&pageSize=1`, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const owners = data.data?.data || [];
+        if (owners.length > 0 && owners[0].sme_id) {
+          setSelectedSmeId(owners[0].sme_id.toString());
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user assigned SME:', error);
+    }
+  };
+
+  // Handle assign to SME click
+  const handleAssignToSmeClick = async (user: User) => {
+    setSelectedUserForSme(user);
+    setSelectedSmeId(''); // Reset first
+    setShowAssignSmeDialog(true);
+    await fetchSmes();
+    // Pre-select user's currently assigned SME if any
+    await fetchUserAssignedSme(user.email);
+  };
+
+  // Handle assign to SME submission
+  const handleAssignToSme = async () => {
+    if (!selectedUserForSme || !selectedSmeId) return;
+
+    setIsAssigning(true);
+    try {
+      const response = await fetch(`/api/users/${selectedUserForSme.id}/assign-sme`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ sme_id: parseInt(selectedSmeId) }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message || 'User assigned to SME successfully');
+        setShowAssignSmeDialog(false);
+        setSelectedUserForSme(null);
+        setSelectedSmeId('');
+        router.reload({ only: ['data'] });
+      } else {
+        toast.error(data.message || 'Failed to assign user to SME');
+      }
+    } catch (error) {
+      console.error('Error assigning user to SME:', error);
+      toast.error('Failed to assign user to SME');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   // Create additional actions using the extracted handlers
   const additionalActions = createUserAdditionalActions({
     onActivate: permissions.canEdit ? userActionHandlers.activate : undefined,
@@ -117,6 +241,7 @@ export default function UsersIndex({
     onResetPassword: permissions.canEdit ? userActionHandlers.resetPassword : undefined,
     onImpersonate: permissions.canManage ? userActionHandlers.impersonate : undefined,
     onSendWelcomeEmail: permissions.canEdit ? userActionHandlers.sendWelcomeEmail : undefined,
+    onAssignToSme: permissions.canEdit ? handleAssignToSmeClick : undefined,
   });
 
   // Custom form wrappers to include roles
@@ -173,6 +298,43 @@ export default function UsersIndex({
           />
         </div>
       </div>
+
+      {/* Assign to SME Dialog */}
+      <Dialog open={showAssignSmeDialog} onOpenChange={setShowAssignSmeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign User to SME</DialogTitle>
+            <DialogDescription>
+              Select an SME to assign {selectedUserForSme?.name} to. This will link the user account to the selected SME.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="sme">Select SME *</Label>
+              <Select value={selectedSmeId} onValueChange={setSelectedSmeId} disabled={isLoadingSmes}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isLoadingSmes ? "Loading SMEs..." : "Select an SME"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {smes.map((sme) => (
+                    <SelectItem key={sme.id} value={sme.id.toString()}>
+                      {sme.name} ({sme.usme_number})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAssignSmeDialog(false)} disabled={isAssigning}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignToSme} disabled={isAssigning || !selectedSmeId}>
+              {isAssigning ? 'Assigning...' : 'Assign to SME'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Admin>
   );
 }

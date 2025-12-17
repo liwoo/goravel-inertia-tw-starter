@@ -1,9 +1,11 @@
 import {
-  BookOpen,
   Users,
-  Shield,
   FileText,
-  Landmark,
+  Settings,
+  Building2,
+  Briefcase,
+  Calendar,
+  FileBox,
 } from 'lucide-react';
 
 /**
@@ -16,7 +18,9 @@ import {
  * 3. Ensure the backend search controller handles the entity type
  */
 
-export type SearchEntityType = 'book' | 'user' | 'lender';
+export type SearchEntityType = 'sme' | 'bdsp' | 'event' | 'procurement' | 'user' | 'config' | 'application';
+
+export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage';
 
 export interface SearchEntityConfig {
   type: SearchEntityType;
@@ -24,7 +28,7 @@ export interface SearchEntityConfig {
   icon: React.ReactNode;
   iconClassName?: string;
   permissionService: string; // Service name for permission check
-  permissionAction: string;  // Action name for permission check
+  permissionAction: PermissionAction;  // Action name for permission check
   colors: {
     light: string;
     dark: string;
@@ -38,40 +42,88 @@ export interface SearchEntityConfig {
  */
 export const SEARCH_ENTITIES: SearchEntityConfig[] = [
   {
-    type: 'book',
-    label: 'Books',
-    icon: <BookOpen className="h-4 w-4" />,
-    permissionService: 'books',
-    permissionAction: 'read' as const,
+    type: 'sme',
+    label: 'SMEs',
+    icon: <Building2 className="h-4 w-4" />,
+    permissionService: 'smes',
+    permissionAction: 'read',
     colors: {
       light: 'bg-blue-100 text-blue-800',
       dark: 'dark:bg-blue-900/30 dark:text-blue-400',
     },
-    urlPrefix: '/admin/books',
+    urlPrefix: '/admin/smes',
+  },
+  {
+    type: 'bdsp',
+    label: 'BDSPs',
+    icon: <Briefcase className="h-4 w-4" />,
+    permissionService: 'bdsps',
+    permissionAction: 'read',
+    colors: {
+      light: 'bg-green-100 text-green-800',
+      dark: 'dark:bg-green-900/30 dark:text-green-400',
+    },
+    urlPrefix: '/admin/bdsps',
+  },
+  {
+    type: 'event',
+    label: 'Events',
+    icon: <Calendar className="h-4 w-4" />,
+    permissionService: 'events',
+    permissionAction: 'read',
+    colors: {
+      light: 'bg-orange-100 text-orange-800',
+      dark: 'dark:bg-orange-900/30 dark:text-orange-400',
+    },
+    urlPrefix: '/admin/events',
+  },
+  {
+    type: 'procurement',
+    label: 'Procurements',
+    icon: <FileBox className="h-4 w-4" />,
+    permissionService: 'procurement_notices',
+    permissionAction: 'read',
+    colors: {
+      light: 'bg-purple-100 text-purple-800',
+      dark: 'dark:bg-purple-900/30 dark:text-purple-400',
+    },
+    urlPrefix: '/admin/procurements',
   },
   {
     type: 'user',
     label: 'Users',
     icon: <Users className="h-4 w-4" />,
     permissionService: 'users',
-    permissionAction: 'read' as const,
+    permissionAction: 'read',
     colors: {
-      light: 'bg-green-100 text-green-800',
-      dark: 'dark:bg-green-900/30 dark:text-green-400',
+      light: 'bg-cyan-100 text-cyan-800',
+      dark: 'dark:bg-cyan-900/30 dark:text-cyan-400',
     },
     urlPrefix: '/admin/users',
   },
   {
-    type: 'lender',
-    label: 'Lenders',
-    icon: <Landmark className="h-4 w-4" />,
-    permissionService: 'lenders',
-    permissionAction: 'read' as const,
+    type: 'config',
+    label: 'Configs',
+    icon: <Settings className="h-4 w-4" />,
+    permissionService: 'config',
+    permissionAction: 'read',
     colors: {
-      light: 'bg-orange-100 text-orange-800',
-      dark: 'dark:bg-orange-900/30 dark:text-orange-400',
+      light: 'bg-gray-100 text-gray-800',
+      dark: 'dark:bg-gray-900/30 dark:text-gray-400',
     },
-    urlPrefix: '/admin/lenders',
+    urlPrefix: '/admin/configs',
+  },
+  {
+    type: 'application',
+    label: 'Applications',
+    icon: <FileText className="h-4 w-4" />,
+    permissionService: 'applications',
+    permissionAction: 'read',
+    colors: {
+      light: 'bg-amber-100 text-amber-800',
+      dark: 'dark:bg-amber-900/30 dark:text-amber-400',
+    },
+    urlPrefix: '/admin/applications',
   },
 ];
 

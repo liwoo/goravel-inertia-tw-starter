@@ -40,5 +40,16 @@ func init() {
 				"driver": "orm",
 			},
 		},
+
+		// Two-Factor Authentication Settings
+		//
+		// When require_2fa is true, users accessing permission-protected resources
+		// must have 2FA enabled. This applies to all RequirePermission,
+		// RequireServicePermission, RequireScopedPermission, RequireRole, and
+		// RequireResourceAccess calls.
+		//
+		// Users without 2FA will receive a "2FA required" error and should be
+		// redirected to set up 2FA before accessing protected resources.
+		"require_2fa": config.Env("AUTH_REQUIRE_2FA", false),
 	})
 }

@@ -6,6 +6,8 @@ import {
   ShareIcon,
   type LucideIcon,
 } from "lucide-react"
+// @ts-ignore
+import { Link } from "@inertiajs/react"
 
 import {
   DropdownMenu,
@@ -36,15 +38,14 @@ export function NavDocuments({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Documents</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <a href={item.url}>
+              <Link href={item.url}>
                 <item.icon />
                 <span>{item.name}</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

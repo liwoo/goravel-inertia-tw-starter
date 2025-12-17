@@ -4,8 +4,8 @@ import (
 	"github.com/goravel/framework/contracts/foundation"
 	"github.com/goravel/framework/facades"
 
-	"players/app/grpc"
-	"players/routes"
+	"smedi-sme-db/app/grpc"
+	"smedi-sme-db/routes"
 )
 
 type GrpcServiceProvider struct {

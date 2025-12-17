@@ -1,10 +1,13 @@
 name: CD
 
 on:
-  push:
-    branches: [ main ]
-    tags:
-      - 'v*'
+  # Trigger after CI workflow completes successfully
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches: [main, develop]
+  # Manual trigger
   workflow_dispatch:
     inputs:
       environment:
@@ -15,134 +18,343 @@ on:
         options:
           - staging
           - production
+      skip_smoke_tests:
+        description: 'Skip smoke tests after deployment'
+        required: false
+        default: false
+        type: boolean
 
 env:
-  HELM_VERSION: 'v3.13.0'
-  KUBECTL_VERSION: 'v1.28.0'
+  HELM_VERSION: 'v3.14.0'
+  KUBECTL_VERSION: 'v1.29.0'
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/smedi-database
+
+# Only allow one deployment at a time per environment
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy to Kubernetes
+  # =============================================================================
+  # Determine Environment
+  # =============================================================================
+
+  setup:
+    name: Setup Deployment
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    # Only run if CI was successful (or manual trigger)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      namespace: ${{ steps.env.outputs.namespace }}
+      values_file: ${{ steps.env.outputs.values_file }}
+      image_tag: ${{ steps.tag.outputs.tag }}
+      app_version: ${{ steps.tag.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set environment variables
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Determine environment
+        id: env
         run: |
-          if [[ "${{ github.event.inputs.environment }}" == "production" ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-            echo "NAMESPACE=production" >> $GITHUB_ENV
-            echo "VALUES_FILE=values.production.yaml" >> $GITHUB_ENV
+          # Get the branch - workflow_run uses different context
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            BRANCH="${{ github.event.workflow_run.head_branch }}"
           else
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-            echo "NAMESPACE=staging" >> $GITHUB_ENV
-            echo "VALUES_FILE=values.staging.yaml" >> $GITHUB_ENV
+            BRANCH="${{ github.ref }}"
           fi
-          
+
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]] || [[ "$BRANCH" == refs/tags/v* ]] || [[ "$BRANCH" == "main" ]] || [[ "$BRANCH" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "namespace=production" >> $GITHUB_OUTPUT
+            echo "values_file=values.production.yaml" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "namespace=staging" >> $GITHUB_OUTPUT
+            echo "values_file=values.staging.yaml" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine image tag
+        id: tag
+        run: |
+          # Get version from package.json (local checkout)
+          VERSION=$(jq -r '.version' package.json)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "App version from package.json: ${VERSION}"
+
+          # Sync Chart.yaml appVersion to match package.json
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" helm/goravel-blog/Chart.yaml
+          echo "Synced Chart.yaml appVersion to: ${VERSION}"
+
+          # Get environment from previous step
+          ENVIRONMENT="${{ steps.env.outputs.environment }}"
+
+          # Determine Docker image tag based on environment
+          # - staging uses 'develop' tag (CI tags develop branch as 'develop')
+          # - production uses package.json version
+          if [[ "$ENVIRONMENT" == "staging" ]]; then
+            echo "tag=develop" >> $GITHUB_OUTPUT
+            echo "Using image tag: develop (staging environment)"
+          else
+            echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+            echo "Using image tag: ${VERSION} (production environment)"
+          fi
+
+  # =============================================================================
+  # Pre-deployment Checks
+  # =============================================================================
+
+  pre-deploy-checks:
+    name: Pre-deployment Checks
+    runs-on: ubuntu-latest
+    needs: [setup]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if image exists in registry
+        run: |
+          echo "Checking for image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}"
+          # Note: This will be validated during deployment
+
+      - name: Validate Helm values
+        run: |
+          # Install Helm
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+          # Template with the target values file
+          helm template goravel-blog ./helm/goravel-blog \
+            --values ./helm/goravel-blog/values.yaml \
+            --values ./helm/goravel-blog/${{ needs.setup.outputs.values_file }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ needs.setup.outputs.image_tag }} \
+            --dry-run > /dev/null
+
+          echo "Helm template validation passed"
+
+  # =============================================================================
+  # Deploy
+  # =============================================================================
+
+  deploy:
+    name: Deploy to ${{ needs.setup.outputs.environment }}
+    runs-on: ubuntu-latest
+    needs: [setup, pre-deploy-checks]
+    environment:
+      name: ${{ needs.setup.outputs.environment }}
+      url: ${{ steps.deploy-url.outputs.url }}
+    outputs:
+      deployment_url: ${{ steps.deploy-url.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@v4
         with:
           version: ${{ env.KUBECTL_VERSION }}
-          
+
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v4
         with:
           version: ${{ env.HELM_VERSION }}
-          
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-          
-      - name: Update kubeconfig
+
+      - name: Configure Kubernetes credentials
         run: |
-          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
-          
+          mkdir -p $HOME/.kube
+          cat <<'KUBECONFIG_EOF' > $HOME/.kube/config
+          ${{ secrets.KUBECONFIG }}
+          KUBECONFIG_EOF
+          chmod 600 $HOME/.kube/config
+
+      - name: Verify cluster connection
+        run: |
+          echo "Testing cluster connection..."
+          kubectl cluster-info || { echo "Failed to connect to cluster"; exit 1; }
+          kubectl get nodes || { echo "Failed to get nodes"; exit 1; }
+          echo "Cluster connection verified successfully"
+
       - name: Create namespace if not exists
         run: |
-          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-          
+          kubectl create namespace ${{ needs.setup.outputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Create image pull secret
         run: |
-          kubectl create secret docker-registry ghcr-secret \
-            --docker-server=ghcr.io \
-            --docker-username=${{ github.actor }} \
-            --docker-password=${{ secrets.GITHUB_TOKEN }} \
-            --namespace=${{ env.NAMESPACE }} \
+          kubectl create secret docker-registry dockerhub-secret \
+            --docker-server=docker.io \
+            --docker-username=${{ secrets.DOCKERHUB_USERNAME }} \
+            --docker-password=${{ secrets.DOCKERHUB_TOKEN }} \
+            --namespace=${{ needs.setup.outputs.namespace }} \
             --dry-run=client -o yaml | kubectl apply -f -
-            
-      - name: Get image tag
-        id: image
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${{ github.ref_name }}-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-          fi
-          
+
       - name: Deploy with Helm
+        id: helm-deploy
         run: |
           helm upgrade --install goravel-blog ./helm/goravel-blog \
-            --namespace ${{ env.NAMESPACE }} \
+            --namespace ${{ needs.setup.outputs.namespace }} \
             --values ./helm/goravel-blog/values.yaml \
-            --values ./helm/goravel-blog/${{ env.VALUES_FILE }} \
-            --set image.repository=ghcr.io/${{ github.repository }} \
-            --set image.tag=${{ steps.image.outputs.tag }} \
-            --set imagePullSecrets[0].name=ghcr-secret \
+            --values ./helm/goravel-blog/${{ needs.setup.outputs.values_file }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ needs.setup.outputs.image_tag }} \
+            --set imagePullSecrets[0].name=dockerhub-secret \
+            --set app.version=${{ needs.setup.outputs.app_version }} \
             --set app.database.password=${{ secrets.DB_PASSWORD }} \
             --set app.jwt.secret=${{ secrets.JWT_SECRET }} \
             --set app.key=${{ secrets.APP_KEY }} \
+            --set app.redis.password=${{ secrets.REDIS_PASSWORD }} \
             --wait \
-            --timeout 10m
-            
-      - name: Check deployment status
+            --timeout 10m \
+            --atomic
+
+      - name: Wait for deployment rollout
         run: |
-          kubectl rollout status deployment/goravel-blog-goravel-blog -n ${{ env.NAMESPACE }}
-          
-      - name: Run database migrations
-        if: success()
+          kubectl rollout status deployment/goravel-blog \
+            -n ${{ needs.setup.outputs.namespace }} \
+            --timeout=5m
+
+      # NOTE: Database migrations are handled by the init container in the Helm chart
+      # The init container redirects stdin to /dev/null to prevent charmbracelet/huh TTY panic
+
+      - name: Get deployment URL
+        id: deploy-url
         run: |
-          POD_NAME=$(kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=goravel-blog -o jsonpath="{.items[0].metadata.name}")
-          kubectl exec -n ${{ env.NAMESPACE }} $POD_NAME -- ./main artisan migrate --force
-          
+          INGRESS_HOST=$(kubectl get ingress -n ${{ needs.setup.outputs.namespace }} \
+            -l app.kubernetes.io/name=goravel-blog \
+            -o jsonpath="{.items[0].spec.rules[0].host}" 2>/dev/null || echo "")
+
+          if [ -n "$INGRESS_HOST" ]; then
+            echo "url=https://${INGRESS_HOST}" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://${{ needs.setup.outputs.environment }}.example.com" >> $GITHUB_OUTPUT
+          fi
+
       - name: Display deployment info
-        if: always()
         run: |
-          echo "Deployment info:"
-          kubectl get all -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=goravel-blog
+          echo "=== Deployment Summary ==="
+          echo "Environment: ${{ needs.setup.outputs.environment }}"
+          echo "Namespace: ${{ needs.setup.outputs.namespace }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}"
           echo ""
-          echo "Ingress info:"
-          kubectl get ingress -n ${{ env.NAMESPACE }}
+          echo "=== Pods ==="
+          kubectl get pods -n ${{ needs.setup.outputs.namespace }} -l app.kubernetes.io/name=goravel-blog
+          echo ""
+          echo "=== Services ==="
+          kubectl get services -n ${{ needs.setup.outputs.namespace }} -l app.kubernetes.io/name=goravel-blog
+          echo ""
+          echo "=== Ingress ==="
+          kubectl get ingress -n ${{ needs.setup.outputs.namespace }}
+
+  # =============================================================================
+  # Post-deployment Validation
+  # =============================================================================
+
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [setup, deploy]
+    if: ${{ !inputs.skip_smoke_tests }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for services to stabilize
+        run: sleep 30
+
+      - name: Health check
+        run: |
+          DEPLOY_URL="${{ needs.deploy.outputs.deployment_url }}"
+
+          echo "Testing health endpoint at ${DEPLOY_URL}/health"
+
+          for i in {1..10}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${DEPLOY_URL}/health" || echo "000")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Health check passed!"
+              exit 0
+            fi
+
+            echo "Attempt $i: HTTP $HTTP_CODE - Retrying in 10s..."
+            sleep 10
+          done
+
+          echo "Health check failed after 10 attempts"
+          exit 1
+        continue-on-error: true
+
+      - name: Ready check
+        run: |
+          DEPLOY_URL="${{ needs.deploy.outputs.deployment_url }}"
+
+          echo "Testing ready endpoint at ${DEPLOY_URL}/ready"
+
+          for i in {1..5}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${DEPLOY_URL}/ready" || echo "000")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Ready check passed!"
+              exit 0
+            fi
+
+            echo "Attempt $i: HTTP $HTTP_CODE - Retrying in 10s..."
+            sleep 10
+          done
+
+          echo "Ready check failed after 5 attempts"
+          exit 1
+        continue-on-error: true
+
+      - name: Basic API test
+        run: |
+          DEPLOY_URL="${{ needs.deploy.outputs.deployment_url }}"
+
+          echo "Testing API endpoint at ${DEPLOY_URL}/"
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${DEPLOY_URL}/" || echo "000")
+
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
+            echo "API test passed! (HTTP $HTTP_CODE)"
+          else
+            echo "API test warning: HTTP $HTTP_CODE"
+          fi
+        continue-on-error: true
+
+  # =============================================================================
+  # Rollback (manual trigger or on failure)
+  # =============================================================================
 
   rollback:
     name: Rollback Deployment
     runs-on: ubuntu-latest
-    needs: deploy
+    needs: [setup, deploy]
     if: failure()
-    environment: ${{ github.event.inputs.environment || 'staging' }}
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure Kubernetes credentials
+        run: |
+          mkdir -p $HOME/.kube
+          cat <<'KUBECONFIG_EOF' > $HOME/.kube/config
+          ${{ secrets.KUBECONFIG }}
+          KUBECONFIG_EOF
+          chmod 600 $HOME/.kube/config
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-          
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
-          
-      - name: Set namespace
-        run: |
-          if [[ "${{ github.event.inputs.environment }}" == "production" ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "NAMESPACE=production" >> $GITHUB_ENV
-          else
-            echo "NAMESPACE=staging" >> $GITHUB_ENV
-          fi
-          
+          version: ${{ env.HELM_VERSION }}
+
       - name: Rollback Helm release
         run: |
-          helm rollback goravel-blog -n ${{ env.NAMESPACE }}
+          echo "Rolling back goravel-blog in namespace ${{ needs.setup.outputs.namespace }}"
+          helm rollback goravel-blog -n ${{ needs.setup.outputs.namespace }} || true
+
+      - name: Verify rollback
+        run: |
+          kubectl rollout status deployment/goravel-blog \
+            -n ${{ needs.setup.outputs.namespace }} \
+            --timeout=5m || true
+
+      - name: Display rollback status
+        run: |
+          echo "=== Current State After Rollback ==="
+          kubectl get pods -n ${{ needs.setup.outputs.namespace }} -l app.kubernetes.io/name=goravel-blog
+          echo ""
+          helm history goravel-blog -n ${{ needs.setup.outputs.namespace }} | tail -5

@@ -1,15 +1,18 @@
 package contracts
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
 	"time"
 
+	"smedi-sme-db/app/auth"
+
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
+	"github.com/goravel/framework/support/str"
 )
 
 // GenericCrudService provides a complete CRUD service implementation with minimal code
@@ -50,8 +53,9 @@ func NewGenericCrudService[T any](resourceName string, primaryKey string) *Gener
 	var model T
 	modelType := reflect.TypeOf(model)
 
-	// Extract table name from model type
-	tableName := strings.ToLower(modelType.Name()) + "s"
+	// Use the provided resourceName as the table name
+	// This allows services to specify custom table names (e.g., "sme_config" instead of "configs")
+	tableName := resourceName
 
 	return &GenericCrudService[T]{
 		BaseCrudService:      NewBaseCrudService(resourceName, primaryKey),
@@ -474,8 +478,9 @@ func (s *GenericCrudService[T]) GetByID(id uint) (interface{}, error) {
 		query = s.customQuery(query)
 	}
 
-	// Use First with the model pointer to ensure GORM handles soft deletes
-	if err := query.Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
+	// Use qualified primary key (table.column) to avoid ambiguity when JOINs are used
+	primaryKey := s.BaseCrudService.GetQualifiedPrimaryKey()
+	if err := query.Where(primaryKey+" = ?", id).First(&model); err != nil {
 		fmt.Printf("DEBUG: GetByID - Failed to find model with ID %d: %v\n", id, err)
 		return nil, fmt.Errorf("%s not found: %w", s.BaseCrudService.tableName, err)
 	}
@@ -527,7 +532,9 @@ func (s *GenericCrudService[T]) GetByIDWithContext(ctx http.Context, id uint) (i
 		}
 	}
 
-	if err := query.Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
+	// Use qualified primary key (table.column) to avoid ambiguity when JOINs are used
+	primaryKey := s.BaseCrudService.GetQualifiedPrimaryKey()
+	if err := query.Where(primaryKey+" = ?", id).First(&model); err != nil {
 		return nil, fmt.Errorf("%s not found: %w", s.BaseCrudService.tableName, err)
 	}
 
@@ -606,6 +613,17 @@ func (s *GenericCrudService[T]) Update(id uint, data map[string]interface{}) (in
 		}
 	}
 
+	// Serialize JSON fields if needed
+	// This fixes issues where GORM updates via map don't trigger serializer hooks correctly for some drivers
+	if err := s.serializeJsonFields(mappedData); err != nil {
+		facades.Log().Error("Failed to serialize JSON fields", map[string]interface{}{
+			"service": s.tableName,
+			"id":      id,
+			"error":   err.Error(),
+		})
+		// Continue anyway, maybe it works without serialization or it's not critical
+	}
+
 	// Update using GORM
 	var model T
 	if _, err := facades.Orm().Query().Model(&model).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).Update(mappedData); err != nil {
@@ -629,6 +647,13 @@ func (s *GenericCrudService[T]) Update(id uint, data map[string]interface{}) (in
 					"error":    err.Error(),
 				})
 			}
+		} else {
+			facades.Log().Warning("After update hook: type assertion failed", map[string]interface{}{
+				"resource":    s.BaseCrudService.tableName,
+				"id":          id,
+				"actualType":  fmt.Sprintf("%T", updated),
+				"expectedPtr": fmt.Sprintf("*%T", *new(T)),
+			})
 		}
 	}
 
@@ -655,15 +680,20 @@ func (s *GenericCrudService[T]) Delete(id uint) error {
 	}
 
 	// Delete using GORM (soft delete)
-	// First find the record, then delete it to ensure soft delete works properly
+	// Use Model() to ensure GORM uses the TableName() method from the model
 	var model T
-	if err := facades.Orm().Query().Table(s.tableName).Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).First(&model); err != nil {
-		return fmt.Errorf("failed to find %s for deletion: %w", s.tableName, err)
+	result, err := facades.Orm().Query().
+		Model(&model).
+		Where(s.BaseCrudService.GetPrimaryKey()+" = ?", id).
+		Update("deleted_at", time.Now())
+
+	if err != nil {
+		return fmt.Errorf("failed to delete %s: %w", s.tableName, err)
 	}
 
-	// Now delete the found record (this should trigger soft delete)
-	if _, err := facades.Orm().Query().Delete(&model); err != nil {
-		return fmt.Errorf("failed to delete %s: %w", s.tableName, err)
+	// Check if any row was actually deleted
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("no %s found with id %d", s.tableName, id)
 	}
 
 	// Run after hook if set
@@ -847,16 +877,28 @@ func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool
 		}
 	}
 
+	// Convert camelCase to snake_case for validation
+	// e.g., "formalisationScore" -> "formalisation_score"
+	snakeCaseField := str.Of(frontendField).Snake().String()
+
 	// If we have a mapping, check if this field has a mapped name
 	if mapping != nil {
 		if dbField, exists := mapping[frontendField]; exists {
-			// Check if the mapped field is sortable
-			if s.ValidateSortField(dbField) {
+			// The mapped field could be a complex expression like "COALESCE(table.column, 0)"
+			// We validate using the original frontend field or its snake_case equivalent
+			// since sortFields contains the logical field names, not the fully qualified column names
+			if s.ValidateSortField(frontendField) {
+				return dbField, true
+			}
+			// Check snake_case version (e.g., formalisationScore -> formalisation_score)
+			if s.ValidateSortField(snakeCaseField) {
 				return dbField, true
 			}
 			if logger := facades.Log(); logger != nil {
 				logger.Warning("Mapped field is NOT sortable", map[string]interface{}{
 					"service":        s.tableName,
+					"frontendField":  frontendField,
+					"snakeCaseField": snakeCaseField,
 					"dbField":        dbField,
 					"sortableFields": s.sortFields,
 				})
@@ -868,12 +910,17 @@ func (s *GenericCrudService[T]) MapSortField(frontendField string) (string, bool
 	if s.ValidateSortField(frontendField) {
 		return frontendField, true
 	}
+	// Also check snake_case version
+	if s.ValidateSortField(snakeCaseField) {
+		return snakeCaseField, true
+	}
 
 	// Log warning if logger is available (may be nil in unit tests)
 	if logger := facades.Log(); logger != nil {
 		logger.Warning("Field not sortable", map[string]interface{}{
 			"service":        s.tableName,
 			"frontendField":  frontendField,
+			"snakeCaseField": snakeCaseField,
 			"sortableFields": s.sortFields,
 		})
 	}
@@ -1298,4 +1345,49 @@ func (s *GenericCrudService[T]) applyFieldMapping(data map[string]interface{}) m
 	}
 
 	return result
+}
+
+// serializeJsonFields handles manual serialization of fields tagged with serializer:json or type:json
+// This is needed because GORM's Update with map bypasses some serializer hooks or treats slices as DB arrays
+func (s *GenericCrudService[T]) serializeJsonFields(data map[string]interface{}) error {
+	var model T
+	modelType := reflect.TypeOf(model)
+
+	for i := 0; i < modelType.NumField(); i++ {
+		field := modelType.Field(i)
+
+		// Extract json field name
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "" || jsonTag == "-" {
+			continue
+		}
+		fieldName := strings.Split(jsonTag, ",")[0]
+
+		// Check if field needs JSON serialization
+		gormTag := field.Tag.Get("gorm")
+		if !strings.Contains(gormTag, "serializer:json") && !strings.Contains(gormTag, "type:json") {
+			continue
+		}
+
+		// Serialize field value if present
+		value, exists := data[fieldName]
+		if !exists || value == nil {
+			continue
+		}
+
+		// Skip if already serialized
+		switch value.(type) {
+		case []byte, string:
+			continue
+		}
+
+		// Marshal to JSON
+		jsonBytes, err := json.Marshal(value)
+		if err != nil {
+			return fmt.Errorf("failed to marshal field %s: %w", fieldName, err)
+		}
+		data[fieldName] = jsonBytes
+	}
+
+	return nil
 }

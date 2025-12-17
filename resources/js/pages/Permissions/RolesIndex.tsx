@@ -27,8 +27,8 @@ interface RoleListResponse {
   perPage: number;
   currentPage: number;
   lastPage: number;
-  from: number | null;
-  to: number | null;
+  from?: number;
+  to?: number;
 }
 
 interface RolesIndexProps {
@@ -82,14 +82,8 @@ export default function RolesIndex({
     onManagePermissions: permissions.canManage ? roleActionHandlers.handleManagePermissions : undefined,
   });
 
-  // Custom form wrappers to include additional data
-  const CreateFormWithData = (props: any) => (
-    <RoleCreateForm {...props} allPermissions={allPermissions} services={services} actions={actions} />
-  );
-
-  const EditFormWithData = (props: any) => (
-    <RoleEditForm {...props} allPermissions={allPermissions} services={services} actions={actions} />
-  );
+  // For now, just use the forms directly without wrapping
+  // CrudPage will pass all required props
 
   // Configure filters and actions
   const simpleFilters = roleSimpleFilters(stats);
@@ -115,8 +109,8 @@ export default function RolesIndex({
           actions={additionalActions}
           simpleFilters={simpleFilters}
           pageActions={pageActions}
-          createForm={CreateFormWithData}
-          editForm={EditFormWithData}
+          createForm={RoleCreateForm}
+          editForm={RoleEditForm}
           detailView={RoleDetailView}
           onRefresh={handleRefresh}
         />

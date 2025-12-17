@@ -3,17 +3,63 @@ package inertia
 import (
 	"encoding/json"
 	"log"
+	"os"
+	"strings"
+	"sync"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	inertia "github.com/petaki/inertia-go"
 
-	"players/app/auth"   // Import auth for permission helper
-	"players/app/models" // Import the User model
+	"smedi-sme-db/app/auth"   // Import auth for permission helper
+	"smedi-sme-db/app/models" // Import the User model
 )
 
 // Version represents the current asset version
-const Version = "1.0.0"
+// This is loaded from APP_VERSION environment variable (set by Helm from package.json)
+var Version = "0.0.0"
+
+// versionOnce ensures we only load version once
+var versionOnce sync.Once
+
+// loadVersion reads the version from APP_VERSION environment variable
+// In production, APP_VERSION is set by Helm from package.json version
+// In development, it falls back to reading package.json directly
+func loadVersion() {
+	versionOnce.Do(func() {
+		// First, try APP_VERSION environment variable (production)
+		if envVersion := os.Getenv("APP_VERSION"); envVersion != "" {
+			Version = envVersion
+			log.Printf("Loaded app version from APP_VERSION env: %s", Version)
+			return
+		}
+
+		// Fallback: try reading package.json (local development)
+		data, err := os.ReadFile("package.json")
+		if err != nil {
+			log.Printf("Warning: APP_VERSION not set and could not read package.json: %v", err)
+			return
+		}
+
+		var pkg struct {
+			Version string `json:"version"`
+		}
+		if err := json.Unmarshal(data, &pkg); err != nil {
+			log.Printf("Warning: Could not parse package.json: %v", err)
+			return
+		}
+
+		if pkg.Version != "" {
+			Version = pkg.Version
+			log.Printf("Loaded app version from package.json: %s", Version)
+		}
+	})
+}
+
+// init loads the version when the package is initialized
+func init() {
+	loadVersion()
+}
 
 var Manager *inertia.Inertia
 
@@ -27,6 +73,9 @@ func GetManager() *inertia.Inertia {
 func Render(ctx http.Context, component string, props map[string]interface{}) http.Response {
 	// Prepare shared props, including auth user
 	sharedProps := make(map[string]interface{})
+
+	// Add app version to shared props
+	sharedProps["appVersion"] = Version
 
 	// Add session errors to shared props for Inertia.js
 	if ctx.Request().HasSession() {
@@ -54,10 +103,14 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 	// Add authenticated user information
 	var authUser *models.User
 
+	// Check if 2FA is required globally
+	require2FA := facades.Config().GetBool("auth.require_2fa", false)
+
 	// Default to no authenticated user in shared props
 	sharedProps["auth"] = map[string]interface{}{
 		"user":        nil,
 		"permissions": map[string]interface{}{}, // Empty permissions object
+		"require_2fa": require2FA,
 	}
 
 	err := facades.Auth(ctx).User(&authUser)
@@ -104,8 +157,10 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 					"permissions":  []string{},                 // Empty permissions array
 					"isSuperAdmin": authUser.Role == "ADMIN",   // Check legacy role
 					"isAdmin":      authUser.Role == "ADMIN",
+					"totpEnabled":  authUser.TOTPEnabled,
 				},
 				"permissions": allPermissions,
+				"require_2fa": require2FA,
 			}
 		} else {
 			// Get permission helper to build permissions map
@@ -147,8 +202,10 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 					"permissions":  userPermissions,
 					"isSuperAdmin": userWithRoles.IsSuperAdminUser(),
 					"isAdmin":      userWithRoles.IsAdmin(),
+					"totpEnabled":  userWithRoles.TOTPEnabled,
 				},
 				"permissions": allPermissions,
+				"require_2fa": require2FA,
 			}
 		}
 	}
@@ -164,10 +221,19 @@ func Render(ctx http.Context, component string, props map[string]interface{}) ht
 		finalProps[k] = v
 	}
 
-	// Get the URL safely
-	requestURL := ctx.Request().FullUrl()
-	if requestURL == "" {
-		requestURL = ctx.Request().Url()
+	// Get the URL path only (not full URL) to avoid origin mismatch issues
+	// When behind a reverse proxy (nginx ingress), FullUrl() returns internal URLs like
+	// http://localhost:3000/... which causes DOMException: operation is insecure
+	// when Inertia tries to pushState with a different origin than the browser
+	requestPath := ctx.Request().Path()
+	if requestPath == "" {
+		requestPath = "/"
+	}
+	// Include query string if present - extract from FullUrl since there's no QueryStr method
+	requestURL := requestPath
+	fullURL := ctx.Request().FullUrl()
+	if idx := strings.Index(fullURL, "?"); idx != -1 {
+		requestURL = requestPath + fullURL[idx:]
 	}
 
 	// Create the page data
@@ -230,8 +296,17 @@ func Middleware(next http.HandlerFunc) http.HandlerFunc {
 			if ctx.Request().Header("X-Inertia-Version", "") != Version {
 				// If there's a version mismatch and this is a GET request, force a full page reload
 				if ctx.Request().Method() == "GET" {
+					// Build the full URL using APP_URL config to avoid internal URL issues
+					appURL := facades.Config().GetString("app.url", "")
+					requestPath := ctx.Request().Path()
+					locationURL := appURL + requestPath
+					// Extract query string from FullUrl
+					fullURL := ctx.Request().FullUrl()
+					if idx := strings.Index(fullURL, "?"); idx != -1 {
+						locationURL = locationURL + fullURL[idx:]
+					}
 					return ctx.Response().
-						Header("X-Inertia-Location", ctx.Request().FullUrl()).
+						Header("X-Inertia-Location", locationURL).
 						Status(409).
 						Json(http.Json{})
 				}

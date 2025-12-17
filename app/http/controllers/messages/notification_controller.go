@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
-	"players/app/auth"
-	"players/app/contracts"
-	"players/app/services"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/services"
 )
 
 type NotificationController struct {
@@ -146,8 +146,8 @@ func (c *NotificationController) GetCounts(ctx http.Context) http.Response {
 		return c.ForbiddenResponse(ctx, "Authentication required")
 	}
 
-	// Get notification counts
-	counts, err := c.notificationService.GetNotificationCounts(user.ID)
+	// Get notification counts (pass ctx for permission checking)
+	counts, err := c.notificationService.GetNotificationCounts(user.ID, ctx)
 	if err != nil {
 		return c.InternalErrorResponse(ctx, err.Error())
 	}

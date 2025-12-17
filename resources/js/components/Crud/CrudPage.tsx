@@ -3,7 +3,7 @@
 import * as React from 'react';
 // @ts-ignore
 import {Head, router} from '@inertiajs/react';
-import {Command, Edit, Eye, Filter, Plus, RefreshCw, Search, Settings2, Trash2, X,} from 'lucide-react';
+import {ChevronDown, Command, Edit, Eye, Filter, Plus, RefreshCw, Search, Settings2, Trash2, X,} from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {CrudAction, CrudPageProps} from '@/types/crud';
 import {Button} from '@/components/ui/button';
@@ -37,12 +37,16 @@ export function CrudPage<T extends { id: number }>({
                                                        filters,
                                                        title,
                                                        resourceName,
+                                                       displayName,
                                                        route,
                                                        columns,
                                                        actions = [],
                                                        customFilters = [],
                                                        pageActions = [],
                                                        simpleFilters = [],
+                                                       simpleFiltersVariant = 'tabs',
+                                                       simpleFiltersDropdownLabel = 'Filter',
+                                                       bulkActions = [],
                                                        paginationConfig,
                                                        createForm: CreateForm,
                                                        editForm: EditForm,
@@ -56,6 +60,8 @@ export function CrudPage<T extends { id: number }>({
                                                        canEdit: propCanEdit,
                                                        canDelete: propCanDelete,
                                                        canView: propCanView,
+                                                       // Read-only mode
+                                                       readOnly = false,
                                                    }: CrudPageProps<T>) {
     // Guard against undefined data
     if (!data || !data.data) {
@@ -73,9 +79,14 @@ export function CrudPage<T extends { id: number }>({
     // Use provided route or default to /admin/{resourceName}
     const baseRoute = route || `/admin/${resourceName}`;
 
-    const canCreate = propCanCreate !== undefined ? propCanCreate : canPerformAction(resourceName, 'create');
-    const canEdit = propCanEdit !== undefined ? propCanEdit : canPerformAction(resourceName, 'update');
-    const canDelete = propCanDelete !== undefined ? propCanDelete : canPerformAction(resourceName, 'delete');
+    // Compute the singular display name for UI elements
+    // Use displayName if provided, otherwise format resourceName
+    const singularDisplayName = displayName || resourceName.slice(0, -1).replace(/_/g, ' ');
+
+    // In readOnly mode, disable create, edit, and delete regardless of permissions
+    const canCreate = readOnly ? false : (propCanCreate !== undefined ? propCanCreate : canPerformAction(resourceName, 'create'));
+    const canEdit = readOnly ? false : (propCanEdit !== undefined ? propCanEdit : canPerformAction(resourceName, 'update'));
+    const canDelete = readOnly ? false : (propCanDelete !== undefined ? propCanDelete : canPerformAction(resourceName, 'delete'));
     const canView = propCanView !== undefined ? propCanView : canPerformAction(resourceName, 'read');
 
     const canExport = canPerformAction(resourceName, 'export');
@@ -354,8 +365,40 @@ export function CrudPage<T extends { id: number }>({
     const handleRefresh = React.useCallback(() => {
         setIsRefreshing(true);
         onRefresh?.();
-        setTimeout(() => setIsRefreshing(false), 1000);
-    }, [onRefresh]);
+
+        // Clear all query params and navigate to clean base route
+        setSearchTerm('');
+        setActiveFilters({});
+        setAppliedDynamicFilter(null);
+        setActiveSimpleFilter(undefined);
+
+        router.get(baseRoute, {}, {
+            preserveState: false,
+            preserveScroll: false,
+            onFinish: () => {
+                setIsRefreshing(false);
+            },
+        });
+    }, [onRefresh, baseRoute]);
+
+    // Clear search handler
+    const handleClearSearch = React.useCallback(() => {
+        setSearchTerm('');
+
+        const params = buildNavigationParams({
+            search: undefined,
+            page: 1,
+        });
+
+        // Remove search from params
+        delete params.search;
+
+        router.get(baseRoute, params, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['data', 'filters'],
+        });
+    }, [baseRoute, buildNavigationParams]);
 
     const handleSort = React.useCallback((field: string, direction?: 'asc' | 'desc') => {
         // If direction is explicitly provided, use it; otherwise toggle
@@ -481,7 +524,7 @@ export function CrudPage<T extends { id: number }>({
 
         if ('logic' in appliedDynamicFilter && index !== undefined) {
             // Remove specific condition from compound filter
-            const newConditions = appliedDynamicFilter.conditions.filter((_, i) => i !== index);
+            const newConditions = appliedDynamicFilter.conditions.filter((_: FilterCondition | CompoundFilter, i: number) => i !== index);
             if (newConditions.length > 1) {
                 newFilter = {...appliedDynamicFilter, conditions: newConditions};
             } else if (newConditions.length === 1) {
@@ -590,7 +633,7 @@ export function CrudPage<T extends { id: number }>({
     }, []);
 
     const handleDelete = React.useCallback(async (item: T) => {
-        const confirmMessage = `Are you sure you want to delete this ${resourceName.slice(0, -1)}?`;
+        const confirmMessage = `Are you sure you want to delete this ${singularDisplayName}?`;
         if (confirm(confirmMessage)) {
             try {
                 // Get CSRF token from meta tag
@@ -608,7 +651,7 @@ export function CrudPage<T extends { id: number }>({
                 });
 
                 if (response.ok) {
-                    toast.success(`${resourceName.slice(0, -1)} deleted successfully`);
+                    toast.success(`${singularDisplayName} deleted successfully`);
                     // Close drawer first if it's open
                     if (drawerState.isOpen) {
                         closeDrawer();
@@ -617,8 +660,6 @@ export function CrudPage<T extends { id: number }>({
                     setTimeout(() => {
                         router.reload({
                             only: ['data', 'filters', 'stats'],
-                            preserveState: false,
-                            preserveScroll: true
                         });
                     }, 100);
                     if (selectedIds.includes(item.id)) {
@@ -627,11 +668,11 @@ export function CrudPage<T extends { id: number }>({
                 } else {
                     const errorData = await response.json().catch(() => ({}));
                     console.error('Delete error:', errorData);
-                    toast.error(`Failed to delete ${resourceName.slice(0, -1)}: ${errorData.message || 'Unknown error'}`);
+                    toast.error(`Failed to delete ${singularDisplayName}: ${errorData.message || 'Unknown error'}`);
                 }
             } catch (error) {
                 console.error('Delete error:', error);
-                toast.error(`Failed to delete ${resourceName.slice(0, -1)}: Network error`);
+                toast.error(`Failed to delete ${singularDisplayName}: Network error`);
             }
         }
     }, [resourceName, selectedIds, clearSelection]);
@@ -667,8 +708,6 @@ export function CrudPage<T extends { id: number }>({
         // Refresh the page data
         router.reload({
             only: ['data', 'filters', 'stats'],
-            preserveState: false,
-            preserveScroll: true
         });
     }, [closeDrawer]);
 
@@ -777,7 +816,7 @@ export function CrudPage<T extends { id: number }>({
                 onClick: handleDelete,
                 className: 'text-destructive focus:text-destructive',
                 confirm: true,
-                confirmMessage: `Are you sure you want to delete this ${resourceName.slice(0, -1)}?`,
+                confirmMessage: `Are you sure you want to delete this ${singularDisplayName}?`,
             });
         }
 
@@ -795,7 +834,7 @@ export function CrudPage<T extends { id: number }>({
         if (!appliedDynamicFilter) return 0;
         if ('logic' in appliedDynamicFilter) {
             // Compound filter - count all conditions
-            return appliedDynamicFilter.conditions.filter(c => !('logic' in c)).length;
+            return appliedDynamicFilter.conditions.filter((c: FilterCondition | CompoundFilter) => !('logic' in c)).length;
         }
         // Single condition
         return 1;
@@ -822,8 +861,8 @@ export function CrudPage<T extends { id: number }>({
     // Keyboard shortcuts
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Cmd/Ctrl + N to create new
-            if ((e.metaKey || e.ctrlKey) && e.key === 'n' && canCreate && CreateForm) {
+            // Cmd/Ctrl + C to create new
+            if ((e.metaKey || e.ctrlKey) && e.key === 'c' && canCreate && CreateForm) {
                 e.preventDefault();
                 handleCreate();
             }
@@ -915,11 +954,11 @@ export function CrudPage<T extends { id: number }>({
                             <Button onClick={handleCreate} className="group">
                                 <Plus className="h-4 w-4"/>
                                 <span className="hidden lg:inline ml-2 whitespace-nowrap">
-                  Add {resourceName.slice(0, -1)}
+                  Add {singularDisplayName}
                 </span>
                                 <kbd
                                     className="ml-2 pointer-events-none hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100">
-                                    <Command className="h-3 w-3"/>N
+                                    <Command className="h-3 w-3"/>C
                                 </kbd>
                             </Button>
                         )}
@@ -944,9 +983,21 @@ export function CrudPage<T extends { id: number }>({
                                 placeholder={`Search ${resourceName}...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9"
+                                className={cn("pl-9", searchTerm && "pr-9")}
                                 autoFocus
                             />
+                            {searchTerm && !isSearching && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleClearSearch}
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 h-full px-3 py-0 hover:bg-transparent"
+                                >
+                                    <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                    <span className="sr-only">Clear search</span>
+                                </Button>
+                            )}
                         </div>
                     </div>
 
@@ -963,7 +1014,7 @@ export function CrudPage<T extends { id: number }>({
                     )}
 
                     {/* Simple Filters */}
-                    {simpleFilters.length > 0 && (
+                    {simpleFilters.length > 0 && simpleFiltersVariant === 'tabs' && (
                         <Tabs
                             value={activeSimpleFilter || "all"}
                             onValueChange={(value) => handleSimpleFilterChange(value === "all" ? undefined : value)}
@@ -985,6 +1036,50 @@ export function CrudPage<T extends { id: number }>({
                                 ))}
                             </TabsList>
                         </Tabs>
+                    )}
+
+                    {/* Simple Filters - Dropdown Variant */}
+                    {simpleFilters.length > 0 && simpleFiltersVariant === 'dropdown' && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-fit gap-2">
+                                    <span className="truncate">
+                                        {activeSimpleFilter
+                                            ? simpleFilters.find(f => f.value.toString() === activeSimpleFilter)?.label || simpleFiltersDropdownLabel
+                                            : simpleFiltersDropdownLabel
+                                        }
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-fit min-w-[180px]">
+                                <DropdownMenuItem
+                                    onClick={() => handleSimpleFilterChange(undefined)}
+                                    className={cn(!activeSimpleFilter && "bg-accent")}
+                                >
+                                    All
+                                </DropdownMenuItem>
+                                {simpleFilters.map((filter) => (
+                                    <DropdownMenuItem
+                                        key={filter.key}
+                                        onClick={() => handleSimpleFilterChange(filter.value.toString())}
+                                        className={cn(
+                                            activeSimpleFilter === filter.value.toString() && "bg-accent"
+                                        )}
+                                    >
+                                        <span className="flex items-center gap-2 flex-1">
+                                            {filter.icon}
+                                            {filter.label}
+                                        </span>
+                                        {filter.badge !== undefined && (
+                                            <Badge variant="secondary" className="ml-auto">
+                                                {filter.badge}
+                                            </Badge>
+                                        )}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
 
                     {/* Filter Panel - Mobile-responsive overlay on small screens */}
@@ -1057,39 +1152,6 @@ export function CrudPage<T extends { id: number }>({
                     )}
                 </div>
 
-                {/* Bulk Actions */}
-                {selectedIds.length > 0 && onBulkAction && (
-                    <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <Badge variant="secondary">
-                                {selectedIds.length} selected
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                {selectedIds.length} of {data.data.length} row(s) selected
-              </span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            {canBulkDelete && (
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={handleBulkDelete}
-                                >
-                                    <Trash2 className="h-4 w-4 mr-1"/>
-                                    Delete
-                                </Button>
-                            )}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={clearSelection}
-                            >
-                                Clear
-                            </Button>
-                        </div>
-                    </div>
-                )}
-
                 {/* Data Table */}
                 <div className="min-w-0 overflow-hidden">
                     <CrudDataTable
@@ -1111,11 +1173,15 @@ export function CrudPage<T extends { id: number }>({
                                 setSelection(ids);
                             }
                         }}
-                        enableSelection={!!onBulkAction}
+                        enableSelection={bulkActions.length > 0 || !!onBulkAction}
+                        bulkActions={bulkActions}
+                        onBulkAction={onBulkAction}
                         enableSearch={false} // We handle search externally
                         enableColumnToggle={true}
                         enablePagination={false} // We handle pagination externally
                         className={tableClassName}
+                        onRowClick={canView && DetailView ? handleView : undefined}
+                        canRowClick={canView && !!DetailView}
                     />
                 </div>
 
@@ -1141,6 +1207,7 @@ export function CrudPage<T extends { id: number }>({
                 title={title}
                 type={drawerState.type}
                 resourceName={resourceName}
+                displayName={singularDisplayName}
                 size={drawerState.type === 'view' ? 'lg' : 'lg'}
                 canEdit={drawerState.type === 'view' ? canEdit : false}
                 canSave={drawerState.type === 'create' ? canCreate : drawerState.type === 'edit' ? canEdit : false}

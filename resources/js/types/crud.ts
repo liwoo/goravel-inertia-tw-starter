@@ -20,6 +20,7 @@ export interface ListRequest {
   sort?: string;
   direction?: 'asc' | 'desc';
   filters?: Record<string, any>;
+  [key: string]: any; // Index signature for dynamic filter keys
 }
 
 export interface BaseModel {
@@ -48,6 +49,7 @@ export interface CrudAction<T = any> {
   confirm?: boolean;
   confirmMessage?: string;
   disabled?: (item: T) => boolean;
+  hidden?: (item: T) => boolean;
 }
 
 export interface CrudFilter {
@@ -63,39 +65,46 @@ export interface CrudPageProps<T = any> {
   // Data
   data: PaginatedResult<T>;
   filters: ListRequest;
-  
+
   // Configuration
   title: string;
   resourceName: string; // e.g., 'teams', 'players'
+  displayName?: string; // Optional display name override (e.g., 'Additional Members' instead of 'additional_business_members')
   route?: string; // Optional route override (e.g., '/admin/permissions' for roles)
   columns: CrudColumn<T>[];
   actions?: CrudAction<T>[];
   customFilters?: CrudFilter[];
   pageActions?: PageAction[];
   simpleFilters?: SimpleFilter[];
-  
+  simpleFiltersVariant?: 'tabs' | 'dropdown';
+  simpleFiltersDropdownLabel?: string;
+  bulkActions?: BulkAction[];
+
   // Pagination metadata (optional - will fallback to defaults if not provided)
   paginationConfig?: {
     defaultPageSize: number;
     maxPageSize: number;
     allowedSizes: number[];
   };
-  
+
   // Permissions
   canCreate?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
   canView?: boolean;
-  
+
+  // Read-only mode - disables create, edit, delete actions (useful for view-only pages like Applications)
+  readOnly?: boolean;
+
   // Custom Components
   createForm?: React.ForwardRefExoticComponent<CrudFormProps & React.RefAttributes<any>>;
   editForm?: React.ForwardRefExoticComponent<CrudEditFormProps<T> & React.RefAttributes<any>>;
   detailView?: React.ComponentType<CrudDetailViewProps<T>>;
-  
+
   // Callbacks
   onRefresh?: () => void;
   onBulkAction?: (action: string, selectedIds: number[]) => void;
-  
+
   // Styling
   className?: string;
   tableClassName?: string;
@@ -232,6 +241,14 @@ export interface SimpleFilter {
   // The actual filter parameters to apply when this filter is selected
   // If not provided, defaults to { [key]: value }
   filterParams?: Record<string, any>;
+}
+
+// Simple filters configuration
+export interface SimpleFiltersConfig {
+  filters: SimpleFilter[];
+  variant?: 'tabs' | 'dropdown';
+  // Label for dropdown variant (e.g., "Configuration", "Status")
+  dropdownLabel?: string;
 }
 
 // Bulk action types

@@ -1,21 +1,58 @@
 package routes
 
 import (
+	"smedi-sme-db/app/http/controllers"
+	"smedi-sme-db/app/http/controllers/applications"
+	"smedi-sme-db/app/http/controllers/auth"
+	"smedi-sme-db/app/http/controllers/auth/perimissions"
+	"smedi-sme-db/app/http/controllers/auth/users"
+	"smedi-sme-db/app/http/controllers/bdsps"
+	"smedi-sme-db/app/http/controllers/books"
+	"smedi-sme-db/app/http/controllers/configs"
+	"smedi-sme-db/app/http/controllers/directory"
+	"smedi-sme-db/app/http/controllers/events"
+	"smedi-sme-db/app/http/controllers/members"
+	"smedi-sme-db/app/http/controllers/myapplications"
+	"smedi-sme-db/app/http/controllers/opportunities"
+	"smedi-sme-db/app/http/controllers/procurementnotices"
+	"smedi-sme-db/app/http/controllers/smes"
+	inertiaHelper "smedi-sme-db/app/http/inertia"
+	"smedi-sme-db/app/http/middleware"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support"
-	"players/app/http/controllers"
-	"players/app/http/controllers/auth"
-	"players/app/http/controllers/auth/perimissions"
-	"players/app/http/controllers/auth/users"
-	"players/app/http/controllers/books"
-	"players/app/http/controllers/lenders"
-	inertiaHelper "players/app/http/inertia"
-	"players/app/http/middleware"
 )
 
 func Web() {
+	// Readiness probe - verifies database connection
+	facades.Route().Get("/ready", func(ctx http.Context) http.Response {
+		var result int
+		err := facades.Orm().Query().Raw("SELECT 1").Scan(&result)
+		if err != nil {
+			return ctx.Response().Json(http.StatusServiceUnavailable, map[string]string{
+				"status": "not ready",
+				"error":  "database connection failed",
+			})
+		}
+		return ctx.Response().Json(http.StatusOK, map[string]string{
+			"status": "ready",
+		})
+	})
+
+	// Liveness probe - simple health check
+	facades.Route().Get("/health", func(ctx http.Context) http.Response {
+		return ctx.Response().Json(http.StatusOK, map[string]string{
+			"status": "ok",
+		})
+	})
+
+	// Serve static files from the public directory
+	facades.Route().Static("/images", "./public/images")
+	facades.Route().Static("/css", "./public/css")
+	facades.Route().Static("/js", "./public/js")
+
 	// Register the Inertia middleware globally
 	facades.Route().GlobalMiddleware(inertiaMiddleware)
 
@@ -25,9 +62,19 @@ func Web() {
 	booksPageController := books.NewBooksPageController()
 	permissionsPageController := perimissions.NewPermissionsPageController()
 	userPageController := users.NewUserPageController()
-	lendersPageController := lenders.NewLenderPageController()
+	configsPageController := configs.NewConfigPageController()
+	smesPageController := smes.NewSmePageController()
+	bdspsPageController := bdsps.NewBdspPageController()
+	eventsPageController := events.NewEventPageController()
+	procurementnoticesPageController := procurementnotices.NewProcurementNoticePageController()
+	applicationsPageController := applications.NewApplicationPageController()
+	membersPageController := members.NewMemberPageController()
+	opportunitiesPageController := opportunities.NewOpportunitiesPageController()
+	myApplicationsPageController := myapplications.NewMyApplicationsPageController()
+	directoryController := directory.NewDirectoryController()
 
 	facades.Route().Post("/login", authController.Login)
+	facades.Route().Post("/verify-2fa", authController.Verify2FA) // 2FA verification during web login
 	facades.Route().Get("/login", func(ctx http.Context) http.Response {
 		return inertiaHelper.Render(ctx, "auth/Login", map[string]interface{}{
 			"version": support.Version,
@@ -43,9 +90,22 @@ func Web() {
 		})
 	})
 
-	// Authenticated routes
-	facades.Route().Middleware(middleware.JwtAuth()).Group(func(router route.Router) {
+	// Public Application Page
+	facades.Route().Get("/apply", applicationsPageController.ShowPublicApply)
+
+	// Authenticated routes with 2FA enforcement
+	// The Require2FA middleware checks if AUTH_REQUIRE_2FA is enabled and redirects
+	// users without 2FA to /2fa-required
+	facades.Route().Middleware(middleware.JwtAuth(), middleware.Require2FA()).Group(func(router route.Router) {
 		router.Post("/logout", authController.Logout)
+
+		// 2FA required setup page - accessible by authenticated users who need to set up 2FA
+		// (Require2FA middleware allows this path even without 2FA)
+		router.Get("/2fa-required", func(ctx http.Context) http.Response {
+			return inertiaHelper.Render(ctx, "auth/TwoFactorRequired", map[string]interface{}{
+				"version": support.Version,
+			})
+		})
 
 		router.Get("/settings", func(ctx http.Context) http.Response {
 			return inertiaHelper.Render(ctx, "settings/Index", map[string]interface{}{
@@ -65,8 +125,23 @@ func Web() {
 		// Books management page
 		router.Get("/admin/books", booksPageController.Index)
 
-		// Lenders management page
-		router.Get("/admin/lenders", lendersPageController.Index)
+		// SMEs management page
+		router.Get("/admin/smes", smesPageController.Index)
+
+		// BDSPs management page
+		router.Get("/admin/bdsps", bdspsPageController.Index)
+
+		// Event management page
+		router.Get("/admin/events", eventsPageController.Index)
+
+		// Procurement Notice management page
+		router.Get("/admin/procurement-notices", procurementnoticesPageController.Index)
+
+		// Applications management page
+		router.Get("/admin/applications", applicationsPageController.Index)
+
+		// Configurations management page
+		router.Get("/admin/configs", configsPageController.Index)
 
 		// Permissions/Role management pages
 		router.Get("/admin/permissions", permissionsPageController.Index)
@@ -75,6 +150,17 @@ func Web() {
 
 		// User management pages (super admin only)
 		router.Get("/admin/users", userPageController.Index)
+
+		router.Get("/portal", membersPageController.Index)
+
+		// Opportunities page (for SME users)
+		router.Get("/opportunities", opportunitiesPageController.Index)
+
+		// My Applications page (for SME users to track their formalisation change requests)
+		router.Get("/applications", myApplicationsPageController.Index)
+
+		// SME Directory (accessible to all authenticated users)
+		router.Get("/directory", directoryController.ShowDirectory)
 
 		// SSE Test page (for development/testing)
 		router.Get("/test/sse", func(ctx http.Context) http.Response {

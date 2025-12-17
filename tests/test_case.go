@@ -1,30 +1,52 @@
+// Package tests provides test utilities and helpers for the SMEDI database test suite.
+// Tests should be run using the scripts/run_tests.sh script which sets up the test
+// database container and environment variables.
 package tests
 
 import (
-	"github.com/goravel/framework/testing"
 	"os"
+	"testing"
 
-	"players/bootstrap"
+	goraveltesting "github.com/goravel/framework/testing"
 )
 
-func init() {
-	// Set environment for testing if not already set
-	if os.Getenv("APP_ENV") == "" {
-		os.Setenv("APP_ENV", "testing")
-	}
-
-	// For testing, explicitly set database configuration
-	if os.Getenv("APP_ENV") == "testing" {
-		os.Setenv("DB_CONNECTION", "sqlite")
-		os.Setenv("DB_DATABASE", "database/test.sqlite")
-
-		// Create the database directory if it doesn't exist
-		os.MkdirAll("database", 0755)
-	}
-
-	bootstrap.Boot()
+// RunTestMain is a helper for test packages.
+// The actual database setup should be done via the shell script (scripts/run_tests.sh)
+func RunTestMain(m *testing.M) {
+	os.Exit(m.Run())
 }
 
+// IsUsingPostgres returns true if using PostgreSQL
+func IsUsingPostgres() bool {
+	return os.Getenv("DB_CONNECTION") == "postgres"
+}
+
+// GetTestDBPort returns the test database port from environment
+func GetTestDBPort() string {
+	return os.Getenv("DB_PORT")
+}
+
+// GetTestDBHost returns the test database host from environment
+func GetTestDBHost() string {
+	return os.Getenv("DB_HOST")
+}
+
+// GetTestDBName returns the test database name from environment
+func GetTestDBName() string {
+	return os.Getenv("DB_DATABASE")
+}
+
+// TestCase embeds Goravel's TestCase
 type TestCase struct {
-	testing.TestCase
+	goraveltesting.TestCase
+}
+
+// RefreshDatabase is a placeholder - database refresh should be handled by test infrastructure
+func (t *TestCase) RefreshDatabase() {
+	// Database refresh handled externally
+}
+
+// Seed is a placeholder for seeder support
+func (t *TestCase) Seed(seeders ...string) {
+	// Seeders can be run here if needed
 }

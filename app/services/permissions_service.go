@@ -2,9 +2,9 @@ package services
 
 import (
 	"fmt"
-	"players/app/contracts"
-	"players/app/helpers"
-	"players/app/models"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/helpers"
+	"smedi-sme-db/app/models"
 	"strings"
 
 	"github.com/goravel/framework/facades"
@@ -129,6 +129,7 @@ func (s *PermissionsService) AssignPermissionToRole(roleID, permissionID uint) e
 	count, err := facades.Orm().Query().
 		Table("role_permissions").
 		Where("role_id = ? AND permission_id = ?", roleID, permissionID).
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
 		return fmt.Errorf("failed to check existing assignment: %w", err)
@@ -191,6 +192,36 @@ func (s *PermissionsService) BulkAssignPermissions(request BulkAssignmentRequest
 
 // SyncRolePermissions completely replaces a role's permissions
 func (s *PermissionsService) SyncRolePermissions(roleID uint, permissionIDs []uint) error {
+	// Validate that all permission IDs exist in the permissions table
+	if len(permissionIDs) > 0 {
+		var validPermissions []models.Permission
+		err := facades.Orm().Query().
+			Model(&models.Permission{}).
+			WhereIn("id", toInterfaceSlice(permissionIDs)).
+			Where("is_active = ?", true).
+			Find(&validPermissions)
+		if err != nil {
+			return fmt.Errorf("failed to validate permissions: %w", err)
+		}
+
+		// Build a set of valid permission IDs
+		validIDSet := make(map[uint]bool)
+		for _, p := range validPermissions {
+			validIDSet[p.ID] = true
+		}
+
+		// Filter to only valid permission IDs
+		validPermissionIDs := make([]uint, 0, len(permissionIDs))
+		for _, id := range permissionIDs {
+			if validIDSet[id] {
+				validPermissionIDs = append(validPermissionIDs, id)
+			} else {
+				facades.Log().Warningf("SyncRolePermissions: Skipping invalid permission ID %d (not found or inactive)", id)
+			}
+		}
+		permissionIDs = validPermissionIDs
+	}
+
 	// Start transaction
 	tx, err := facades.Orm().Query().Begin()
 	if err != nil {
@@ -230,6 +261,15 @@ func (s *PermissionsService) SyncRolePermissions(roleID uint, permissionIDs []ui
 
 	tx.Commit()
 	return nil
+}
+
+// toInterfaceSlice converts a []uint to []interface{} for WhereIn
+func toInterfaceSlice(ids []uint) []interface{} {
+	result := make([]interface{}, len(ids))
+	for i, id := range ids {
+		result[i] = id
+	}
+	return result
 }
 
 // GetRolePermissions gets all permissions for a specific role

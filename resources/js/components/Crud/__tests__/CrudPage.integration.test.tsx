@@ -113,7 +113,7 @@ describe('CrudPage Integration - Filter Functionality', () => {
     expect(filterBadge).toBeInTheDocument();
 
     // Click X on filter badge
-    const badge = filterBadge.closest('.flex');
+    const badge = filterBadge.closest('.flex') as HTMLElement;
     const removeButton = within(badge!).getByRole('button', { name: /×/i });
     await user.click(removeButton);
 

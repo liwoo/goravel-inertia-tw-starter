@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/images/mw-coat.svg">
     <!-- Link to your compiled CSS -->
     <!-- <link rel="stylesheet" href="/css/app.css"> -->
     <!-- Fonts -->
@@ -12,18 +13,7 @@
 <body>
     <div id="app" data-page="{{.page}}"></div> 
 
-    {{ if .isDev }}
-    <!-- Scripts for Vite Dev Server (only in development) -->
-    <script type="module" src="http://localhost:5173/@vite/client"></script>
-    <script type="module">
-      import RefreshRuntime from 'http://localhost:5173/@react-refresh';
-      RefreshRuntime.injectIntoGlobalHook(window);
-      window.$RefreshReg$ = () => {};
-      window.$RefreshSig$ = () => (type) => type;
-      window.__vite_plugin_react_preamble_installed__ = true;
-    </script>
-    {{ end }}
-    {{ vite "resources/css/app.css" }}
+    <!-- Vite handles both JS and CSS (CSS is a dependency of the JS entry) -->
     {{ vite "resources/js/app.tsx" }}  
 
 </body>

@@ -24,11 +24,20 @@ const (
 type ServiceRegistry string
 
 const (
-	ServiceBooks       ServiceRegistry = "books"
-	ServiceUsers       ServiceRegistry = "users"
-	ServiceRoles       ServiceRegistry = "roles"
-	ServicePermissions ServiceRegistry = "permissions"
-	ServiceLenders     ServiceRegistry = "lenders"
+	ServiceBooks                     ServiceRegistry = "books"
+	ServiceUsers                     ServiceRegistry = "users"
+	ServiceRoles                     ServiceRegistry = "roles"
+	ServicePermissions               ServiceRegistry = "permissions"
+	ServiceLenders                   ServiceRegistry = "lenders"
+	ServiceConfig                    ServiceRegistry = "config"
+	ServiceSMEs                      ServiceRegistry = "smes"
+	ServicePrimaryBusinessOwners     ServiceRegistry = "primary_business_owners"
+	ServiceAdditionalBusinessMembers ServiceRegistry = "additional_business_members"
+	ServiceBusinessFormalisation     ServiceRegistry = "business_formalisation"
+	ServiceEvents                    ServiceRegistry = "events"
+	ServiceProcurementNotices        ServiceRegistry = "procurement_notices"
+	ServiceBdsps                     ServiceRegistry = "bdsps"
+	ServiceApplications              ServiceRegistry = "applications"
 )
 
 // GetAllCorePermissionActions returns all core permission actions
@@ -54,6 +63,15 @@ func GetAllServiceRegistries() []ServiceRegistry {
 		ServiceRoles,
 		ServicePermissions,
 		ServiceLenders,
+		ServiceConfig,
+		ServiceSMEs,
+		ServicePrimaryBusinessOwners,
+		ServiceAdditionalBusinessMembers,
+		ServiceBusinessFormalisation,
+		ServiceEvents,
+		ServiceProcurementNotices,
+		ServiceBdsps,
+		ServiceApplications,
 	}
 }
 
@@ -75,6 +93,24 @@ func GetServiceDisplayName(service ServiceRegistry) string {
 		return "Permission Management"
 	case ServiceLenders:
 		return "Lender Management"
+	case ServiceConfig:
+		return "Configuration Management"
+	case ServiceSMEs:
+		return "SME Management"
+	case ServicePrimaryBusinessOwners:
+		return "Primary Business Owner Management"
+	case ServiceAdditionalBusinessMembers:
+		return "Additional Business Members Management"
+	case ServiceBusinessFormalisation:
+		return "Business Formalisation Management"
+	case ServiceEvents:
+		return "Events Management"
+	case ServiceProcurementNotices:
+		return "Procurement Notices Management"
+	case ServiceBdsps:
+		return "BDSP Management"
+	case ServiceApplications:
+		return "Applications Management"
 	default:
 		return string(service)
 	}
@@ -160,6 +196,83 @@ func GetServiceActions(service ServiceRegistry) []CorePermissionAction {
 			PermissionUpdate,
 			PermissionView,
 			PermissionManage,
+		}
+	case ServiceConfig:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+			PermissionManage,
+		}
+	case ServiceSMEs:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionExport,
+			PermissionView,
+			PermissionManage,
+		}
+	case ServicePrimaryBusinessOwners:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+			PermissionManage,
+		}
+	case ServiceAdditionalBusinessMembers:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+		}
+	case ServiceBusinessFormalisation:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+		}
+	case ServiceEvents:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+		}
+	case ServiceProcurementNotices:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+			PermissionManage,
+		}
+	case ServiceBdsps:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
+		}
+	case ServiceApplications:
+		return []CorePermissionAction{
+			PermissionCreate,
+			PermissionRead,
+			PermissionUpdate,
+			PermissionDelete,
+			PermissionView,
 		}
 	default:
 		return GetAllCorePermissionActions()

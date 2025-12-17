@@ -7,8 +7,8 @@ import (
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
-	"players/app/contracts"
-	"players/app/models"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/models"
 )
 
 // RoleService implements role-specific business logic using the builder pattern
@@ -19,14 +19,14 @@ type RoleService struct {
 // NewRoleService creates a new role service using the builder pattern
 func NewRoleService() *RoleService {
 	// Build the service with all required configurations
-	service := contracts.NewServiceBuilder[models.Role]("role", "id").
+	service := contracts.NewServiceBuilder[models.Role]("roles", "id").
 		WithSearchFields("name", "slug", "description").                     // REQUIRED
 		WithSortFields("id", "name", "slug", "created_at", "updated_at").    // REQUIRED
 		WithFilterFields("slug", "is_active", "level", "name", "parent_id"). // REQUIRED
 		WithValidationRules(map[string]interface{}{                          // REQUIRED
 			"name":        "required|string|max:255",
 			"slug":        "required|string|max:100|unique:roles,slug",
-			"description": "string|max:500",
+			"description": "string|max:1000",
 			"is_active":   "boolean",
 		}).
 		WithRelations("Permissions", "Creator", "Updater").        // Optional
@@ -182,6 +182,36 @@ func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint, scope
 	// Super admins should be able to customize all roles
 	// The UI/controller layer handles super admin authorization
 
+	// Validate that all permission IDs exist in the permissions table
+	if len(permissionIDs) > 0 {
+		var validPermissions []models.Permission
+		err := facades.Orm().Query().
+			Model(&models.Permission{}).
+			WhereIn("id", interfaceSlice(permissionIDs)).
+			Where("is_active = ?", true).
+			Find(&validPermissions)
+		if err != nil {
+			return fmt.Errorf("failed to validate permissions: %v", err)
+		}
+
+		// Build a set of valid permission IDs
+		validIDSet := make(map[uint]bool)
+		for _, p := range validPermissions {
+			validIDSet[p.ID] = true
+		}
+
+		// Filter to only valid permission IDs
+		validPermissionIDs := make([]uint, 0, len(permissionIDs))
+		for _, id := range permissionIDs {
+			if validIDSet[id] {
+				validPermissionIDs = append(validPermissionIDs, id)
+			} else {
+				facades.Log().Warningf("Skipping invalid permission ID %d (not found or inactive)", id)
+			}
+		}
+		permissionIDs = validPermissionIDs
+	}
+
 	// Begin transaction
 	tx, err := facades.Orm().Query().Begin()
 	if err != nil {
@@ -220,6 +250,15 @@ func (s *RoleService) AssignPermissions(roleID uint, permissionIDs []uint, scope
 	tx.Commit()
 
 	return nil
+}
+
+// interfaceSlice converts a []uint to []interface{} for WhereIn
+func interfaceSlice(ids []uint) []interface{} {
+	result := make([]interface{}, len(ids))
+	for i, id := range ids {
+		result[i] = id
+	}
+	return result
 }
 
 // GetPermissionsMatrix returns all permissions organized by service and action

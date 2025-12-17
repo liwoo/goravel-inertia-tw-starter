@@ -5,19 +5,20 @@ import axios from '@/lib/axios';
 import { useSSE, useSSEEvent } from '@/hooks/useSSE';
 import sseManager from '@/services/sseManager';
 
-interface User {
+export interface MessageUser {
   id: number;
   name: string;
   email: string;
-  is_active: boolean;
+  is_active?: boolean;
+  role?: string;
   roles?: Array<{
     id: number;
     name: string;
-    slug: string;
+    slug?: string;
   }>;
 }
 
-interface Message {
+export interface Message {
   id: number;
   content: string;
   type: string;
@@ -29,19 +30,22 @@ interface Message {
   read_at?: string;
   created_at: string;
   updated_at: string;
-  sender?: User;
-  recipient?: User;
+  sender?: MessageUser;
+  recipient?: MessageUser;
   parent_message_id?: number;
   parent_message?: Message;
   replies?: Message[];
 }
 
-interface Conversation {
-  user: User;
+export interface Conversation {
+  user: MessageUser;
   latest_message: Message;
   unread_count: number;
   last_activity: string;
 }
+
+// Alias for internal use
+type User = MessageUser;
 
 interface ListRequest {
   page: number;
@@ -335,10 +339,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   // Mark messages as read
   const markAsRead = useCallback(async (userId: number): Promise<void> => {
     try {
-      setError(null);
-      
       await axios.put(`/api/messages/conversation/${userId}/read`);
-      
+
       // Update conversation to show messages as read
       setConversations(prev =>
         prev.map(conv =>
@@ -347,11 +349,18 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
             : conv
         )
       );
-      
-      await refreshUnreadCount();
+
+      // Refresh unread count
+      try {
+        const response = await axios.get('/api/messages/unread-count');
+        if (response.data.success && response.data.data) {
+          setUnreadCount(response.data.data.unread_count || 0);
+        }
+      } catch {
+        // Ignore unread count refresh errors
+      }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to mark messages as read';
-      setError(errorMessage);
+      // Don't set error for mark as read failures - it's not critical
       console.error('Error marking messages as read:', err);
     }
   }, []);

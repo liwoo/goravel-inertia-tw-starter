@@ -7,27 +7,28 @@ import (
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
-	"players/app/contracts"
-	"players/app/models"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/models"
 )
 
 // MessageService - Simplified version using generic CRUD service
 type MessageService struct {
 	*contracts.GenericCrudService[models.Message]
-	sseService *SSEService
+	sseService   *SSEService
+	cacheService *CacheService
 }
 
 // NewMessageService creates a new simplified message service
 func NewMessageService() *MessageService {
 	// Create the generic service
-	genericService := contracts.NewGenericCrudService[models.Message]("message", "id")
+	genericService := contracts.NewGenericCrudService[models.Message]("messages", "id")
 
 	// Configure the service
 	genericService.
 		SetSearchFields("content", "subject").
 		SetSortFields("id", "created_at", "updated_at", "read_at").
 		SetFilterFields("sender_id", "recipient_id", "type", "status").
-		SetRelations("Sender", "Recipient", "Thread", "Parent").
+		SetRelations("Sender", "Recipient", "ParentMessage").
 		SetValidationRules(map[string]interface{}{
 			"sender_id":    "required|numeric",
 			"recipient_id": "required|numeric",
@@ -119,6 +120,7 @@ func NewMessageService() *MessageService {
 	service := &MessageService{
 		GenericCrudService: genericService,
 		sseService:         NewSSEService(),
+		cacheService:       GetCacheService(),
 	}
 
 	// Register service
@@ -128,6 +130,17 @@ func NewMessageService() *MessageService {
 }
 
 // Custom methods for messaging functionality
+
+// truncateString truncates a string to maxLen characters with ellipsis
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return s[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
+}
 
 // SendMessage creates and sends a new message
 func (s *MessageService) SendMessage(senderID uint, recipientID uint, content string, messageType models.MessageType) (*models.Message, error) {
@@ -145,15 +158,71 @@ func (s *MessageService) SendMessage(senderID uint, recipientID uint, content st
 
 	message := result.(*models.Message)
 
+	// Invalidate unread count cache for recipient
+	s.cacheService.InvalidateMessageUnreadCount(recipientID)
+
 	// Emit SSE events
 	s.sseService.NotifyNewMessage(senderID, recipientID, message)
 
-	// Update unread count for recipient
+	// Update unread count for recipient (will re-cache)
 	if count, err := s.GetUnreadCount(recipientID); err == nil {
 		s.sseService.UpdateUnreadCount(recipientID, count)
 	}
 
+	// Create notification for the recipient
+	s.createMessageNotification(senderID, recipientID, message)
+
 	return message, nil
+}
+
+// createMessageNotification creates a notification for a new message
+func (s *MessageService) createMessageNotification(senderID uint, recipientID uint, message *models.Message) {
+	// Get sender's name for the notification title
+	var sender models.User
+	if err := facades.Orm().Query().Where("id = ?", senderID).First(&sender); err != nil {
+		facades.Log().Warning("Failed to load sender for notification", map[string]interface{}{
+			"sender_id": senderID,
+			"error":     err.Error(),
+		})
+		return
+	}
+
+	notificationService := NewNotificationService()
+
+	// Create the notification
+	title := fmt.Sprintf("New message from %s", sender.Name)
+	notificationMessage := truncateString(message.Content, 100)
+	notificationType := "message"
+	relatedType := "message"
+	priority := "normal"
+
+	_, err := notificationService.CreateNotification(
+		recipientID,           // userID
+		title,                 // title
+		notificationMessage,   // message
+		notificationType,      // type
+		&senderID,             // triggerUserID
+		&relatedType,          // relatedType
+		&message.ID,           // relatedID
+		priority,              // priority
+		nil,                   // expiresAt
+		"",                    // data
+	)
+
+	if err != nil {
+		facades.Log().Warning("Failed to create message notification", map[string]interface{}{
+			"sender_id":    senderID,
+			"recipient_id": recipientID,
+			"message_id":   message.ID,
+			"error":        err.Error(),
+		})
+	} else {
+		facades.Log().Info("Message notification created", map[string]interface{}{
+			"sender_id":    senderID,
+			"recipient_id": recipientID,
+			"message_id":   message.ID,
+		})
+	}
 }
 
 // SendBroadcast sends a broadcast message to multiple recipients
@@ -179,10 +248,208 @@ func (s *MessageService) SendBroadcast(senderID uint, recipientIDs []uint, conte
 			continue
 		}
 
-		messages = append(messages, result.(*models.Message))
+		message := result.(*models.Message)
+		messages = append(messages, message)
+
+		// Create notification for each recipient
+		s.createMessageNotification(senderID, recipientID, message)
 	}
 
 	return messages, nil
+}
+
+// BroadcastToRole sends a message to all users with a specific role (super admin only)
+func (s *MessageService) BroadcastToRole(senderID uint, roleID uint, content string, subject string) (map[string]interface{}, error) {
+	// Get the role to verify it exists
+	var role models.Role
+	if err := facades.Orm().Query().Where("id = ?", roleID).First(&role); err != nil {
+		return nil, fmt.Errorf("role not found: %w", err)
+	}
+
+	// Get all active users with this role
+	var userIDs []uint
+	err := facades.Orm().Query().Raw(`
+		SELECT DISTINCT u.id
+		FROM users u
+		INNER JOIN user_roles ur ON ur.user_id = u.id
+		WHERE ur.role_id = ?
+		AND ur.is_active = true
+		AND u.is_active = true
+		AND u.deleted_at IS NULL
+		AND u.id != ?
+	`, roleID, senderID).Pluck("id", &userIDs)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get users for role: %w", err)
+	}
+
+	if len(userIDs) == 0 {
+		return map[string]interface{}{
+			"sent_count":   0,
+			"role_id":      roleID,
+			"role_name":    role.Name,
+			"failed_count": 0,
+			"message":      "No active users found with this role",
+		}, nil
+	}
+
+	// Send messages to all users
+	var sentCount int
+	var failedCount int
+	var messageIDs []uint
+
+	for _, recipientID := range userIDs {
+		data := map[string]interface{}{
+			"sender_id":    float64(senderID),
+			"recipient_id": float64(recipientID),
+			"content":      content,
+			"type":         string(models.MessageTypeSystem),
+		}
+
+		result, err := s.Create(data)
+		if err != nil {
+			facades.Log().Error("Failed to send role broadcast to user", map[string]interface{}{
+				"recipient_id": recipientID,
+				"role_id":      roleID,
+				"error":        err.Error(),
+			})
+			failedCount++
+			continue
+		}
+
+		message := result.(*models.Message)
+		messageIDs = append(messageIDs, message.ID)
+		sentCount++
+
+		// Create notification for the recipient
+		s.createMessageNotification(senderID, recipientID, message)
+	}
+
+	facades.Log().Info("Role broadcast completed", map[string]interface{}{
+		"sender_id":    senderID,
+		"role_id":      roleID,
+		"role_name":    role.Name,
+		"sent_count":   sentCount,
+		"failed_count": failedCount,
+	})
+
+	return map[string]interface{}{
+		"sent_count":   sentCount,
+		"failed_count": failedCount,
+		"role_id":      roleID,
+		"role_name":    role.Name,
+		"message_ids":  messageIDs,
+	}, nil
+}
+
+// GetBroadcastHistory retrieves broadcast messages sent by a user (super admin only)
+// Groups broadcasts by timestamp to show as threads
+func (s *MessageService) GetBroadcastHistory(senderID uint, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
+	// Get page parameters
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := req.PageSize
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	offset := (page - 1) * pageSize
+
+	// Get broadcast messages (type = 'system') sent by this user, grouped by content and approximate time
+	// We'll use a subquery to get distinct broadcasts
+	var broadcasts []struct {
+		Content     string    `gorm:"column:content"`
+		CreatedAt   time.Time `gorm:"column:created_at"`
+		FirstMsgID  uint      `gorm:"column:first_msg_id"`
+		RecipientCount int64  `gorm:"column:recipient_count"`
+	}
+
+	// Query to get unique broadcasts (grouped by content and minute)
+	err := facades.Orm().Query().Raw(`
+		SELECT
+			content,
+			MIN(created_at) as created_at,
+			MIN(id) as first_msg_id,
+			COUNT(*) as recipient_count
+		FROM messages
+		WHERE sender_id = ?
+		AND type = 'system'
+		AND deleted_at IS NULL
+		GROUP BY content, DATE_TRUNC('minute', created_at)
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`, senderID, pageSize, offset).Scan(&broadcasts)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get broadcast history: %w", err)
+	}
+
+	// Get total count
+	var totalCount int64
+	err = facades.Orm().Query().Raw(`
+		SELECT COUNT(*) FROM (
+			SELECT 1
+			FROM messages
+			WHERE sender_id = ?
+			AND type = 'system'
+			AND deleted_at IS NULL
+			GROUP BY content, DATE_TRUNC('minute', created_at)
+		) as broadcast_groups
+	`, senderID).Scan(&totalCount)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to count broadcasts: %w", err)
+	}
+
+	// Build result with read counts for each broadcast
+	var results []interface{}
+	for _, broadcast := range broadcasts {
+		// Calculate time window for this broadcast
+		startTime := broadcast.CreatedAt.Add(-1 * time.Minute)
+		endTime := broadcast.CreatedAt.Add(1 * time.Minute)
+
+		// Get read count for this broadcast
+		var readCount int64
+		facades.Orm().Query().Raw(`
+			SELECT COUNT(*)
+			FROM messages m
+			WHERE m.sender_id = ?
+			AND m.type = 'system'
+			AND m.content = ?
+			AND m.created_at >= ?
+			AND m.created_at <= ?
+			AND m.deleted_at IS NULL
+			AND m.read_at IS NOT NULL
+		`, senderID, broadcast.Content, startTime, endTime).Scan(&readCount)
+
+		results = append(results, map[string]interface{}{
+			"id":              broadcast.FirstMsgID,
+			"content":         broadcast.Content,
+			"created_at":      broadcast.CreatedAt,
+			"recipient_count": broadcast.RecipientCount,
+			"read_count":      readCount,
+		})
+	}
+
+	lastPage := int(totalCount) / pageSize
+	if int(totalCount)%pageSize > 0 {
+		lastPage++
+	}
+	if lastPage < 1 {
+		lastPage = 1
+	}
+
+	return &contracts.PaginatedResult{
+		Data:        results,
+		Total:       totalCount,
+		PerPage:     pageSize,
+		CurrentPage: page,
+		LastPage:    lastPage,
+	}, nil
 }
 
 // GetInbox retrieves messages for a user with pagination
@@ -212,9 +479,32 @@ func (s *MessageService) GetUnreadMessages(userID uint, req contracts.ListReques
 
 // GetUnreadCount gets the count of unread messages
 func (s *MessageService) GetUnreadCount(userID uint) (int64, error) {
-	return facades.Orm().Query().Model(&models.Message{}).
+	// Try to get from cache first
+	if cachedCount, found := s.cacheService.GetMessageUnreadCount(userID); found {
+		facades.Log().Debug("Message unread count cache hit", map[string]interface{}{
+			"user_id": userID,
+			"count":   cachedCount,
+		})
+		return cachedCount, nil
+	}
+
+	// Query from database
+	count, err := facades.Orm().Query().Model(&models.Message{}).
 		Where("recipient_id = ? AND read_at IS NULL", userID).
 		Count()
+	if err != nil {
+		return 0, err
+	}
+
+	// Cache the count
+	if err := s.cacheService.SetMessageUnreadCount(userID, count); err != nil {
+		facades.Log().Warning("Failed to cache message unread count", map[string]interface{}{
+			"user_id": userID,
+			"error":   err.Error(),
+		})
+	}
+
+	return count, nil
 }
 
 // GetThreadMessages retrieves all messages in a thread
@@ -249,16 +539,58 @@ func (s *MessageService) MarkAsRead(messageID uint, userID uint) error {
 	})
 
 	if err == nil {
+		// Invalidate unread count cache
+		s.cacheService.InvalidateMessageUnreadCount(userID)
+
 		// Emit SSE events
 		s.sseService.NotifyMessageRead(message.SenderID, messageID)
 
-		// Update unread count for recipient
+		// Update unread count for recipient (will re-cache)
 		if count, err := s.GetUnreadCount(userID); err == nil {
 			s.sseService.UpdateUnreadCount(userID, count)
 		}
 	}
 
 	return err
+}
+
+// MarkConversationAsRead marks all messages from a specific user as read
+func (s *MessageService) MarkConversationAsRead(currentUserID uint, otherUserID uint) error {
+	now := time.Now()
+
+	// Update all unread messages from otherUserID to currentUserID
+	_, err := facades.Orm().Query().
+		Model(&models.Message{}).
+		Where("sender_id = ?", otherUserID).
+		Where("recipient_id = ?", currentUserID).
+		Where("read_at IS NULL").
+		Update("read_at", now)
+
+	if err != nil {
+		return fmt.Errorf("failed to mark messages as read: %w", err)
+	}
+
+	// Also update status
+	_, err = facades.Orm().Query().
+		Model(&models.Message{}).
+		Where("sender_id = ?", otherUserID).
+		Where("recipient_id = ?", currentUserID).
+		Where("status != ?", string(models.MessageStatusRead)).
+		Update("status", string(models.MessageStatusRead))
+
+	if err != nil {
+		return fmt.Errorf("failed to update message status: %w", err)
+	}
+
+	// Invalidate unread count cache
+	s.cacheService.InvalidateMessageUnreadCount(currentUserID)
+
+	// Update unread count for recipient (will re-cache)
+	if count, err := s.GetUnreadCount(currentUserID); err == nil {
+		s.sseService.UpdateUnreadCount(currentUserID, count)
+	}
+
+	return nil
 }
 
 // MarkAsImportant marks a message as important/unimportant
@@ -304,6 +636,9 @@ func (s *MessageService) DeleteMessage(messageID uint, userID uint) error {
 
 			// Update unread count if message was unread
 			if message.ReadAt == nil {
+				// Invalidate unread count cache
+				s.cacheService.InvalidateMessageUnreadCount(*message.RecipientID)
+
 				if count, err := s.GetUnreadCount(*message.RecipientID); err == nil {
 					s.sseService.UpdateUnreadCount(*message.RecipientID, count)
 				}
@@ -398,22 +733,29 @@ func (s *MessageService) GetConversations(userID uint) ([]interface{}, error) {
 
 // GetConversation retrieves messages between two users
 func (s *MessageService) GetConversation(user1ID uint, user2ID uint, req contracts.ListRequest) (*contracts.PaginatedResult, error) {
-	// Create a custom query for conversation
-	var messages []models.Message
-	query := facades.Orm().Query().Model(&models.Message{}).
-		With("Sender", "Recipient").
-		Where("(sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)",
+	// Get total count first
+	total, countErr := facades.Orm().Query().Model(&models.Message{}).
+		Where("((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)) AND deleted_at IS NULL",
 			user1ID, user2ID, user2ID, user1ID).
-		Order("created_at DESC")
-
-	// Apply pagination manually
-	total, err := query.Count()
-	if err != nil {
-		return nil, err
+		Count()
+	if countErr != nil {
+		return nil, countErr
 	}
 
+	// Get paginated messages
+	var messages []models.Message
 	offset := (req.Page - 1) * req.PageSize
-	if err := query.Offset(offset).Limit(req.PageSize).Find(&messages); err != nil {
+	err := facades.Orm().Query().
+		With("Sender").
+		With("Recipient").
+		Where("((sender_id = ? AND recipient_id = ?) OR (sender_id = ? AND recipient_id = ?)) AND deleted_at IS NULL",
+			user1ID, user2ID, user2ID, user1ID).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(req.PageSize).
+		Find(&messages)
+
+	if err != nil {
 		return nil, err
 	}
 

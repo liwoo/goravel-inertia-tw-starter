@@ -3,7 +3,7 @@ package helpers
 import (
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/testing/mock"
-	"players/app/models"
+	"smedi-sme-db/app/models"
 )
 
 // CreateAuthenticatedContext creates a mock context with an authenticated user

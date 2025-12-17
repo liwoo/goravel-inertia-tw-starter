@@ -14,9 +14,9 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"players/app/models"
-	"players/tests"
-	"players/tests/helpers"
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/tests"
+	"smedi-sme-db/tests/helpers"
 )
 
 type BookAdvancedFeaturesTestSuite struct {
@@ -58,6 +58,11 @@ func (s *BookAdvancedFeaturesTestSuite) SetupTest() {
 	// Clean database
 	s.RefreshDatabase()
 
+	// Clean up any leftover books from previous tests to ensure test isolation
+	if orm := facades.Orm(); orm != nil {
+		orm.Query().Exec("DELETE FROM books")
+	}
+
 	// Create test user with permissions
 	s.setupTestUser()
 }
@@ -65,7 +70,8 @@ func (s *BookAdvancedFeaturesTestSuite) SetupTest() {
 func (s *BookAdvancedFeaturesTestSuite) TearDownTest() {
 	// Clean up test data
 	if orm := facades.Orm(); orm != nil {
-		orm.Query().Exec("DELETE FROM books WHERE isbn LIKE '979%'")
+		// Clean up ALL books to ensure test isolation
+		orm.Query().Exec("DELETE FROM books")
 		orm.Query().Exec("DELETE FROM users WHERE email = 'bookadv@example.com'")
 		orm.Query().Exec("DELETE FROM user_roles")
 		orm.Query().Exec("DELETE FROM role_permissions")

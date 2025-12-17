@@ -2,73 +2,71 @@ package helpers
 
 import (
 	"github.com/goravel/framework/facades"
-	"os"
 )
 
 // CleanTestDatabase removes all test data from the database
+// Uses PostgreSQL (testcontainers)
 func CleanTestDatabase() error {
 	orm := facades.Orm()
 	if orm == nil {
 		return nil
 	}
 
-	// Get all tables (SQLite specific)
-	var tables []string
+	return cleanPostgresDatabase()
+}
+
+// cleanPostgresDatabase removes all test data from PostgreSQL database
+func cleanPostgresDatabase() error {
+	orm := facades.Orm()
+	if orm == nil {
+		return nil
+	}
+
+	// Get all tables from PostgreSQL
+	var tables []struct {
+		TableName string `gorm:"column:tablename"`
+	}
 	err := orm.Query().Raw(`
-		SELECT name FROM sqlite_master 
-		WHERE type='table' 
-		AND name NOT LIKE 'sqlite_%' 
-		AND name NOT LIKE 'migrations'
-		ORDER BY name
+		SELECT tablename FROM pg_tables
+		WHERE schemaname = 'public'
+		AND tablename != 'migrations'
+		ORDER BY tablename
 	`).Scan(&tables)
 
 	if err != nil {
 		return err
 	}
 
-	// Disable foreign key constraints temporarily
-	orm.Query().Exec("PRAGMA foreign_keys = OFF")
-
-	// Clear all tables except migrations
+	// Use TRUNCATE CASCADE for PostgreSQL (faster and handles FKs)
 	for _, table := range tables {
-		if table != "migrations" {
-			orm.Query().Exec("DELETE FROM " + table)
+		if table.TableName != "migrations" {
+			_, err := orm.Query().Exec("TRUNCATE TABLE " + table.TableName + " CASCADE")
+			if err != nil {
+				// If TRUNCATE fails, try DELETE
+				orm.Query().Exec("DELETE FROM " + table.TableName)
+			}
 		}
 	}
-
-	// Re-enable foreign key constraints
-	orm.Query().Exec("PRAGMA foreign_keys = ON")
 
 	return nil
 }
 
 // ResetTestDatabase completely recreates the test database
+// Uses PostgreSQL (testcontainers)
 func ResetTestDatabase() error {
-	// For SQLite, we can just delete and recreate the file
-	if os.Getenv("DB_CONNECTION") == "sqlite" {
-		dbPath := os.Getenv("DB_DATABASE")
-		if dbPath == "" {
-			dbPath = "database/test.sqlite"
-		}
+	return resetPostgresDatabase()
+}
 
-		// Delete the existing database file
-		os.Remove(dbPath)
-
-		// Create a new empty file
-		file, err := os.Create(dbPath)
-		if err != nil {
-			return err
-		}
-		file.Close()
-
-		// Run migrations
-		err = facades.Artisan().Call("migrate")
-		if err != nil {
-			return err
-		}
+// resetPostgresDatabase resets the PostgreSQL test database
+func resetPostgresDatabase() error {
+	// Clean all tables first
+	err := cleanPostgresDatabase()
+	if err != nil {
+		return err
 	}
 
-	return nil
+	// Run migrations with --force flag for non-interactive execution
+	return facades.Artisan().Call("migrate --force")
 }
 
 // CleanupTestData removes only test-specific data

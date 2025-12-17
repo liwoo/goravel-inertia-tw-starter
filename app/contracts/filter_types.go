@@ -457,19 +457,23 @@ func (fc FilterCondition) ToSQL() (string, []interface{}) {
 		}
 
 	case OperatorContains:
-		sql = fmt.Sprintf("%s LIKE ?", fc.Field)
+		// Use ILIKE for case-insensitive PostgreSQL search
+		sql = fmt.Sprintf("%s ILIKE ?", fc.Field)
 		args = []interface{}{fmt.Sprintf("%%%v%%", fc.Value)}
 
 	case OperatorNotContains:
-		sql = fmt.Sprintf("%s NOT LIKE ?", fc.Field)
+		// Use ILIKE for case-insensitive PostgreSQL search
+		sql = fmt.Sprintf("%s NOT ILIKE ?", fc.Field)
 		args = []interface{}{fmt.Sprintf("%%%v%%", fc.Value)}
 
 	case OperatorStartsWith:
-		sql = fmt.Sprintf("%s LIKE ?", fc.Field)
+		// Use ILIKE for case-insensitive PostgreSQL search
+		sql = fmt.Sprintf("%s ILIKE ?", fc.Field)
 		args = []interface{}{fmt.Sprintf("%v%%", fc.Value)}
 
 	case OperatorEndsWith:
-		sql = fmt.Sprintf("%s LIKE ?", fc.Field)
+		// Use ILIKE for case-insensitive PostgreSQL search
+		sql = fmt.Sprintf("%s ILIKE ?", fc.Field)
 		args = []interface{}{fmt.Sprintf("%%%v", fc.Value)}
 
 	case OperatorIsNull:

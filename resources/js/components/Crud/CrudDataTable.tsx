@@ -14,11 +14,11 @@ import {
   useReactTable,
   Row,
 } from '@tanstack/react-table';
-import { 
-  ChevronUp, 
-  ChevronDown, 
-  ChevronsUpDown, 
-  FileX, 
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  FileX,
   MoreVertical,
   ChevronLeft,
   ChevronRight,
@@ -27,11 +27,12 @@ import {
   Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DataTableProps, CrudAction, CrudColumn } from '@/types/crud';
+import { DataTableProps, CrudAction, CrudColumn, BulkAction } from '@/types/crud';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -125,8 +126,8 @@ const createColumnDef = <T extends { id: number }>(
   accessorKey: column.key,
   id: column.key,
   header: ({ column: tanColumn }) => (
-    <DataTableColumnHeader 
-      column={tanColumn} 
+    <DataTableColumnHeader
+      column={tanColumn}
       title={column.label}
       className={column.className}
       onSort={onSort}
@@ -136,8 +137,8 @@ const createColumnDef = <T extends { id: number }>(
     const item = row.original;
     return (
       <div className={cn('text-sm', column.className)}>
-        {column.render ? 
-          column.render(item) : 
+        {column.render ?
+          column.render(item) :
           String((item as any)[column.key] || '-')
         }
       </div>
@@ -159,7 +160,7 @@ const createActionsColumn = <T extends { id: number }>(
   header: () => <span className="sr-only">Actions</span>,
   cell: ({ row }) => {
     const item = row.original;
-    
+
     const handleActionClick = (action: CrudAction<T>, item: T) => {
       if (action.confirm) {
         const message = action.confirmMessage || `Are you sure you want to ${action.label.toLowerCase()}?`;
@@ -187,9 +188,14 @@ const createActionsColumn = <T extends { id: number }>(
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           {actions.map((action, actionIndex) => {
+            // Skip rendering if action should be hidden for this item
+            if (action.hidden?.(item)) {
+              return null;
+            }
+
             const isDisabled = action.disabled?.(item) || false;
             const isDestructive = action.key === 'delete' || action.className?.includes('destructive');
-            
+
             return (
               <React.Fragment key={action.key}>
                 {actionIndex > 0 && actions[actionIndex - 1]?.key !== 'delete' && action.key === 'delete' && (
@@ -345,6 +351,68 @@ function DataTableViewOptions<TData>({
   )
 }
 
+// Bulk Action Bar Component
+function BulkActionBar<T extends { id: number }>({
+  selectedCount,
+  totalCount,
+  bulkActions,
+  onBulkAction,
+  onClearSelection,
+}: {
+  selectedCount: number
+  totalCount: number
+  bulkActions: BulkAction[]
+  onBulkAction: (action: string, selectedIds: number[]) => void
+  onClearSelection: () => void
+  selectedIds: number[]
+}) {
+  if (selectedCount === 0) return null;
+
+  const handleActionClick = (action: BulkAction) => {
+    if (action.confirm) {
+      const message = action.confirmMessage || `Are you sure you want to ${action.label.toLowerCase()} ${selectedCount} item(s)?`;
+      if (confirm(message)) {
+        onBulkAction(action.key, []);
+      }
+    } else {
+      onBulkAction(action.key, []);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3">
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary" className="font-medium">
+          {selectedCount} selected
+        </Badge>
+        <span className="text-sm text-muted-foreground">
+          {selectedCount} of {totalCount} row(s) selected
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        {bulkActions.map((action) => (
+          <Button
+            key={action.key}
+            variant={action.variant === 'danger' ? 'destructive' : action.variant === 'warning' ? 'outline' : 'secondary'}
+            size="sm"
+            onClick={() => handleActionClick(action)}
+          >
+            {action.icon && <span className="mr-1.5">{action.icon}</span>}
+            {action.label}
+          </Button>
+        ))}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClearSelection}
+        >
+          Clear
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // Extended interface for modern features
 interface ModernDataTableProps<T> extends DataTableProps<T> {
   searchKey?: string
@@ -353,6 +421,10 @@ interface ModernDataTableProps<T> extends DataTableProps<T> {
   enableColumnToggle?: boolean
   enablePagination?: boolean
   onSearch?: (value: string) => void
+  bulkActions?: BulkAction[]
+  onBulkAction?: (action: string, selectedIds: number[]) => void
+  onRowClick?: (item: T) => void
+  canRowClick?: boolean
 }
 
 export function CrudDataTable<T extends { id: number }>({
@@ -374,6 +446,10 @@ export function CrudDataTable<T extends { id: number }>({
   enableColumnToggle = false,
   enablePagination = false,
   onSearch,
+  bulkActions = [],
+  onBulkAction,
+  onRowClick,
+  canRowClick = false,
 }: ModernDataTableProps<T>) {
   // State management
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -466,7 +542,7 @@ export function CrudDataTable<T extends { id: number }>({
   React.useEffect(() => {
     const selectedRows = table.getFilteredSelectedRowModel().rows
     const newSelectedIds = selectedRows.map(row => row.original.id)
-    
+
     // Only update if there's a difference to avoid infinite loops
     if (JSON.stringify(newSelectedIds.sort()) !== JSON.stringify(selectedIds.sort())) {
       onSelectionChange(newSelectedIds)
@@ -480,8 +556,54 @@ export function CrudDataTable<T extends { id: number }>({
     }
   }, [globalFilter, onSearch])
 
+  // Handle bulk action with selected IDs
+  const handleBulkAction = React.useCallback((action: string) => {
+    if (onBulkAction) {
+      onBulkAction(action, selectedIds);
+    }
+  }, [onBulkAction, selectedIds]);
+
+  // Clear selection handler
+  const handleClearSelection = React.useCallback(() => {
+    table.toggleAllRowsSelected(false);
+    onSelectionChange([]);
+  }, [table, onSelectionChange]);
+
+  // Handle row click - only triggers for non-interactive elements
+  const handleRowClick = React.useCallback((item: T, event: React.MouseEvent) => {
+    // Don't trigger row click if clicking on a button, link, checkbox, or interactive element
+    const target = event.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('[role="button"]') ||
+      target.closest('[role="menuitem"]') ||
+      target.closest('input') ||
+      target.closest('select') ||
+      target.closest('[data-radix-collection-item]')
+    ) {
+      return;
+    }
+
+    if (canRowClick && onRowClick) {
+      onRowClick(item);
+    }
+  }, [canRowClick, onRowClick]);
+
   return (
     <div className={cn("w-full space-y-4", className)}>
+      {/* Bulk Action Bar */}
+      {enableSelection && bulkActions.length > 0 && selectedIds.length > 0 && (
+        <BulkActionBar
+          selectedCount={selectedIds.length}
+          totalCount={data.length}
+          bulkActions={bulkActions}
+          onBulkAction={handleBulkAction}
+          onClearSelection={handleClearSelection}
+          selectedIds={selectedIds}
+        />
+      )}
+
       {/* Toolbar */}
       {(enableSearch || enableColumnToggle) && (
         <div className="flex items-center justify-between">
@@ -507,77 +629,82 @@ export function CrudDataTable<T extends { id: number }>({
             </div>
           </div>
         )}
-        
+
         <div className="rounded-md border overflow-hidden">
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <Table className="w-full min-w-full">
-            <TableHeader className="bg-muted/50 sticky top-0 z-10">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead 
-                        key={header.id}
-                        className={cn(
-                          'px-2 py-3 text-left whitespace-nowrap bg-muted/50 border-b',
-                          header.id === 'select' && 'w-12 min-w-[3rem]',
-                          header.id === 'actions' && 'w-16 min-w-[4rem] sticky right-0 z-20 bg-muted/50 border-l',
-                          // Add min-width for other columns to prevent them from being too narrow
-                          header.id !== 'select' && header.id !== 'actions' && 'min-w-[8rem]'
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
+              <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead
+                          key={header.id}
+                          className={cn(
+                            'px-2 py-3 text-left whitespace-nowrap bg-muted/50 border-b',
+                            header.id === 'select' && 'w-12 min-w-[3rem]',
+                            header.id === 'actions' && 'w-16 min-w-[4rem] sticky right-0 z-20 bg-muted/50 border-l',
+                            // Add min-width for other columns to prevent them from being too narrow
+                            header.id !== 'select' && header.id !== 'actions' && 'min-w-[8rem]'
+                          )}
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
                               header.column.columnDef.header,
                               header.getContext()
                             )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                    className="hover:bg-muted/50"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell 
-                        key={cell.id}
-                        className={cn(
-                          'px-2 py-3 whitespace-nowrap',
-                          cell.column.id === 'actions' && 'text-right sticky right-0 z-20 bg-background border-l',
-                          cell.column.id === 'select' && 'w-12',
-                          // Add consistent padding and prevent text wrapping
-                        )}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
+                        </TableHead>
+                      )
+                    })}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={tableColumns.length}
-                    className="h-32 text-center"
-                  >
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                      <FileX className="h-8 w-8 text-muted-foreground/50" />
-                      <p className="text-sm text-muted-foreground">{emptyMessage}</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                      onClick={(e) => handleRowClick(row.original, e)}
+                      className={cn(
+                        "transition-colors duration-150",
+                        canRowClick && onRowClick && "cursor-pointer hover:bg-muted/70 active:bg-muted",
+                        !canRowClick && "hover:bg-muted/50"
+                      )}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            'px-2 py-3 whitespace-nowrap',
+                            cell.column.id === 'actions' && 'text-right sticky right-0 z-20 bg-background border-l',
+                            cell.column.id === 'select' && 'w-12',
+                            // Add consistent padding and prevent text wrapping
+                          )}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={tableColumns.length}
+                      className="h-32 text-center"
+                    >
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <FileX className="h-8 w-8 text-muted-foreground/50" />
+                        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
             </Table>
           </div>
         </div>

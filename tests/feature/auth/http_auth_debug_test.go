@@ -13,8 +13,8 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/assert"
 
-	"players/app/models"
-	"players/tests"
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/tests"
 )
 
 type HTTPAuthDebugTestSuite struct {

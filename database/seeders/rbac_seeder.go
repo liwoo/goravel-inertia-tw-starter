@@ -3,9 +3,10 @@ package seeders
 import (
 	"fmt"
 
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/models"
+
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
-	"players/app/models"
 )
 
 // RBACSeeder seeds the database with default roles and permissions
@@ -16,24 +17,31 @@ func (s *RBACSeeder) Signature() string {
 	return "rbac"
 }
 
-// Run seeds default roles and permissions
+// Run seeds default roles and permissions (idempotent - safe to run multiple times)
 func (s *RBACSeeder) Run() error {
 	facades.Log().Info("Starting RBAC Seeder...")
 
-	// Clear existing data first
-	facades.Orm().Query().Exec("DELETE FROM role_permissions")
-	facades.Orm().Query().Exec("DELETE FROM user_roles")
-	facades.Orm().Query().Exec("DELETE FROM permissions")
-	facades.Orm().Query().Exec("DELETE FROM roles")
+	// Check if RBAC is already set up by checking for existing roles
+	roleCount, err := facades.Orm().Query().Model(&models.Role{}).Where("is_active = ?", true).Count()
+	if err == nil && roleCount > 0 {
+		facades.Log().Info("RBAC already set up, checking for updates...", map[string]interface{}{
+			"existing_roles": roleCount,
+		})
+		// Don't delete existing data - just ensure all roles and permissions exist
+		return s.ensureRBACSetup()
+	}
 
-	// Create roles directly with raw SQL
+	facades.Log().Info("No existing RBAC setup found, creating fresh...")
+
+	// Create roles directly with raw SQL (using NOW() for PostgreSQL compatibility)
 	rolesSQL := []string{
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Super Administrator', 'super-admin', 'Full system access with all permissions', 100, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Administrator', 'admin', 'Administrative access to most features', 80, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Librarian', 'librarian', 'Full book management access', 60, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Moderator', 'moderator', 'Limited administrative access', 40, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Member', 'member', 'Regular user with borrowing privileges', 20, 1, datetime('now'), datetime('now'))",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Guest', 'guest', 'Basic read-only access', 10, 1, datetime('now'), datetime('now'))",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Super Administrator', 'super-admin', 'Full system access with all permissions', 100, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Administrator', 'admin', 'Administrative access to most features', 80, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Librarian', 'librarian', 'Full book management access', 60, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('SME User', 'sme-user', 'SME user access', 60, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Moderator', 'moderator', 'Limited administrative access', 40, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Member', 'member', 'Regular user with borrowing privileges', 20, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Guest', 'guest', 'Basic read-only access', 10, true, NOW(), NOW())",
 	}
 
 	for _, sql := range rolesSQL {
@@ -55,15 +63,15 @@ func (s *RBACSeeder) Run() error {
 	}
 
 	// Assign all permissions to super-admin role
-	_, err := facades.Orm().Query().Exec(`
+	_, execErr := facades.Orm().Query().Exec(`
 		INSERT INTO role_permissions (role_id, permission_id, is_active, created_at, updated_at)
-		SELECT r.id, p.id, 1, datetime('now'), datetime('now')
+		SELECT r.id, p.id, true, NOW(), NOW()
 		FROM roles r, permissions p
 		WHERE r.slug = 'super-admin'
 	`)
-	if err != nil {
+	if execErr != nil {
 		facades.Log().Error("Failed to assign permissions to super-admin", map[string]interface{}{
-			"error": err.Error(),
+			"error": execErr.Error(),
 		})
 	}
 
@@ -72,7 +80,7 @@ func (s *RBACSeeder) Run() error {
 	if err := facades.Orm().Query().Where("role = ?", "ADMIN").First(&adminUser); err == nil {
 		_, err = facades.Orm().Query().Exec(`
 			INSERT INTO user_roles (user_id, role_id, assigned_at, is_active, notes, created_at, updated_at)
-			SELECT ?, r.id, datetime('now'), 1, 'Assigned during RBAC seeding', datetime('now'), datetime('now')
+			SELECT $1, r.id, NOW(), true, 'Assigned during RBAC seeding', NOW(), NOW()
 			FROM roles r
 			WHERE r.slug = 'super-admin'
 		`, adminUser.ID)
@@ -88,8 +96,49 @@ func (s *RBACSeeder) Run() error {
 		}
 	}
 
+	// Assign SME-related permissions to sme-user role
+	s.assignSmeUserPermissions()
+
 	facades.Log().Info("RBAC seeding completed")
 	return nil
+}
+
+// assignSmeUserPermissions assigns SME-related permissions to the sme-user role
+func (s *RBACSeeder) assignSmeUserPermissions() {
+	var role models.Role
+	err := facades.Orm().Query().Where("slug = ?", "sme-user").First(&role)
+	if err != nil {
+		facades.Log().Error("Failed to find sme-user role", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// Resources that SME users should have access to for their own data
+	smeResources := []string{
+		"additional_business_members",
+		"smes",
+		"primary_business_owners",
+		"business_formalisations",
+	}
+
+	// Actions SME users can perform on their own data
+	smeActions := []string{"read", "update", "create"}
+
+	for _, resource := range smeResources {
+		for _, action := range smeActions {
+			var permission models.Permission
+			err := facades.Orm().Query().
+				Where("resource = ? AND action = ?", resource, action).
+				First(&permission)
+			if err != nil {
+				continue
+			}
+			s.assignPermissionToRole(role.ID, permission.ID)
+		}
+	}
+
+	facades.Log().Info("Assigned SME permissions to sme-user role")
 }
 
 // createPermissions creates default permissions
@@ -159,8 +208,8 @@ func (s *RBACSeeder) createPermissions() error {
 			})
 
 			// Create using raw SQL to avoid GORM issues
-			query := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at) 
-			         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`
+			query := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at)
+			         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`
 
 			_, err = facades.Orm().Query().Exec(query,
 				permission.Name,
@@ -209,6 +258,7 @@ func (s *RBACSeeder) createRoles() error {
 	roles := []roleData{
 		{Name: "Super Administrator", Slug: "super-admin", Description: "Full system access with all permissions", Level: 100},
 		{Name: "Administrator", Slug: "admin", Description: "Administrative access to most features", Level: 80},
+		{Name: "SME User", Slug: "sme-user", Description: "SME Portal access", Level: 60},
 		{Name: "Librarian", Slug: "librarian", Description: "Full book management access", Level: 60},
 		{Name: "Moderator", Slug: "moderator", Description: "Limited administrative access", Level: 40},
 		{Name: "Member", Slug: "member", Description: "Regular user with borrowing privileges", Level: 20},
@@ -220,8 +270,8 @@ func (s *RBACSeeder) createRoles() error {
 		err := facades.Orm().Query().Where("slug = ?", role.Slug).First(&existing)
 		if err != nil {
 			// Role doesn't exist, create it using raw SQL to avoid GORM issues
-			query := `INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) 
-			         VALUES (?, ?, ?, ?, 1, datetime('now'), datetime('now'))`
+			query := `INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at)
+			         VALUES ($1, $2, $3, $4, true, NOW(), NOW())`
 
 			_, err = facades.Orm().Query().Exec(query, role.Name, role.Slug, role.Description, role.Level)
 			if err != nil {
@@ -310,6 +360,16 @@ func (s *RBACSeeder) assignPermissionsToRoles() error {
 		return err
 	}
 
+	// SME User permissions
+	smeUserPerms := []string{
+		"books.viewAny", "books.view", "books.create", "books.update", "books.delete", "books.manage", "books.export",
+		"users.view",
+		"reports.view", "reports.export",
+	}
+	if err := s.assignPermissionsToRole("sme-user", smeUserPerms); err != nil {
+		return err
+	}
+
 	// Moderator permissions
 	moderatorPerms := []string{
 		"books.viewAny", "books.view", "books.create", "books.update", "books.borrow", "books.return",
@@ -386,7 +446,7 @@ func (s *RBACSeeder) assignPermissionToRole(roleID, permissionID uint) error {
 	// Check if relationship already exists
 	var existing models.RolePermission
 	err := facades.Orm().Query().Where("role_id = ? AND permission_id = ?", roleID, permissionID).First(&existing)
-	if err != nil {
+	if err != nil || existing.ID == 0 {
 		// Relationship doesn't exist, create it
 		rolePermission := models.RolePermission{
 			RoleID:       roleID,
@@ -426,12 +486,25 @@ func (s *RBACSeeder) createPermissionsFromServices() error {
 			slug := fmt.Sprintf("%s_%s", string(service), string(action))
 			name := fmt.Sprintf("%s %s", actionName, serviceName)
 			description := fmt.Sprintf("%s %s in the system", actionName, string(service))
+			existing := models.Permission{}
+			err := facades.Orm().Query().Where("slug = ?", slug).First(&existing)
+			if err != nil {
+				facades.Log().Error("Failed to find permission", map[string]interface{}{
+					"error": err.Error(),
+				})
+			}
+			if existing.ID > 0 {
+				facades.Log().Info("Permission already exists", map[string]interface{}{
+					"slug": slug,
+				})
+				continue
+			}
 
 			// Create permission using raw SQL
-			sql := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at) 
-			       VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0, datetime('now'), datetime('now'))`
+			sql := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at)
+			       VALUES ($1, $2, $3, $4, $5, $6, true, false, false, NOW(), NOW())`
 
-			_, err := facades.Orm().Query().Exec(sql, name, slug, description, string(service), string(service), string(action))
+			_, err = facades.Orm().Query().Exec(sql, name, slug, description, string(service), string(service), string(action))
 			if err != nil {
 				facades.Log().Error("Failed to create permission", map[string]interface{}{
 					"error":   err.Error(),
@@ -479,8 +552,8 @@ func (s *RBACSeeder) createHardcodedPermissions() {
 	}
 
 	for _, perm := range hardcodedPermissions {
-		sql := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at) 
-		       VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0, datetime('now'), datetime('now'))`
+		sql := `INSERT INTO permissions (name, slug, description, category, resource, action, is_active, requires_ownership, can_delegate, created_at, updated_at)
+		       VALUES ($1, $2, $3, $4, $5, $6, true, false, false, NOW(), NOW())`
 
 		_, err := facades.Orm().Query().Exec(sql, perm.name, perm.slug, perm.description, perm.category, perm.category, perm.action)
 		if err != nil {
@@ -498,4 +571,75 @@ func minInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// ensureRBACSetup ensures all roles and permissions exist without deleting existing data
+func (s *RBACSeeder) ensureRBACSetup() error {
+	facades.Log().Info("Ensuring RBAC setup is complete (idempotent mode)...")
+
+	// Ensure all default roles exist
+	rolesData := []struct {
+		name, slug, description string
+		level                   int
+	}{
+		{"Super Administrator", "super-admin", "Full system access with all permissions", 100},
+		{"Administrator", "admin", "Administrative access to most features", 80},
+		{"SME User", "sme-user", "SME Portal access", 60},
+		{"Librarian", "librarian", "Full book management access", 60},
+		{"Moderator", "moderator", "Limited administrative access", 40},
+		{"Member", "member", "Regular user with borrowing privileges", 20},
+		{"Guest", "guest", "Basic read-only access", 10},
+	}
+
+	for _, role := range rolesData {
+		var existing models.Role
+		err := facades.Orm().Query().Where("slug = ?", role.slug).First(&existing)
+		if err != nil {
+			// Role doesn't exist, create it
+			sql := `INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at)
+			       VALUES ($1, $2, $3, $4, true, NOW(), NOW())`
+			_, err = facades.Orm().Query().Exec(sql, role.name, role.slug, role.description, role.level)
+			if err != nil {
+				facades.Log().Error("Failed to create role", map[string]interface{}{
+					"error": err.Error(),
+					"slug":  role.slug,
+				})
+			} else {
+				facades.Log().Info("Created missing role", map[string]interface{}{
+					"slug": role.slug,
+				})
+			}
+		}
+	}
+
+	// Ensure permissions exist (this already handles duplicates gracefully)
+	if err := s.createPermissionsFromServices(); err != nil {
+		facades.Log().Warning("Failed to create permissions from services, using fallback", map[string]interface{}{
+			"error": err.Error(),
+		})
+		s.createHardcodedPermissions()
+	}
+
+	// Ensure super-admin has all permissions
+	_, err := facades.Orm().Query().Exec(`
+		INSERT INTO role_permissions (role_id, permission_id, is_active, created_at, updated_at)
+		SELECT r.id, p.id, true, NOW(), NOW()
+		FROM roles r, permissions p
+		WHERE r.slug = 'super-admin'
+		AND NOT EXISTS (
+			SELECT 1 FROM role_permissions rp
+			WHERE rp.role_id = r.id AND rp.permission_id = p.id
+		)
+	`)
+	if err != nil {
+		facades.Log().Error("Failed to assign new permissions to super-admin", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	// Ensure SME user permissions are assigned
+	s.assignSmeUserPermissions()
+
+	facades.Log().Info("RBAC setup verification completed")
+	return nil
 }

@@ -3,7 +3,7 @@ package console
 import (
 	"github.com/goravel/framework/contracts/console"
 
-	"players/app/console/commands"
+	"smedi-sme-db/app/console/commands"
 )
 
 type Kernel struct {
@@ -44,6 +44,9 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.CrudTestMaker{},
 		&commands.PageControllerMaker{},
 		&commands.UIMaker{},
+		&commands.EnumGenerator{},
 		&commands.MakeApp{},
+		&commands.SmeImport{},
+		&commands.SmeRecalculate{},
 	}
 }

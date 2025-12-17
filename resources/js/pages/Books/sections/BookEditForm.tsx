@@ -287,13 +287,19 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
           <div>
             <p className="text-gray-500">Created</p>
             <p className="font-medium">
-              {(book.createdAt || book.created_at) ? new Date(book.createdAt || book.created_at).toLocaleDateString() : '-'}
+              {(() => {
+                const created = book.createdAt || book.created_at;
+                return created ? new Date(created).toLocaleDateString() : '-';
+              })()}
             </p>
           </div>
           <div>
             <p className="text-gray-500">Last Updated</p>
             <p className="font-medium">
-              {(book.updatedAt || book.updated_at) ? new Date(book.updatedAt || book.updated_at).toLocaleDateString() : '-'}
+              {(() => {
+                const updated = book.updatedAt || book.updated_at;
+                return updated ? new Date(updated).toLocaleDateString() : '-';
+              })()}
             </p>
           </div>
         </div>

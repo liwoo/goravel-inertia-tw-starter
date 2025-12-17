@@ -24,10 +24,11 @@ import (
 	"github.com/goravel/framework/translation"
 	"github.com/goravel/framework/validation"
 	"github.com/goravel/gin"
+	"github.com/goravel/postgres"
 	"github.com/goravel/redis"
 	"github.com/goravel/sqlite"
 
-	"players/app/providers"
+	"smedi-sme-db/app/providers"
 )
 
 // Boot Start all init methods of the current folder to bootstrap all config.
@@ -95,6 +96,7 @@ func init() {
 			&log.ServiceProvider{},
 			&console.ServiceProvider{},
 			&database.ServiceProvider{},
+			&postgres.ServiceProvider{},
 			&sqlite.ServiceProvider{},
 			&redis.ServiceProvider{},
 			&cache.ServiceProvider{},

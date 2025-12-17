@@ -17,6 +17,7 @@ export interface UserPermissions {
   permissions: string[];
   isSuperAdmin: boolean;
   isAdmin: boolean;
+  totpEnabled?: boolean; // 2FA enabled status
 }
 
 export interface ServicePermissions {
@@ -44,13 +45,35 @@ export interface PermissionsContextType {
   getPermissionScope: (service: string, action: string) => PermissionScope;
   isSuperAdmin: () => boolean;
   isAdmin: () => boolean;
+  // 2FA related
+  is2FARequired: boolean;
+  has2FAEnabled: () => boolean;
+  needs2FASetup: () => boolean; // Returns true if 2FA is required but user hasn't enabled it
 }
 
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
 
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { props } = usePage();
-  const auth = props.auth as { user: UserPermissions | null; permissions?: Record<string, ServicePermissions> };
+  const auth = props.auth as {
+    user: UserPermissions | null;
+    permissions?: Record<string, ServicePermissions>;
+    require_2fa?: boolean; // Global 2FA requirement setting
+  };
+
+  // Check if 2FA is required globally
+  const is2FARequired = auth?.require_2fa || false;
+
+  // Check if user has 2FA enabled
+  const has2FAEnabled = (): boolean => {
+    return auth?.user?.totpEnabled || false;
+  };
+
+  // Check if user needs to set up 2FA (required but not enabled)
+  const needs2FASetup = (): boolean => {
+    if (!auth?.user) return false;
+    return is2FARequired && !has2FAEnabled();
+  };
 
   const hasPermission = (permission: string): boolean => {
     if (!auth?.user) return false;
@@ -73,7 +96,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       `${basePermission}_by_me`
     ];
     
-    return scopedPermissions.some(perm => auth.user.permissions?.includes(perm)) || false;
+    return scopedPermissions.some(perm => auth.user?.permissions?.includes(perm)) || false;
   };
 
   const canPerformAction = (service: string, action: 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage'): boolean => {
@@ -86,7 +109,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
     // Check the permissions object for this service
     const servicePerms = auth?.permissions?.[service];
-    
+
     if (!servicePerms) {
       // Fallback to checking user's permission array with scope support
       const basePermission = `${service}_${action}`;
@@ -96,8 +119,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         `${basePermission}_by_my_role`,
         `${basePermission}_by_me`
       ];
-      
-      const hasPermission = scopedPermissions.some(perm => auth.user.permissions?.includes(perm)) || false;
+
+      const hasPermission = scopedPermissions.some(perm => auth.user?.permissions?.includes(perm)) || false;
       return hasPermission;
     }
 
@@ -158,6 +181,10 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     getPermissionScope,
     isSuperAdmin,
     isAdmin,
+    // 2FA related
+    is2FARequired,
+    has2FAEnabled,
+    needs2FASetup,
   };
 
   return (

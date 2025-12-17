@@ -28,7 +28,14 @@ export function useFilterMetadata(resourceName: string) {
 
       // If 404, just set empty metadata and return - this is expected for resources without filters
       if (response.status === 404) {
-        setMetadata({ filters: [] });
+        setMetadata({
+          filters: [],
+          logic_operators: ['AND', 'OR'],
+          resource: resourceName,
+          searchable_fields: [],
+          sortable_fields: [],
+          filterable_fields: []
+        });
         setLoading(false);
         return;
       }

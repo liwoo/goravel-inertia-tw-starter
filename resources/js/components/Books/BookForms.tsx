@@ -645,7 +645,7 @@ export function BookDetailView({
               <Clock className="h-4 w-4 text-gray-400" />
               <span className="text-sm font-medium text-gray-500">Added:</span>
               <span className="text-sm text-gray-900">
-                {new Date(book.createdAt).toLocaleDateString()}
+                {book.createdAt ? new Date(book.createdAt).toLocaleDateString() : 'N/A'}
               </span>
             </div>
           </div>

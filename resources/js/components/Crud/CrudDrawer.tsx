@@ -3,6 +3,12 @@ import { ArrowLeft, Edit, Save, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DrawerProps } from '@/types/crud';
 import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CrudDrawerProps extends DrawerProps {
   type?: 'create' | 'edit' | 'view';
@@ -13,13 +19,14 @@ interface CrudDrawerProps extends DrawerProps {
   canSave?: boolean;
   isSaving?: boolean;
   resourceName?: string;
+  displayName?: string; // Optional display name override for cleaner titles
 }
 
-export function CrudDrawer({ 
-  isOpen, 
-  onClose, 
-  title, 
-  size = 'lg', 
+export function CrudDrawer({
+  isOpen,
+  onClose,
+  title,
+  size = 'lg',
   children,
   className,
   overlayClassName,
@@ -30,7 +37,8 @@ export function CrudDrawer({
   canEdit = false,
   canSave = false,
   isSaving = false,
-  resourceName = ''
+  resourceName = '',
+  displayName
 }: CrudDrawerProps) {
   // Keyboard shortcuts
   useEffect(() => {
@@ -42,68 +50,50 @@ export function CrudDrawer({
         e.preventDefault();
         onSave();
       }
-      
+
       // Cmd/Ctrl + E to edit (from view mode)
       if ((e.metaKey || e.ctrlKey) && e.key === 'e' && type === 'view' && canEdit && onEdit) {
         e.preventDefault();
         onEdit();
       }
-      
-      // Escape to close
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, type, canSave, canEdit, onSave, onEdit, onClose]);
+  }, [isOpen, type, canSave, canEdit, onSave, onEdit]);
+
+  // Map size to width classes
   const sizeClasses = {
-    sm: 'w-full sm:w-[400px]',
-    md: 'w-full sm:w-[600px]',
-    lg: 'w-full sm:w-[800px]',
-    xl: 'w-full sm:w-[1000px]',
+    sm: 'w-full sm:max-w-[400px]',
+    md: 'w-full sm:max-w-[600px]',
+    lg: 'w-full sm:max-w-[800px]',
+    xl: 'w-full sm:max-w-[1000px]',
     full: 'w-full',
   };
 
-  if (!isOpen) return null;
-
-  // Capitalize resource name for title
-  const capitalizedResourceName = resourceName ? 
-    resourceName.charAt(0).toUpperCase() + resourceName.slice(1, -1) : // Remove 's' at the end
-    '';
+  // Use displayName if provided, otherwise format resourceName
+  const formattedName = displayName || (resourceName ?
+    resourceName.charAt(0).toUpperCase() + resourceName.slice(1, -1).replace(/_/g, ' ') : // Remove 's' and replace underscores
+    '');
 
   // Build title based on type
-  const displayTitle = type && capitalizedResourceName ? 
-    (type === 'create' ? `Create New ${capitalizedResourceName}` :
-     type === 'edit' ? `Edit ${capitalizedResourceName}` :
-     type === 'view' ? `${capitalizedResourceName} Details` : title) : title;
+  const displayTitle = type && formattedName ?
+    (type === 'create' ? `Create New ${formattedName}` :
+     type === 'edit' ? `Edit ${formattedName}` :
+     type === 'view' ? `${formattedName} Details` : title) : title;
 
   return (
-    <>
-      {/* Overlay */}
-      <div 
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent
+        side="right"
         className={cn(
-          "fixed inset-0 bg-black/20 z-40 transition-opacity",
-          overlayClassName
-        )}
-        onClick={onClose}
-      />
-      
-      {/* Drawer */}
-      <div 
-        className={cn(
-          "fixed right-0 top-0 h-full bg-white dark:bg-gray-950 shadow-xl z-50 flex flex-col",
-          "transform transition-transform duration-300 ease-in-out",
-          isOpen ? "translate-x-0" : "translate-x-full",
           sizeClasses[size],
-          "max-w-full", // Ensure drawer never exceeds viewport width
+          "p-0 flex flex-col gap-0 [&>button]:hidden", // Hide default close button
           className
         )}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+        {/* Custom Header with actions */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -113,15 +103,15 @@ export function CrudDrawer({
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <SheetTitle className="text-lg font-semibold">
               {displayTitle}
-            </h2>
+            </SheetTitle>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* Edit button for View mode */}
             {type === 'view' && canEdit && onEdit && (
-              <Button 
+              <Button
                 onClick={onEdit}
                 size="sm"
                 variant="outline"
@@ -134,10 +124,10 @@ export function CrudDrawer({
                 </kbd>
               </Button>
             )}
-            
+
             {/* Save button for Create/Edit modes */}
             {(type === 'create' || type === 'edit') && canSave && onSave && (
-              <Button 
+              <Button
                 onClick={onSave}
                 size="sm"
                 disabled={isSaving}
@@ -155,13 +145,13 @@ export function CrudDrawer({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable Content */}
+        <ScrollArea className="flex-1">
           <div className="p-4 sm:p-6">
             {children}
           </div>
-        </div>
-      </div>
-    </>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
   );
 }

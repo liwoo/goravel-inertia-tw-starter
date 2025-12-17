@@ -1,18 +1,25 @@
-# Git files
+# =============================================================================
+# Docker ignore file for Goravel application
+# =============================================================================
+
+# Git
 .git
 .gitignore
+.gitattributes
 
 # Documentation
 *.md
-docs/
+!README.md
+docs/*.md
+docs/screenshots/
 LICENSE
 
-# Development files
-.env.local
-.env.development
-.env.test
+# Environment files (security)
+.env
+.env.*
+!.env.example
 
-# Dependencies
+# Dependencies (will be installed in container)
 node_modules/
 vendor/
 
@@ -23,33 +30,41 @@ vendor/
 *.dll
 *.so
 *.dylib
+dist/
 
-# Test files
+# Test files (not needed in production image)
 *_test.go
 tests/
+coverage/
 coverage.out
 *.test
+.nyc_output/
+vitest.config.ts
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/__tests__/
 
-# IDE files
+# IDE and editor files
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+*.sublime-*
 
 # OS files
 .DS_Store
 Thumbs.db
-
-# Logs
 *.log
-storage/logs/
 
-# Temporary files
+# Storage (runtime data)
+storage/logs/*
+storage/app/public/*
 storage/framework/cache/*
 storage/framework/sessions/*
 storage/framework/views/*
-storage/app/public/*
 !storage/framework/cache/.gitkeep
 !storage/framework/sessions/.gitkeep
 !storage/framework/views/.gitkeep
@@ -60,13 +75,50 @@ storage/app/public/*
 database/*.sqlite
 database/*.db
 
-# Helm charts
+# Helm charts (deployment config, not app)
 helm/
 
-# GitHub Actions
+# CI/CD files
 .github/
+.gitlab-ci.yml
+Jenkinsfile
+.circleci/
 
 # Docker files (prevent recursive copy)
-Dockerfile
-docker-compose.yml
+Dockerfile*
+docker-compose*.yml
 .dockerignore
+
+# Kubernetes manifests
+k8s/
+*.yaml
+!components.json
+!package*.json
+!tsconfig.json
+!tailwind.config.js
+!postcss.config.js
+!vite.config.ts
+
+# Scripts not needed in production
+*.sh
+Makefile
+
+# Temporary and cache files
+*.tmp
+*.temp
+*.cache
+.cache/
+
+# Go specific
+go.work
+go.work.sum
+
+# Node specific
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+yarn.lock
+pnpm-lock.yaml
+package-lock.json

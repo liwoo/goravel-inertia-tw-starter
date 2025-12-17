@@ -1,0 +1,32 @@
+export type District = 'Chitipa' | 'Karonga' | 'Likoma' | 'Mzimba' | 'Nkhata Bay' | 'Rumphi' | 'Dedza' | 'Dowa' | 'Kasungu' | 'Lilongwe' | 'Mchinji' | 'Nkhotakota' | 'Ntcheu' | 'Ntchisi' | 'Salima' | 'Balaka' | 'Blantyre' | 'Chikwawa' | 'Chiradzulu' | 'Machinga' | 'Mangochi' | 'Mulanje' | 'Mwanza' | 'Neno' | 'Nsanje' | 'Phalombe' | 'Thyolo' | 'Zomba';
+
+export const DISTRICT_OPTIONS: { value: District; label: string }[] = [
+  { value: 'Chitipa', label: 'Chitipa' },
+  { value: 'Karonga', label: 'Karonga' },
+  { value: 'Likoma', label: 'Likoma' },
+  { value: 'Mzimba', label: 'Mzimba' },
+  { value: 'Nkhata Bay', label: 'Nkhata Bay' },
+  { value: 'Rumphi', label: 'Rumphi' },
+  { value: 'Dedza', label: 'Dedza' },
+  { value: 'Dowa', label: 'Dowa' },
+  { value: 'Kasungu', label: 'Kasungu' },
+  { value: 'Lilongwe', label: 'Lilongwe' },
+  { value: 'Mchinji', label: 'Mchinji' },
+  { value: 'Nkhotakota', label: 'Nkhotakota' },
+  { value: 'Ntcheu', label: 'Ntcheu' },
+  { value: 'Ntchisi', label: 'Ntchisi' },
+  { value: 'Salima', label: 'Salima' },
+  { value: 'Balaka', label: 'Balaka' },
+  { value: 'Blantyre', label: 'Blantyre' },
+  { value: 'Chikwawa', label: 'Chikwawa' },
+  { value: 'Chiradzulu', label: 'Chiradzulu' },
+  { value: 'Machinga', label: 'Machinga' },
+  { value: 'Mangochi', label: 'Mangochi' },
+  { value: 'Mulanje', label: 'Mulanje' },
+  { value: 'Mwanza', label: 'Mwanza' },
+  { value: 'Neno', label: 'Neno' },
+  { value: 'Nsanje', label: 'Nsanje' },
+  { value: 'Phalombe', label: 'Phalombe' },
+  { value: 'Thyolo', label: 'Thyolo' },
+  { value: 'Zomba', label: 'Zomba' }
+];

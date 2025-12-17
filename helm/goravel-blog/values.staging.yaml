@@ -1,20 +1,45 @@
-# Staging environment values
+# =============================================================================
+# Staging environment values for goravel-blog
+# =============================================================================
+
 replicaCount: 1
 
+# Run database migrations before app starts
+# Uses stdin redirect to /dev/null to prevent charmbracelet/huh TTY panic
+migrations:
+  enabled: true
+  createAdmin: true
+
 image:
+  # Use 'develop' tag for staging - CI automatically tags develop branch pushes
+  tag: "develop"
   pullPolicy: Always
 
 ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # SSE (Server-Sent Events) support - long-lived connections
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    # Disable request buffering for streaming
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
   hosts:
-    - host: staging-blog.example.com
+    - host: smedi.dartsmw.com
       paths:
         - path: /
           pathType: Prefix
+  tls:
+    - secretName: smedi-dartsmw-tls
+      hosts:
+        - smedi.dartsmw.com
 
 resources:
   limits:
-    cpu: 250m
-    memory: 256Mi
+    cpu: 500m
+    memory: 512Mi
   requests:
     cpu: 100m
     memory: 128Mi
@@ -22,14 +47,82 @@ resources:
 autoscaling:
   enabled: false
 
+podDisruptionBudget:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
 app:
+  name: "[STG] SMEDI Database"
   env: "staging"
   debug: true
-  url: "https://staging-blog.example.com"
-  
+  url: "https://smedi.dartsmw.com"
+
+  # Auth configuration
+  auth:
+    require_2fa: true
+
   database:
-    host: "mysql-staging.default.svc.cluster.local"
-    database: "goravel_blog_staging"
-    
+    connection: "postgres"
+    host: "my-pgbouncer.doorbell.svc.cluster.local"
+    port: 5432
+    database: "smedi_db"
+    username: "admin"
+    password: "postgrespw"
+    sslmode: "disable"
+    pool:
+      max: 450
+      min: 0
+
   redis:
-    host: "redis-staging.default.svc.cluster.local"
+    enabled: true
+    host: "redis-master.data.svc.cluster.local"
+    password: "ErMAXAXYYX"
+    port: 6379
+    database: 0
+    ttl: 86400
+
+  session:
+    driver: "redis"
+
+  admin:
+    name: "Admin"
+    email: "admin@dartsmw.com"
+    password: "changeme123"  # Change this!
+
+  logging:
+    level: "debug"
+
+  storage:
+    persistence:
+      enabled: false
+
+healthcheck:
+  enabled: true
+  # Startup probe runs first - allows up to 5 mins for app to start
+  # Liveness/readiness probes only start after startup probe succeeds
+  startupProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30  # 30 * 10s = 5 minutes to start
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 0  # Startup probe handles delay
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: http
+    initialDelaySeconds: 0  # Startup probe handles delay
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3

@@ -1,11 +1,14 @@
-# Default values for goravel-blog.
+# =============================================================================
+# Default values for goravel-blog Helm chart
+# =============================================================================
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 replicaCount: 2
 
 image:
-  repository: goravel-blog
+  # DockerHub repository for the application image
+  repository: jeremiahchienda/smedi-database
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
@@ -14,117 +17,190 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# =============================================================================
+# Database Migrations
+# =============================================================================
+migrations:
+  # Enable to run migrations as an init container before the app starts
+  # Runs: migrate, db:seed, rbac:setup
+  enabled: false
+  # Set to true to create admin user during first deployment
+  createAdmin: false
+
+# =============================================================================
+# Service Account
+# =============================================================================
 serviceAccount:
-  # Specifies whether a service account should be created
-  create: false
-  # Annotations to add to the service account
+  create: true
   annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
   name: ""
 
-podAnnotations: {}
+# =============================================================================
+# Pod Configuration
+# =============================================================================
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3000"
+  prometheus.io/path: "/metrics"
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
 
 securityContext:
   runAsNonRoot: true
-  runAsUser: 1000
+  runAsUser: 1001
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: false
   capabilities:
     drop:
-    - ALL
+      - ALL
 
+# =============================================================================
+# Service Configuration
+# =============================================================================
 service:
   type: ClusterIP
   port: 80
   targetPort: 3000
+  annotations: {}
 
+# =============================================================================
+# Ingress Configuration
+# =============================================================================
 ingress:
   enabled: true
   className: "nginx"
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
   hosts:
-    - host: blog.example.com
+    - host: smedi.example.com
       paths:
         - path: /
           pathType: Prefix
   tls: []
-  #  - secretName: blog-tls-secret
-  #    hosts:
-  #      - blog.example.com
 
+# =============================================================================
+# Resource Limits
+# =============================================================================
 resources:
   limits:
     cpu: 500m
     memory: 512Mi
   requests:
-    cpu: 250m
-    memory: 256Mi
+    cpu: 100m
+    memory: 128Mi
 
+# =============================================================================
+# Autoscaling
+# =============================================================================
 autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 10
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max
 
+# =============================================================================
+# Node Selection
+# =============================================================================
 nodeSelector: {}
 
 tolerations: []
 
-affinity: {}
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - goravel-blog
+          topologyKey: kubernetes.io/hostname
 
-# Application configuration
+# =============================================================================
+# Application Configuration
+# =============================================================================
 app:
-  name: "Goravel Blog"
+  name: "SMEDI Database"
   env: "production"
-  key: "" # Will be auto-generated if not provided
+  key: ""  # Will be auto-generated if not provided
   debug: false
-  url: "https://blog.example.com"
-  
-  # Database configuration
+  url: "https://smedi.example.com"
+  timezone: "UTC"
+  version: ""  # Set via CI/CD from package.json, falls back to Chart.AppVersion
+
+  # Database configuration (PostgreSQL via PgBouncer)
   database:
-    connection: "mysql"
-    host: "mysql.default.svc.cluster.local"
-    port: 3306
-    database: "goravel_blog"
-    username: "goravel"
-    password: "" # Should be provided via --set or secrets
-    charset: "utf8mb4"
-    
+    connection: "postgres"
+    host: "my-pgbouncer.doorbell.svc.cluster.local"
+    port: 5432
+    database: "smedi_db"
+    username: "admin"
+    password: ""  # Set via secrets: DATABASE_PASSWORD
+    sslmode: "disable"
+    pool:
+      max: 450
+      min: 0
+
   # Redis configuration
   redis:
     enabled: true
-    host: "redis.default.svc.cluster.local"
+    host: "redis-master.data.svc.cluster.local"
     port: 6379
-    password: ""
-    
+    password: ""  # Set via secrets: REDIS_PASSWORD
+    database: 0
+    ttl: 86400
+
   # JWT configuration
   jwt:
-    secret: "" # Will be auto-generated if not provided
+    secret: ""  # Will be auto-generated if not provided
     ttl: 60
     refresh_ttl: 20160
-    
+
   # Storage configuration
   storage:
     persistence:
       enabled: true
-      storageClass: "standard"
+      storageClass: ""
       accessMode: ReadWriteOnce
       size: 10Gi
-      
+
   # Session configuration
   session:
-    driver: "cookie"
+    driver: "redis"
     lifetime: 120
     encrypt: true
-    
+
   # Mail configuration
   mail:
     enabled: false
@@ -134,10 +210,17 @@ app:
     username: ""
     password: ""
     encryption: "tls"
-    from_address: "noreply@blog.example.com"
-    from_name: "Goravel Blog"
+    from_address: "noreply@smedi.example.com"
+    from_name: "SMEDI"
 
-# Health checks
+  # Logging configuration
+  logging:
+    level: "info"
+    channel: "stack"
+
+# =============================================================================
+# Health Checks
+# =============================================================================
 healthcheck:
   enabled: true
   livenessProbe:
@@ -146,14 +229,99 @@ healthcheck:
       port: http
     initialDelaySeconds: 30
     periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
   readinessProbe:
     httpGet:
       path: /ready
       port: http
     initialDelaySeconds: 5
     periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+  startupProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30
+    successThreshold: 1
 
+# =============================================================================
 # Pod Disruption Budget
+# =============================================================================
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+  # maxUnavailable: 1
+
+# =============================================================================
+# Network Policy
+# =============================================================================
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+    # Allow traffic from nginx ingress controller
+    from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      - podSelector: {}  # Allow traffic from same namespace
+  egress:
+    enabled: true
+    # Allow DNS resolution
+    to:
+      - namespaceSelector: {}
+        podSelector:
+          matchLabels:
+            k8s-app: kube-dns
+      # Allow traffic to PostgreSQL
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: data
+      # Allow traffic to Redis
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: data
+
+# =============================================================================
+# Service Monitor (Prometheus)
+# =============================================================================
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  path: /metrics
+  labels: {}
+
+# =============================================================================
+# Extra Environment Variables
+# =============================================================================
+extraEnv: []
+# - name: EXTRA_VAR
+#   value: "value"
+
+extraEnvFrom: []
+# - secretRef:
+#     name: extra-secrets
+
+# =============================================================================
+# Init Containers
+# =============================================================================
+initContainers: []
+
+# =============================================================================
+# Sidecar Containers
+# =============================================================================
+sidecars: []
+
+# =============================================================================
+# Extra Volumes
+# =============================================================================
+extraVolumes: []
+
+extraVolumeMounts: []

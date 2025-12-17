@@ -129,7 +129,7 @@ Tests automatically clean up after themselves:
    - Don't create users directly with ORM
 
 4. **Import Errors After Reorganization**
-   - Helpers are in `players/tests/helpers` package
+   - Helpers are in `smedi-sme-db/tests/helpers` package
    - Test files remain in `package feature`
 
 ## Best Practices

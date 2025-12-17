@@ -5,11 +5,11 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
-	"players/app/contracts"
-	"players/app/http/requests"
-	"players/app/models"
-	"players/app/services"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/http/requests"
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/app/services"
 )
 
 // MessageController handles messaging endpoints
@@ -148,6 +148,84 @@ func (c *MessageController) SendBroadcast(ctx http.Context) http.Response {
 		"sent_count": len(messages),
 		"messages":   messages,
 	}, fmt.Sprintf("Broadcast sent to %d recipients", len(messages)))
+}
+
+// BroadcastToRole handles POST /api/messages/broadcast-to-role
+// Super admin only - sends a message to all users with a specific role
+func (c *MessageController) BroadcastToRole(ctx http.Context) http.Response {
+	// Get authenticated user
+	permHelper := auth.GetPermissionHelper()
+	user := permHelper.GetAuthenticatedUser(ctx)
+	if user == nil {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Super admin only
+	if !user.IsSuperAdmin {
+		return c.ForbiddenResponse(ctx, "Super admin access required")
+	}
+
+	// Parse request
+	var request struct {
+		RoleID  uint   `json:"role_id" validate:"required"`
+		Content string `json:"content" validate:"required,max:5000"`
+		Subject string `json:"subject" validate:"max:255"`
+	}
+
+	if err := ctx.Request().Bind(&request); err != nil {
+		return c.BadRequestResponse(ctx, "Invalid request data", map[string]interface{}{
+			"error": err.Error(),
+		})
+	}
+
+	if request.RoleID == 0 {
+		return c.BadRequestResponse(ctx, "Role ID is required", nil)
+	}
+
+	if request.Content == "" {
+		return c.BadRequestResponse(ctx, "Message content is required", nil)
+	}
+
+	// Send broadcast to role
+	result, err := c.messageService.BroadcastToRole(user.ID, request.RoleID, request.Content, request.Subject)
+	if err != nil {
+		return c.InternalErrorResponse(ctx, "Failed to send broadcast: "+err.Error())
+	}
+
+	return c.SuccessResponse(ctx, result, fmt.Sprintf("Broadcast sent to %d users in role", result["sent_count"]))
+}
+
+// GetBroadcastHistory handles GET /api/messages/broadcast-history
+// Super admin only - retrieves history of broadcasts sent by the user
+func (c *MessageController) GetBroadcastHistory(ctx http.Context) http.Response {
+	// Get authenticated user
+	permHelper := auth.GetPermissionHelper()
+	user := permHelper.GetAuthenticatedUser(ctx)
+	if user == nil {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Super admin only
+	if !user.IsSuperAdmin {
+		return c.ForbiddenResponse(ctx, "Super admin access required")
+	}
+
+	// Get pagination request
+	req, err := c.ValidatePaginationRequest(ctx)
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid pagination parameters", map[string]interface{}{
+			"validation_error": err.Error(),
+		})
+	}
+
+	// Get broadcast history
+	result, err := c.messageService.GetBroadcastHistory(user.ID, *req)
+	if err != nil {
+		return c.InternalErrorResponse(ctx, "Failed to retrieve broadcast history: "+err.Error())
+	}
+
+	response := c.BuildPaginatedResponse(result, req)
+	return c.SuccessResponse(ctx, response, "Broadcast history retrieved successfully")
 }
 
 // GetConversations handles GET /api/messages/conversations
@@ -311,6 +389,29 @@ func (c *MessageController) MarkAsRead(ctx http.Context) http.Response {
 	return c.SuccessResponse(ctx, nil, "Message marked as read")
 }
 
+// MarkConversationAsRead handles PUT /api/messages/conversation/{userId}/read
+func (c *MessageController) MarkConversationAsRead(ctx http.Context) http.Response {
+	// Get authenticated user
+	permHelper := auth.GetPermissionHelper()
+	user := permHelper.GetAuthenticatedUser(ctx)
+	if user == nil {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Get other user ID from the conversation
+	otherUserID, err := c.ValidateID(ctx, "userId")
+	if err != nil {
+		return c.BadRequestResponse(ctx, "Invalid user ID", nil)
+	}
+
+	// Mark all messages from this user as read
+	if err := c.messageService.MarkConversationAsRead(user.ID, otherUserID); err != nil {
+		return c.BadRequestResponse(ctx, err.Error(), nil)
+	}
+
+	return c.SuccessResponse(ctx, nil, "Conversation marked as read")
+}
+
 // MarkAsImportant handles PUT /api/messages/{id}/important
 func (c *MessageController) MarkAsImportant(ctx http.Context) http.Response {
 	// Get authenticated user
@@ -381,6 +482,7 @@ func (c *MessageController) GetConversation(ctx http.Context) http.Response {
 }
 
 // GetMessagableUsers handles GET /api/messages/users
+// Returns users that the current user can message (same role level or lower)
 func (c *MessageController) GetMessagableUsers(ctx http.Context) http.Response {
 	// Get authenticated user
 	permHelper := auth.GetPermissionHelper()
@@ -389,12 +491,17 @@ func (c *MessageController) GetMessagableUsers(ctx http.Context) http.Response {
 		return c.ForbiddenResponse(ctx, "Authentication required")
 	}
 
-	// Get users based on role-based discovery rules:
-	// - Super admins can message anyone
-	// - Regular users can discover people in their roles or below
+	// Ensure user has roles loaded
+	if err := facades.Orm().Query().With("Roles").Find(user, user.ID); err != nil {
+		return c.InternalErrorResponse(ctx, "Failed to load user roles: "+err.Error())
+	}
+
+	// Get user's role level
+	userLevel := user.GetRoleLevel()
+
 	var users []models.User
 
-	if user.IsSuperAdmin {
+	if user.IsSuperAdminUser() {
 		// Super admins can see all active users except themselves
 		facades.Log().Info("Super admin getting all users", map[string]interface{}{
 			"current_user_id": user.ID,
@@ -402,41 +509,97 @@ func (c *MessageController) GetMessagableUsers(ctx http.Context) http.Response {
 		if err := facades.Orm().Query().Model(&models.User{}).
 			Where("is_active = ?", true).
 			Where("id != ?", user.ID).
+			With("Roles").
 			Order("name ASC").
 			Find(&users); err != nil {
 			return c.InternalErrorResponse(ctx, "Failed to retrieve users: "+err.Error())
 		}
-		facades.Log().Info("Super admin found users", map[string]interface{}{
-			"users_count": len(users),
+	} else if userLevel == 0 {
+		// Users with no role can only message other users with no role
+		facades.Log().Info("User with no role getting users with no role", map[string]interface{}{
+			"current_user_id": user.ID,
 		})
-	} else {
-		// Regular users can only discover users in their roles or below
-		// For now, implement a simplified version - they can see other regular users
-		// TODO: Implement proper role hierarchy checking
-		if err := facades.Orm().Query().Model(&models.User{}).
+		// Find users who have no active roles
+		if err := facades.Orm().Query().
+			Model(&models.User{}).
 			Where("is_active = ?", true).
 			Where("id != ?", user.ID).
-			Where("is_super_admin = ?", false). // Regular users can see other regular users
+			Where("is_super_admin = ?", false).
+			With("Roles").
 			Order("name ASC").
 			Find(&users); err != nil {
 			return c.InternalErrorResponse(ctx, "Failed to retrieve users: "+err.Error())
 		}
+		// Filter to only users with no roles
+		filteredUsers := []models.User{}
+		for _, u := range users {
+			if u.GetRoleLevel() == 0 {
+				filteredUsers = append(filteredUsers, u)
+			}
+		}
+		users = filteredUsers
+	} else {
+		// Regular users can message users at their role level or lower
+		facades.Log().Info("User getting messagable users by role level", map[string]interface{}{
+			"current_user_id": user.ID,
+			"user_level":      userLevel,
+		})
+
+		// Get all active users with their roles
+		if err := facades.Orm().Query().
+			Model(&models.User{}).
+			Where("is_active = ?", true).
+			Where("id != ?", user.ID).
+			Where("is_super_admin = ?", false). // Can't message super admins
+			With("Roles").
+			Order("name ASC").
+			Find(&users); err != nil {
+			return c.InternalErrorResponse(ctx, "Failed to retrieve users: "+err.Error())
+		}
+
+		// Filter to users at same level or lower
+		filteredUsers := []models.User{}
+		for _, u := range users {
+			recipientLevel := u.GetRoleLevel()
+			// Can message if recipient level <= sender level
+			// Users with no role (level 0) can also be messaged
+			if recipientLevel <= userLevel {
+				filteredUsers = append(filteredUsers, u)
+			}
+		}
+		users = filteredUsers
 	}
 
-	// Build messagable users list
+	facades.Log().Info("Found messagable users", map[string]interface{}{
+		"current_user_id": user.ID,
+		"users_count":     len(users),
+	})
+
+	// Build messagable users list with role info
 	messagableUsers := []interface{}{}
 	for _, u := range users {
+		userRoles := []map[string]interface{}{}
+		for _, role := range u.Roles {
+			if role.IsActive {
+				userRoles = append(userRoles, map[string]interface{}{
+					"id":   role.ID,
+					"name": role.Name,
+					"slug": role.Slug,
+				})
+			}
+		}
+
 		messagableUsers = append(messagableUsers, map[string]interface{}{
 			"id":             u.ID,
 			"name":           u.Name,
 			"email":          u.Email,
 			"is_super_admin": u.IsSuperAdmin,
 			"is_active":      u.IsActive,
+			"roles":          userRoles,
 		})
 	}
 
 	// Return in the expected format
-	// The frontend expects response.data.data to be the paginated structure
 	paginatedResult := map[string]interface{}{
 		"data":         messagableUsers,
 		"total":        len(messagableUsers),
@@ -448,6 +611,26 @@ func (c *MessageController) GetMessagableUsers(ctx http.Context) http.Response {
 	}
 
 	return c.SuccessResponse(ctx, paginatedResult, "Messagable users retrieved successfully")
+}
+
+// GetUnreadCount handles GET /api/messages/unread-count
+func (c *MessageController) GetUnreadCount(ctx http.Context) http.Response {
+	// Get authenticated user
+	permHelper := auth.GetPermissionHelper()
+	user := permHelper.GetAuthenticatedUser(ctx)
+	if user == nil {
+		return c.ForbiddenResponse(ctx, "Authentication required")
+	}
+
+	// Get unread count
+	unreadCount, err := c.messageService.GetUnreadCount(user.ID)
+	if err != nil {
+		return c.InternalErrorResponse(ctx, "Failed to retrieve unread count: "+err.Error())
+	}
+
+	return c.SuccessResponse(ctx, map[string]interface{}{
+		"unread_count": unreadCount,
+	}, "Unread count retrieved successfully")
 }
 
 // Override Delete to use custom delete logic

@@ -5,9 +5,9 @@ import (
 	"regexp"
 
 	"github.com/goravel/framework/facades"
-	"players/app/auth"
-	"players/app/contracts"
-	"players/app/models"
+	"smedi-sme-db/app/auth"
+	"smedi-sme-db/app/contracts"
+	"smedi-sme-db/app/models"
 )
 
 // UserService implements user-specific business logic using the builder pattern
@@ -24,7 +24,7 @@ func NewUserService() *UserService {
 	var pendingRoleID *uint
 
 	// Build the service with all required configurations
-	service := contracts.NewServiceBuilder[models.User]("user", "id").
+	service := contracts.NewServiceBuilder[models.User]("users", "id").
 		WithSearchFields("name", "email").                                                  // REQUIRED
 		WithSortFields("id", "name", "email", "created_at", "updated_at").                  // REQUIRED
 		WithFilterFields("email", "is_active", "role", "is_super_admin", "email_verified"). // REQUIRED

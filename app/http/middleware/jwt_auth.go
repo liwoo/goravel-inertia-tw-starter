@@ -31,6 +31,14 @@ func JwtAuth() contractshttp.Middleware {
 			}
 		}
 
+		// If token not found in cookie, try query parameter (for SSE connections)
+		if tokenString == "" {
+			queryToken := ctx.Request().Query("token", "")
+			if queryToken != "" {
+				tokenString = queryToken
+			}
+		}
+
 		handleAuthFailure := func(logMessage string) {
 			// Log the failure reason if needed, perhaps using facades.Log() once configured
 			if xInertiaHeader == "true" {

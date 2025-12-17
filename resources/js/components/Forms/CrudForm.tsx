@@ -1,6 +1,5 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
 import { useFormHandler, FormConfig, FormActions, FormField } from '@/lib/crud-form-utils';
-import { Form } from '@/components/ui/form';
 
 export interface CrudFormProps<T = any> {
   onSuccess: (message?: string) => void;

@@ -271,7 +271,7 @@ export function FilterConditionBuilder({
       {/* Operator Selector */}
       {fieldDefinition && (
         <Select 
-          value={condition.operator && condition.operator !== '' ? condition.operator : undefined} 
+          value={condition.operator && (condition.operator as string) !== '' ? condition.operator : undefined} 
           onValueChange={handleOperatorChange}
         >
           <SelectTrigger className="w-full sm:w-[200px]">
@@ -280,7 +280,7 @@ export function FilterConditionBuilder({
           <SelectContent>
             {fieldDefinition.operators.map((operator) => {
               // Skip empty operators
-              if (!operator || operator === '') return null;
+              if (!operator || (operator as string) === '') return null;
               return (
                 <SelectItem key={operator} value={operator}>
                   {getOperatorLabel(operator)}

@@ -14,8 +14,8 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"players/app/models"
-	"players/tests"
+	"smedi-sme-db/app/models"
+	"smedi-sme-db/tests"
 )
 
 type APIScopedPermissionsTestSuite struct {
@@ -55,6 +55,18 @@ func (s *APIScopedPermissionsTestSuite) SetupSuite() {
 
 func (s *APIScopedPermissionsTestSuite) SetupTest() {
 	s.RefreshDatabase()
+
+	// Clean up any existing test data to ensure a clean state
+	if orm := facades.Orm(); orm != nil {
+		// Delete in order respecting foreign key constraints
+		orm.Query().Exec("DELETE FROM books")
+		orm.Query().Exec("DELETE FROM role_permissions")
+		orm.Query().Exec("DELETE FROM user_roles")
+		orm.Query().Exec("DELETE FROM users")
+		orm.Query().Exec("DELETE FROM permissions")
+		orm.Query().Exec("DELETE FROM roles")
+	}
+
 	s.setupTestData()
 	s.startTestServer()
 	s.loginAllUsers()

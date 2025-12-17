@@ -35,9 +35,11 @@ type ViteHelper struct {
 // NewViteHelper creates a new ViteHelper instance.
 // Configuration is loaded from facades.Config() with defaults.
 func NewViteHelper() *ViteHelper {
-	isDev := facades.Config().GetString("app.env", "production") != "production"
-	manifestPath := facades.Config().GetString("vite.manifest_path", "public/build/manifest.json")
-	publicPath := facades.Config().GetString("vite.public_path", "/build")
+	appEnv := facades.Config().GetString("app.env", "production")
+	// Only use dev mode for local/development environments, not staging/production
+	isDev := appEnv == "local" || appEnv == "development"
+	manifestPath := facades.Config().GetString("vite.manifest_path", "public/.vite/manifest.json")
+	publicPath := facades.Config().GetString("vite.public_path", "")
 	devServerURL := facades.Config().GetString("vite.dev_server_url", "http://localhost:5173")
 
 	vh := &ViteHelper{
@@ -95,7 +97,26 @@ func (vh *ViteHelper) devAsset(assetPath string) template.HTML {
 	if strings.HasSuffix(assetPath, ".css") {
 		return template.HTML(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, url))
 	}
-	return template.HTML(fmt.Sprintf(`<script type="module" src="%s"></script>`, url))
+
+	// For JS/TSX files, include Vite client and React Refresh preamble for HMR
+	var html strings.Builder
+
+	// Vite client for HMR
+	html.WriteString(fmt.Sprintf(`<script type="module" src="%s/@vite/client"></script>`, vh.devServerURL))
+
+	// React Refresh preamble (required before any React components load)
+	html.WriteString(fmt.Sprintf(`<script type="module">
+import RefreshRuntime from '%s/@react-refresh';
+RefreshRuntime.injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;
+window.__vite_plugin_react_preamble_installed__ = true;
+</script>`, vh.devServerURL))
+
+	// Main entry script
+	html.WriteString(fmt.Sprintf(`<script type="module" src="%s"></script>`, url))
+
+	return template.HTML(html.String())
 }
 
 // prodAsset generates HTML tags for assets in production mode (using the manifest).

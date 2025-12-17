@@ -92,7 +92,7 @@ func generateCreateRequestContent(requestName string) (string, error) {
 
 import (
 	"fmt"
-	"players/app/contracts"
+	"smedi-sme-db/app/contracts"
 	"strings"
 
 	"github.com/goravel/framework/contracts/http"
@@ -225,7 +225,7 @@ func generateUpdateRequestContent(requestName string) (string, error) {
 
 import (
 	"fmt"
-	"players/app/contracts"
+	"smedi-sme-db/app/contracts"
 	"strings"
 
 	"github.com/goravel/framework/contracts/http"
