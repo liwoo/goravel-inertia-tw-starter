@@ -68,20 +68,20 @@ func (suite *SmeClassificationTestSuite) TestMicroClassification_MaxEmployeesAtT
 		"4 employees with turnover at max threshold (5,000,000) should be classified as Micro")
 }
 
-// TestMicroClassification_AssetsOnlyMeetCriteria tests micro classification when
-// assets meet criteria but turnover exceeds the threshold
+// TestMicroClassification_AssetsOnlyMeetCriteria tests classification when
+// employees are in micro range but turnover qualifies for a higher classification
 func (suite *SmeClassificationTestSuite) TestMicroClassification_AssetsOnlyMeetCriteria() {
-	// 2 employees with assets meeting criteria (800,000) but turnover exceeding (6,000,000)
-	// Since turnover exceeds micro threshold, it doesn't satisfy turnover criteria
-	// But assets are within micro threshold, so assets criteria is satisfied
+	// With OR logic: 2 employees (micro) + 6M turnover (small range) = Small
+	// Higher classification wins when either criterion qualifies for different levels
 	employees := 2
-	turnover := 6000000.0    // Exceeds micro threshold of 5,000,000
-	assets := 800000.0       // Within micro threshold of 1,000,000
+	turnover := 6000000.0    // In Small range (5M-50M)
+	assets := 800000.0       // Within micro threshold - but not used in OR logic
 
 	classification := suite.smeService.DetermineClassification(employees, turnover, assets)
 
-	suite.Equal(models.ClassificationMicro, classification,
-		"2 employees with assets 800,000 (within micro threshold) should be Micro even if turnover exceeds threshold")
+	// Turnover 6M qualifies for Small (5M-50M), which is higher than Micro
+	suite.Equal(models.ClassificationSmall, classification,
+		"With OR logic, turnover 6M (Small range) wins over 2 employees (Micro range)")
 }
 
 // TestMicroClassification_TurnoverOnlyMeetCriteria tests micro classification when
@@ -170,18 +170,20 @@ func (suite *SmeClassificationTestSuite) TestSmallClassification_MaxThresholds()
 		"20 employees at max small thresholds should be classified as Small")
 }
 
-// TestSmallClassification_AssetsOnlyMeetCriteria tests small classification when
-// assets meet criteria but turnover exceeds
+// TestSmallClassification_AssetsOnlyMeetCriteria tests classification when
+// employees are in small range but turnover qualifies for a higher classification
 func (suite *SmeClassificationTestSuite) TestSmallClassification_AssetsOnlyMeetCriteria() {
-	// 10 employees with assets meeting criteria but turnover exceeding
+	// With OR logic: 10 employees (small) + 60M turnover (medium range) = Medium
+	// Higher classification wins when either criterion qualifies for different levels
 	employees := 10
-	turnover := 60000000.0   // Exceeds small threshold of 50,000,000
-	assets := 15000000.0     // Within small threshold of 20,000,000
+	turnover := 60000000.0   // In Medium range (50M-500M)
+	assets := 15000000.0     // Within small threshold - but not used in OR logic
 
 	classification := suite.smeService.DetermineClassification(employees, turnover, assets)
 
-	suite.Equal(models.ClassificationSmall, classification,
-		"10 employees with assets 15,000,000 (within small threshold) should be Small even if turnover exceeds threshold")
+	// Turnover 60M qualifies for Medium (50M-500M), which is higher than Small
+	suite.Equal(models.ClassificationMedium, classification,
+		"With OR logic, turnover 60M (Medium range) wins over 10 employees (Small range)")
 }
 
 // TestSmallClassification_TurnoverOnlyMeetCriteria tests small classification when
@@ -367,99 +369,107 @@ func (suite *SmeClassificationTestSuite) TestMediumClassification_ExactBoundaryT
 // UNCLASSIFIED TESTS
 // =============================================================================
 
-// TestUnclassified_ZeroEmployees tests that 0 employees results in Unclassified
+// TestUnclassified_ZeroEmployees tests classification with 0 employees
 func (suite *SmeClassificationTestSuite) TestUnclassified_ZeroEmployees() {
-	// 0 employees should be unclassified regardless of financial metrics
+	// With OR logic: 0 employees BUT turnover 5M qualifies for Micro
 	employees := 0
-	turnover := 5000000.0
+	turnover := 5000000.0  // At Micro boundary (turnover > 0 && <= 5M)
 	assets := 1000000.0
 
 	classification := suite.smeService.DetermineClassification(employees, turnover, assets)
 
-	suite.Equal(models.ClassificationUnclassified, classification,
-		"0 employees should be classified as Unclassified regardless of financial criteria")
+	// Turnover qualifies for Micro even with 0 employees
+	suite.Equal(models.ClassificationMicro, classification,
+		"With OR logic, turnover 5M qualifies for Micro even with 0 employees")
 }
 
-// TestUnclassified_TooManyEmployees tests that 100+ employees results in Unclassified
+// TestUnclassified_TooManyEmployees tests classification with 100+ employees
 func (suite *SmeClassificationTestSuite) TestUnclassified_TooManyEmployees() {
-	// 100+ employees should be unclassified (not an SME)
+	// With OR logic: 100+ employees is out of range, but turnover 200M qualifies for Medium
 	testCases := []struct {
-		name      string
-		employees int
+		name       string
+		employees  int
+		turnover   float64
+		expected   string
 	}{
-		{"100 employees", 100},
-		{"150 employees", 150},
-		{"500 employees", 500},
-		{"1000 employees", 1000},
+		// Turnover 200M is in Medium range (50M-500M), so these are Medium via turnover
+		{"100 employees with 200M turnover", 100, 200000000.0, models.ClassificationMedium},
+		{"150 employees with 200M turnover", 150, 200000000.0, models.ClassificationMedium},
+		{"500 employees with 200M turnover", 500, 200000000.0, models.ClassificationMedium},
+		{"1000 employees with 200M turnover", 1000, 200000000.0, models.ClassificationMedium},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			classification := suite.smeService.DetermineClassification(tc.employees, 200000000.0, 100000000.0)
-			suite.Equal(models.ClassificationUnclassified, classification,
-				"%d employees should be classified as Unclassified", tc.employees)
+			classification := suite.smeService.DetermineClassification(tc.employees, tc.turnover, 100000000.0)
+			suite.Equal(tc.expected, classification,
+				"With OR logic, turnover 200M qualifies for Medium regardless of employee count")
 		})
 	}
 }
 
-// TestUnclassified_EmployeesInRangeButFinancialNotMet tests that employees in range
-// but financial criteria not met results in Unclassified
-func (suite *SmeClassificationTestSuite) TestUnclassified_EmployeesInRangeButFinancialNotMet() {
+// TestClassification_EmployeesAloneQualify tests that with OR logic,
+// employees in range qualify for classification even without financial data
+func (suite *SmeClassificationTestSuite) TestClassification_EmployeesAloneQualify() {
 	testCases := []struct {
 		name       string
 		employees  int
 		turnover   float64
 		assets     float64
+		expected   string
 	}{
-		// Micro employee range but no financial criteria met
+		// With OR logic: employees alone qualify
 		{
-			name:      "Micro employees (3) with zero turnover and assets",
+			name:      "Micro employees (3) qualify without financial data",
 			employees: 3,
 			turnover:  0,
 			assets:    0,
+			expected:  models.ClassificationMicro,
 		},
-		// Small employee range but no financial criteria met
 		{
-			name:      "Small employees (10) with zero turnover and assets",
+			name:      "Small employees (10) qualify without financial data",
 			employees: 10,
 			turnover:  0,
 			assets:    0,
+			expected:  models.ClassificationSmall,
 		},
-		// Medium employee range but no financial criteria met
 		{
-			name:      "Medium employees (50) with zero turnover and assets",
+			name:      "Medium employees (50) qualify without financial data",
 			employees: 50,
 			turnover:  0,
 			assets:    0,
+			expected:  models.ClassificationMedium,
 		},
-		// Micro employees but turnover is above micro threshold and assets exceed
+		// When turnover qualifies for higher classification, higher wins
 		{
-			name:      "Micro employees (2) with turnover and assets both exceeding micro thresholds",
+			name:      "Micro employees (2) with Small turnover -> Small",
 			employees: 2,
-			turnover:  6000000.0,    // Above micro threshold
-			assets:    2000000.0,    // Above micro threshold
+			turnover:  6000000.0,    // In Small range (5M-50M)
+			assets:    2000000.0,
+			expected:  models.ClassificationSmall,
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			classification := suite.smeService.DetermineClassification(tc.employees, tc.turnover, tc.assets)
-			suite.Equal(models.ClassificationUnclassified, classification, tc.name)
+			suite.Equal(tc.expected, classification, tc.name)
 		})
 	}
 }
 
 // TestUnclassified_NegativeEmployees tests edge case of negative employees
 func (suite *SmeClassificationTestSuite) TestUnclassified_NegativeEmployees() {
-	// Negative employees should be unclassified
+	// With OR logic: negative employees BUT turnover 5M qualifies for Micro
 	employees := -1
-	turnover := 5000000.0
+	turnover := 5000000.0  // At Micro boundary (turnover > 0 && <= 5M)
 	assets := 1000000.0
 
 	classification := suite.smeService.DetermineClassification(employees, turnover, assets)
 
-	suite.Equal(models.ClassificationUnclassified, classification,
-		"Negative employees should be classified as Unclassified")
+	// Turnover qualifies for Micro even with negative employees
+	suite.Equal(models.ClassificationMicro, classification,
+		"With OR logic, turnover 5M qualifies for Micro even with negative employees")
 }
 
 // =============================================================================
@@ -516,9 +526,9 @@ func (suite *SmeClassificationTestSuite) TestEdgeCase_ExactlyAtBoundaryThreshold
 		{
 			name:       "100 employees at medium/unclassified boundary",
 			employees:  100,
-			turnover:   500000000.0,
+			turnover:   500000000.0,  // At Medium boundary (50M-500M)
 			assets:     250000000.0,
-			expected:   models.ClassificationUnclassified,
+			expected:   models.ClassificationMedium, // OR logic: turnover qualifies
 		},
 	}
 
@@ -623,10 +633,10 @@ func (suite *SmeClassificationTestSuite) TestEdgeCase_TurnoverAtExactThresholdBo
 		// When assets=0, only turnover is considered
 		{
 			name:       "Small: turnover exactly at 5,000,000 (min threshold boundary), no assets",
-			employees:  10,
+			employees:  10, // 10 is in Small range (5-20)
 			turnover:   models.SmallTurnoverMin,
 			assets:     0,
-			expected:   models.ClassificationUnclassified, // turnover must be > 5M for small, assets=0 doesn't help
+			expected:   models.ClassificationSmall, // OR logic: employees alone qualify
 		},
 		{
 			name:       "Small: turnover exactly at 5,000,000 but assets satisfy criteria",
@@ -645,11 +655,11 @@ func (suite *SmeClassificationTestSuite) TestEdgeCase_TurnoverAtExactThresholdBo
 		// Medium: turnover "above 50,000,000" means > 50,000,000
 		// When assets=0, only turnover is considered
 		{
-			name:       "Medium: turnover exactly at 50,000,000 (min threshold boundary), no assets",
-			employees:  50,
-			turnover:   models.MediumTurnoverMin,
+			name:       "Medium: employees in range qualifies even with turnover at boundary",
+			employees:  50, // 50 is in Medium range (21-99)
+			turnover:   models.MediumTurnoverMin, // 50M at boundary
 			assets:     0,
-			expected:   models.ClassificationUnclassified, // turnover must be > 50M for medium, assets=0 doesn't help
+			expected:   models.ClassificationMedium, // OR logic: employees alone qualify
 		},
 		{
 			name:       "Medium: turnover exactly at 50,000,000 but assets satisfy criteria",
@@ -699,11 +709,11 @@ func (suite *SmeClassificationTestSuite) TestEdgeCase_LargeValues() {
 			expected:   models.ClassificationMedium,
 		},
 		{
-			name:       "Unclassified with turnover exceeding all thresholds",
-			employees:  80,
+			name:       "Medium with turnover exceeding threshold but employees in range",
+			employees:  80, // 80 is in Medium range (21-99), so OR logic qualifies via employees
 			turnover:   600000000.0, // Above max
 			assets:     300000000.0, // Above max
-			expected:   models.ClassificationUnclassified,
+			expected:   models.ClassificationMedium, // OR logic: employees qualify
 		},
 	}
 
@@ -751,13 +761,20 @@ func TestDetermineClassification_AllCategories(t *testing.T) {
 		{"Medium - turnover only", 60, 300000000.0, 0, models.ClassificationMedium},
 		{"Medium - assets only", 60, 0, 200000000.0, models.ClassificationMedium},
 
-		// Unclassified
-		{"Unclassified - zero employees", 0, 5000000.0, 1000000.0, models.ClassificationUnclassified},
-		{"Unclassified - 100 employees", 100, 200000000.0, 100000000.0, models.ClassificationUnclassified},
-		{"Unclassified - negative employees", -5, 5000000.0, 1000000.0, models.ClassificationUnclassified},
-		{"Unclassified - no financial data with micro employees", 3, 0, 0, models.ClassificationUnclassified},
-		{"Unclassified - no financial data with small employees", 10, 0, 0, models.ClassificationUnclassified},
-		{"Unclassified - no financial data with medium employees", 50, 0, 0, models.ClassificationUnclassified},
+		// With OR logic: employees OR turnover can qualify
+		// Employees alone now qualify (no financial data needed)
+		{"Micro - employees only (no financial data)", 3, 0, 0, models.ClassificationMicro},
+		{"Small - employees only (no financial data)", 10, 0, 0, models.ClassificationSmall},
+		{"Medium - employees only (no financial data)", 50, 0, 0, models.ClassificationMedium},
+
+		// Turnover alone qualifies even with out-of-range employees
+		{"Micro - turnover qualifies with zero employees", 0, 3000000.0, 0, models.ClassificationMicro},
+		{"Medium - turnover qualifies with 100 employees", 100, 200000000.0, 0, models.ClassificationMedium},
+
+		// True Unclassified cases (neither employees nor turnover in any range)
+		{"Unclassified - zero employees and zero turnover", 0, 0, 0, models.ClassificationUnclassified},
+		{"Unclassified - 100 employees and turnover exceeds max", 100, 600000000.0, 0, models.ClassificationUnclassified},
+		{"Unclassified - negative employees and zero turnover", -5, 0, 0, models.ClassificationUnclassified},
 	}
 
 	for _, tt := range tests {
@@ -818,11 +835,17 @@ func TestClassificationLogicConsistency(t *testing.T) {
 		mediumResult := smeService.DetermineClassification(21, 100000000.0, 50000000.0)
 		assert.Equal(t, models.ClassificationMedium, mediumResult)
 
-		// 99 -> 100 employees should transition from Medium to Unclassified
+		// 99 -> 100 employees: with OR logic, 100 employees is out of range BUT
+		// turnover 500M is at the boundary of Medium (50M-500M), so it's still Medium
 		mediumResult2 := smeService.DetermineClassification(99, 500000000.0, 250000000.0)
 		assert.Equal(t, models.ClassificationMedium, mediumResult2)
 
-		unclassifiedResult := smeService.DetermineClassification(100, 500000000.0, 250000000.0)
+		// 100 employees with turnover 500M still qualifies as Medium via turnover
+		mediumResult3 := smeService.DetermineClassification(100, 500000000.0, 250000000.0)
+		assert.Equal(t, models.ClassificationMedium, mediumResult3)
+
+		// Only truly unclassified when BOTH employees AND turnover are out of range
+		unclassifiedResult := smeService.DetermineClassification(100, 600000000.0, 300000000.0)
 		assert.Equal(t, models.ClassificationUnclassified, unclassifiedResult)
 	})
 }
