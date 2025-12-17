@@ -393,33 +393,36 @@ func (s *SmeClassificationIntegrationSuite) TestEmployeeCount_ContractAndTempora
 }
 
 // TestEmployeeCount_ZeroEmployees verifies that an SME with no employees
-// is classified as Unclassified
+// but with valid turnover is classified based on turnover (OR-based logic)
 func (s *SmeClassificationIntegrationSuite) TestEmployeeCount_ZeroEmployees() {
 	// Create SME with no team members or employee summary
 	sme := s.createTestSme("NoEmployees")
+	// With OR-based logic: turnover 3000.0 is in Micro range (> 0 and <= 5M)
 	s.createBusinessFormalisation(sme.ID, 3000.0, 500.0)
 
 	// Calculate classification
 	classification, err := s.smeService.CalculateClassification(sme.ID)
 
 	s.NoError(err, "Classification calculation should succeed")
-	s.Equal(models.ClassificationUnclassified, classification,
-		"SME with 0 employees should be classified as Unclassified")
+	// With OR logic: 0 employees doesn't qualify, but turnover 3000 qualifies for Micro
+	s.Equal(models.ClassificationMicro, classification,
+		"SME with 0 employees but valid turnover should be classified as Micro")
 }
 
-// TestClassification_NoFinancialData_Unclassified tests that an SME with employees
-// but no financial data is classified as Unclassified
-func (s *SmeClassificationIntegrationSuite) TestClassification_NoFinancialData_Unclassified() {
+// TestClassification_NoFinancialData_ClassifiedByEmployees tests that an SME with employees
+// but no financial data is classified based on employee count (OR-based logic)
+func (s *SmeClassificationIntegrationSuite) TestClassification_NoFinancialData_ClassifiedByEmployees() {
 	// Create SME with primary owner but no formalisation
 	sme := s.createTestSme("NoFinancials")
-	s.createPrimaryBusinessOwner(sme.ID)
+	s.createPrimaryBusinessOwner(sme.ID) // 1 employee in Micro range (1-4)
 
 	// Calculate classification
 	classification, err := s.smeService.CalculateClassification(sme.ID)
 
 	s.NoError(err, "Classification calculation should succeed")
-	s.Equal(models.ClassificationUnclassified, classification,
-		"SME with employees but no financial data should be classified as Unclassified")
+	// With OR logic: 1 employee qualifies for Micro (1-4 range), no financials needed
+	s.Equal(models.ClassificationMicro, classification,
+		"SME with 1 employee and no financial data should be classified as Micro")
 }
 
 // =============================================================================
@@ -431,13 +434,14 @@ func (s *SmeClassificationIntegrationSuite) TestClassification_NoFinancialData_U
 func (s *SmeClassificationIntegrationSuite) TestClassificationTrigger_PrimaryOwnerCreate() {
 	// Create SME with formalisation data
 	sme := s.createTestSme("TriggerPrimaryOwnerCreate")
+	// With OR-based logic: turnover 3000.0 is in Micro range (> 0 and <= 5M)
 	s.createBusinessFormalisation(sme.ID, 3000.0, 500.0)
 
-	// Verify initial classification (should be Unclassified with 0 employees)
+	// Verify initial classification (with OR logic, turnover qualifies for Micro)
 	classification, err := s.smeService.CalculateClassification(sme.ID)
 	s.NoError(err)
-	s.Equal(models.ClassificationUnclassified, classification,
-		"Initial classification with no employees should be Unclassified")
+	s.Equal(models.ClassificationMicro, classification,
+		"Initial classification with turnover in Micro range should be Micro")
 
 	// Create primary owner directly (the service hooks rely on map data conversion
 	// which has issues with date formatting in tests)
@@ -447,10 +451,10 @@ func (s *SmeClassificationIntegrationSuite) TestClassificationTrigger_PrimaryOwn
 	_, err = s.smeService.CalculateClassification(sme.ID)
 	s.NoError(err, "Recalculating classification should succeed")
 
-	// Verify classification was updated (should now be Micro with 1 employee)
+	// Verify classification remains Micro (both 1 employee and turnover qualify for Micro)
 	updatedClassification := s.getSmeClassification(sme.ID)
 	s.Equal(models.ClassificationMicro, updatedClassification,
-		"Classification should be updated to Micro after adding primary owner")
+		"Classification should remain Micro after adding primary owner")
 }
 
 // TestClassificationTrigger_AdditionalMemberCreate tests that creating additional
@@ -523,13 +527,13 @@ func (s *SmeClassificationIntegrationSuite) TestClassificationTrigger_Additional
 func (s *SmeClassificationIntegrationSuite) TestClassificationTrigger_BusinessFormalisationCreate() {
 	// Create SME with primary owner only
 	sme := s.createTestSme("TriggerFormalisationCreate")
-	s.createPrimaryBusinessOwner(sme.ID)
+	s.createPrimaryBusinessOwner(sme.ID) // 1 employee in Micro range (1-4)
 
-	// Initial classification (no formalisation) should be Unclassified
+	// Initial classification (with OR logic, 1 employee qualifies for Micro)
 	classification, err := s.smeService.CalculateClassification(sme.ID)
 	s.NoError(err)
-	s.Equal(models.ClassificationUnclassified, classification,
-		"Initial classification with no financials should be Unclassified")
+	s.Equal(models.ClassificationMicro, classification,
+		"Initial classification with 1 employee should be Micro (OR logic)")
 
 	// Create formalisation via service (should trigger hook)
 	formalisationService := services.NewBusinessFormalisationService()
@@ -548,10 +552,10 @@ func (s *SmeClassificationIntegrationSuite) TestClassificationTrigger_BusinessFo
 	_, err = formalisationService.Create(formalisationData)
 	s.NoError(err, "Creating formalisation via service should succeed")
 
-	// Classification should now be Micro (1 employee with financials)
+	// Classification should remain Micro (1 employee + turnover both qualify for Micro)
 	updatedClassification := s.getSmeClassification(sme.ID)
 	s.Equal(models.ClassificationMicro, updatedClassification,
-		"Classification should be updated to Micro after creating formalisation")
+		"Classification should remain Micro after creating formalisation")
 }
 
 // TestClassificationTrigger_BusinessFormalisationUpdate tests that updating
@@ -737,13 +741,16 @@ func (s *SmeClassificationIntegrationSuite) TestClassificationBoundary_LargeTeam
 	s.createPrimaryBusinessOwner(sme.ID)
 	// Add 99 employees via summary (total 100 with owner)
 	s.createBusinessEmployeeSummary(sme.ID, 50, 49, 0, 0, 0, 0) // 99 from summary + 1 owner = 100
-	s.createBusinessFormalisation(sme.ID, 99999.0, 99999.0) // Max values
+	// With OR-based logic: turnover 99999.0 is in Micro range (> 0 and <= 5M)
+	s.createBusinessFormalisation(sme.ID, 99999.0, 99999.0)
 
 	classification, err := s.smeService.CalculateClassification(sme.ID)
 	s.NoError(err)
-	// 100 employees exceeds Medium max (99), should be Unclassified
-	s.Equal(models.ClassificationUnclassified, classification,
-		"100 employees should exceed Medium range and be Unclassified")
+	// 100 employees exceeds Medium max (99), but turnover 99999 qualifies for Micro
+	// With OR logic, the higher classification wins, but since turnover only qualifies for Micro,
+	// and employees don't qualify for any range, the result is Micro
+	s.Equal(models.ClassificationMicro, classification,
+		"100 employees exceeds range but turnover qualifies for Micro")
 }
 
 // =============================================================================
@@ -779,15 +786,16 @@ func (s *SmeClassificationIntegrationSuite) TestClassification_AssetsOnly() {
 }
 
 // TestClassification_ZeroFinancials tests classification with zero financial data
+// but valid employee count (OR-based logic)
 func (s *SmeClassificationIntegrationSuite) TestClassification_ZeroFinancials() {
 	sme := s.createTestSme("ZeroFinancials")
-	s.createPrimaryBusinessOwner(sme.ID)
+	s.createPrimaryBusinessOwner(sme.ID) // 1 employee in Micro range (1-4)
 	// Create formalisation with zero turnover and zero assets
 	s.createBusinessFormalisation(sme.ID, 0.0, 0.0)
 
 	classification, err := s.smeService.CalculateClassification(sme.ID)
 	s.NoError(err)
-	// With 1 employee but no financial data, should be Unclassified
-	s.Equal(models.ClassificationUnclassified, classification,
-		"SME with zero financials should be Unclassified")
+	// With OR logic: 1 employee qualifies for Micro (1-4 range), zero financials don't matter
+	s.Equal(models.ClassificationMicro, classification,
+		"SME with 1 employee and zero financials should be Micro (OR logic)")
 }

@@ -971,15 +971,20 @@ func (s *SmeService) GetSmeByUserEmail(email string) (*models.Sme, error) {
 	return &sme, nil
 }
 
-// GetSmesByPrimaryOwnerEmail returns all SMEs where the primary owner's email matches
-// This is used during application approval to filter SMEs that belong to the applicant
+// PlaceholderEmailDomain is the domain used for placeholder emails during import
+const PlaceholderEmailDomain = "@placeholder.smedi.gov.mw"
+
+// GetSmesByPrimaryOwnerEmail returns all SMEs where:
+// 1. The primary owner's email matches the provided email, OR
+// 2. The primary owner has a placeholder email (can be linked to any applicant)
+// This is used during application creation to show available SMEs for linking
 func (s *SmeService) GetSmesByPrimaryOwnerEmail(email string) ([]models.Sme, error) {
 	var smes []models.Sme
 
 	err := facades.Orm().Query().
 		Model(&models.Sme{}).
 		Join("INNER JOIN primary_business_owner ON primary_business_owner.sme_id = smes.id").
-		Where("primary_business_owner.email = ?", email).
+		Where("(primary_business_owner.email = ? OR primary_business_owner.email LIKE ?)", email, "%"+PlaceholderEmailDomain).
 		Where("primary_business_owner.deleted_at IS NULL").
 		Where("smes.deleted_at IS NULL").
 		Find(&smes)

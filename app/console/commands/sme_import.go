@@ -798,7 +798,8 @@ func generatePlaceholderEmail(businessName string) string {
 	if len(cleaned) > 20 {
 		cleaned = cleaned[:20]
 	}
-	return fmt.Sprintf("%s@placeholder.smedi.gov.mw", cleaned)
+	// Use the constant from services package for consistency
+	return fmt.Sprintf("%s%s", cleaned, services.PlaceholderEmailDomain)
 }
 
 // deleteExistingSmes deletes all existing SMEs and related data
