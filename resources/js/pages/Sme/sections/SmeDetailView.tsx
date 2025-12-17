@@ -15,7 +15,7 @@ import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { EmptyState } from '@/components/EmptyState';
-import { ScoreBreakdownBar, calculateScoreBreakdown } from '@/components/ui/score-breakdown-bar';
+import { ScoreBreakdownBar } from '@/components/ui/score-breakdown-bar';
 import { CopyableText } from '@/components/ui/copyable-text';
 
 export function SmeDetailView({
@@ -160,13 +160,10 @@ export function SmeDetailView({
                 {!loading && formalisation && (
                   <div className="md:col-span-2">
                     <ScoreBreakdownBar
-                      breakdown={calculateScoreBreakdown(
-                        formalisation,
-                        !!primaryOwner,
-                        additionalMembers.length,
-                        employeeSummary
-                      )}
-                      score={(formalisation as any).formalisation_score ?? formalisation.formalisationScore}
+                      complianceScore={(formalisation as any).compliance_score ?? formalisation.complianceScore ?? 0}
+                      teamStructureScore={(formalisation as any).team_structure_score ?? formalisation.teamStructureScore ?? 0}
+                      financialScore={(formalisation as any).financial_score ?? formalisation.financialScore ?? 0}
+                      totalScore={(formalisation as any).formalisation_score ?? formalisation.formalisationScore ?? 0}
                     />
                   </div>
                 )}

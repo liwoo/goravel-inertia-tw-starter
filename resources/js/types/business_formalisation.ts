@@ -14,6 +14,9 @@ export interface BusinessFormalisation extends BaseModel {
   annualTurnover: number;
   estimatedValueOfAssets: number;
   formalisationScore: number;
+  complianceScore: number;
+  teamStructureScore: number;
+  financialScore: number;
   createdBy?: number;
   updatedBy?: number;
   deletedBy?: number;

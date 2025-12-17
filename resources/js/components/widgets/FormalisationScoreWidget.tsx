@@ -15,12 +15,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScoreBreakdownBar, calculateScoreBreakdown } from "@/components/ui/score-breakdown-bar";
+import { ScoreBreakdownBar } from "@/components/ui/score-breakdown-bar";
 
 // Interface for formalisation data
 export interface FormalisationData {
   formalisation_score?: number;
   formalisationScore?: number;
+  compliance_score?: number;
+  complianceScore?: number;
+  team_structure_score?: number;
+  teamStructureScore?: number;
+  financial_score?: number;
+  financialScore?: number;
   hasBankAccount?: boolean;
   has_bank_account?: boolean;
   hasTaxClarification?: boolean;
@@ -100,14 +106,11 @@ export function FormalisationScoreWidget({
     );
   }
 
-  const breakdown = calculateScoreBreakdown(
-    formalisation,
-    !!primaryOwner,
-    additionalMembers.length,
-    employeeSummary
-  );
-
-  const score = formalisation.formalisation_score ?? formalisation.formalisationScore ?? 0;
+  // Get score components from stored values
+  const complianceScore = formalisation.compliance_score ?? formalisation.complianceScore ?? 0;
+  const teamStructureScore = formalisation.team_structure_score ?? formalisation.teamStructureScore ?? 0;
+  const financialScore = formalisation.financial_score ?? formalisation.financialScore ?? 0;
+  const totalScore = formalisation.formalisation_score ?? formalisation.formalisationScore ?? 0;
 
   return (
     <Card className="flex flex-col">
@@ -199,7 +202,12 @@ export function FormalisationScoreWidget({
         </div>
       </CardHeader>
       <CardContent>
-        <ScoreBreakdownBar breakdown={breakdown} score={score} />
+        <ScoreBreakdownBar
+          complianceScore={complianceScore}
+          teamStructureScore={teamStructureScore}
+          financialScore={financialScore}
+          totalScore={totalScore}
+        />
       </CardContent>
     </Card>
   );

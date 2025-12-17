@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,6 +14,8 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/support/carbon"
 	"github.com/xuri/excelize/v2"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 
 	"smedi-sme-db/app/models"
 	"smedi-sme-db/app/services"
@@ -65,6 +68,37 @@ func (receiver *SmeImport) Extend() command.Extend {
 				Usage:   "Row number to start importing from (1-based, skips header). Use to resume interrupted imports.",
 				Value:   1,
 			},
+			// Database connection flags
+			&command.StringFlag{
+				Name:    "dsn",
+				Usage:   "Full database connection string (e.g., postgres://user:pass@host:port/dbname?sslmode=disable)",
+			},
+			&command.StringFlag{
+				Name:    "db-host",
+				Usage:   "Database host (default: uses app config)",
+			},
+			&command.IntFlag{
+				Name:    "db-port",
+				Usage:   "Database port (default: 5432)",
+				Value:   5432,
+			},
+			&command.StringFlag{
+				Name:    "db-user",
+				Usage:   "Database user",
+			},
+			&command.StringFlag{
+				Name:    "db-password",
+				Usage:   "Database password",
+			},
+			&command.StringFlag{
+				Name:    "db-name",
+				Usage:   "Database name",
+			},
+			&command.StringFlag{
+				Name:    "db-sslmode",
+				Usage:   "Database SSL mode (disable, require, verify-ca, verify-full)",
+				Value:   "disable",
+			},
 		},
 	}
 }
@@ -77,6 +111,15 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 	skipDelete := ctx.OptionBool("skip-delete")
 	startRow := ctx.OptionInt("start-row")
 
+	// Database connection flags
+	dsn := ctx.Option("dsn")
+	dbHost := ctx.Option("db-host")
+	dbPort := ctx.OptionInt("db-port")
+	dbUser := ctx.Option("db-user")
+	dbPassword := ctx.Option("db-password")
+	dbName := ctx.Option("db-name")
+	dbSSLMode := ctx.Option("db-sslmode")
+
 	if filePath == "" {
 		ctx.Error("File path is required. Use --file=/path/to/file.xlsx")
 		return fmt.Errorf("file path is required")
@@ -88,6 +131,36 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 
 	if startRow < 1 {
 		startRow = 1
+	}
+
+	// Set up database connection
+	var customDB *gorm.DB
+	var err error
+
+	if dsn != "" {
+		// Use full connection string
+		ctx.Info(fmt.Sprintf("Using custom database connection (DSN provided)"))
+		customDB, err = createCustomDBConnection(dsn)
+		if err != nil {
+			ctx.Error(fmt.Sprintf("Failed to connect to custom database: %v", err))
+			return err
+		}
+		defer closeCustomDB(customDB)
+	} else if dbHost != "" {
+		// Build connection string from individual parameters
+		if dbUser == "" || dbName == "" {
+			ctx.Error("When using --db-host, --db-user and --db-name are required")
+			return fmt.Errorf("missing required database parameters")
+		}
+
+		builtDSN := buildDSN(dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
+		ctx.Info(fmt.Sprintf("Using custom database connection: %s@%s:%d/%s", dbUser, dbHost, dbPort, dbName))
+		customDB, err = createCustomDBConnection(builtDSN)
+		if err != nil {
+			ctx.Error(fmt.Sprintf("Failed to connect to custom database: %v", err))
+			return err
+		}
+		defer closeCustomDB(customDB)
 	}
 
 	ctx.Info(fmt.Sprintf("Starting SME import from: %s", filePath))
@@ -145,7 +218,7 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 	// Delete existing SMEs if not skipped (only if starting from row 1)
 	if !skipDelete && !dryRun && startRow == 1 {
 		ctx.Info("Deleting existing SMEs and related data...")
-		if err := deleteExistingSmes(ctx); err != nil {
+		if err := deleteExistingSmes(ctx, customDB); err != nil {
 			ctx.Error(fmt.Sprintf("Failed to delete existing SMEs: %v", err))
 			return err
 		}
@@ -208,7 +281,7 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 			}
 
 			// Create the SME with relationships in a transaction
-			err = createSmeWithRelationships(ctx, smeData, smeService)
+			err = createSmeWithRelationships(ctx, smeData, smeService, customDB)
 			if err != nil {
 				errorCount++
 				errMsg := fmt.Sprintf("Row %d: Create error - %v", rowNum, err)
@@ -635,46 +708,49 @@ func generatePlaceholderEmail(businessName string) string {
 }
 
 // deleteExistingSmes deletes all existing SMEs and related data
-func deleteExistingSmes(ctx console.Context) error {
+func deleteExistingSmes(ctx console.Context, customDB *gorm.DB) error {
+	// Helper function to execute delete queries
+	execDelete := func(query string) error {
+		if customDB != nil {
+			return customDB.Exec(query).Error
+		}
+		_, err := facades.Orm().Query().Exec(query)
+		return err
+	}
+
 	// Delete in order due to foreign key constraints
 	// 1. Delete applications (references smes via sme_id)
-	_, err := facades.Orm().Query().Exec("DELETE FROM applications")
-	if err != nil {
+	if err := execDelete("DELETE FROM applications"); err != nil {
 		return fmt.Errorf("failed to delete applications: %w", err)
 	}
 	ctx.Info("  Deleted applications records")
 
 	// 2. Delete business_employee_summary
-	_, err = facades.Orm().Query().Exec("DELETE FROM business_employee_summary")
-	if err != nil {
+	if err := execDelete("DELETE FROM business_employee_summary"); err != nil {
 		return fmt.Errorf("failed to delete business_employee_summary: %w", err)
 	}
 	ctx.Info("  Deleted business_employee_summary records")
 
 	// 3. Delete business_formalisation
-	_, err = facades.Orm().Query().Exec("DELETE FROM business_formalisation")
-	if err != nil {
+	if err := execDelete("DELETE FROM business_formalisation"); err != nil {
 		return fmt.Errorf("failed to delete business_formalisation: %w", err)
 	}
 	ctx.Info("  Deleted business_formalisation records")
 
 	// 4. Delete additional_business_members
-	_, err = facades.Orm().Query().Exec("DELETE FROM additional_business_members")
-	if err != nil {
+	if err := execDelete("DELETE FROM additional_business_members"); err != nil {
 		return fmt.Errorf("failed to delete additional_business_members: %w", err)
 	}
 	ctx.Info("  Deleted additional_business_members records")
 
 	// 5. Delete primary_business_owner
-	_, err = facades.Orm().Query().Exec("DELETE FROM primary_business_owner")
-	if err != nil {
+	if err := execDelete("DELETE FROM primary_business_owner"); err != nil {
 		return fmt.Errorf("failed to delete primary_business_owner: %w", err)
 	}
 	ctx.Info("  Deleted primary_business_owner records")
 
 	// 6. Delete users associated with SMEs (SME portal users)
-	_, err = facades.Orm().Query().Exec("DELETE FROM users WHERE id IN (SELECT user_id FROM user_sme)")
-	if err != nil {
+	if err := execDelete("DELETE FROM users WHERE id IN (SELECT user_id FROM user_sme)"); err != nil {
 		// This might fail if there are no user_sme records, which is fine
 		ctx.Warning(fmt.Sprintf("  Warning deleting SME users: %v", err))
 	} else {
@@ -682,16 +758,14 @@ func deleteExistingSmes(ctx console.Context) error {
 	}
 
 	// 7. Delete user_sme pivot table
-	_, err = facades.Orm().Query().Exec("DELETE FROM user_sme")
-	if err != nil {
+	if err := execDelete("DELETE FROM user_sme"); err != nil {
 		ctx.Warning(fmt.Sprintf("  Warning deleting user_sme: %v", err))
 	} else {
 		ctx.Info("  Deleted user_sme records")
 	}
 
 	// 8. Delete smes
-	_, err = facades.Orm().Query().Exec("DELETE FROM smes")
-	if err != nil {
+	if err := execDelete("DELETE FROM smes"); err != nil {
 		return fmt.Errorf("failed to delete smes: %w", err)
 	}
 	ctx.Info("  Deleted smes records")
@@ -700,7 +774,153 @@ func deleteExistingSmes(ctx console.Context) error {
 }
 
 // createSmeWithRelationships creates an SME with all its related records
-func createSmeWithRelationships(ctx console.Context, data *SmeImportData, smeService *services.SmeService) error {
+func createSmeWithRelationships(ctx console.Context, data *SmeImportData, smeService *services.SmeService, customDB *gorm.DB) error {
+	// Use either custom GORM DB or default Goravel ORM
+	if customDB != nil {
+		return createSmeWithRelationshipsGorm(ctx, data, customDB)
+	}
+	return createSmeWithRelationshipsDefault(ctx, data, smeService)
+}
+
+// createSmeWithRelationshipsGorm creates SME using custom GORM connection
+func createSmeWithRelationshipsGorm(ctx console.Context, data *SmeImportData, db *gorm.DB) error {
+	var smeID uint
+	var bfID uint
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// 1. Create the SME record
+		sme := &models.Sme{
+			Name:               data.BusinessName,
+			BusinessCategory:   data.BusinessType,
+			Sector:             data.Sector,
+			ContactPhone:       data.ContactPhone,
+			ContactEmail:       data.ContactEmail,
+			Classification:     data.Classification,
+			IsActive:           true,
+		}
+
+		// Set optional fields
+		if data.RegistrationNumber != "" {
+			sme.RegistrationNumber = &data.RegistrationNumber
+		}
+		if data.TaxID != "" {
+			sme.TaxIdentificationNumber = &data.TaxID
+		}
+		if data.OperationalStartDate != nil {
+			sme.OperationalStartDate = data.OperationalStartDate
+		}
+		if data.SubSector != "" {
+			sme.SubSector = &data.SubSector
+		}
+		if data.BusinessDescription != "" {
+			sme.BusinessDescription = &data.BusinessDescription
+		}
+		if data.PhysicalAddress != "" {
+			sme.PhysicalAddress = &data.PhysicalAddress
+		}
+		if data.PostalAddress != "" {
+			sme.PostalAddress = &data.PostalAddress
+		}
+		if data.Region != "" {
+			sme.Region = &data.Region
+		}
+		if data.District != "" {
+			sme.District = &data.District
+		}
+		if data.TraditionalAuthority != "" {
+			sme.TraditionalAuthority = &data.TraditionalAuthority
+		}
+
+		// Convert arrays to JSON for direct database insert
+		if len(data.ImprovementAspects) > 0 {
+			aspectsJSON, _ := json.Marshal(data.ImprovementAspects)
+			sme.BusinessImprovementAspectJSON = string(aspectsJSON)
+		} else {
+			sme.BusinessImprovementAspectJSON = "[]"
+		}
+		if len(data.AccessedFinancing) > 0 {
+			financingJSON, _ := json.Marshal(data.AccessedFinancing)
+			sme.BusinessAccessedFinancingJSON = string(financingJSON)
+		} else {
+			sme.BusinessAccessedFinancingJSON = "[]"
+		}
+
+		// Generate USME number
+		usmeData := map[string]interface{}{
+			"district":          data.District,
+			"region":            data.Region,
+			"business_category": data.BusinessType,
+		}
+		usmeNumber, err := generateUsmeNumberForImportWithDB(usmeData, tx)
+		if err != nil {
+			return fmt.Errorf("failed to generate USME number: %w", err)
+		}
+		sme.UsmeNumber = usmeNumber
+
+		if err := tx.Create(sme).Error; err != nil {
+			return fmt.Errorf("failed to create SME: %w", err)
+		}
+		smeID = sme.ID
+
+		// 2. Create Primary Business Owner
+		pbo := buildPrimaryBusinessOwner(data, sme.ID)
+		if err := tx.Create(pbo).Error; err != nil {
+			return fmt.Errorf("failed to create primary business owner: %w", err)
+		}
+
+		// 3. Create Business Formalisation
+		bf := &models.BusinessFormalisation{
+			SmeID:                  int(sme.ID),
+			HasBankAccount:         data.HasBankAccount,
+			HasTaxClarification:    data.HasTaxClearance,
+			IsRegisteredForVat:     data.IsRegisteredForVAT,
+			IsMemberOfAssociation:  data.IsMemberOfAssoc,
+			IsAffiliated:           data.IsAffiliated,
+			HasExportLicense:       data.HasExportLicense,
+			HasAccessedBds:         data.HasAccessedBDS,
+			AnnualTurnover:         data.AnnualTurnover,
+			EstimatedValueOfAssets: data.EstimatedAssets,
+		}
+		if err := tx.Create(bf).Error; err != nil {
+			return fmt.Errorf("failed to create business formalisation: %w", err)
+		}
+		bfID = bf.ID
+
+		// 4. Create Business Employee Summary
+		bes := &models.BusinessEmployeeSummary{
+			SmeID:                       int(sme.ID),
+			FullTimeMales:               data.FullTimeMales,
+			FullTimeFemales:             data.FullTimeFemales,
+			FullTimeWithContractMales:   data.FullTimeWithContractMales,
+			FullTimeWithContractFemales: data.FullTimeWithContractFemales,
+			TemporaryMales:              data.TemporaryMales,
+			TemporaryFemales:            data.TemporaryFemales,
+		}
+		if err := tx.Create(bes).Error; err != nil {
+			return fmt.Errorf("failed to create business employee summary: %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// After successful commit, calculate formalisation score and classification using GORM
+	if calcErr := calculateFormalisationScoreWithDB(smeID, bfID, data, db); calcErr != nil {
+		ctx.Warning(fmt.Sprintf("Warning: Failed to calculate formalisation score for SME %d: %v", smeID, calcErr))
+	}
+
+	if calcErr := calculateClassificationWithDB(smeID, data, db); calcErr != nil {
+		ctx.Warning(fmt.Sprintf("Warning: Failed to calculate classification for SME %d: %v", smeID, calcErr))
+	}
+
+	return nil
+}
+
+// createSmeWithRelationshipsDefault creates SME using default Goravel ORM
+func createSmeWithRelationshipsDefault(ctx console.Context, data *SmeImportData, smeService *services.SmeService) error {
 	// Start a transaction
 	tx, err := facades.Orm().Query().Begin()
 	if err != nil {
@@ -797,78 +1017,7 @@ func createSmeWithRelationships(ctx console.Context, data *SmeImportData, smeSer
 	}
 
 	// 2. Create Primary Business Owner
-	pbo := &models.PrimaryBusinessOwner{
-		SmeID:          int(sme.ID),
-		FirstName:      data.OwnerFirstName,
-		LastName:       data.OwnerLastName,
-		Nationality:    data.OwnerNationality,
-		NationalIdNumber: data.OwnerNationalID,
-		Gender:         data.OwnerGender,
-		EducationLevel: data.OwnerEducation,
-		MalawianStatus: data.OwnerMalawianStatus,
-		HasSpecialNeeds: data.OwnerHasSpecialNeeds,
-		PhoneNumber:    data.OwnerPhone,
-	}
-
-	// Set date of birth if provided
-	if data.OwnerDateOfBirth != nil {
-		pbo.DateOfBirth = *data.OwnerDateOfBirth
-	} else {
-		// Default to a reasonable date if not provided
-		pbo.DateOfBirth = *carbon.NewDateTime(carbon.Parse("1990-01-01"))
-	}
-
-	// Set optional fields
-	if data.OwnerSpecialNeedsDesc != "" {
-		pbo.SpecialNeedsDescription = &data.OwnerSpecialNeedsDesc
-	}
-	if data.OwnerEmail != "" {
-		pbo.Email = &data.OwnerEmail
-	}
-	if data.OwnerPhysicalAddress != "" {
-		pbo.PhysicalAddress = &data.OwnerPhysicalAddress
-	}
-	if data.OwnerPostalAddress != "" {
-		pbo.PostalAddress = &data.OwnerPostalAddress
-	}
-	if data.OwnerRegion != "" {
-		pbo.Region = &data.OwnerRegion
-	}
-	if data.OwnerDistrict != "" {
-		pbo.District = &data.OwnerDistrict
-	}
-	if data.OwnerTA != "" {
-		pbo.TraditionalAuthority = &data.OwnerTA
-	}
-	if data.OwnerNextOfKinName != "" {
-		pbo.AltContactName = &data.OwnerNextOfKinName
-	}
-	if data.OwnerNextOfKinContact != "" {
-		pbo.AltContactPhone = &data.OwnerNextOfKinContact
-	}
-
-	// Default required fields if empty
-	if pbo.FirstName == "" {
-		pbo.FirstName = "Unknown"
-	}
-	if pbo.LastName == "" {
-		pbo.LastName = "Owner"
-	}
-	if pbo.Nationality == "" {
-		pbo.Nationality = "Malawian"
-	}
-	if pbo.NationalIdNumber == "" {
-		pbo.NationalIdNumber = fmt.Sprintf("IMPORT-%d", sme.ID)
-	}
-	if pbo.EducationLevel == "" {
-		pbo.EducationLevel = "Not Specified"
-	}
-	if pbo.MalawianStatus == "" {
-		pbo.MalawianStatus = "citizen"
-	}
-	if pbo.PhoneNumber == "" {
-		pbo.PhoneNumber = data.ContactPhone
-	}
+	pbo := buildPrimaryBusinessOwner(data, sme.ID)
 
 	if err := tx.Create(pbo); err != nil {
 		tx.Rollback()
@@ -928,6 +1077,84 @@ func createSmeWithRelationships(ctx console.Context, data *SmeImportData, smeSer
 	}
 
 	return nil
+}
+
+// buildPrimaryBusinessOwner creates a PrimaryBusinessOwner struct from import data
+func buildPrimaryBusinessOwner(data *SmeImportData, smeID uint) *models.PrimaryBusinessOwner {
+	pbo := &models.PrimaryBusinessOwner{
+		SmeID:            int(smeID),
+		FirstName:        data.OwnerFirstName,
+		LastName:         data.OwnerLastName,
+		Nationality:      data.OwnerNationality,
+		NationalIdNumber: data.OwnerNationalID,
+		Gender:           data.OwnerGender,
+		EducationLevel:   data.OwnerEducation,
+		MalawianStatus:   data.OwnerMalawianStatus,
+		HasSpecialNeeds:  data.OwnerHasSpecialNeeds,
+		PhoneNumber:      data.OwnerPhone,
+	}
+
+	// Set date of birth if provided
+	if data.OwnerDateOfBirth != nil {
+		pbo.DateOfBirth = *data.OwnerDateOfBirth
+	} else {
+		// Default to a reasonable date if not provided
+		pbo.DateOfBirth = *carbon.NewDateTime(carbon.Parse("1990-01-01"))
+	}
+
+	// Set optional fields
+	if data.OwnerSpecialNeedsDesc != "" {
+		pbo.SpecialNeedsDescription = &data.OwnerSpecialNeedsDesc
+	}
+	if data.OwnerEmail != "" {
+		pbo.Email = &data.OwnerEmail
+	}
+	if data.OwnerPhysicalAddress != "" {
+		pbo.PhysicalAddress = &data.OwnerPhysicalAddress
+	}
+	if data.OwnerPostalAddress != "" {
+		pbo.PostalAddress = &data.OwnerPostalAddress
+	}
+	if data.OwnerRegion != "" {
+		pbo.Region = &data.OwnerRegion
+	}
+	if data.OwnerDistrict != "" {
+		pbo.District = &data.OwnerDistrict
+	}
+	if data.OwnerTA != "" {
+		pbo.TraditionalAuthority = &data.OwnerTA
+	}
+	if data.OwnerNextOfKinName != "" {
+		pbo.AltContactName = &data.OwnerNextOfKinName
+	}
+	if data.OwnerNextOfKinContact != "" {
+		pbo.AltContactPhone = &data.OwnerNextOfKinContact
+	}
+
+	// Default required fields if empty
+	if pbo.FirstName == "" {
+		pbo.FirstName = "Unknown"
+	}
+	if pbo.LastName == "" {
+		pbo.LastName = "Owner"
+	}
+	if pbo.Nationality == "" {
+		pbo.Nationality = "Malawian"
+	}
+	if pbo.NationalIdNumber == "" {
+		pbo.NationalIdNumber = fmt.Sprintf("IMPORT-%d", smeID)
+	}
+	if pbo.EducationLevel == "" {
+		pbo.EducationLevel = "Not Specified"
+	}
+	if pbo.MalawianStatus == "" {
+		pbo.MalawianStatus = "citizen"
+	}
+	if pbo.PhoneNumber == "" {
+		pbo.PhoneNumber = data.ContactPhone
+	}
+
+	return pbo
 }
 
 // generateUsmeNumberForImport generates a USME number for import
@@ -1137,4 +1364,328 @@ func calculateLuhnCheckDigitForImport(ubi string) int {
 
 	checkDigit := (10 - (sum % 10)) % 10
 	return checkDigit
+}
+
+// createCustomDBConnection creates a GORM database connection from a DSN
+func createCustomDBConnection(dsn string) (*gorm.DB, error) {
+	// Parse the DSN to convert postgres:// URL format to key=value format if needed
+	parsedDSN, err := parseDSN(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DSN: %w", err)
+	}
+
+	db, err := gorm.Open(postgres.Open(parsedDSN), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	// Test the connection
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get underlying SQL DB: %w", err)
+	}
+
+	if err := sqlDB.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	return db, nil
+}
+
+// parseDSN converts a postgres:// URL to a key=value DSN string
+func parseDSN(dsn string) (string, error) {
+	// If it's already in key=value format, return as-is
+	if !strings.HasPrefix(dsn, "postgres://") && !strings.HasPrefix(dsn, "postgresql://") {
+		return dsn, nil
+	}
+
+	// Parse the URL
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return "", err
+	}
+
+	// Extract components
+	host := u.Hostname()
+	port := u.Port()
+	if port == "" {
+		port = "5432"
+	}
+
+	user := ""
+	password := ""
+	if u.User != nil {
+		user = u.User.Username()
+		password, _ = u.User.Password()
+	}
+
+	dbname := strings.TrimPrefix(u.Path, "/")
+
+	// Build key=value DSN
+	parts := []string{
+		fmt.Sprintf("host=%s", host),
+		fmt.Sprintf("port=%s", port),
+		fmt.Sprintf("user=%s", user),
+		fmt.Sprintf("dbname=%s", dbname),
+	}
+
+	if password != "" {
+		parts = append(parts, fmt.Sprintf("password=%s", password))
+	}
+
+	// Add query parameters (like sslmode)
+	for key, values := range u.Query() {
+		if len(values) > 0 {
+			parts = append(parts, fmt.Sprintf("%s=%s", key, values[0]))
+		}
+	}
+
+	return strings.Join(parts, " "), nil
+}
+
+// closeCustomDB closes the custom database connection
+func closeCustomDB(db *gorm.DB) {
+	if db == nil {
+		return
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return
+	}
+	sqlDB.Close()
+}
+
+// buildDSN builds a PostgreSQL DSN from individual parameters
+func buildDSN(host string, port int, user, password, dbname, sslmode string) string {
+	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s", host, port, user, dbname)
+	if password != "" {
+		dsn += fmt.Sprintf(" password=%s", password)
+	}
+	if sslmode != "" {
+		dsn += fmt.Sprintf(" sslmode=%s", sslmode)
+	}
+	return dsn
+}
+
+// generateUsmeNumberForImportWithDB generates a USME number using a custom GORM DB connection
+func generateUsmeNumberForImportWithDB(data map[string]interface{}, db *gorm.DB) (string, error) {
+	// Get current year
+	year := time.Now().Year()
+
+	// Get district code
+	districtCode, err := getDistrictCodeForImport(data)
+	if err != nil {
+		return "", err
+	}
+
+	// Get category code
+	categoryCode, err := getCategoryCodeForImport(data)
+	if err != nil {
+		return "", err
+	}
+
+	// Get next sequential number using the custom DB
+	sequentialNumber, err := getNextSequentialNumberForImportWithDB(year, districtCode, categoryCode, db)
+	if err != nil {
+		return "", err
+	}
+
+	// Build UBI without check digit
+	ubiWithoutCheck := fmt.Sprintf("MW-%04d-%s-%s-%06d", year, districtCode, categoryCode, sequentialNumber)
+
+	// Calculate check digit
+	checkDigit := calculateLuhnCheckDigitForImport(ubiWithoutCheck)
+
+	// Return complete UBI
+	return fmt.Sprintf("%s-%d", ubiWithoutCheck, checkDigit), nil
+}
+
+// getNextSequentialNumberForImportWithDB gets the next sequential number using custom GORM DB
+func getNextSequentialNumberForImportWithDB(year int, districtCode, categoryCode string, db *gorm.DB) (int, error) {
+	pattern := fmt.Sprintf("MW-%04d-%s-%s-%%", year, districtCode, categoryCode)
+
+	var sme models.Sme
+	err := db.Where("usme_number LIKE ?", pattern).
+		Order("usme_number DESC").
+		First(&sme).Error
+
+	if err != nil || sme.ID == 0 {
+		return 1, nil
+	}
+
+	// Extract the sequential number from the usme_number
+	parts := strings.Split(sme.UsmeNumber, "-")
+	if len(parts) >= 5 {
+		maxSequence, parseErr := strconv.Atoi(parts[4])
+		if parseErr != nil {
+			return 1, nil
+		}
+		return maxSequence + 1, nil
+	}
+
+	return 1, nil
+}
+
+// calculateFormalisationScoreWithDB calculates the formalisation score using a GORM DB connection
+// This mirrors the logic in SmeService.CalculateFormalisationScore but works with custom DB
+func calculateFormalisationScoreWithDB(smeID uint, bfID uint, data *SmeImportData, db *gorm.DB) error {
+	// Calculate score breakdown based on the import data
+	// We have all the data in SmeImportData, so we can calculate directly
+
+	// Compliance Score (70 points max) - from 7 boolean checkboxes
+	complianceScore := 0
+	if data.HasBankAccount {
+		complianceScore += 10
+	}
+	if data.HasTaxClearance {
+		complianceScore += 10
+	}
+	if data.IsRegisteredForVAT {
+		complianceScore += 10
+	}
+	if data.IsMemberOfAssoc {
+		complianceScore += 10
+	}
+	if data.IsAffiliated {
+		complianceScore += 10
+	}
+	if data.HasExportLicense {
+		complianceScore += 10
+	}
+	if data.HasAccessedBDS {
+		complianceScore += 10
+	}
+
+	// Team Structure Score (20 points max)
+	teamStructureScore := 0
+
+	// Has primary business owner (we always create one): 5 points
+	teamStructureScore += 5
+
+	// We don't have additional members in import data, but check if we would have had any
+	// For now, no additional members from import: 0 points for this
+
+	// Calculate total team size
+	totalTeamSize := 1 // Primary owner
+	fullTimeEmployees := data.FullTimeMales + data.FullTimeFemales
+
+	// Has full-time employees (1+): 5 points
+	if fullTimeEmployees > 0 {
+		teamStructureScore += 5
+	}
+
+	// Add all employees to team size
+	totalTeamSize += data.FullTimeMales + data.FullTimeFemales
+	totalTeamSize += data.TemporaryMales + data.TemporaryFemales
+
+	// Team size > 5 people: 5 points
+	if totalTeamSize > 5 {
+		teamStructureScore += 5
+	}
+
+	// Financial Score (10 points max)
+	financialScore := 0
+	if data.AnnualTurnover > 0 {
+		financialScore += 5
+	}
+	if data.EstimatedAssets > 0 {
+		financialScore += 5
+	}
+
+	// Calculate total score
+	totalScore := complianceScore + teamStructureScore + financialScore
+	if totalScore > 100 {
+		totalScore = 100
+	}
+
+	// Update the business_formalisation record with all score components
+	return db.Model(&models.BusinessFormalisation{}).
+		Where("id = ?", bfID).
+		Updates(map[string]interface{}{
+			"formalisation_score":  totalScore,
+			"compliance_score":     complianceScore,
+			"team_structure_score": teamStructureScore,
+			"financial_score":      financialScore,
+		}).Error
+}
+
+// calculateClassificationWithDB calculates and updates SME classification using a GORM DB connection
+// This mirrors the logic in SmeService.CalculateClassification but works with custom DB
+func calculateClassificationWithDB(smeID uint, data *SmeImportData, db *gorm.DB) error {
+	// Calculate total employees from import data
+	totalEmployees := 1 // Primary business owner
+
+	// Add employees from BusinessEmployeeSummary data
+	totalEmployees += data.FullTimeMales + data.FullTimeFemales +
+		data.FullTimeWithContractMales + data.FullTimeWithContractFemales +
+		data.TemporaryMales + data.TemporaryFemales
+
+	// Get turnover and assets
+	turnover := data.AnnualTurnover
+	assets := data.EstimatedAssets
+
+	// Determine classification using the same logic as DetermineClassification
+	classification := determineClassificationForImport(totalEmployees, turnover, assets)
+
+	// Update the SME record with the classification
+	return db.Model(&models.Sme{}).
+		Where("id = ?", smeID).
+		Update("classification", classification).Error
+}
+
+// determineClassificationForImport applies the classification rules based on Malawi MSME Policy
+// This mirrors SmeService.DetermineClassification
+func determineClassificationForImport(employees int, turnover, assets float64) string {
+	// Classification thresholds (matching models package constants)
+	const (
+		// Micro thresholds
+		microEmployeeMin = 1
+		microEmployeeMax = 4
+		microTurnoverMax = 5000000.0
+		microAssetsMax   = 1000000.0
+
+		// Small thresholds
+		smallEmployeeMin = 5
+		smallEmployeeMax = 20
+		smallTurnoverMin = 5000000.0
+		smallTurnoverMax = 50000000.0
+		smallAssetsMax   = 20000000.0
+
+		// Medium thresholds
+		mediumEmployeeMin = 21
+		mediumEmployeeMax = 99
+		mediumTurnoverMin = 50000000.0
+		mediumTurnoverMax = 500000000.0
+		mediumAssetsMax   = 250000000.0
+	)
+
+	// Check Medium classification first (highest)
+	if employees >= mediumEmployeeMin && employees <= mediumEmployeeMax {
+		turnoverMet := turnover > mediumTurnoverMin && turnover <= mediumTurnoverMax
+		assetsMet := assets <= mediumAssetsMax && assets > 0
+		if turnoverMet || assetsMet {
+			return models.ClassificationMedium
+		}
+	}
+
+	// Check Small classification
+	if employees >= smallEmployeeMin && employees <= smallEmployeeMax {
+		turnoverMet := turnover > smallTurnoverMin && turnover <= smallTurnoverMax
+		assetsMet := assets <= smallAssetsMax && assets > 0
+		if turnoverMet || assetsMet {
+			return models.ClassificationSmall
+		}
+	}
+
+	// Check Micro classification
+	if employees >= microEmployeeMin && employees <= microEmployeeMax {
+		turnoverMet := turnover > 0 && turnover <= microTurnoverMax
+		assetsMet := assets > 0 && assets <= microAssetsMax
+		if turnoverMet || assetsMet {
+			return models.ClassificationMicro
+		}
+	}
+
+	// Default to Unclassified
+	return models.ClassificationUnclassified
 }

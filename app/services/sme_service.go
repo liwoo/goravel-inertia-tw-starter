@@ -1269,38 +1269,53 @@ func (s *SmeService) CalculateFormalisationScore(smeID uint) (int, error) {
 		return 0, errors.New("SME not found")
 	}
 
-	// Calculate the score
-	score := s.calculateScore(&sme)
+	// Calculate the score breakdown
+	breakdown := s.calculateScore(&sme)
 
-	// Update the FormalisationScore in BusinessFormalisation table
+	// Update all score components in BusinessFormalisation table
 	if sme.BusinessFormalisation != nil {
 		_, err = facades.Orm().Query().
 			Model(&models.BusinessFormalisation{}).
 			Where("id = ?", sme.BusinessFormalisation.ID).
 			Update(map[string]interface{}{
-				"formalisation_score": score,
+				"formalisation_score":   breakdown.TotalScore,
+				"compliance_score":      breakdown.ComplianceScore,
+				"team_structure_score":  breakdown.TeamStructureScore,
+				"financial_score":       breakdown.FinancialScore,
 			})
 		if err != nil {
-			return score, fmt.Errorf("failed to update formalisation score: %w", err)
+			return breakdown.TotalScore, fmt.Errorf("failed to update formalisation score: %w", err)
 		}
 	} else {
-		// If no BusinessFormalisation record exists, create one with just the score
+		// If no BusinessFormalisation record exists, create one with all score components
 		newFormalisation := &models.BusinessFormalisation{
 			SmeID:              int(smeID),
-			FormalisationScore: score,
+			FormalisationScore: breakdown.TotalScore,
+			ComplianceScore:    breakdown.ComplianceScore,
+			TeamStructureScore: breakdown.TeamStructureScore,
+			FinancialScore:     breakdown.FinancialScore,
 		}
 		err = facades.Orm().Query().Create(newFormalisation)
 		if err != nil {
-			return score, fmt.Errorf("failed to create business formalisation record: %w", err)
+			return breakdown.TotalScore, fmt.Errorf("failed to create business formalisation record: %w", err)
 		}
 	}
 
-	return score, nil
+	return breakdown.TotalScore, nil
+}
+
+// ScoreBreakdown holds the individual score components
+type ScoreBreakdown struct {
+	ComplianceScore     int // 0-70: from 7 boolean checkboxes
+	TeamStructureScore  int // 0-20: from team data
+	FinancialScore      int // 0-10: from financial data
+	TotalScore          int // 0-100: sum of all components
 }
 
 // calculateScore performs the actual score calculation based on SME data
-func (s *SmeService) calculateScore(sme *models.Sme) int {
-	score := 0
+// Returns a breakdown of all score components
+func (s *SmeService) calculateScore(sme *models.Sme) ScoreBreakdown {
+	breakdown := ScoreBreakdown{}
 
 	// ========================================
 	// Formalisation Checkboxes (70 points max)
@@ -1310,37 +1325,37 @@ func (s *SmeService) calculateScore(sme *models.Sme) int {
 
 		// has_bank_account: 10 points
 		if bf.HasBankAccount {
-			score += 10
+			breakdown.ComplianceScore += 10
 		}
 
 		// has_tax_clarification: 10 points
 		if bf.HasTaxClarification {
-			score += 10
+			breakdown.ComplianceScore += 10
 		}
 
 		// is_registered_for_vat: 10 points
 		if bf.IsRegisteredForVat {
-			score += 10
+			breakdown.ComplianceScore += 10
 		}
 
 		// is_member_of_association: 10 points
 		if bf.IsMemberOfAssociation {
-			score += 10
+			breakdown.ComplianceScore += 10
 		}
 
 		// is_affiliated: 10 points
 		if bf.IsAffiliated {
-			score += 10
+			breakdown.ComplianceScore += 10
 		}
 
 		// has_export_license: 10 points
 		if bf.HasExportLicense {
-			score += 10
+			breakdown.ComplianceScore += 10
 		}
 
 		// has_accessed_bds: 10 points
 		if bf.HasAccessedBds {
-			score += 10
+			breakdown.ComplianceScore += 10
 		}
 	}
 
@@ -1350,12 +1365,12 @@ func (s *SmeService) calculateScore(sme *models.Sme) int {
 
 	// Has primary business owner: 5 points
 	if sme.PrimaryBusinessOwner != nil && sme.PrimaryBusinessOwner.ID != 0 {
-		score += 5
+		breakdown.TeamStructureScore += 5
 	}
 
 	// Has additional team members (1+): 5 points
 	if len(sme.AdditionalBusinessMembers) > 0 {
-		score += 5
+		breakdown.TeamStructureScore += 5
 	}
 
 	// Calculate total team size for team structure scoring
@@ -1382,12 +1397,12 @@ func (s *SmeService) calculateScore(sme *models.Sme) int {
 	}
 
 	if fullTimeEmployees > 0 {
-		score += 5
+		breakdown.TeamStructureScore += 5
 	}
 
 	// Team size > 5 people: 5 points
 	if totalTeamSize > 5 {
-		score += 5
+		breakdown.TeamStructureScore += 5
 	}
 
 	// ========================================
@@ -1398,21 +1413,24 @@ func (s *SmeService) calculateScore(sme *models.Sme) int {
 
 		// annual_turnover > 0: 5 points
 		if bf.AnnualTurnover > 0 {
-			score += 5
+			breakdown.FinancialScore += 5
 		}
 
 		// estimated_value_of_assets > 0: 5 points
 		if bf.EstimatedValueOfAssets > 0 {
-			score += 5
+			breakdown.FinancialScore += 5
 		}
 	}
 
-	// Ensure score doesn't exceed 100
-	if score > 100 {
-		score = 100
+	// Calculate total score
+	breakdown.TotalScore = breakdown.ComplianceScore + breakdown.TeamStructureScore + breakdown.FinancialScore
+
+	// Ensure total score doesn't exceed 100
+	if breakdown.TotalScore > 100 {
+		breakdown.TotalScore = 100
 	}
 
-	return score
+	return breakdown
 }
 
 // RecalculateAllFormalisationScores recalculates formalisation scores for all SMEs

@@ -18,6 +18,9 @@ type BusinessFormalisation struct {
 	AnnualTurnover         float64 `json:"annual_turnover" db:"annual_turnover"`
 	EstimatedValueOfAssets float64 `json:"estimated_value_of_assets" db:"estimated_value_of_assets"`
 	FormalisationScore     int     `json:"formalisation_score" db:"formalisation_score"`
+	ComplianceScore        int     `json:"compliance_score" db:"compliance_score"`
+	TeamStructureScore     int     `json:"team_structure_score" db:"team_structure_score"`
+	FinancialScore         int     `json:"financial_score" db:"financial_score"`
 	CreatedBy              *int    `json:"created_by" db:"created_by"`
 	UpdatedBy              *int    `json:"updated_by" db:"updated_by"`
 	DeletedBy              *int    `json:"deleted_by" db:"deleted_by"`
