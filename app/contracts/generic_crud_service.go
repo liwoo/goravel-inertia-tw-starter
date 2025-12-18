@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"smedi-sme-db/app/auth"
+	"starter-project/app/auth"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"

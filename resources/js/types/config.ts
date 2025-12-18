@@ -3,18 +3,7 @@ import { BaseModel, PaginatedResult, ListRequest } from './crud';
 
 // Config type enum matching backend (app/http/requests/config_type.go)
 export enum ConfigType {
-  Financing = 'Financing',
-  ImprovementAspects = 'Improvement Aspects',
-  BusinessCategories = 'Business Categories',
-  Industries = 'Industries',
-  Sectors = 'Sectors',
-  RegistrationStatus = 'Registration Status',
-  DevelopmentPartners = 'Development Partners',
-  ProductTypes = 'Product Types',
-  ProcurementType = 'Procurement Type',
-  ProcurementClassification = 'Procurement Classification',
-  ProcuredBy = 'Procured By',
-  Organization = 'Organization',
+  Example = 'Example',
 }
 
 // Helper array for dropdowns
@@ -22,53 +11,9 @@ export const CONFIG_TYPES = Object.values(ConfigType);
 
 // Config type display configuration
 export const CONFIG_TYPE_CONFIG = {
-  [ConfigType.Financing]: {
-    label: 'Financing',
-    description: 'Financing options and methods',
-  },
-  [ConfigType.ImprovementAspects]: {
-    label: 'Improvement Aspects',
-    description: 'Business improvement aspects',
-  },
-  [ConfigType.BusinessCategories]: {
-    label: 'Business Categories',
-    description: 'Categories of business operations',
-  },
-  [ConfigType.Industries]: {
-    label: 'Industries',
-    description: 'Industry classifications',
-  },
-  [ConfigType.Sectors]: {
-    label: 'Sectors',
-    description: 'Economic sectors',
-  },
-  [ConfigType.RegistrationStatus]: {
-    label: 'Registration Status',
-    description: 'Business registration statuses',
-  },
-  [ConfigType.DevelopmentPartners]: {
-    label: 'Development Partners',
-    description: 'Development partner organizations',
-  },
-  [ConfigType.ProductTypes]: {
-    label: 'Product Types',
-    description: 'Types of products offered by BDSPs',
-  },
-  [ConfigType.ProcurementType]: {
-    label: 'Procurement Type',
-    description: 'Types of procurement',
-  },
-  [ConfigType.ProcurementClassification]: {
-    label: 'Procurement Classification',
-    description: 'Classifications for procurement notices',
-  },
-  [ConfigType.ProcuredBy]: {
-    label: 'Procured By',
-    description: 'Entities procuring goods/services',
-  },
-  [ConfigType.Organization]: {
-    label: 'Organization',
-    description: 'Organizations involved in procurement',
+  [ConfigType.Example]: {
+    label: 'Example',
+    description: 'Example options and methods',
   },
 } as const;
 

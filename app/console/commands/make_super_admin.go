@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	"starter-project/app/models"
+
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
 )
 
 type MakeSuperAdmin struct {

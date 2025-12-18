@@ -3,11 +3,12 @@ package commands
 import (
 	"fmt"
 
+	"starter-project/app/auth"
+	"starter-project/app/models"
+
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
 )
 
 // SetupPermissionsCommand sets up the standard permission system

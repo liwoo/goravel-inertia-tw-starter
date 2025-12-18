@@ -132,9 +132,9 @@ func (receiver *PageControllerMaker) generateControllerContent(
 	return fmt.Sprintf(`package %s
 
 import (
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/services"
+	"starter-project/app/auth"
+	"starter-project/app/contracts"
+	"starter-project/app/services"
 )
 
 // %sPageController handles the %s page

@@ -304,10 +304,10 @@ export function LoginForm({
     <form onSubmit={handleSubmit} className={cn("flex flex-col gap-6 pb-8", className)} {...props}>
       <div className="flex flex-col items-start gap-2 text-center">
         <div className="flex items-center gap-3 w-full">
-          <img src="/images/mw-coat.svg" alt="MW Gov Emblem" className="w-1/5" />
+          <img src="/images/logo.svg" alt="MW Gov Emblem" className="w-1/5" />
           <div className="flex flex-col items-start">
-            <h3 className="text-xl font-semibold uppercase text-nowrap">National MSME's Database</h3>
-            <h4>Management Information System</h4>
+            <h3 className="text-xl font-semibold uppercase text-nowrap">Starter Project</h3>
+            <h4>Application Tagline</h4>
           </div>
         </div>
         <p className="text-balance text-sm text-muted-foreground">

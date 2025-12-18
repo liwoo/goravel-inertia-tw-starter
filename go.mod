@@ -1,4 +1,4 @@
-module smedi-sme-db
+module starter-project
 
 go 1.24.0
 

@@ -2,8 +2,8 @@ package helpers
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
+	"starter-project/app/auth"
+	"starter-project/app/models"
 )
 
 // AuditHelper provides utilities for audit field management

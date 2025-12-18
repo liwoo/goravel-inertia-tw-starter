@@ -5,7 +5,7 @@ import (
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
+	"starter-project/app/models"
 )
 
 // TwoFactorRequiredError is returned when 2FA is required but not enabled

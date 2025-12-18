@@ -2,11 +2,12 @@ package middleware
 
 import (
 	"fmt"
-	contractshttp "github.com/goravel/framework/contracts/http"
-	"github.com/goravel/framework/facades"
 	. "net/http"
 
-	"smedi-sme-db/app/models" // Module 'players' from go.mod
+	contractshttp "github.com/goravel/framework/contracts/http"
+	"github.com/goravel/framework/facades"
+
+	"starter-project/app/models" // Module 'players' from go.mod
 )
 
 // Authenticated returns a middleware handler function.

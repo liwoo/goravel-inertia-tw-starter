@@ -3,7 +3,7 @@ package helpers
 import (
 	"fmt"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
+	"starter-project/app/models"
 	"time"
 )
 

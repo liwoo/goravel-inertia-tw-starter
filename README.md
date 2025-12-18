@@ -134,7 +134,7 @@ package tests
 import (
     "testing"
     "github.com/stretchr/testify/suite"
-    "smedi-sme-db/tests"
+    "starter-project/tests"
 )
 
 type YourTestSuite struct {

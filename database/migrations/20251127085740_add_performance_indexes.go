@@ -23,17 +23,9 @@ func (r *M20251127085740AddPerformanceIndexes) createIndexIfNotExists(indexName,
 
 // Up Run the migrations.
 // Performance indexes to address slow queries identified in logs:
-// - SLOW SELECT * FROM smes WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 20 (217.885ms)
 // - SLOW SELECT * FROM users WHERE id = 1... (283.916ms and 209.803ms)
 // - N+1 queries on user_roles and role_permissions
 func (r *M20251127085740AddPerformanceIndexes) Up() error {
-	// Add indexes to smes table
-	r.createIndexIfNotExists("smes_deleted_at_id_index", "smes", "deleted_at, id")
-	r.createIndexIfNotExists("smes_deleted_at_created_at_index", "smes", "deleted_at, created_at")
-	r.createIndexIfNotExists("smes_created_by_index", "smes", "created_by")
-	r.createIndexIfNotExists("smes_region_index", "smes", "region")
-	r.createIndexIfNotExists("smes_district_index", "smes", "district")
-	r.createIndexIfNotExists("smes_business_category_index", "smes", "business_category")
 
 	// Add indexes to users table
 	r.createIndexIfNotExists("users_deleted_at_index", "users", "deleted_at")
@@ -68,14 +60,6 @@ func (r *M20251127085740AddPerformanceIndexes) dropIndexIfExists(indexName strin
 
 // Down Reverse the migrations.
 func (r *M20251127085740AddPerformanceIndexes) Down() error {
-	// Drop smes indexes
-	r.dropIndexIfExists("smes_deleted_at_id_index")
-	r.dropIndexIfExists("smes_deleted_at_created_at_index")
-	r.dropIndexIfExists("smes_created_by_index")
-	r.dropIndexIfExists("smes_region_index")
-	r.dropIndexIfExists("smes_district_index")
-	r.dropIndexIfExists("smes_business_category_index")
-
 	// Drop users indexes
 	r.dropIndexIfExists("users_deleted_at_index")
 

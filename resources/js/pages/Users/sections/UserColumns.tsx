@@ -42,9 +42,9 @@ export const userColumns: CrudColumn<User>[] = [
       <div className="flex flex-wrap gap-1">
         {user.roles && user.roles.length > 0 ? (
           user.roles.map((role, index) => (
-            <Badge 
-              key={`${user.id}-role-${role.id}-${index}`} 
-              variant="secondary" 
+            <Badge
+              key={`${user.id}-role-${role.id}-${index}`}
+              variant="secondary"
               className="text-xs bg-secondary/50 dark:bg-secondary/30"
             >
               {role.name}
@@ -212,17 +212,6 @@ export const createUserAdditionalActions = (callbacks: {
       icon: <UserIcon className="h-4 w-4 text-blue-500" />,
       onClick: (user: User) => callbacks.onSendWelcomeEmail!(user.id),
       disabled: (user: User) => !user.is_active,
-    });
-  }
-
-  if (callbacks.onAssignToSme) {
-    actions.push({
-      key: 'assign-to-sme',
-      label: 'Assign to SME',
-      icon: <Building2 className="h-4 w-4 text-emerald-600" />,
-      onClick: (user: User) => callbacks.onAssignToSme!(user),
-      // Only show for users with SME User role
-      hidden: (user: User) => !user.roles?.some(r => r.slug === 'sme-user'),
     });
   }
 

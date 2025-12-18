@@ -1,11 +1,12 @@
 package users
 
 import (
+	"starter-project/app/auth"
+	"starter-project/app/contracts"
+	"starter-project/app/services"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/services"
 )
 
 // UserPageController handles the users page

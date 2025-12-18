@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
+	"starter-project/app/auth"
+	"starter-project/app/models"
 )
 
 // TestRequestScopedCacheCreation tests that the request-scoped cache is created correctly

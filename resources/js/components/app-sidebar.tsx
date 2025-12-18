@@ -64,18 +64,6 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         // Determine which main navigation to use
         let activeNavMain = navigationConfig.navMain;
 
-        // List of specialized navigation sections to check
-        const specializedNavs = [navigationConfig.navSme];
-
-        for (const navSection of specializedNavs) {
-            if (navSection && navSection.length > 0) {
-                if (navSection[0].requiredRole && hasRequiredRole(navSection[0])) {
-                    activeNavMain = navSection;
-                    break;
-                }
-            }
-        }
-
         // Filter main navigation
         const filteredNavMain = activeNavMain.filter(checkItemRequirements);
 
@@ -111,8 +99,8 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                 <SidebarHeader>
                     <div className="flex items-center justify-between px-1 py-2">
                         <a href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full">
-                            <img src="/images/mw-coat.svg" alt="Logo" className="h-8 w-auto shrink-0" />
-                            <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">MSME Database</span>
+                            <img src="/images/logo.svg" alt="Logo" className="h-8 w-auto shrink-0" />
+                            <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">Starter Project</span>
                         </a>
                     </div>
                 </SidebarHeader>

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
-	"smedi-sme-db/app/contracts"
+	"starter-project/app/contracts"
 )
 
 type CustomFiltersTestSuite struct {

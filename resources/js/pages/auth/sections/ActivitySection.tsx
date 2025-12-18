@@ -12,7 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Book
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from '@/lib/axios';
@@ -25,7 +26,7 @@ interface ActivitySectionProps {
 // Recent activity data structure (matches dashboard RecentActivityDTO)
 interface RecentActivity {
   id: number;
-  entityType: "sme" | "event" | "procurement";
+  entityType: "book";
   entityId: number;
   entityName: string;
   action: "created" | "updated";
@@ -37,12 +38,8 @@ interface RecentActivity {
 // Get icon for entity type
 function getEntityIcon(entityType: string) {
   switch (entityType) {
-    case "sme":
-      return Building2;
-    case "event":
-      return Calendar;
-    case "procurement":
-      return FileText;
+    case "book":
+      return Book;
     default:
       return Activity;
   }
@@ -51,12 +48,8 @@ function getEntityIcon(entityType: string) {
 // Get label for entity type
 function getEntityLabel(entityType: string): string {
   switch (entityType) {
-    case "sme":
-      return "SME";
-    case "event":
-      return "Event";
-    case "procurement":
-      return "Procurement";
+    case "book":
+      return "Book";
     default:
       return entityType;
   }

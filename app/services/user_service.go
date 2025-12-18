@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"regexp"
 
+	"starter-project/app/auth"
+	"starter-project/app/contracts"
+	"starter-project/app/models"
+
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
 )
 
 // UserService implements user-specific business logic using the builder pattern

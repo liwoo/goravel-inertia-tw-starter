@@ -9,9 +9,9 @@ import (
 	"github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/facades"
 
-	"smedi-sme-db/app/http/requests"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
+	"starter-project/app/http/requests"
+	"starter-project/app/models"
+	"starter-project/app/services"
 )
 
 // AccountController handles account-related API endpoints
@@ -409,7 +409,7 @@ func (c *AccountController) GetProfile(ctx http.Context) http.Response {
 
 // GetRecentActivities godoc
 // @Summary      Get user's recent entity activities
-// @Description  Get recent activities (SMEs, events, procurements) created or updated by the authenticated user
+// @Description  Get recent activities (books) created or updated by the authenticated user
 // @Tags         account
 // @Accept       json
 // @Produce      json

@@ -18,7 +18,7 @@ export default function LoginPage() {
                     v{appVersion || '0.0.0'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                    Property of Ministry of Trade and Industry and SMEDI. All rights reserved.
+                    All rights reserved.
                 </p>
             </div>
         </AuthLayout>

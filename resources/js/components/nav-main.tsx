@@ -31,7 +31,7 @@ export function NavMain({
     url: string
     icon?: LucideIcon
     variant?: "default" | "primary"
-    action?: "openMySmeModal"
+    action?: string
   }[]
 }) {
   const { url } = usePage();
@@ -44,7 +44,7 @@ export function NavMain({
       return url === '/dashboard';
     }
     // For other routes, check if current URL starts with the item URL
-    // This handles /admin/smes, /admin/smes/1, /admin/smes/create, etc.
+    // This handles /admin/books, /admin/books/1, /admin/books/create, etc.
     return url.startsWith(itemUrl);
   };
 
@@ -61,11 +61,7 @@ export function NavMain({
   };
 
   // Check if user can create any entity
-  const canCreateAnything =
-    canPerformAction('smes', 'create') ||
-    canPerformAction('bdsps', 'create') ||
-    canPerformAction('events', 'create') ||
-    canPerformAction('procurement_notices', 'create');
+  const canCreateAnything = canPerformAction('books', 'create');
 
   // Keyboard shortcuts for navigation items (Cmd/Ctrl + 1-9)
   useEffect(() => {
@@ -121,24 +117,9 @@ export function NavMain({
                 <DropdownMenuContent side="right" align="start" className="w-48">
                   <DropdownMenuLabel>Create New</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {canPerformAction('smes', 'create') && (
-                    <DropdownMenuItem onClick={() => router.visit('/smes/create')}>
-                      SME
-                    </DropdownMenuItem>
-                  )}
-                  {canPerformAction('bdsps', 'create') && (
-                    <DropdownMenuItem onClick={() => router.visit('/bdsps/create')}>
-                      BDSP
-                    </DropdownMenuItem>
-                  )}
-                  {canPerformAction('events', 'create') && (
-                    <DropdownMenuItem onClick={() => router.visit('/events/create')}>
-                      Event
-                    </DropdownMenuItem>
-                  )}
-                  {canPerformAction('procurement_notices', 'create') && (
-                    <DropdownMenuItem onClick={() => router.visit('/procurements/create')}>
-                      Procurement
+                  {canPerformAction('books', 'create') && (
+                    <DropdownMenuItem onClick={() => router.visit('/books/create')}>
+                      Book
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
