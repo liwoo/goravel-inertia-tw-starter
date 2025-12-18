@@ -1,10 +1,11 @@
 package middleware
 
 import (
+	"starter-project/app/models"
+	"strings"
+
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
-	"strings"
 )
 
 // OptionalJwtAuth is a middleware that attempts to parse JWT token if present

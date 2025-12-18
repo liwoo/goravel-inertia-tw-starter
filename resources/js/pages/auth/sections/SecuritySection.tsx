@@ -117,7 +117,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
     }
 
     if (formData.current_password && formData.new_password &&
-        formData.current_password === formData.new_password) {
+      formData.current_password === formData.new_password) {
       newErrors.new_password = 'New password must be different from current password';
     }
 
@@ -250,7 +250,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
 
   const downloadBackupCodes = (codes: string[]) => {
     const content = [
-      'SMEDI Database - Two-Factor Authentication Backup Codes',
+      'Starter Project - Two-Factor Authentication Backup Codes',
       '========================================================',
       '',
       'Store these codes in a safe place. Each code can only be used once.',
@@ -264,7 +264,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'smedi-2fa-backup-codes.txt';
+    a.download = 'starter-project-2fa-backup-codes.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -374,20 +374,18 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                     {[1, 2, 3, 4].map((level) => (
                       <div
                         key={level}
-                        className={`h-1 flex-1 rounded-full transition-colors ${
-                          passwordStrength.level >= level
-                            ? passwordStrength.color
-                            : 'bg-muted'
-                        }`}
+                        className={`h-1 flex-1 rounded-full transition-colors ${passwordStrength.level >= level
+                          ? passwordStrength.color
+                          : 'bg-muted'
+                          }`}
                       />
                     ))}
                   </div>
-                  <p className={`text-xs ${
-                    passwordStrength.level <= 1 ? 'text-red-500' :
+                  <p className={`text-xs ${passwordStrength.level <= 1 ? 'text-red-500' :
                     passwordStrength.level === 2 ? 'text-yellow-600' :
-                    passwordStrength.level === 3 ? 'text-blue-500' :
-                    'text-green-500'
-                  }`}>
+                      passwordStrength.level === 3 ? 'text-blue-500' :
+                        'text-green-500'
+                    }`}>
                     Password strength: {passwordStrength.label}
                   </p>
                 </div>

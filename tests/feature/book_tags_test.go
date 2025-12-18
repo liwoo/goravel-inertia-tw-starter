@@ -6,8 +6,8 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/tests"
+	"starter-project/app/models"
+	"starter-project/tests"
 )
 
 type BookTagsTestSuite struct {

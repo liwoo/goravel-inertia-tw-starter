@@ -1,10 +1,11 @@
 package services
 
 import (
+	"starter-project/app/contracts"
+	"starter-project/app/http/requests"
+	"starter-project/app/models"
+
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/http/requests"
 )
 
 // ConfigService implements business logic for sme_config using the builder pattern
@@ -54,49 +55,19 @@ func (s *ConfigService) GetColumnMapping() map[string]string {
 // GetConfigStatistics returns statistics about configs grouped by type
 func (s *ConfigService) GetConfigStatistics() (map[string]interface{}, error) {
 	var stats struct {
-		FinancingCount           int64
-		ImprovementAspectsCount  int64
-		BusinessCategoriesCount  int64
-		IndustriesCount          int64
-		SectorsCount             int64
-		RegistrationStatusCount  int64
-		DevelopmentPartnersCount int64
-		TotalConfigs             int64
+		ExampleCount int64
+		TotalConfigs int64
 	}
 
 	// Get total configs
 	stats.TotalConfigs, _ = facades.Orm().Query().Model(&models.Config{}).Count()
 
 	// Get counts for each config type
-	stats.FinancingCount, _ = facades.Orm().Query().Model(&models.Config{}).
-		Where("config_type = ?", requests.ConfigTypeFinancing).Count()
-
-	stats.ImprovementAspectsCount, _ = facades.Orm().Query().Model(&models.Config{}).
-		Where("config_type = ?", requests.ConfigTypeImprovementAspects).Count()
-
-	stats.BusinessCategoriesCount, _ = facades.Orm().Query().Model(&models.Config{}).
-		Where("config_type = ?", requests.ConfigTypeBusinessCategories).Count()
-
-	stats.IndustriesCount, _ = facades.Orm().Query().Model(&models.Config{}).
-		Where("config_type = ?", requests.ConfigTypeIndustries).Count()
-
-	stats.SectorsCount, _ = facades.Orm().Query().Model(&models.Config{}).
-		Where("config_type = ?", requests.ConfigTypeSectors).Count()
-
-	stats.RegistrationStatusCount, _ = facades.Orm().Query().Model(&models.Config{}).
-		Where("config_type = ?", requests.ConfigTypeRegistrationStatus).Count()
-
-	stats.DevelopmentPartnersCount, _ = facades.Orm().Query().Model(&models.Config{}).
-		Where("config_type = ?", requests.ConfigTypeDevelopmentPartners).Count()
+	stats.ExampleCount, _ = facades.Orm().Query().Model(&models.Config{}).
+		Where("config_type = ?", requests.ConfigTypeExample).Count()
 
 	return map[string]interface{}{
-		"totalConfigs":             stats.TotalConfigs,
-		"financingCount":           stats.FinancingCount,
-		"improvementAspectsCount":  stats.ImprovementAspectsCount,
-		"businessCategoriesCount":  stats.BusinessCategoriesCount,
-		"industriesCount":          stats.IndustriesCount,
-		"sectorsCount":             stats.SectorsCount,
-		"registrationStatusCount":  stats.RegistrationStatusCount,
-		"developmentPartnersCount": stats.DevelopmentPartnersCount,
+		"totalConfigs": stats.TotalConfigs,
+		"exampleCount": stats.ExampleCount,
 	}, nil
 }

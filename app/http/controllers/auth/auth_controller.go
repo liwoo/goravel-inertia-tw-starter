@@ -5,10 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"starter-project/app/models"
+	"starter-project/app/services"
 	nethttp "net/http"
-	authpkg "smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"
@@ -301,12 +300,6 @@ func (r *AuthController) completeLoginJSON(ctx http.Context, user *models.User) 
 	// Determine redirect URL based on user role
 	redirectURL := "/dashboard"
 
-	// SME users should go to /portal instead of /dashboard
-	permissionService := authpkg.GetPermissionService()
-	if permissionService.HasRole(user, "sme-user") {
-		redirectURL = "/portal"
-	}
-
 	// Check if 2FA is required globally but user hasn't enabled it
 	require2FA := facades.Config().GetBool("auth.require_2fa", false)
 	if require2FA && !user.TOTPEnabled {
@@ -368,12 +361,6 @@ func (r *AuthController) completeLogin(ctx http.Context, user *models.User) http
 
 	// Determine redirect URL based on user role
 	redirectURL := "/dashboard"
-
-	// SME users should go to /portal instead of /dashboard
-	permissionService := authpkg.GetPermissionService()
-	if permissionService.HasRole(user, "sme-user") {
-		redirectURL = "/portal"
-	}
 
 	// Check if 2FA is required globally but user hasn't enabled it
 	require2FA := facades.Config().GetBool("auth.require_2fa", false)
@@ -495,10 +482,6 @@ func (r *AuthController) Verify2FA(ctx http.Context) http.Response {
 
 	// Determine redirect URL based on user role
 	redirectURL := "/dashboard"
-	permService := authpkg.GetPermissionService()
-	if permService.HasRole(&user, "sme-user") {
-		redirectURL = "/portal"
-	}
 
 	return ctx.Response().Json(http.StatusOK, http.Json{
 		"success": true,

@@ -2,7 +2,7 @@ package contracts
 
 import (
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/auth"
+	"starter-project/app/auth"
 )
 
 // PageControllerBuilder uses a step-by-step builder pattern to ensure all required methods are implemented

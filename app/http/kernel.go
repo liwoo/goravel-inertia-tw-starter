@@ -1,7 +1,7 @@
 package http
 
 import (
-	"smedi-sme-db/app/http/middleware"
+	"starter-project/app/http/middleware"
 
 	"github.com/goravel/framework/contracts/http"
 	sessionMiddleware "github.com/goravel/framework/session/middleware"

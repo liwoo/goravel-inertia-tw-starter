@@ -1,9 +1,9 @@
 package lenders
 
 import (
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/services"
+	"starter-project/app/auth"
+	"starter-project/app/contracts"
+	"starter-project/app/services"
 )
 
 // LenderPageController handles the lenders page

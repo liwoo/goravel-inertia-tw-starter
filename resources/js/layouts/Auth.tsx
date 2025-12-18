@@ -52,7 +52,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         {/* Header section for the logo */}
         <div className="relative z-10 flex justify-between items-center mb-4 md:mb-8">
           <a href="/" className="flex items-center gap-2 font-medium">
-            <img src="/images/mw-coat.svg" alt="Logo" className="h-8 w-auto" />
+            <img src="/images/logo.svg" alt="Logo" className="h-8 w-auto" />
             {/* Optionally, add text next to logo if desired */}
             {/* <span className="text-lg font-semibold">Acme Inc.</span> */}
           </a>

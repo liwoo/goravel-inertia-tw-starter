@@ -6,7 +6,7 @@ import (
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
-	"smedi-sme-db/app/models"
+	"starter-project/app/models"
 )
 
 // Require2FA returns a middleware function that enforces 2FA when required globally.

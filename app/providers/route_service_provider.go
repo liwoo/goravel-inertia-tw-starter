@@ -5,8 +5,8 @@ import (
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/facades"
 
-	"smedi-sme-db/app/http"
-	"smedi-sme-db/routes"
+	"starter-project/app/http"
+	"starter-project/routes"
 )
 
 type RouteServiceProvider struct {

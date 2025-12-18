@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/assert"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/tests"
+	"starter-project/app/models"
+	"starter-project/tests"
 	"testing"
 )
 

@@ -74,7 +74,7 @@ func (s *TestContainersIntegrationSuite) TestTablesExist() {
 	orm := facades.Orm()
 	s.NotNil(orm)
 
-	tables := []string{"users", "roles", "permissions", "smes", "business_employee_summary"}
+	tables := []string{"users", "roles", "permissions", "books"}
 
 	for _, table := range tables {
 		var exists bool
@@ -86,24 +86,6 @@ func (s *TestContainersIntegrationSuite) TestTablesExist() {
 	}
 }
 
-func (s *TestContainersIntegrationSuite) TestBusinessEmployeeSummaryHasDeletedAt() {
-	// Verify business_employee_summary has deleted_at column
-	orm := facades.Orm()
-	s.NotNil(orm)
-
-	var exists bool
-	query := `SELECT EXISTS (
-		SELECT 1 FROM information_schema.columns
-		WHERE table_schema = 'public'
-		AND table_name = 'business_employee_summary'
-		AND column_name = 'deleted_at'
-	)`
-
-	err := orm.Query().Raw(query).Scan(&exists)
-	s.Nil(err, "Query should succeed")
-	s.True(exists, "business_employee_summary should have deleted_at column")
-}
-
 func (s *TestContainersIntegrationSuite) TestIsolatedFromProduction() {
 	// Verify that we're using the test database, not production
 	dbName := os.Getenv("DB_DATABASE")
@@ -113,7 +95,7 @@ func (s *TestContainersIntegrationSuite) TestIsolatedFromProduction() {
 	s.T().Logf("Database: %s, User: %s, Port: %s", dbName, dbUser, dbPort)
 
 	// These should be test values, not production
-	s.NotEqual("smedi", dbName, "Should not be using production database")
+	s.NotEqual("starter_project_test", dbName, "Should not be using production database")
 	s.NotEqual("55000", dbPort, "Should NOT be using production port 55000")
 }
 

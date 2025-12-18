@@ -6,9 +6,10 @@ import (
 	nethttp "net/http"
 	"time"
 
+	"starter-project/app/auth"
+	"starter-project/app/services"
+
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/services"
 )
 
 // SSEController handles Server-Sent Events for real-time updates

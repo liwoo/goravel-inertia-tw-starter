@@ -1,7 +1,7 @@
 package contracts
 
 import (
-	"smedi-sme-db/app/auth"
+	"starter-project/app/auth"
 
 	"github.com/goravel/framework/contracts/database/orm"
 )

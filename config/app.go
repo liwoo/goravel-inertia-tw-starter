@@ -28,7 +28,7 @@ import (
 	"github.com/goravel/redis"
 	"github.com/goravel/sqlite"
 
-	"smedi-sme-db/app/providers"
+	"starter-project/app/providers"
 )
 
 // Boot Start all init methods of the current folder to bootstrap all config.

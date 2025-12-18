@@ -173,7 +173,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
 
   const downloadBackupCodes = () => {
     const content = [
-      'SMEDI Database - Two-Factor Authentication Backup Codes',
+      'Starter Project - Two-Factor Authentication Backup Codes',
       '========================================================',
       '',
       'Store these codes in a safe place. Each code can only be used once.',
@@ -187,7 +187,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'smedi-2fa-backup-codes.txt';
+    a.download = 'starter-project-2fa-backup-codes.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -394,9 +394,8 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
               setVerificationCode(value);
             }}
             placeholder="000000"
-            className={`text-center text-2xl font-mono tracking-widest ${
-              errors.code ? 'border-destructive' : ''
-            }`}
+            className={`text-center text-2xl font-mono tracking-widest ${errors.code ? 'border-destructive' : ''
+              }`}
             disabled={isLoading}
             autoComplete="one-time-code"
             onKeyDown={(e) => e.key === 'Enter' && handleVerifyCode()}

@@ -86,7 +86,7 @@ linters-settings:
     simplify: true
 
   goimports:
-    local-prefixes: smedi-sme-db
+    local-prefixes: starter-project
 
   staticcheck:
     go: "1.24"

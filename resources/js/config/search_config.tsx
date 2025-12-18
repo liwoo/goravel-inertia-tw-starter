@@ -2,10 +2,7 @@ import {
   Users,
   FileText,
   Settings,
-  Building2,
-  Briefcase,
-  Calendar,
-  FileBox,
+  Book,
 } from 'lucide-react';
 
 /**
@@ -18,7 +15,7 @@ import {
  * 3. Ensure the backend search controller handles the entity type
  */
 
-export type SearchEntityType = 'sme' | 'bdsp' | 'event' | 'procurement' | 'user' | 'config' | 'application';
+export type SearchEntityType = 'book' | 'user' | 'config';
 
 export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage';
 
@@ -42,52 +39,16 @@ export interface SearchEntityConfig {
  */
 export const SEARCH_ENTITIES: SearchEntityConfig[] = [
   {
-    type: 'sme',
-    label: 'SMEs',
-    icon: <Building2 className="h-4 w-4" />,
-    permissionService: 'smes',
-    permissionAction: 'read',
-    colors: {
-      light: 'bg-blue-100 text-blue-800',
-      dark: 'dark:bg-blue-900/30 dark:text-blue-400',
-    },
-    urlPrefix: '/admin/smes',
-  },
-  {
-    type: 'bdsp',
-    label: 'BDSPs',
-    icon: <Briefcase className="h-4 w-4" />,
-    permissionService: 'bdsps',
-    permissionAction: 'read',
-    colors: {
-      light: 'bg-green-100 text-green-800',
-      dark: 'dark:bg-green-900/30 dark:text-green-400',
-    },
-    urlPrefix: '/admin/bdsps',
-  },
-  {
-    type: 'event',
-    label: 'Events',
-    icon: <Calendar className="h-4 w-4" />,
-    permissionService: 'events',
-    permissionAction: 'read',
-    colors: {
-      light: 'bg-orange-100 text-orange-800',
-      dark: 'dark:bg-orange-900/30 dark:text-orange-400',
-    },
-    urlPrefix: '/admin/events',
-  },
-  {
-    type: 'procurement',
-    label: 'Procurements',
-    icon: <FileBox className="h-4 w-4" />,
-    permissionService: 'procurement_notices',
+    type: 'book',
+    label: 'Books',
+    icon: <Book className="h-4 w-4" />,
+    permissionService: 'books',
     permissionAction: 'read',
     colors: {
       light: 'bg-purple-100 text-purple-800',
       dark: 'dark:bg-purple-900/30 dark:text-purple-400',
     },
-    urlPrefix: '/admin/procurements',
+    urlPrefix: '/admin/books',
   },
   {
     type: 'user',
@@ -112,18 +73,6 @@ export const SEARCH_ENTITIES: SearchEntityConfig[] = [
       dark: 'dark:bg-gray-900/30 dark:text-gray-400',
     },
     urlPrefix: '/admin/configs',
-  },
-  {
-    type: 'application',
-    label: 'Applications',
-    icon: <FileText className="h-4 w-4" />,
-    permissionService: 'applications',
-    permissionAction: 'read',
-    colors: {
-      light: 'bg-amber-100 text-amber-800',
-      dark: 'dark:bg-amber-900/30 dark:text-amber-400',
-    },
-    urlPrefix: '/admin/applications',
   },
 ];
 

@@ -71,8 +71,8 @@ func generateRepositoryContent(repositoryName string) (string, error) {
 	tmpl := `package repositories
 
 import (
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
+	"starter-project/app/contracts"
+	"starter-project/app/models"
 )
 
 // {{.RepositoryName}} handles {{.ResourceNameLower}}-specific data access

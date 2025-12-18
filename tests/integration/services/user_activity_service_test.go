@@ -8,9 +8,9 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
-	"smedi-sme-db/tests"
+	"starter-project/app/models"
+	"starter-project/app/services"
+	"starter-project/tests"
 )
 
 type UserActivityServiceTestSuite struct {
@@ -84,10 +84,10 @@ func (s *UserActivityServiceTestSuite) TestLogActivityWithRelation_SetsRelatedEn
 	err := s.activityService.LogActivityWithRelation(
 		nil,
 		s.testUser.ID,
-		"sme_view", // Using string directly since constant doesn't exist
-		"Viewed SME record",
+		"book_view", // Using string directly since constant doesn't exist
+		"Viewed Book record",
 		nil,
-		"sme",
+		"book",
 		relatedID,
 	)
 	s.NoError(err)
@@ -96,10 +96,10 @@ func (s *UserActivityServiceTestSuite) TestLogActivityWithRelation_SetsRelatedEn
 	var activity models.UserActivity
 	err = facades.Orm().Query().
 		Where("user_id = ?", s.testUser.ID).
-		Where("activity_type = ?", "sme_view").
+		Where("activity_type = ?", "book_view").
 		First(&activity)
 	s.NoError(err)
-	s.Equal("sme", activity.RelatedType)
+	s.Equal("book", activity.RelatedType)
 	s.NotNil(activity.RelatedID)
 	s.Equal(relatedID, *activity.RelatedID)
 }

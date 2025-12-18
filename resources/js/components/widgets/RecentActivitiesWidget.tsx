@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Activity, Building2, Calendar, FileText, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { Activity, Building2, Calendar, FileText, User, ChevronLeft, ChevronRight, Book } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 // Interface for recent activity data
 export interface RecentActivity {
   id: number;
-  entityType: "sme" | "event" | "procurement";
+  entityType: "book";
   entityId: number;
   entityName: string;
   action: "created" | "updated";
@@ -34,12 +34,8 @@ interface RecentActivitiesWidgetProps {
 // Get icon for entity type
 function getEntityIcon(entityType: string) {
   switch (entityType) {
-    case "sme":
-      return Building2;
-    case "event":
-      return Calendar;
-    case "procurement":
-      return FileText;
+    case "book":
+      return Book;
     default:
       return Activity;
   }
@@ -48,12 +44,8 @@ function getEntityIcon(entityType: string) {
 // Get label for entity type
 function getEntityLabel(entityType: string): string {
   switch (entityType) {
-    case "sme":
-      return "SME";
-    case "event":
-      return "Event";
-    case "procurement":
-      return "Procurement";
+    case "book":
+      return "Book";
     default:
       return entityType;
   }

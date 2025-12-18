@@ -3,13 +3,14 @@ package roles
 import (
 	"fmt"
 
+	"starter-project/app/auth"
+	"starter-project/app/contracts"
+	"starter-project/app/http/requests"
+	"starter-project/app/models"
+	"starter-project/app/services"
+
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/http/requests"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
 )
 
 // RolesController handles API endpoints for role management

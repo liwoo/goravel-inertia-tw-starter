@@ -4,7 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/foundation"
 	"github.com/goravel/framework/facades"
 
-	"smedi-sme-db/database"
+	"starter-project/database"
 )
 
 type DatabaseServiceProvider struct {

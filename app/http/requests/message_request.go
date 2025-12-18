@@ -1,8 +1,9 @@
 package requests
 
 import (
+	"starter-project/app/models"
+
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/models"
 )
 
 // MessageCreateRequest handles message creation validation

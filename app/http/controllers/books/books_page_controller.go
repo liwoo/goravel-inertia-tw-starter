@@ -1,9 +1,9 @@
 package books
 
 import (
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/services"
+	"starter-project/app/auth"
+	"starter-project/app/contracts"
+	"starter-project/app/services"
 )
 
 // BooksPageController handles the books page

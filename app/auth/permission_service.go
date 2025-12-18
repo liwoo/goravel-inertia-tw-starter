@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
+	"starter-project/app/models"
 )
 
 // Cache TTL for permissions
