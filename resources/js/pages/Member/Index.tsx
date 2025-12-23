@@ -203,7 +203,7 @@ export default function MemberIndex({
 
           {/* Right Sidebar - Calendar Widget */}
           <aside className="w-full xl:w-[380px] 2xl:w-[420px] shrink-0">
-            <EventsCalendarWidget events={calendarEvents} district={district} />
+            <EventsCalendarWidget events={calendarEvents} district={district} smeId={smeId} />
           </aside>
         </div>
       </div>

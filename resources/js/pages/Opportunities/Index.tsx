@@ -2,11 +2,17 @@ import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import Admin from '@/layouts/Admin';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   CalendarDays,
   Building2,
@@ -21,8 +27,10 @@ import {
   FileText,
   Calendar,
   ArrowRight,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import MarkdownEditor from '@uiw/react-markdown-editor';
 
 interface Opportunity {
   id: number;
@@ -71,12 +79,15 @@ const formatDate = (dateStr: string): string => {
 };
 
 // Opportunity Card Component
-const OpportunityCard: React.FC<{ opportunity: Opportunity; isPast?: boolean }> = ({
+const OpportunityCard: React.FC<{
+  opportunity: Opportunity;
+  isPast?: boolean;
+  onClick?: () => void;
+}> = ({
   opportunity,
   isPast = false,
+  onClick,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   const statusColor = isPast
     ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
     : opportunity.is_open
@@ -95,7 +106,7 @@ const OpportunityCard: React.FC<{ opportunity: Opportunity; isPast?: boolean }> 
         'transition-all duration-200 hover:shadow-md cursor-pointer',
         isPast && 'opacity-75'
       )}
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={onClick}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
@@ -117,12 +128,7 @@ const OpportunityCard: React.FC<{ opportunity: Opportunity; isPast?: boolean }> 
               {opportunity.procured_by}
             </CardDescription>
           </div>
-          <ChevronRight
-            className={cn(
-              'h-5 w-5 text-muted-foreground transition-transform shrink-0',
-              isExpanded && 'rotate-90'
-            )}
-          />
+          <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
         </div>
       </CardHeader>
 
@@ -156,50 +162,6 @@ const OpportunityCard: React.FC<{ opportunity: Opportunity; isPast?: boolean }> 
             ))}
           </div>
         )}
-
-        {/* Expanded Details */}
-        {isExpanded && (
-          <div className="mt-4 pt-4 border-t space-y-4">
-            <div>
-              <h4 className="font-medium text-sm mb-2">Details</h4>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {opportunity.details}
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-medium text-sm mb-2">How to Apply</h4>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {opportunity.application_details}
-              </p>
-            </div>
-
-            {opportunity.qualifying_districts && opportunity.qualifying_districts.length > 0 && (
-              <div>
-                <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  Qualifying Districts
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {opportunity.qualifying_districts.map((district) => (
-                    <Badge key={district} variant="outline" className="text-xs">
-                      {district}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span>
-                <strong>Market Approach:</strong> {opportunity.market_approach}
-              </span>
-              <span>
-                <strong>Invitation:</strong> {opportunity.invitation}
-              </span>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -229,6 +191,166 @@ const EmptyState: React.FC<{ type: 'upcoming' | 'past' }> = ({ type }) => (
   </div>
 );
 
+// Opportunity Detail Modal Component
+const OpportunityDetailModal: React.FC<{
+  opportunity: Opportunity | null;
+  isOpen: boolean;
+  onClose: () => void;
+}> = ({ opportunity, isOpen, onClose }) => {
+  if (!opportunity) return null;
+
+  const statusColor = opportunity.is_open
+    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+    : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300';
+
+  const statusText = opportunity.is_open
+    ? 'Open'
+    : `Opens ${formatDate(opportunity.open_date)}`;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="fixed inset-4 w-auto max-w-none h-auto translate-x-0 translate-y-0 top-0 left-0 p-0 flex flex-col gap-0"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <div>
+              <DialogTitle className="text-lg font-semibold">
+                {opportunity.organization}
+              </DialogTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="outline" className="text-xs font-mono">
+                  {opportunity.ref_no}
+                </Badge>
+                <Badge className={statusColor}>{statusText}</Badge>
+                {opportunity.days_remaining > 0 && opportunity.days_remaining <= 7 && (
+                  <Badge variant="destructive" className="text-xs">
+                    {opportunity.days_remaining} days left
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <ScrollArea className="flex-1">
+          <div className="p-6 space-y-6">
+            {/* Quick Info */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-muted-foreground">Procured By</p>
+                  <p className="font-medium">{opportunity.procured_by}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-muted-foreground">Type</p>
+                  <p className="font-medium">{opportunity.procurement_type}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Target className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-muted-foreground">Min Score</p>
+                  <p className="font-medium">{opportunity.minimum_qualifying_score}%</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-muted-foreground">Dates</p>
+                  <p className="font-medium">
+                    {formatDate(opportunity.open_date)} - {formatDate(opportunity.close_date)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Classification Badges */}
+            {opportunity.classification && opportunity.classification.length > 0 && (
+              <div>
+                <h4 className="font-medium text-sm mb-2">Classification</h4>
+                <div className="flex flex-wrap gap-2">
+                  {opportunity.classification.map((cls) => (
+                    <Badge key={cls} variant="secondary">
+                      {cls}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Qualifying Districts */}
+            {opportunity.qualifying_districts && opportunity.qualifying_districts.length > 0 && (
+              <div>
+                <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  Qualifying Districts
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {opportunity.qualifying_districts.map((district) => (
+                    <Badge key={district} variant="outline">
+                      {district}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Details Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Details</h3>
+              <div className="prose prose-sm max-w-none dark:prose-invert border rounded-md p-4 bg-card">
+                <MarkdownEditor.Markdown
+                  source={opportunity.details || 'No details provided.'}
+                  style={{ backgroundColor: 'transparent' }}
+                />
+              </div>
+            </div>
+
+            {/* How to Apply Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">How to Apply</h3>
+              <div className="prose prose-sm max-w-none dark:prose-invert border rounded-md p-4 bg-card">
+                <MarkdownEditor.Markdown
+                  source={opportunity.application_details || 'No application details provided.'}
+                  style={{ backgroundColor: 'transparent' }}
+                />
+              </div>
+            </div>
+
+            {/* Additional Info */}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground pt-4 border-t">
+              <span>
+                <strong>Market Approach:</strong> {opportunity.market_approach}
+              </span>
+              <span>
+                <strong>Invitation:</strong> {opportunity.invitation}
+              </span>
+            </div>
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function OpportunitiesIndex({
   upcomingOpportunities = [],
   pastOpportunities = [],
@@ -240,8 +362,21 @@ export default function OpportunitiesIndex({
   district,
   error,
 }: OpportunitiesIndexProps) {
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const totalOpportunities = upcomingOpportunities.length + pastOpportunities.length;
   const openOpportunities = upcomingOpportunities.filter((o) => o.is_open).length;
+
+  const handleOpportunityClick = (opportunity: Opportunity) => {
+    setSelectedOpportunity(opportunity);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedOpportunity(null);
+  };
 
   return (
     <Admin title="Opportunities">
@@ -352,7 +487,11 @@ export default function OpportunitiesIndex({
             ) : (
               <div className="grid gap-4">
                 {upcomingOpportunities.map((opportunity) => (
-                  <OpportunityCard key={opportunity.id} opportunity={opportunity} />
+                  <OpportunityCard
+                    key={opportunity.id}
+                    opportunity={opportunity}
+                    onClick={() => handleOpportunityClick(opportunity)}
+                  />
                 ))}
               </div>
             )}
@@ -364,7 +503,12 @@ export default function OpportunitiesIndex({
             ) : (
               <div className="grid gap-4">
                 {pastOpportunities.map((opportunity) => (
-                  <OpportunityCard key={opportunity.id} opportunity={opportunity} isPast />
+                  <OpportunityCard
+                    key={opportunity.id}
+                    opportunity={opportunity}
+                    isPast
+                    onClick={() => handleOpportunityClick(opportunity)}
+                  />
                 ))}
               </div>
             )}
@@ -389,6 +533,13 @@ export default function OpportunitiesIndex({
           </CardContent>
         </Card>
       </div>
+
+      {/* Opportunity Detail Modal */}
+      <OpportunityDetailModal
+        opportunity={selectedOpportunity}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+      />
     </Admin>
   );
 }

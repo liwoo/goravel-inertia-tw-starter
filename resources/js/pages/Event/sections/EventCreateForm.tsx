@@ -37,51 +37,36 @@ export const EventCreateForm = forwardRef<any, EventCreateFormProps>(({
     notes: '',
     ...initialData,
     // Ensure arrays are initialized if initialData has them as null/undefined
-    partners: initialData?.partners || [],
-    attending_smes: initialData?.attending_smes || []
+    partners: initialData?.partners || []
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Config options
   const [partnerOptions, setPartnerOptions] = useState<string[]>([]);
-  const [smeOptions, setSmeOptions] = useState<{ id: number, name: string }[]>([]);
   const [loadingConfigs, setLoadingConfigs] = useState(false);
 
   // Temporary state for inputs
   const [partnerInput, setPartnerInput] = useState('');
-  const [smeInput, setSmeInput] = useState('');
   const [partnerPopoverOpen, setPartnerPopoverOpen] = useState(false);
-  const [smePopoverOpen, setSmePopoverOpen] = useState(false);
 
   // Fetch config options on mount
   useEffect(() => {
     const fetchConfigOptions = async () => {
       setLoadingConfigs(true);
       try {
-        const [partnersRes, smesRes] = await Promise.all([
-          axios.get('/api/configs', {
-            params: {
-              config_type: 'Development Partners',
-              pageSize: 100,
-              sort: 'name',
-              direction: 'ASC'
-            }
-          }),
-          axios.get('/api/smes', {
-            params: {
-              pageSize: 100,
-              sort: 'business_name',
-              direction: 'ASC'
-            }
-          })
-        ]);
+        const partnersRes = await axios.get('/api/configs', {
+          params: {
+            config_type: 'Development Partners',
+            pageSize: 100,
+            sort: 'name',
+            direction: 'ASC'
+          }
+        });
 
         const partnersData = partnersRes.data.data?.data || [];
-        const smesData = smesRes.data.data?.data || [];
 
         setPartnerOptions(partnersData.map((config: any) => config.name));
-        setSmeOptions(smesData.map((sme: any) => ({ id: sme.id, name: sme.name })));
       } catch (error) {
         console.error('Error fetching config options:', error);
       } finally {
@@ -111,27 +96,6 @@ export const EventCreateForm = forwardRef<any, EventCreateFormProps>(({
     });
   };
 
-  // SME Handlers
-  const toggleSme = (smeId: number) => {
-    if (formData.attending_smes.includes(smeId)) {
-      setFormData({
-        ...formData,
-        attending_smes: formData.attending_smes.filter(id => id !== smeId)
-      });
-    } else {
-      setFormData({
-        ...formData,
-        attending_smes: [...formData.attending_smes, smeId]
-      });
-    }
-  };
-
-  const removeSme = (smeId: number) => {
-    setFormData({
-      ...formData,
-      attending_smes: formData.attending_smes.filter(id => id !== smeId)
-    });
-  };
 
   const handleSubmit = async () => {
     // Basic validation
@@ -291,9 +255,9 @@ export const EventCreateForm = forwardRef<any, EventCreateFormProps>(({
         <Card>
           <CardHeader>
             <CardTitle>Participants</CardTitle>
-            <CardDescription>Manage partners and attending SMEs</CardDescription>
+            <CardDescription>Manage event partners</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             {/* Partners */}
             <div className="space-y-2">
               <Label>Partners</Label>
@@ -378,74 +342,6 @@ export const EventCreateForm = forwardRef<any, EventCreateFormProps>(({
                     />
                   </Badge>
                 ))}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Attending SMEs */}
-            <div className="space-y-2">
-              <Label>Attending SMEs</Label>
-              <Popover open={smePopoverOpen} onOpenChange={setSmePopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between"
-                    type="button"
-                  >
-                    {formData.attending_smes.length > 0
-                      ? `${formData.attending_smes.length} selected`
-                      : 'Select SMEs...'}
-                    <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
-                  <div className="p-4 space-y-4">
-                    <div className="space-y-2">
-                      <Input
-                        placeholder="Search SMEs..."
-                        value={smeInput}
-                        onChange={(e) => setSmeInput(e.target.value)}
-                      />
-                    </div>
-                    <Separator />
-                    <div className="max-h-[200px] overflow-auto space-y-2">
-                      {smeOptions
-                        .filter(sme =>
-                          sme.name?.toLowerCase().includes(smeInput?.toLowerCase() || '')
-                        )
-                        .map((sme) => (
-                          <div key={sme.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`sme-${sme.id}`}
-                              checked={formData.attending_smes.includes(sme.id)}
-                              onCheckedChange={() => toggleSme(sme.id)}
-                            />
-                            <label
-                              htmlFor={`sme-${sme.id}`}
-                              className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                            >
-                              {sme.name}
-                            </label>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.attending_smes.map((smeId) => {
-                  const sme = smeOptions.find(s => s.id === smeId);
-                  return sme ? (
-                    <Badge key={smeId} variant="secondary" className="gap-1">
-                      {sme.name}
-                      <X
-                        className="h-3 w-3 cursor-pointer hover:text-destructive"
-                        onClick={() => removeSme(smeId)}
-                      />
-                    </Badge>
-                  ) : null;
-                })}
               </div>
             </div>
           </CardContent>

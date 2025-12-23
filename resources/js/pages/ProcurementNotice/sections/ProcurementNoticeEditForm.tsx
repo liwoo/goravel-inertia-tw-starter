@@ -648,11 +648,11 @@ export const ProcurementNoticeEditForm = forwardRef<any, ProcurementNoticeEditFo
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="details">Details *</Label>
-                                <div className="min-h-[200px] border rounded-md p-1">
+                                <div className="min-h-[400px] border rounded-md p-1">
                                     <MarkdownEditor
                                         value={formData.details}
                                         onChange={(value) => setFormData({ ...formData, details: value })}
-                                        height="200px"
+                                        height="400px"
                                     />
                                 </div>
                                 {errors.details && <p className="text-sm text-destructive">{errors.details}</p>}
@@ -660,11 +660,11 @@ export const ProcurementNoticeEditForm = forwardRef<any, ProcurementNoticeEditFo
 
                             <div className="space-y-2">
                                 <Label htmlFor="application_details">Application Details *</Label>
-                                <div className="min-h-[200px] border rounded-md p-1">
+                                <div className="min-h-[400px] border rounded-md p-1">
                                     <MarkdownEditor
                                         value={formData.application_details}
                                         onChange={(value) => setFormData({ ...formData, application_details: value })}
-                                        height="200px"
+                                        height="400px"
                                     />
                                 </div>
                                 {errors.application_details && <p className="text-sm text-destructive">{errors.application_details}</p>}

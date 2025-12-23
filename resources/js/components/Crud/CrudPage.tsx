@@ -1209,6 +1209,7 @@ export function CrudPage<T extends { id: number }>({
                 resourceName={resourceName}
                 displayName={singularDisplayName}
                 size={drawerState.type === 'view' ? 'lg' : 'lg'}
+                fullscreen={drawerState.type === 'edit' || drawerState.type === 'create'}
                 canEdit={drawerState.type === 'view' ? canEdit : false}
                 canSave={drawerState.type === 'create' ? canCreate : drawerState.type === 'edit' ? canEdit : false}
                 isSaving={isSaving}

@@ -46,7 +46,8 @@ func NewMemberPageController() *MemberPageController {
 		if sme.District != nil {
 			district = *sme.District
 		}
-		return dashboardService.GetEventsForDistrict(district), nil
+		// Use the new method that includes isAttending flag
+		return dashboardService.GetEventsForDistrictWithAttendance(district, sme.ID), nil
 	})
 
 	// Helper function to get user's linked SME
