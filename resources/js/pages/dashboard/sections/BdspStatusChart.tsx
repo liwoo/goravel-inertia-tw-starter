@@ -14,6 +14,7 @@ import { DistributionPoint } from "@/types/sme";
 interface BdspStatusChartProps {
   data: DistributionPoint[];
   isLoading?: boolean;
+  height?: number;
 }
 
 // Colors for registration status
@@ -50,7 +51,7 @@ const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   return config;
 };
 
-export function BdspStatusChart({ data, isLoading = false }: BdspStatusChartProps) {
+export function BdspStatusChart({ data, isLoading = false, height }: BdspStatusChartProps) {
   const chartData = React.useMemo(() => {
     // Define preferred order for statuses
     const order = ['active', 'pending', 'inactive', 'rejected'];
@@ -82,6 +83,20 @@ export function BdspStatusChart({ data, isLoading = false }: BdspStatusChartProp
     return data.reduce((acc, curr) => acc + curr.value, 0);
   }, [data]);
 
+  // Calculate dynamic radius based on height (scale proportionally)
+  const { innerRadius, outerRadius } = React.useMemo(() => {
+    if (height && height > 400) {
+      // Scale up for fullscreen - use ~30% of height for outer radius
+      const baseSize = Math.min(height * 0.35, 250);
+      return {
+        innerRadius: Math.floor(baseSize * 0.6),
+        outerRadius: Math.floor(baseSize),
+      };
+    }
+    // Default sizes for normal view
+    return { innerRadius: 60, outerRadius: 100 };
+  }, [height]);
+
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center pb-0">
@@ -98,10 +113,16 @@ export function BdspStatusChart({ data, isLoading = false }: BdspStatusChartProp
     );
   }
 
+  // Use dynamic height if provided, otherwise use default constraints
+  const containerClass = height
+    ? "mx-auto aspect-square"
+    : "mx-auto aspect-square h-full max-h-[300px] min-h-[250px]";
+
   return (
     <ChartContainer
       config={chartConfig}
-      className="mx-auto aspect-square h-full max-h-[300px] min-h-[250px]"
+      className={containerClass}
+      style={height ? { height: `${height}px` } : undefined}
     >
       <PieChart>
         <ChartTooltip
@@ -136,8 +157,8 @@ export function BdspStatusChart({ data, isLoading = false }: BdspStatusChartProp
           data={chartData}
           dataKey="value"
           nameKey="status"
-          innerRadius={60}
-          outerRadius={100}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
           strokeWidth={2}
           stroke="hsl(var(--background))"
         >

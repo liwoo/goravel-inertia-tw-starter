@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ChartActions } from "@/components/ui/chart-actions";
 import { DistributionPoint } from "@/types/sme";
 import { BdspStatusChart } from "./BdspStatusChart";
 import { BdspServicesChart } from "./BdspServicesChart";
@@ -42,6 +43,50 @@ export function BdspChartsCarousel({
 
   const [currentIndex, setCurrentIndex] = React.useState(0);
 
+  // Create refs for each chart slide
+  const chartRef1 = React.useRef<HTMLDivElement>(null);
+  const chartRef2 = React.useRef<HTMLDivElement>(null);
+
+  // Prepare CSV-friendly data for each chart
+  const csvData1 = React.useMemo(() => {
+    return statusData.map(item => ({
+      "Status": item.label,
+      "Count": item.value,
+      "Percentage (%)": item.percentage.toFixed(1),
+    }));
+  }, [statusData]);
+
+  const csvData2 = React.useMemo(() => {
+    return servicesData.map(item => ({
+      "Service": item.label,
+      "Count": item.value,
+      "Percentage (%)": item.percentage.toFixed(1),
+    }));
+  }, [servicesData]);
+
+  // Create arrays to switch between charts based on currentIndex
+  const chartRefs = [chartRef1, chartRef2];
+  const csvDataSets = [csvData1, csvData2];
+  const filenames = ["bdsp-status-distribution", "bdsp-services-distribution"];
+
+  // Render function for fullscreen charts
+  const renderFullscreen = React.useCallback((width: number, height: number) => {
+    const chartHeight = height - 20; // Leave some padding
+    if (currentIndex === 0) {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <BdspStatusChart data={statusData} height={chartHeight} />
+        </div>
+      );
+    } else {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <BdspServicesChart data={servicesData} height={chartHeight} />
+        </div>
+      );
+    }
+  }, [currentIndex, statusData, servicesData]);
+
   // Track current index for card header update
   const handleCarouselChange = (index: number) => {
     setCurrentIndex(index);
@@ -63,19 +108,28 @@ export function BdspChartsCarousel({
 
   return (
     <Card className="flex flex-col overflow-hidden">
-      <CardHeader className="items-center pb-0">
+      <CardHeader className="items-center pb-0 relative">
+        <div className="absolute right-4 top-4">
+          <ChartActions
+            chartRef={chartRefs[currentIndex]}
+            data={csvDataSets[currentIndex]}
+            filename={filenames[currentIndex]}
+            title={chartInfo[currentIndex].title}
+            renderFullscreen={renderFullscreen}
+          />
+        </div>
         <CardTitle>{chartInfo[currentIndex].title}</CardTitle>
         <CardDescription>{chartInfo[currentIndex].description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-4 overflow-hidden">
         <CarouselWithCallback onIndexChange={handleCarouselChange}>
           {/* Chart 1: Registration Status (Donut) */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef1} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <BdspStatusChart data={statusData} />
           </div>
 
           {/* Chart 2: Top Services (Bar) */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef2} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <BdspServicesChart data={servicesData} />
           </div>
         </CarouselWithCallback>

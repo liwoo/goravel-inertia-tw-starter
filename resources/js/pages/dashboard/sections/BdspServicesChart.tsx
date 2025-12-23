@@ -12,6 +12,7 @@ import { DistributionPoint } from "@/types/sme";
 interface BdspServicesChartProps {
   data: DistributionPoint[];
   isLoading?: boolean;
+  height?: number;
 }
 
 // Use purple shade variations for bar charts
@@ -40,7 +41,7 @@ const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   return config;
 };
 
-export function BdspServicesChart({ data, isLoading = false }: BdspServicesChartProps) {
+export function BdspServicesChart({ data, isLoading = false, height }: BdspServicesChartProps) {
   // Transform and sort data by value descending, limit to top 10
   const chartData = React.useMemo(() => {
     return [...data]
@@ -78,7 +79,11 @@ export function BdspServicesChart({ data, isLoading = false }: BdspServicesChart
 
   return (
     <div className="overflow-hidden w-full">
-      <ChartContainer config={chartConfig} className="h-[300px] w-full max-w-full">
+      <ChartContainer
+        config={chartConfig}
+        className={height ? "w-full max-w-full" : "h-[300px] w-full max-w-full"}
+        style={height ? { height: `${height}px` } : undefined}
+      >
         <BarChart
           data={chartData}
           layout="vertical"

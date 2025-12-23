@@ -184,8 +184,8 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
     if (notification.related_type) {
       switch (notification.related_type) {
         case "application":
-          // For application notifications, go to my applications page
-          return "/applications";
+          // For application notifications, go to admin applications page
+          return "/admin/applications";
         case "event":
         case "procurement":
           // Events and procurement opportunities go to opportunities page
@@ -197,7 +197,7 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
     switch (notification.type) {
       case "application_approved":
       case "application_rejected":
-        return "/applications";
+        return "/admin/applications";
       case "event":
       case "procurement":
         return "/opportunities";
@@ -308,7 +308,7 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
               className="mb-4 p-3 rounded-lg border border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors"
               onClick={() => {
                 setIsOpen(false);
-                router.visit('/applications');
+                router.visit('/admin/applications');
               }}
             >
               <div className="flex items-center gap-3">

@@ -14,6 +14,7 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { ChartActions } from "@/components/ui/chart-actions";
 import { DistributionPoint } from "@/types/sme";
 import { SmeClassificationChart } from "./SmeClassificationChart";
 
@@ -58,9 +59,10 @@ interface BarChartContentProps {
   data: DistributionPoint[];
   dataKey: string;
   labelWidth?: number;
+  height?: number;
 }
 
-function BarChartContent({ data, dataKey, labelWidth = 90 }: BarChartContentProps) {
+function BarChartContent({ data, dataKey, labelWidth = 90, height }: BarChartContentProps) {
   const chartData = React.useMemo(() => {
     return [...data]
       .sort((a, b) => b.value - a.value)
@@ -87,7 +89,11 @@ function BarChartContent({ data, dataKey, labelWidth = 90 }: BarChartContentProp
 
   return (
     <div className="overflow-hidden w-full">
-      <ChartContainer config={chartConfig} className="h-[300px] w-full max-w-full">
+      <ChartContainer
+        config={chartConfig}
+        className={height ? "w-full max-w-full" : "h-[300px] w-full max-w-full"}
+        style={height ? { height: `${height}px` } : undefined}
+      >
         <BarChart
           data={chartData}
           layout="vertical"
@@ -202,6 +208,65 @@ export function SmeBusinessChartsCarousel({
 
   const [currentIndex, setCurrentIndex] = React.useState(0);
 
+  // Create refs for each chart slide
+  const chartRef1 = React.useRef<HTMLDivElement>(null);
+  const chartRef2 = React.useRef<HTMLDivElement>(null);
+  const chartRef3 = React.useRef<HTMLDivElement>(null);
+
+  // Prepare CSV-friendly data for each chart
+  const csvData1 = React.useMemo(() => {
+    return sectorData.map(item => ({
+      "Sector": item.label,
+      "Count": item.value,
+      "Percentage (%)": item.percentage.toFixed(1),
+    }));
+  }, [sectorData]);
+
+  const csvData2 = React.useMemo(() => {
+    return categoryData.map(item => ({
+      "Category": item.label,
+      "Count": item.value,
+      "Percentage (%)": item.percentage.toFixed(1),
+    }));
+  }, [categoryData]);
+
+  const csvData3 = React.useMemo(() => {
+    return classificationData.map(item => ({
+      "Classification": item.label,
+      "Count": item.value,
+      "Percentage (%)": item.percentage.toFixed(1),
+    }));
+  }, [classificationData]);
+
+  // Create arrays to switch between charts based on currentIndex
+  const chartRefs = [chartRef1, chartRef2, chartRef3];
+  const csvDataSets = [csvData1, csvData2, csvData3];
+  const filenames = ["sme-sector-distribution", "sme-category-distribution", "sme-classification-distribution"];
+
+  // Render function for fullscreen charts
+  const renderFullscreen = React.useCallback((width: number, height: number) => {
+    const chartHeight = height - 20; // Leave some padding
+    if (currentIndex === 0) {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <BarChartContent data={sectorData} dataKey="sector" labelWidth={90} height={chartHeight} />
+        </div>
+      );
+    } else if (currentIndex === 1) {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <BarChartContent data={categoryData} dataKey="category" labelWidth={90} height={chartHeight} />
+        </div>
+      );
+    } else {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <SmeClassificationChart data={classificationData} height={chartHeight} />
+        </div>
+      );
+    }
+  }, [currentIndex, sectorData, categoryData, classificationData]);
+
   // Track current index for card header update
   const handleCarouselChange = (index: number) => {
     setCurrentIndex(index);
@@ -223,24 +288,33 @@ export function SmeBusinessChartsCarousel({
 
   return (
     <Card className="flex flex-col overflow-hidden">
-      <CardHeader className="items-center pb-0">
+      <CardHeader className="items-center pb-0 relative">
+        <div className="absolute right-4 top-4">
+          <ChartActions
+            chartRef={chartRefs[currentIndex]}
+            data={csvDataSets[currentIndex]}
+            filename={filenames[currentIndex]}
+            title={chartInfo[currentIndex].title}
+            renderFullscreen={renderFullscreen}
+          />
+        </div>
         <CardTitle>{chartInfo[currentIndex].title}</CardTitle>
         <CardDescription>{chartInfo[currentIndex].description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-4 overflow-hidden">
         <CarouselWithCallback onIndexChange={handleCarouselChange}>
           {/* Chart 1: Sector Distribution (Bar) */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef1} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <BarChartContent data={sectorData} dataKey="sector" labelWidth={90} />
           </div>
 
           {/* Chart 2: Category Distribution (Bar) */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef2} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <BarChartContent data={categoryData} dataKey="category" labelWidth={90} />
           </div>
 
           {/* Chart 3: Classification Distribution (Donut) */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef3} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <SmeClassificationChart data={classificationData} />
           </div>
         </CarouselWithCallback>

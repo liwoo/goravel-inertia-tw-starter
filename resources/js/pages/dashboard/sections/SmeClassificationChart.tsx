@@ -14,6 +14,7 @@ import { DistributionPoint } from "@/types/sme";
 interface SmeClassificationChartProps {
   data: DistributionPoint[];
   isLoading?: boolean;
+  height?: number;
 }
 
 // Colors matching the classification badges in SmeColumns.tsx
@@ -50,7 +51,7 @@ const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   return config;
 };
 
-export function SmeClassificationChart({ data, isLoading = false }: SmeClassificationChartProps) {
+export function SmeClassificationChart({ data, isLoading = false, height }: SmeClassificationChartProps) {
   const chartData = React.useMemo(() => {
     // Define preferred order for classifications
     const order = ['micro', 'small', 'medium', 'unclassified'];
@@ -79,6 +80,20 @@ export function SmeClassificationChart({ data, isLoading = false }: SmeClassific
     return data.reduce((acc, curr) => acc + curr.value, 0);
   }, [data]);
 
+  // Calculate dynamic radius based on height (scale proportionally)
+  const { innerRadius, outerRadius } = React.useMemo(() => {
+    if (height && height > 400) {
+      // Scale up for fullscreen - use ~30% of height for outer radius
+      const baseSize = Math.min(height * 0.35, 250);
+      return {
+        innerRadius: Math.floor(baseSize * 0.6),
+        outerRadius: Math.floor(baseSize),
+      };
+    }
+    // Default sizes for normal view
+    return { innerRadius: 60, outerRadius: 100 };
+  }, [height]);
+
   if (isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center pb-0">
@@ -95,10 +110,16 @@ export function SmeClassificationChart({ data, isLoading = false }: SmeClassific
     );
   }
 
+  // Use dynamic height if provided, otherwise use default constraints
+  const containerClass = height
+    ? "mx-auto aspect-square"
+    : "mx-auto aspect-square h-full max-h-[300px] min-h-[250px]";
+
   return (
     <ChartContainer
       config={chartConfig}
-      className="mx-auto aspect-square h-full max-h-[300px] min-h-[250px]"
+      className={containerClass}
+      style={height ? { height: `${height}px` } : undefined}
     >
       <PieChart>
         <ChartTooltip
@@ -133,8 +154,8 @@ export function SmeClassificationChart({ data, isLoading = false }: SmeClassific
           data={chartData}
           dataKey="value"
           nameKey="classification"
-          innerRadius={60}
-          outerRadius={100}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
           strokeWidth={2}
           stroke="hsl(var(--background))"
         >
