@@ -89,76 +89,6 @@ export function CrudDrawer({
      type === 'edit' ? `Edit ${formattedName}` :
      type === 'view' ? `${formattedName} Details` : title) : title;
 
-  // Shared header content
-  const headerContent = (
-    <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border shrink-0">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="h-8 w-8"
-        >
-          {fullscreen ? <X className="h-4 w-4" /> : <ArrowLeft className="h-4 w-4" />}
-        </Button>
-        {fullscreen ? (
-          <DialogTitle className="text-lg font-semibold">
-            {displayTitle}
-          </DialogTitle>
-        ) : (
-          <SheetTitle className="text-lg font-semibold">
-            {displayTitle}
-          </SheetTitle>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        {/* Edit button for View mode */}
-        {type === 'view' && canEdit && onEdit && (
-          <Button
-            onClick={onEdit}
-            size="sm"
-            variant="outline"
-            className="group"
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-            <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-background">
-              <Command className="h-3 w-3" />E
-            </kbd>
-          </Button>
-        )}
-
-        {/* Save button for Create/Edit modes */}
-        {(type === 'create' || type === 'edit') && canSave && onSave && (
-          <Button
-            onClick={onSave}
-            size="sm"
-            disabled={isSaving}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground group"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Saving...' : 'Save'}
-            {!isSaving && (
-              <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-primary-foreground/20 px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-primary-foreground/30">
-                <Command className="h-3 w-3" />S
-              </kbd>
-            )}
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-
-  // Shared scrollable content
-  const scrollableContent = (
-    <ScrollArea className="flex-1">
-      <div className="p-4 sm:p-6">
-        {children}
-      </div>
-    </ScrollArea>
-  );
-
   // Fullscreen mode uses Dialog
   if (fullscreen) {
     return (
@@ -170,8 +100,49 @@ export function CrudDrawer({
             className
           )}
         >
-          {headerContent}
-          {scrollableContent}
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border shrink-0">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <DialogTitle className="text-lg font-semibold">
+                {displayTitle}
+              </DialogTitle>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Save button for Create/Edit modes */}
+              {(type === 'create' || type === 'edit') && canSave && onSave && (
+                <Button
+                  onClick={onSave}
+                  size="sm"
+                  disabled={isSaving}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground group"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? 'Saving...' : 'Save'}
+                  {!isSaving && (
+                    <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-primary-foreground/20 px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-primary-foreground/30">
+                      <Command className="h-3 w-3" />S
+                    </kbd>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <ScrollArea className="flex-1">
+            <div className="p-4 sm:p-6">
+              {children}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     );
@@ -188,8 +159,65 @@ export function CrudDrawer({
           className
         )}
       >
-        {headerContent}
-        {scrollableContent}
+        {/* Custom Header with actions */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <SheetTitle className="text-lg font-semibold">
+              {displayTitle}
+            </SheetTitle>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Edit button for View mode */}
+            {type === 'view' && canEdit && onEdit && (
+              <Button
+                onClick={onEdit}
+                size="sm"
+                variant="outline"
+                className="group"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+                <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-background">
+                  <Command className="h-3 w-3" />E
+                </kbd>
+              </Button>
+            )}
+
+            {/* Save button for Create/Edit modes */}
+            {(type === 'create' || type === 'edit') && canSave && onSave && (
+              <Button
+                onClick={onSave}
+                size="sm"
+                disabled={isSaving}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground group"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? 'Saving...' : 'Save'}
+                {!isSaving && (
+                  <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-primary-foreground/20 px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-primary-foreground/30">
+                    <Command className="h-3 w-3" />S
+                  </kbd>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <ScrollArea className="flex-1">
+          <div className="p-4 sm:p-6">
+            {children}
+          </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );
