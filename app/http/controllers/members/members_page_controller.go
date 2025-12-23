@@ -17,7 +17,6 @@ type MemberPageController struct {
 // NewMemberPageController creates a new members page controller
 func NewMemberPageController() *MemberPageController {
 	memberService := services.NewAdditionalBusinessMemberService()
-	dashboardService := services.NewDashboardService()
 	smeService := services.NewSmeService()
 
 	controller := &MemberPageController{
@@ -30,25 +29,6 @@ func NewMemberPageController() *MemberPageController {
 		}),
 		memberService: memberService,
 	}
-
-	controller.AddExtraDataProvider("calendarEvents", func(ctx http.Context) (interface{}, error) {
-		user := auth.GetPermissionHelper().GetAuthenticatedUser(ctx)
-		if user == nil {
-			return dashboardService.GetEventsForDistrict(""), nil
-		}
-
-		sme, err := smeService.GetSmeByUserEmail(user.Email)
-		if err != nil || sme == nil {
-			return dashboardService.GetEventsForDistrict(""), nil
-		}
-
-		district := ""
-		if sme.District != nil {
-			district = *sme.District
-		}
-		// Use the new method that includes isAttending flag
-		return dashboardService.GetEventsForDistrictWithAttendance(district, sme.ID), nil
-	})
 
 	// Helper function to get user's linked SME
 	getSmeForUser := func(ctx http.Context) *uint {
@@ -176,20 +156,6 @@ func NewMemberPageController() *MemberPageController {
 		}
 
 		return sme.UsmeNumber, nil
-	})
-
-	controller.AddExtraDataProvider("district", func(ctx http.Context) (interface{}, error) {
-		user := auth.GetPermissionHelper().GetAuthenticatedUser(ctx)
-		if user == nil {
-			return nil, nil
-		}
-
-		sme, err := smeService.GetSmeByUserEmail(user.Email)
-		if err != nil || sme == nil {
-			return nil, nil
-		}
-
-		return sme.District, nil
 	})
 
 	return controller

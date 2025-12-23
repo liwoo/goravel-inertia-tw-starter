@@ -33,13 +33,14 @@ func (listener *BroadcastEventNotification) Handle(args ...any) error {
 		return nil
 	}
 
-	senderID, ok := args[0].(uint)
+	// Note: After JSON serialization in queue, numbers come back as float64
+	senderID, ok := toUint(args[0])
 	if !ok {
 		facades.Log().Warning("BroadcastEventNotification: Invalid senderID type")
 		return nil
 	}
 
-	eventID, ok := args[1].(uint)
+	eventID, ok := toUint(args[1])
 	if !ok {
 		facades.Log().Warning("BroadcastEventNotification: Invalid eventID type")
 		return nil

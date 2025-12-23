@@ -40,4 +40,6 @@ export interface DirectoryPageProps {
   smes: DirectorySME[];
   filters: DirectoryFilters;
   pagination: DirectoryPagination;
+  userFormalisationScore: number;
+  minScoreForContactView: number;
 }

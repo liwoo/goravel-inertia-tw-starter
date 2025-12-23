@@ -23,6 +23,8 @@ export default function DirectoryIndex({
   smes: initialSmes = [],
   filters: initialFilters,
   pagination: initialPagination,
+  userFormalisationScore = 0,
+  minScoreForContactView = 70,
 }: DirectoryPageProps) {
   const isMobile = useIsMobile();
 
@@ -275,7 +277,12 @@ export default function DirectoryIndex({
             ) : smes.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {smes.map((sme) => (
-                  <DirectorySMECard key={sme.usme_number} sme={sme} />
+                  <DirectorySMECard
+                    key={sme.usme_number}
+                    sme={sme}
+                    canViewContactDetails={userFormalisationScore >= minScoreForContactView}
+                    minScoreRequired={minScoreForContactView}
+                  />
                 ))}
               </div>
             ) : (

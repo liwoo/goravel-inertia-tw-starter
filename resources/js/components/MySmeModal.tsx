@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DISTRICT_NAMES } from '@/constants/districts';
+import { SECTOR_NAMES } from '@/constants/sectors';
 import { NATIONALITY_OPTIONS } from '@/types/nationalities';
 import { GENDER_OPTIONS } from '@/types/gender';
 import { EDUCATION_OPTIONS } from '@/types/education';
@@ -111,15 +112,11 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
   const [ownerData, setOwnerData] = useState<PrimaryOwnerData | null>(null);
   const [ownerErrors, setOwnerErrors] = useState<Record<string, string>>({});
 
-  // Configuration options
-  const [sectorOptions, setSectorOptions] = useState<string[]>([]);
-
   // Fetch SME and Owner Data when modal opens
   useEffect(() => {
     if (open && smeId) {
       console.log('MySmeModal: Fetching data for smeId:', smeId);
       fetchData();
-      fetchConfigs();
     }
   }, [open, smeId]);
 
@@ -177,49 +174,15 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
     }
   };
 
-  const fetchConfigs = async () => {
-    try {
-      const sectorRes = await axios.get('/api/configs', {
-        params: { config_type: 'Sectors', pageSize: 100, sort: 'name', direction: 'ASC' }
-      });
-      console.log('MySmeModal: Sector configs response:', sectorRes.data);
-
-      // Handle various response formats
-      let sectors: string[] = [];
-      const responseData = sectorRes.data;
-
-      if (responseData?.data?.data && Array.isArray(responseData.data.data)) {
-        // Format: { data: { data: [...] } }
-        sectors = responseData.data.data.map((s: any) => s.name || s.Name).filter(Boolean);
-      } else if (responseData?.data && Array.isArray(responseData.data)) {
-        // Format: { data: [...] }
-        sectors = responseData.data.map((s: any) => s.name || s.Name).filter(Boolean);
-      } else if (Array.isArray(responseData)) {
-        // Format: [...]
-        sectors = responseData.map((s: any) => s.name || s.Name).filter(Boolean);
-      }
-
-      console.log('MySmeModal: Parsed sector options:', sectors);
-      setSectorOptions(sectors);
-    } catch (error) {
-      console.error('MySmeModal: Error fetching configs:', error);
-    }
-  };
-
   const validateBusinessData = (): boolean => {
     const errors: Record<string, string> = {};
 
-    if (!smeData.name?.trim()) {
-      errors.name = 'Business name is required';
-    }
+    // Note: name and contactEmail are disabled fields, not validated
     if (!smeData.sector?.trim()) {
       errors.sector = 'Sector is required';
     }
     if (!smeData.contactPhone?.trim()) {
       errors.contactPhone = 'Contact phone is required';
-    }
-    if (!smeData.contactEmail?.trim()) {
-      errors.contactEmail = 'Contact email is required';
     }
 
     setSmeErrors(errors);
@@ -231,15 +194,7 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
 
     const errors: Record<string, string> = {};
 
-    if (!ownerData.firstName?.trim()) {
-      errors.firstName = 'First name is required';
-    }
-    if (!ownerData.lastName?.trim()) {
-      errors.lastName = 'Last name is required';
-    }
-    if (!ownerData.nationalIdNumber?.trim()) {
-      errors.nationalIdNumber = 'National ID is required';
-    }
+    // Note: firstName, lastName, nationalIdNumber, and email are disabled fields, not validated
     if (!ownerData.gender?.trim()) {
       errors.gender = 'Gender is required';
     }
@@ -259,12 +214,11 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
 
     setIsSaving(true);
     try {
+      // Note: name and contactEmail are not sent as they cannot be changed
       const payload = snakefiyKeys({
-        name: smeData.name,
         sector: smeData.sector,
         subSector: smeData.subSector,
         contactPhone: smeData.contactPhone,
-        contactEmail: smeData.contactEmail,
         website: smeData.website,
         district: smeData.district,
         physicalAddress: smeData.physicalAddress,
@@ -291,14 +245,11 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
 
     setIsSaving(true);
     try {
+      // Note: firstName, lastName, nationalIdNumber, and email are not sent as they cannot be changed
       const payload = snakefiyKeys({
-        firstName: ownerData.firstName,
-        lastName: ownerData.lastName,
-        nationalIdNumber: ownerData.nationalIdNumber,
         dateOfBirth: ownerData.dateOfBirth,
         gender: ownerData.gender,
-        phoneNumber: ownerData.phoneNumber,
-        email: ownerData.email
+        phoneNumber: ownerData.phoneNumber
       });
 
       // Use /api/my-sme/primary-owner endpoint which bypasses admin permissions
@@ -322,12 +273,13 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
 
   // Ensure current sector is included in options for display
   const effectiveSectorOptions = useMemo(() => {
-    const options = [...sectorOptions];
+    const options: string[] = [...SECTOR_NAMES];
+    // Include current sector if not in standard list (legacy data)
     if (smeData.sector && !options.includes(smeData.sector)) {
       options.unshift(smeData.sector);
     }
     return options;
-  }, [sectorOptions, smeData.sector]);
+  }, [smeData.sector]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -357,15 +309,14 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Business Name *</Label>
+                        <Label htmlFor="name">Business Name</Label>
                         <Input
                           id="name"
                           value={smeData.name}
-                          onChange={(e) => setSmeData({ ...smeData, name: e.target.value })}
-                          placeholder="Enter business name"
-                          className={smeErrors.name ? 'border-destructive' : ''}
+                          disabled
+                          className="bg-muted cursor-not-allowed"
                         />
-                        {smeErrors.name && <p className="text-sm text-destructive">{smeErrors.name}</p>}
+                        <p className="text-xs text-muted-foreground">Business name cannot be changed</p>
                       </div>
 
                       <div className="space-y-2">
@@ -412,16 +363,15 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="contactEmail">Contact Email *</Label>
+                        <Label htmlFor="contactEmail">Contact Email</Label>
                         <Input
                           id="contactEmail"
                           type="email"
                           value={smeData.contactEmail}
-                          onChange={(e) => setSmeData({ ...smeData, contactEmail: e.target.value })}
-                          placeholder="Enter email"
-                          className={smeErrors.contactEmail ? 'border-destructive' : ''}
+                          disabled
+                          className="bg-muted cursor-not-allowed"
                         />
-                        {smeErrors.contactEmail && <p className="text-sm text-destructive">{smeErrors.contactEmail}</p>}
+                        <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                       </div>
 
                       <div className="space-y-2">
@@ -508,40 +458,36 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="firstName">First Name *</Label>
+                            <Label htmlFor="firstName">First Name</Label>
                             <Input
                               id="firstName"
                               value={ownerData.firstName}
-                              onChange={(e) => setOwnerData({ ...ownerData, firstName: e.target.value })}
-                              placeholder="Enter first name"
-                              className={ownerErrors.firstName ? 'border-destructive' : ''}
+                              disabled
+                              className="bg-muted cursor-not-allowed"
                             />
-                            {ownerErrors.firstName && <p className="text-sm text-destructive">{ownerErrors.firstName}</p>}
+                            <p className="text-xs text-muted-foreground">Name cannot be changed</p>
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="lastName">Last Name *</Label>
+                            <Label htmlFor="lastName">Last Name</Label>
                             <Input
                               id="lastName"
                               value={ownerData.lastName}
-                              onChange={(e) => setOwnerData({ ...ownerData, lastName: e.target.value })}
-                              placeholder="Enter last name"
-                              className={ownerErrors.lastName ? 'border-destructive' : ''}
+                              disabled
+                              className="bg-muted cursor-not-allowed"
                             />
-                            {ownerErrors.lastName && <p className="text-sm text-destructive">{ownerErrors.lastName}</p>}
+                            <p className="text-xs text-muted-foreground">Name cannot be changed</p>
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="nationalIdNumber">National ID *</Label>
+                            <Label htmlFor="nationalIdNumber">National ID</Label>
                             <Input
                               id="nationalIdNumber"
                               value={ownerData.nationalIdNumber}
-                              onChange={(e) => setOwnerData({ ...ownerData, nationalIdNumber: e.target.value.toUpperCase() })}
-                              placeholder={EXAMPLE_FORMATS.NATIONAL_ID}
-                              maxLength={8}
-                              className={ownerErrors.nationalIdNumber ? 'border-destructive' : ''}
+                              disabled
+                              className="bg-muted cursor-not-allowed"
                             />
-                            {ownerErrors.nationalIdNumber && <p className="text-sm text-destructive">{ownerErrors.nationalIdNumber}</p>}
+                            <p className="text-xs text-muted-foreground">National ID cannot be changed</p>
                           </div>
 
                           <div className="space-y-2">
@@ -595,9 +541,10 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
                               id="email"
                               type="email"
                               value={ownerData.email}
-                              onChange={(e) => setOwnerData({ ...ownerData, email: e.target.value })}
-                              placeholder="Enter email"
+                              disabled
+                              className="bg-muted cursor-not-allowed"
                             />
+                            <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                           </div>
                         </div>
                       </CardContent>

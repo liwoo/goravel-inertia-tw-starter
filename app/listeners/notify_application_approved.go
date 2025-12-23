@@ -33,13 +33,14 @@ func (listener *NotifyApplicationApproved) Handle(args ...any) error {
 		return nil
 	}
 
-	approverUserID, ok := args[0].(uint)
+	// Note: After JSON serialization in queue, numbers come back as float64
+	approverUserID, ok := toUint(args[0])
 	if !ok {
 		facades.Log().Warning("NotifyApplicationApproved: Invalid approverUserID type")
 		return nil
 	}
 
-	applicationID, ok := args[1].(uint)
+	applicationID, ok := toUint(args[1])
 	if !ok {
 		facades.Log().Warning("NotifyApplicationApproved: Invalid applicationID type")
 		return nil
