@@ -106,13 +106,13 @@ export function DashboardKpiCards({
   // Collect visible cards
   const cards: React.ReactNode[] = [];
 
-  // Total SMEs Card - only if user can view SMEs
+  // Total MSMEs Card - only if user can view SMEs
   if (canViewSmes) {
     cards.push(
       <Card key="total-smes">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total SMEs
+            Total MSMEs
           </CardTitle>
           <Building2 className="h-4 w-4 text-muted-foreground" />
         </CardHeader>

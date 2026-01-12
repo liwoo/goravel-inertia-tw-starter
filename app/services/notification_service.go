@@ -754,12 +754,12 @@ func (s *NotificationService) NotifyApplicationStatusSync(
 	if status == "approved" {
 		if applicationType == "amend_formalisation" {
 			title = "Amendment Approved"
-			message = fmt.Sprintf("Your formalisation amendment for %s has been approved. The changes have been applied to your SME profile.", smeName)
-			messageContent = fmt.Sprintf("✅ **Amendment Approved**\n\nYour formalisation amendment request for **%s** has been approved.\n\nThe requested changes have been applied to your SME profile. You can view your updated profile in the Member Portal.", smeName)
+			message = fmt.Sprintf("Your formalisation amendment for %s has been approved. The changes have been applied to your MSME profile.", smeName)
+			messageContent = fmt.Sprintf("✅ **Amendment Approved**\n\nYour formalisation amendment request for **%s** has been approved.\n\nThe requested changes have been applied to your MSME profile. You can view your updated profile in the Member Portal.", smeName)
 		} else {
 			title = "Application Approved"
 			message = fmt.Sprintf("Your application for %s has been approved. Welcome to SMEDI!", smeName)
-			messageContent = fmt.Sprintf("✅ **Application Approved**\n\nCongratulations! Your application for **%s** has been approved.\n\nWelcome to the SME Database! You can now access all the features available in the Member Portal.", smeName)
+			messageContent = fmt.Sprintf("✅ **Application Approved**\n\nCongratulations! Your application for **%s** has been approved.\n\nWelcome to the MSME Database! You can now access all the features available in the Member Portal.", smeName)
 		}
 	} else { // rejected
 		priority = "high"

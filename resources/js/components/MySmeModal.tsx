@@ -285,7 +285,7 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-xl md:max-w-2xl overflow-hidden flex flex-col">
         <SheetHeader className="flex-shrink-0 pb-4">
-          <SheetTitle className="text-2xl">My SME Details</SheetTitle>
+          <SheetTitle className="text-2xl">My MSME Details</SheetTitle>
         </SheetHeader>
 
         {isLoading ? (

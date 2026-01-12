@@ -43,7 +43,7 @@ export interface SearchEntityConfig {
 export const SEARCH_ENTITIES: SearchEntityConfig[] = [
   {
     type: 'sme',
-    label: 'SMEs',
+    label: 'MSMEs',
     icon: <Building2 className="h-4 w-4" />,
     permissionService: 'smes',
     permissionAction: 'read',

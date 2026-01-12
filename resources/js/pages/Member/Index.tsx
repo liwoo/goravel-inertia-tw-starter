@@ -113,8 +113,8 @@ export default function MemberIndex({
   ));
 
   return (
-    <Admin title={"SME Portal"}>
-      <Head title="SME Portal" />
+    <Admin title={"MSME Portal"}>
+      <Head title="MSME Portal" />
 
       <div className="p-4 md:p-6 flex flex-col gap-6">
         {/* Welcome Header */}

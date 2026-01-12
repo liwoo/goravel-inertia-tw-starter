@@ -101,8 +101,8 @@ func (r *AdditionalBusinessMemberUpdateRequest) Messages(ctx http.Context) map[s
 		"phone_number.max_len":        "Phone Number cannot exceed 20 characters",
 		"is_intern.boolean":           "Is Intern must be true or false",
 		"is_part_time.boolean":        "Is Part Time must be true or false",
-		"sme_id.required":             "SME ID is required",
-		"sme_id.numeric":              "SME ID must be a number",
+		"sme_id.required":             "MSME ID is required",
+		"sme_id.numeric":              "MSME ID must be a number",
 	}
 }
 

@@ -73,14 +73,14 @@ export const eventColumns: CrudColumn<Event>[] = [
   },
   {
     key: 'attending_smes',
-    label: 'Attending SMEs',
+    label: 'Attending MSMEs',
     sortable: false,
     className: 'min-w-[150px]',
     render: (event) => (
       <div className="flex items-start gap-3">
         <div className="flex-1 space-y-1">
           <div className="flex flex-wrap gap-1">
-            <Badge variant="outline">{event.attending_sme_details?.length || 0} SMEs</Badge>
+            <Badge variant="outline">{event.attending_sme_details?.length || 0} MSMEs</Badge>
           </div>
         </div>
       </div>
@@ -170,9 +170,9 @@ export const eventFilters: CrudFilter[] = [
   },
   {
     key: 'attending_smes',
-    label: 'Attending SMEs',
+    label: 'Attending MSMEs',
     type: 'number',
-    placeholder: 'Enter SME ID',
+    placeholder: 'Enter MSME ID',
   },
   {
     key: 'notes',

@@ -139,12 +139,12 @@ export function EventDetailView({
 
       <TabsContent value="attendees" className="space-y-6 mt-6">
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">Attending SMEs</h3>
+          <h3 className="text-lg font-semibold mb-4 text-foreground">Attending MSMEs</h3>
           {event.attending_sme_details && event.attending_sme_details.length > 0 ? (
             <div className="space-y-2">
               <div className="rounded-md border">
                 <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 border-b font-medium text-sm">
-                  <div>SME Name</div>
+                  <div>MSME Name</div>
                   <div>ID</div>
                 </div>
                 {event.attending_sme_details.map((sme) => (
@@ -162,7 +162,7 @@ export function EventDetailView({
             <div className="flex flex-col items-center justify-center py-12 text-center border rounded-md bg-muted/20">
               <Users className="h-12 w-12 text-muted-foreground/50 mb-3" />
               <p className="text-muted-foreground font-medium">No attendees yet</p>
-              <p className="text-sm text-muted-foreground mt-1">SMEs can register for this event through their portal</p>
+              <p className="text-sm text-muted-foreground mt-1">MSMEs can register for this event through their portal</p>
             </div>
           )}
         </div>

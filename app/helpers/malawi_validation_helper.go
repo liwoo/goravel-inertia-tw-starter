@@ -64,15 +64,32 @@ func (v *MalawiValidationHelper) ValidatePhoneNumber(phone string) bool {
 }
 
 // ValidateBusinessRegistration validates Malawian business registration numbers
-// Format: BRNR-XXXXXX where X is alphanumeric (e.g., BRNR-EP5CWE3)
+// Accepts official MBRS (Malawi Business Registration System) formats:
+// - BRN-XXXXXXX (7 alphanumeric) - sole proprietorships/partnerships
+// - COY-XXXXXX (6 alphanumeric) - incorporated companies
+// - PVT-XXXXXXXX (8 alphanumeric) - private limited companies
+// - BRNR-XXXXXX (6-7 alphanumeric) - legacy format for backward compatibility
 func (v *MalawiValidationHelper) ValidateBusinessRegistration(regNumber string) bool {
 	// Remove spaces and convert to uppercase
 	regNumber = strings.ToUpper(strings.TrimSpace(regNumber))
 
-	// Pattern: BRNR- followed by 6-7 alphanumeric characters
-	pattern := `^BRNR-[A-Z0-9]{6,7}$`
-	matched, _ := regexp.MatchString(pattern, regNumber)
-	return matched
+	// Define patterns for each valid format
+	patterns := []string{
+		`^BRN-[A-Z0-9]{7}$`,    // Sole proprietorships/partnerships
+		`^COY-[A-Z0-9]{6}$`,    // Incorporated companies
+		`^PVT-[A-Z0-9]{8}$`,    // Private limited companies
+		`^BRNR-[A-Z0-9]{6,7}$`, // Legacy format (backward compatibility)
+	}
+
+	// Check if any pattern matches
+	for _, pattern := range patterns {
+		matched, _ := regexp.MatchString(pattern, regNumber)
+		if matched {
+			return true
+		}
+	}
+
+	return false
 }
 
 // ValidateTIN validates Malawian Tax Identification Numbers
@@ -118,14 +135,20 @@ func (v *MalawiValidationHelper) FormatPhoneNumber(phone string) string {
 }
 
 // FormatBusinessRegistration formats a business registration number to standard format
+// Handles MBRS formats: BRN-, COY-, PVT-, and legacy BRNR-
 func (v *MalawiValidationHelper) FormatBusinessRegistration(regNumber string) string {
 	// Remove spaces and convert to uppercase
 	regNumber = strings.ToUpper(strings.TrimSpace(regNumber))
 
-	// If doesn't start with BRNR-, add it
-	if !strings.HasPrefix(regNumber, "BRNR-") && len(regNumber) >= 6 {
-		regNumber = "BRNR-" + regNumber
+	// Check if already has a valid prefix
+	validPrefixes := []string{"BRN-", "COY-", "PVT-", "BRNR-"}
+	for _, prefix := range validPrefixes {
+		if strings.HasPrefix(regNumber, prefix) {
+			return regNumber
+		}
 	}
 
+	// If no valid prefix, don't auto-add one - let validation handle it
+	// This prevents incorrect prefix assignment for new MBRS formats
 	return regNumber
 }

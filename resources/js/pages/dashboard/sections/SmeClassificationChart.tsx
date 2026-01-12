@@ -184,7 +184,7 @@ export function SmeClassificationChart({ data, isLoading = false, height }: SmeC
                       y={(viewBox.cy || 0) + 24}
                       className="fill-muted-foreground text-sm"
                     >
-                      Total SMEs
+                      Total MSMEs
                     </tspan>
                   </text>
                 );

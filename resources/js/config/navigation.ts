@@ -67,7 +67,7 @@ export const navigationConfig: NavigationConfig = {
             // Dashboard is always accessible to authenticated users
         },
         {
-            title: "SMEs",
+            title: "MSMEs",
             url: "/admin/smes",
             icon: User2Icon,
             requiredService: "smes",

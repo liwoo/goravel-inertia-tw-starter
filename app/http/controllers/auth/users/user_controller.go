@@ -92,7 +92,7 @@ func (c *UserController) AssignToSme(ctx http.Context) http.Response {
 
 	if requestBody.SmeID == 0 {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]interface{}{
-			"message": "SME ID is required",
+			"message": "MSME ID is required",
 		})
 	}
 
@@ -108,7 +108,7 @@ func (c *UserController) AssignToSme(ctx http.Context) http.Response {
 	var sme models.Sme
 	if err := facades.Orm().Query().Where("id = ?", requestBody.SmeID).First(&sme); err != nil {
 		return ctx.Response().Json(http.StatusNotFound, map[string]interface{}{
-			"message": "SME not found",
+			"message": "MSME not found",
 		})
 	}
 
@@ -117,7 +117,7 @@ func (c *UserController) AssignToSme(ctx http.Context) http.Response {
 	checkErr := facades.Orm().Query().Where("sme_id = ? AND email = ?", requestBody.SmeID, user.Email).First(&existingOwner)
 	if checkErr == nil && existingOwner.ID > 0 {
 		return ctx.Response().Json(http.StatusConflict, map[string]interface{}{
-			"message": "User is already assigned to this SME",
+			"message": "User is already assigned to this MSME",
 		})
 	}
 
@@ -137,7 +137,7 @@ func (c *UserController) AssignToSme(ctx http.Context) http.Response {
 
 	if err := facades.Orm().Query().Create(&primaryOwner); err != nil {
 		return ctx.Response().Json(http.StatusInternalServerError, map[string]interface{}{
-			"message": fmt.Sprintf("Failed to assign user to SME: %v", err),
+			"message": fmt.Sprintf("Failed to assign user to MSME: %v", err),
 		})
 	}
 
@@ -149,7 +149,7 @@ func (c *UserController) AssignToSme(ctx http.Context) http.Response {
 	})
 
 	return ctx.Response().Json(http.StatusOK, map[string]interface{}{
-		"message": fmt.Sprintf("User %s has been assigned to SME %s", user.Name, sme.Name),
+		"message": fmt.Sprintf("User %s has been assigned to MSME %s", user.Name, sme.Name),
 		"data": map[string]interface{}{
 			"user_id":          userID,
 			"sme_id":           requestBody.SmeID,

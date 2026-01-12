@@ -453,7 +453,7 @@ func (s *SmeService) GetPrimaryBusinessOwner(smeID uint) (*models.PrimaryBusines
 
 	// Check if SME was actually found (ID will be 0 if not found)
 	if sme.ID == 0 {
-		return nil, errors.New("SME not found")
+		return nil, errors.New("MSME not found")
 	}
 
 	return sme.PrimaryBusinessOwner, nil
@@ -500,7 +500,7 @@ func (s *SmeService) GetAdditionalBusinessMembers(smeID uint) ([]models.Addition
 
 	// Check if SME was actually found (ID will be 0 if not found)
 	if sme.ID == 0 {
-		return nil, errors.New("SME not found")
+		return nil, errors.New("MSME not found")
 	}
 
 	return sme.AdditionalBusinessMembers, nil
@@ -520,7 +520,7 @@ func (s *SmeService) GetBusinessFormalisation(smeID uint) (*models.BusinessForma
 
 	// Check if SME was actually found (ID will be 0 if not found)
 	if sme.ID == 0 {
-		return nil, errors.New("SME not found")
+		return nil, errors.New("MSME not found")
 	}
 
 	return sme.BusinessFormalisation, nil
@@ -540,7 +540,7 @@ func (s *SmeService) GetBusinessEmployeeSummary(smeID uint) (*models.BusinessEmp
 
 	// Check if SME was actually found (ID will be 0 if not found)
 	if sme.ID == 0 {
-		return nil, errors.New("SME not found")
+		return nil, errors.New("MSME not found")
 	}
 
 	return sme.BusinessEmployeeSummary, nil
@@ -592,42 +592,42 @@ func generateUBI(data map[string]interface{}) (string, error) {
 
 // getDistrictCode returns the 2-letter district code for a given district name based on ISO 3166-2:MW
 func getDistrictCode(data map[string]interface{}) (string, error) {
-	// District code mapping for all 28 Malawian districts using ISO 3166-2:MW two-letter codes
+	// District code mapping for all 28 Malawian districts
 	districtCodes := map[string]string{
 		// Northern Region
-		"Chitipa":    "CT",
-		"Karonga":    "KR",
+		"Chitipa":    "CP",
+		"Karonga":    "KA",
 		"Mzuzu":      "MZ",
 		"Nkhata Bay": "NB",
 		"Rumphi":     "RU",
-		"Likoma":     "LK",
-		"Mzimba":     "MH", // Added missing district
+		"Likoma":     "LA",
+		"Mzimba":     "MZ", // Same as Mzuzu (Mzuzu city is within Mzimba district)
 
 		// Central Region
-		"Dedza":      "DE",
-		"Dowa":       "DO",
-		"Kasungu":    "KS",
-		"Lilongwe":   "LI",
+		"Dedza":      "DZ",
+		"Dowa":       "DA",
+		"Kasungu":    "KU",
+		"Lilongwe":   "LL",
 		"Mchinji":    "MC",
-		"Nkhotakota": "NK",
+		"Nkhotakota": "KK",
 		"Ntcheu":     "NU",
 		"Ntchisi":    "NI",
 		"Salima":     "SA",
 
 		// Southern Region
-		"Balaka":     "BA", // Confirmed from ISO 3166-2:MW
-		"Blantyre":   "BT", // Confirmed from user specification
+		"Balaka":     "BLK",
+		"Blantyre":   "BT",
 		"Chikwawa":   "CK",
-		"Chiradzulu": "CR",
-		"Machinga":   "MG",
-		"Mangochi":   "MN",
+		"Chiradzulu": "CZ",
+		"Machinga":   "MHG",
+		"Mangochi":   "MH",
 		"Mulanje":    "MJ",
-		"Mwanza":     "MW",
-		"Nsanje":     "NS",
-		"Thyolo":     "TH",
-		"Phalombe":   "PH",
-		"Zomba":      "ZO",
-		"Neno":       "NE",
+		"Mwanza":     "MN",
+		"Nsanje":     "NE",
+		"Thyolo":     "TO",
+		"Phalombe":   "PE",
+		"Zomba":      "ZA",
+		"Neno":       "NN",
 	}
 
 	district, ok := data["district"]
@@ -1271,7 +1271,7 @@ func (s *SmeService) CalculateFormalisationScore(smeID uint) (int, error) {
 	}
 
 	if sme.ID == 0 {
-		return 0, errors.New("SME not found")
+		return 0, errors.New("MSME not found")
 	}
 
 	// Calculate the score breakdown
@@ -1510,7 +1510,7 @@ func (s *SmeService) CalculateClassification(smeID uint) (string, error) {
 	}
 
 	if sme.ID == 0 {
-		return "", errors.New("SME not found")
+		return "", errors.New("MSME not found")
 	}
 
 	// Calculate total employees from all sources

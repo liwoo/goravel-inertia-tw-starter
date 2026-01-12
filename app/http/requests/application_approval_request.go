@@ -19,9 +19,9 @@ func (r *ApplicationApprovalRequest) Rules(ctx http.Context) map[string]string {
 // Messages returns custom validation messages
 func (r *ApplicationApprovalRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"sme_id.required": "SME selection is required",
-		"sme_id.numeric":  "SME ID must be a number",
-		"sme_id.min":      "Invalid SME ID",
+		"sme_id.required": "MSME selection is required",
+		"sme_id.numeric":  "MSME ID must be a number",
+		"sme_id.min":      "Invalid MSME ID",
 	}
 }
 

@@ -174,7 +174,7 @@ export function SmeRegionChart({ data, isLoading = false }: SmeRegionChartProps)
                           y={(viewBox.cy || 0) + 24}
                           className="fill-muted-foreground text-sm"
                         >
-                          Total SMEs
+                          Total MSMEs
                         </tspan>
                       </text>
                     );

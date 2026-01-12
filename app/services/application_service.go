@@ -163,7 +163,7 @@ func (s *ApplicationService) CreateAmendmentApplication(smeID uint, submitterUse
 	// 1. Fetch the SME and its formalisation data
 	var sme models.Sme
 	if err := facades.Orm().Query().With("BusinessFormalisation").Where("id = ?", smeID).First(&sme); err != nil {
-		return nil, fmt.Errorf("SME not found: %w", err)
+		return nil, fmt.Errorf("MSME not found: %w", err)
 	}
 
 	// 2. Build current data from SME
@@ -278,7 +278,7 @@ func (s *ApplicationService) approveSignupApplication(applicationID uint, smeID 
 	// Validate that the SME exists
 	var sme models.Sme
 	if err := facades.Orm().Query().Where("id = ?", smeID).First(&sme); err != nil {
-		return nil, fmt.Errorf("SME not found: %w", err)
+		return nil, fmt.Errorf("MSME not found: %w", err)
 	}
 
 	// Check if user with this email already exists
@@ -388,7 +388,7 @@ func (s *ApplicationService) approveSignupApplication(applicationID uint, smeID 
 	s.notificationService.CreateNotification(
 		user.ID,
 		"Welcome to SMEDI",
-		"Your application has been approved. Welcome to the SME Database!",
+		"Your application has been approved. Welcome to the MSME Database!",
 		"application_approved",
 		&approverUserID,
 		strPtr("application"),
@@ -411,7 +411,7 @@ func (s *ApplicationService) approveSignupApplication(applicationID uint, smeID 
 // approveAmendmentApplication handles approval of formalisation amendment applications
 func (s *ApplicationService) approveAmendmentApplication(applicationID uint, application models.Application, approverUserID uint) (map[string]interface{}, error) {
 	if application.SmeID == nil || application.Data == nil {
-		return nil, fmt.Errorf("invalid amendment application: missing SME ID or data")
+		return nil, fmt.Errorf("invalid amendment application: missing MSME ID or data")
 	}
 
 	// Parse the amendment data
@@ -426,7 +426,7 @@ func (s *ApplicationService) approveAmendmentApplication(applicationID uint, app
 	// Fetch the SME with formalisation
 	var sme models.Sme
 	if err := facades.Orm().Query().With("BusinessFormalisation").Where("id = ?", smeID).First(&sme); err != nil {
-		return nil, fmt.Errorf("SME not found: %w", err)
+		return nil, fmt.Errorf("MSME not found: %w", err)
 	}
 
 	// Update SME-level fields if provided
