@@ -75,6 +75,7 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251216210411AddContractFieldsToBusinessEmployeeSummary{},
 		&migrations.M20251216215300ExpandVarcharFields{},
 		&migrations.AddScoreComponentsToBusinessFormalisation{},
+		&migrations.M20260112090000UpdateUsmeDistrictCodes{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {
