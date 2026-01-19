@@ -34,7 +34,7 @@ export function ProcurementNoticeDetailView({
                 });
                 setSmeMap(map);
             } catch (error) {
-                console.error('Error fetching SMEs:', error);
+                console.error('Error fetching MSMEs:', error);
             }
         };
 

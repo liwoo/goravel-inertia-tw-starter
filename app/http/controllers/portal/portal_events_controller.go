@@ -39,7 +39,7 @@ func (c *PortalEventsController) Attend(ctx http.Context) http.Response {
 	if err != nil || sme == nil {
 		return ctx.Response().Status(http.StatusBadRequest).Json(http.Json{
 			"success": false,
-			"message": "No SME linked to your account",
+			"message": "No MSME linked to your account",
 		})
 	}
 
@@ -95,7 +95,7 @@ func (c *PortalEventsController) Unattend(ctx http.Context) http.Response {
 	if err != nil || sme == nil {
 		return ctx.Response().Status(http.StatusBadRequest).Json(http.Json{
 			"success": false,
-			"message": "No SME linked to your account",
+			"message": "No MSME linked to your account",
 		})
 	}
 

@@ -124,7 +124,7 @@ interface AdditionalMemberData {
 }
 
 const STEPS = [
-  { id: 1, name: 'Business Information', description: 'Basic SME details' },
+  { id: 1, name: 'Business Information', description: 'Basic MSME details' },
   { id: 2, name: 'Primary Owner', description: 'Business owner information' },
   { id: 3, name: 'Formalization', description: 'Business formalization status' },
   { id: 4, name: 'Additional Members', description: 'Optional team members' },
@@ -632,7 +632,7 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
       }
 
       // Call onSuccess with a string message (for CrudPage toast display)
-      onSuccess?.('SME created successfully');
+      onSuccess?.('MSME created successfully');
 
       // Call onSmeCreated with the SME data object (for approval workflow)
       if (onSmeCreated) {
@@ -643,7 +643,7 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
         });
       }
     } catch (error: any) {
-      onError?.(error.message || 'Failed to create SME');
+      onError?.(error.message || 'Failed to create MSME');
     } finally {
       setIsSubmitting(false);
       setIsSaving?.(false);
@@ -1969,7 +1969,7 @@ export const SmeCreateForm = forwardRef<any, SmeCreateFormProps>(({
               onClick={handleSubmit}
               disabled={isLoading}
             >
-              {isLoading ? 'Creating...' : 'Create SME'}
+              {isLoading ? 'Creating...' : 'Create MSME'}
             </Button>
           )}
         </div>

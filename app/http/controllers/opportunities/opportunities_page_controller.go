@@ -65,7 +65,7 @@ func (c *OpportunitiesPageController) Index(ctx http.Context) http.Response {
 			"formalisationScore":    0,
 			"userName":              user.Name,
 			"smeName":               "",
-			"error":                 "No SME linked to your account",
+			"error":                 "No MSME linked to your account",
 			"calendarEvents":        c.dashboardService.GetEventsForDistrict(""),
 		})
 	}
@@ -204,7 +204,7 @@ func (c *OpportunitiesPageController) ShowInterest(ctx http.Context) http.Respon
 	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
 	if err != nil || sme == nil {
 		return ctx.Response().Status(400).Json(map[string]interface{}{
-			"error": "No SME linked to your account",
+			"error": "No MSME linked to your account",
 		})
 	}
 
@@ -276,7 +276,7 @@ func (c *OpportunitiesPageController) WithdrawInterest(ctx http.Context) http.Re
 	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
 	if err != nil || sme == nil {
 		return ctx.Response().Status(400).Json(map[string]interface{}{
-			"error": "No SME linked to your account",
+			"error": "No MSME linked to your account",
 		})
 	}
 

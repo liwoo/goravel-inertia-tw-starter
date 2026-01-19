@@ -160,7 +160,7 @@ export default function UsersIndex({
         toast.error('Failed to load MSMEs');
       }
     } catch (error) {
-      console.error('Error fetching SMEs:', error);
+      console.error('Error fetching MSMEs:', error);
       toast.error('Failed to load MSMEs');
     } finally {
       setIsLoadingSmes(false);
@@ -185,7 +185,7 @@ export default function UsersIndex({
         }
       }
     } catch (error) {
-      console.error('Error fetching user assigned SME:', error);
+      console.error('Error fetching user assigned MSME:', error);
     }
   };
 
@@ -227,7 +227,7 @@ export default function UsersIndex({
         toast.error(data.message || 'Failed to assign user to MSME');
       }
     } catch (error) {
-      console.error('Error assigning user to SME:', error);
+      console.error('Error assigning user to MSME:', error);
       toast.error('Failed to assign user to MSME');
     } finally {
       setIsAssigning(false);

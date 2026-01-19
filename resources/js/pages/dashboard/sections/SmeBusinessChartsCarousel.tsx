@@ -40,7 +40,7 @@ const BAR_COLORS = [
 const generateBarChartConfig = (data: DistributionPoint[], labelKey: string): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SMEs",
+      label: "MSMEs",
     },
   };
 

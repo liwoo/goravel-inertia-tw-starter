@@ -123,7 +123,7 @@ export default function ApplicationIndex({
         toast.info('Failed to load MSMEs');
       }
     } catch (error) {
-      console.error('Error fetching SMEs:', error);
+      console.error('Error fetching MSMEs:', error);
       toast.info('Failed to load MSMEs');
     } finally {
       setIsLoadingSmes(false);

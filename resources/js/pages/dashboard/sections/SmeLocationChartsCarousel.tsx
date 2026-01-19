@@ -43,7 +43,7 @@ const CHART_COLORS = [
 const generateRegionChartConfig = (data: DistributionPoint[]): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SMEs",
+      label: "MSMEs",
     },
   };
 

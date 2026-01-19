@@ -32,7 +32,7 @@ func (receiver *SmeImport) Signature() string {
 
 // Description The console command description.
 func (receiver *SmeImport) Description() string {
-	return "Import SME data from an Excel file"
+	return "Import MSME data from an Excel file"
 }
 
 // Extend The console command extend.
@@ -60,7 +60,7 @@ func (receiver *SmeImport) Extend() command.Extend {
 			&command.BoolFlag{
 				Name:    "truncate",
 				Aliases: []string{"t"},
-				Usage:   "Delete ALL existing SMEs before import (use with caution!)",
+				Usage:   "Delete ALL existing MSMEs before import (use with caution!)",
 			},
 			&command.IntFlag{
 				Name:    "start-row",
@@ -163,7 +163,7 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 		defer closeCustomDB(customDB)
 	}
 
-	ctx.Info(fmt.Sprintf("Starting SME import from: %s", filePath))
+	ctx.Info(fmt.Sprintf("Starting MSME import from: %s", filePath))
 	ctx.Info(fmt.Sprintf("Batch size: %d", batchSize))
 	if dryRun {
 		ctx.Warning("DRY RUN MODE - No database changes will be made")
@@ -220,14 +220,14 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 		if startRow > 1 {
 			ctx.Warning("Ignoring --truncate because --start-row is set (cannot truncate when resuming)")
 		} else if !dryRun {
-			ctx.Warning("TRUNCATE MODE: Deleting ALL existing SMEs and related data...")
+			ctx.Warning("TRUNCATE MODE: Deleting ALL existing MSMEs and related data...")
 			if err := deleteExistingSmes(ctx, customDB); err != nil {
-				ctx.Error(fmt.Sprintf("Failed to delete existing SMEs: %v", err))
+				ctx.Error(fmt.Sprintf("Failed to delete existing MSMEs: %v", err))
 				return err
 			}
-			ctx.Success("Existing SMEs deleted successfully")
+			ctx.Success("Existing MSMEs deleted successfully")
 		} else {
-			ctx.Warning("DRY RUN: Would delete all existing SMEs (--truncate flag set)")
+			ctx.Warning("DRY RUN: Would delete all existing MSMEs (--truncate flag set)")
 		}
 	} else {
 		ctx.Info("Running in incremental mode (duplicates will be skipped)")
@@ -292,7 +292,7 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 			if isDuplicate {
 				duplicateCount++
 				ctx.Warning(fmt.Sprintf("Row %d: Skipped (duplicate) - %s '%s' already exists (%s)",
-					rowNum, "SME", smeData.BusinessName, matchReason))
+					rowNum, "MSME", smeData.BusinessName, matchReason))
 				continue
 			}
 
@@ -307,7 +307,7 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 			}
 
 			successCount++
-			ctx.Success(fmt.Sprintf("Row %d: SME '%s' imported successfully", rowNum, smeData.BusinessName))
+			ctx.Success(fmt.Sprintf("Row %d: MSME '%s' imported successfully", rowNum, smeData.BusinessName))
 		}
 	}
 
@@ -821,17 +821,65 @@ func generatePlaceholderEmail(businessName string) string {
 	return fmt.Sprintf("%s%s", cleaned, services.PlaceholderEmailDomain)
 }
 
-// checkForDuplicate checks if an SME with matching criteria already exists in the database
-// Returns (isDuplicate bool, matchReason string)
+// isPlaceholderNationalID checks if a National ID is a known placeholder value
+// that should not be used for duplicate detection. These are commonly used
+// when the actual National ID is unknown or not provided during data collection.
+func isPlaceholderNationalID(nationalID string) bool {
+	if nationalID == "" {
+		return true
+	}
+
+	// Normalize for comparison
+	id := strings.ToLower(strings.TrimSpace(nationalID))
+
+	// Known placeholder patterns
+	placeholders := []string{
+		"00000000",
+		"0000000p",
+		"xxxxxxxx",
+		"hhhhh000",
+		"hhhhhh00",
+		"hhhhhhh0",
+		"n/a",
+		"na",
+		"none",
+		"-",
+		"unknown",
+		"pending",
+	}
+
+	for _, placeholder := range placeholders {
+		if id == placeholder {
+			return true
+		}
+	}
+
+	// Check for patterns like all zeros, all x's, all h's
+	if matched, _ := regexp.MatchString(`^0+p?$`, id); matched {
+		return true
+	}
+	if matched, _ := regexp.MatchString(`^x+$`, id); matched {
+		return true
+	}
+	if matched, _ := regexp.MatchString(`^h+0*$`, id); matched {
+		return true
+	}
+
+	return false
+}
+
+// checkForDuplicate checks if an SME with matching criteria already exists in the database.
+// Returns (isDuplicate bool, matchReason string).
 // Matching criteria (in order of priority):
-// 1. National ID number (most unique identifier)
+// 1. National ID number (most unique identifier) - skips placeholder values like "00000000"
 // 2. Business registration number (if registered)
 // 3. Business name + Owner name combination
 func checkForDuplicate(data *SmeImportData, customDB *gorm.DB) (bool, string) {
 	var count int64
 
 	// 1. Check by National ID (most reliable unique identifier)
-	if data.OwnerNationalID != "" {
+	// Skip placeholder IDs as they are not reliable for duplicate detection
+	if data.OwnerNationalID != "" && !isPlaceholderNationalID(data.OwnerNationalID) {
 		if customDB != nil {
 			customDB.Model(&models.PrimaryBusinessOwner{}).
 				Where("national_id_number = ?", data.OwnerNationalID).

@@ -58,7 +58,7 @@ const FALLBACK_COLORS = [
 const generateGenderChartConfig = (data: DistributionPoint[]): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SME Owners",
+      label: "MSME Owners",
     },
   };
 
@@ -222,11 +222,11 @@ export function SmeOwnerChartsCarousel({
   const chartInfo = [
     {
       title: "Owner Gender Distribution",
-      description: "Primary SME owners by gender",
+      description: "Primary MSME owners by gender",
     },
     {
       title: "Owner Youth Distribution",
-      description: "SME owners by age group (18-35 = Youth)",
+      description: "MSME owners by age group (18-35 = Youth)",
     },
     {
       title: "Age & Gender Distribution",

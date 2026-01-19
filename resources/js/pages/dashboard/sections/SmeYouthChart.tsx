@@ -43,7 +43,7 @@ const FALLBACK_COLORS = [
 const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SME Owners",
+      label: "MSME Owners",
     },
   };
 

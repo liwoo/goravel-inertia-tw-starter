@@ -64,7 +64,7 @@ func (s *ConfigSeeder) Run() error {
 		{Name: "Primary Cooperative", Code: strPtr("BC_COOP1"), ConfigType: "Business Categories"},
 		{Name: "Secondary Cooperative", Code: strPtr("BC_COOP2"), ConfigType: "Business Categories"},
 		{Name: "Sole Proprietorship", Code: strPtr("BC_SOLE"), ConfigType: "Business Categories"},
-		{Name: "Group SME", Code: strPtr("BC_GROUP"), ConfigType: "Business Categories"},
+		{Name: "Group MSME", Code: strPtr("BC_GROUP"), ConfigType: "Business Categories"},
 		{Name: "Private Company", Code: strPtr("BC_PRIV"), ConfigType: "Business Categories"},
 		{Name: "Association", Code: strPtr("BC_ASSOC"), ConfigType: "Business Categories"},
 	}
@@ -74,8 +74,8 @@ func (s *ConfigSeeder) Run() error {
 		{Name: "Microfinance", Code: strPtr("IND_MFI"), ConfigType: "Industries"},
 		{Name: "Business Counselling and Training", Code: strPtr("IND_BCT"), ConfigType: "Industries"},
 		{Name: "MSMEs Consultants", Code: strPtr("IND_CONS"), ConfigType: "Industries"},
-		{Name: "Banks with SME Products", Code: strPtr("IND_BANK"), ConfigType: "Industries"},
-		{Name: "SME Insurance Facilities", Code: strPtr("IND_INS"), ConfigType: "Industries"},
+		{Name: "Banks with MSME Products", Code: strPtr("IND_BANK"), ConfigType: "Industries"},
+		{Name: "MSME Insurance Facilities", Code: strPtr("IND_INS"), ConfigType: "Industries"},
 		{Name: "Market Linkages", Code: strPtr("IND_MKT"), ConfigType: "Industries"},
 		{Name: "Institutions that deal with MSMEs", Code: strPtr("IND_INST"), ConfigType: "Industries"},
 	}

@@ -35,20 +35,20 @@ export default function AdminLayout({title, children}: AdminLayoutProps) {
             if (customEvent.detail?.action === 'openMySmeModal') {
                 // Fetch user's linked SME ID if not already loaded
                 if (!userSmeId && user?.email) {
-                    console.log('Admin: Fetching SME for user email:', user.email);
+                    console.log('Admin: Fetching MSME for user email:', user.email);
                     try {
                         const response = await axios.get('/api/smes/by-email');
-                        console.log('Admin: SME by-email response:', response.data);
+                        console.log('Admin: MSME by-email response:', response.data);
                         const smeId = response.data?.data?.id || response.data?.data?.ID;
                         if (smeId) {
                             console.log('Admin: Setting userSmeId to:', smeId);
                             setUserSmeId(smeId);
                             setMySmeModalOpen(true);
                         } else {
-                            console.error('Admin: No SME ID found in response');
+                            console.error('Admin: No MSME ID found in response');
                         }
                     } catch (error) {
-                        console.error('Admin: Failed to fetch user SME:', error);
+                        console.error('Admin: Failed to fetch user MSME:', error);
                     }
                 } else if (userSmeId) {
                     console.log('Admin: Using cached userSmeId:', userSmeId);

@@ -105,7 +105,7 @@ export default function SmeIndex({
 
     // Prepare statistics if requested
     const statistics = options.includeStats && stats ? {
-      'Total SMEs': stats.totalSmes,
+      'Total MSMEs': stats.totalSmes,
       'New This Month': stats.newThisMonth,
       'New Last Month': stats.newLastMonth,
       'Has Registration': stats.hasRegistration,
@@ -131,7 +131,7 @@ export default function SmeIndex({
         rows: exportRows,
         columns,
         statistics,
-        title: 'SME Export',
+        title: 'MSME Export',
       },
       {
         ...options,
@@ -158,7 +158,7 @@ export default function SmeIndex({
       icon: <PowerOff className="h-4 w-4" />,
       variant: 'warning',
       confirm: true,
-      confirmMessage: 'Are you sure you want to deactivate the selected SMEs?',
+      confirmMessage: 'Are you sure you want to deactivate the selected MSMEs?',
     },
     {
       key: 'activate',
@@ -166,7 +166,7 @@ export default function SmeIndex({
       icon: <Power className="h-4 w-4" />,
       variant: 'default',
       confirm: true,
-      confirmMessage: 'Are you sure you want to activate the selected SMEs?',
+      confirmMessage: 'Are you sure you want to activate the selected MSMEs?',
     },
   ];
 
@@ -199,12 +199,12 @@ export default function SmeIndex({
       }
     } catch (error) {
       console.error(`Bulk ${action} error:`, error);
-      toast.error(`Failed to ${action} SMEs`);
+      toast.error(`Failed to ${action} MSMEs`);
     }
   };
 
   return (
-    <Admin title={"SME Management"}>
+    <Admin title={"MSME Management"}>
       <Head title="Sme - Management" />
 
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -216,7 +216,7 @@ export default function SmeIndex({
           <CrudPage<Sme>
             data={data}
             filters={filters}
-            title="SMEs Management"
+            title="MSMEs Management"
             resourceName="smes"
             columns={isMobile ? smeColumnsMobile : smeColumns}
             customFilters={smeFilters}
@@ -244,8 +244,8 @@ export default function SmeIndex({
         totalItems={data.data.length}
         availableFields={smeExportFields}
         defaultFields={defaultSmeExportFields}
-        title="Export SMEs"
-        description={`Export ${data.data.length.toLocaleString()} SME records from the current page.`}
+        title="Export MSMEs"
+        description={`Export ${data.data.length.toLocaleString()} MSME records from the current page.`}
         showStatsOption={!!stats}
         defaultFilename="smes-export"
         preparedBy={currentUser?.name}

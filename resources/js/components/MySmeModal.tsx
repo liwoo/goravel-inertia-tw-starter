@@ -130,7 +130,7 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
         axios.get('/api/my-sme/primary-owner')
       ]);
 
-      console.log('MySmeModal: SME Response:', smeRes.data);
+      console.log('MySmeModal: MSME Response:', smeRes.data);
       console.log('MySmeModal: Owner Response:', ownerRes.data);
 
       // Handle nested data structure - API returns { success, data, message }
@@ -148,7 +148,7 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
           physicalAddress: smeDataRaw.physical_address || smeDataRaw.physicalAddress || smeDataRaw.PhysicalAddress || '',
           businessDescription: smeDataRaw.business_description || smeDataRaw.businessDescription || smeDataRaw.BusinessDescription || ''
         });
-        console.log('MySmeModal: SME Data set:', smeDataRaw);
+        console.log('MySmeModal: MSME Data set:', smeDataRaw);
       }
 
       const ownerDataRaw = ownerRes.data?.data || ownerRes.data;
@@ -168,7 +168,7 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
       }
     } catch (error) {
       console.error('MySmeModal: Error fetching data:', error);
-      toast.error('Failed to load SME details');
+      toast.error('Failed to load MSME details');
     } finally {
       setIsLoading(false);
     }
@@ -230,7 +230,7 @@ export const MySmeModal: React.FC<MySmeModalProps> = ({ open, onOpenChange, smeI
       toast.success('Business details updated successfully');
       setSmeErrors({});
     } catch (error: any) {
-      console.error('Error updating SME:', error);
+      console.error('Error updating MSME:', error);
       toast.error(error.response?.data?.message || 'Failed to update business details');
     } finally {
       setIsSaving(false);

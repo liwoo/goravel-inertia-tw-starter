@@ -80,8 +80,8 @@ export function SmeRegistrationTrend({ data }: SmeRegistrationTrendProps) {
           <CardTitle>Registration Trend</CardTitle>
           <CardDescription>
             {viewMode === 'count'
-              ? 'Monthly new SME registrations'
-              : 'Cumulative SME registrations over time'}
+              ? 'Monthly new MSME registrations'
+              : 'Cumulative MSME registrations over time'}
           </CardDescription>
         </div>
         <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
