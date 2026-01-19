@@ -565,6 +565,33 @@ func sanitizeName(name string) string {
 	return name
 }
 
+// sanitizePhoneNumber cleans and truncates phone numbers to fit database constraints
+// Max length is 50 characters (matching database schema)
+func sanitizePhoneNumber(phone string) string {
+	phone = strings.TrimSpace(phone)
+	if phone == "" {
+		return ""
+	}
+
+	// Remove any non-printable characters
+	phone = strings.Map(func(r rune) rune {
+		if r < 32 || r > 126 {
+			return -1
+		}
+		return r
+	}, phone)
+
+	// Truncate if too long (database limit is 50)
+	const maxPhoneLength = 50
+	if len(phone) > maxPhoneLength {
+		facades.Log().Warning(fmt.Sprintf("Phone number truncated from %d to %d chars: %s...",
+			len(phone), maxPhoneLength, phone[:20]))
+		phone = phone[:maxPhoneLength]
+	}
+
+	return phone
+}
+
 // validateParsedName checks if a parsed name looks suspicious and returns a warning message
 // Returns empty string if name looks valid
 func validateParsedName(firstName, lastName, originalFullName string) string {
@@ -667,7 +694,7 @@ func parseRowData(row []string, columnMap map[string]int, rowNum int) (*SmeImpor
 	data.OwnerMalawianStatus = sanitizeName(getCellValue(row, columnMap, "MALAWI STATUS"))
 	data.OwnerHasSpecialNeeds = parseYesNo(getCellValue(row, columnMap, "HAS SPECIAL NEED?"))
 	data.OwnerSpecialNeedsDesc = sanitizeName(getCellValue(row, columnMap, "SPECIAL NEEDS DESCRIPTION"))
-	data.OwnerPhone = strings.TrimSpace(getCellValue(row, columnMap, "CONTACT"))
+	data.OwnerPhone = sanitizePhoneNumber(getCellValue(row, columnMap, "CONTACT"))
 	data.OwnerEmail = strings.TrimSpace(getCellValue(row, columnMap, "EMAIL"))
 	data.OwnerPhysicalAddress = sanitizeName(getCellValue(row, columnMap, "PHYSICAL ADDRESS"))
 	data.OwnerPostalAddress = sanitizeName(getCellValue(row, columnMap, "POSTAL ADDRESS"))
@@ -675,7 +702,7 @@ func parseRowData(row []string, columnMap map[string]int, rowNum int) (*SmeImpor
 	data.OwnerDistrict = sanitizeName(getCellValue(row, columnMap, "DISTRICT"))
 	data.OwnerTA = sanitizeName(getCellValue(row, columnMap, "TRADITIONAL AUTHORITY"))
 	data.OwnerNextOfKinName = sanitizeName(getCellValue(row, columnMap, "NEXT OF KIN NAME"))
-	data.OwnerNextOfKinContact = strings.TrimSpace(getCellValue(row, columnMap, "NEXT OF KIN CONTACT"))
+	data.OwnerNextOfKinContact = sanitizePhoneNumber(getCellValue(row, columnMap, "NEXT OF KIN CONTACT"))
 
 	// Parse SME fields
 	data.BusinessName = sanitizeName(getCellValue(row, columnMap, "BUSINESS NAME"))
@@ -688,7 +715,7 @@ func parseRowData(row []string, columnMap map[string]int, rowNum int) (*SmeImpor
 	data.Sector = getCellValue(row, columnMap, "SECTOR")
 	data.SubSector = getCellValue(row, columnMap, "SUB SECTOR")
 	data.BusinessDescription = getCellValue(row, columnMap, "SERVICES DESCRIPTION")
-	data.ContactPhone = getCellValue(row, columnMap, "BUSINESS CONTACT")
+	data.ContactPhone = sanitizePhoneNumber(getCellValue(row, columnMap, "BUSINESS CONTACT"))
 	data.ContactEmail = getCellValue(row, columnMap, "BUSINESS EMAIL")
 	data.PhysicalAddress = getCellValue(row, columnMap, "BUSINESS PHYSICAL ADDRESS")
 	data.PostalAddress = getCellValue(row, columnMap, "BUSINESS POSTAL ADDRESS")

@@ -372,9 +372,13 @@ export function CrudPage<T extends { id: number }>({
         setAppliedDynamicFilter(null);
         setActiveSimpleFilter(undefined);
 
-        router.get(baseRoute, {}, {
+        // Use router.visit with replace to ensure clean URL navigation
+        router.visit(baseRoute, {
+            method: 'get',
+            data: {},
             preserveState: false,
             preserveScroll: false,
+            replace: true,
             onFinish: () => {
                 setIsRefreshing(false);
             },
@@ -393,9 +397,13 @@ export function CrudPage<T extends { id: number }>({
         // Remove search from params
         delete params.search;
 
-        router.get(baseRoute, params, {
+        // Use router.visit with replace to ensure URL is properly updated
+        router.visit(baseRoute, {
+            method: 'get',
+            data: params,
             preserveState: true,
             preserveScroll: true,
+            replace: true,
             only: ['data', 'filters'],
         });
     }, [baseRoute, buildNavigationParams]);
@@ -551,9 +559,13 @@ export function CrudPage<T extends { id: number }>({
         if (filters?.direction) params.direction = filters.direction;
         if (filters?.search) params.search = filters.search;
 
-        router.get(baseRoute, params, {
+        // Use router.visit with replace to ensure URL is properly updated
+        router.visit(baseRoute, {
+            method: 'get',
+            data: params,
             preserveState: true,
             preserveScroll: true,
+            replace: true,
             only: ['data', 'filters'],
         });
     }, [baseRoute, filters, pageSize]);
