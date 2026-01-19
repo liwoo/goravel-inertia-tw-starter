@@ -25,7 +25,7 @@ export const DISTRICTS: readonly District[] = [
   { name: 'Mchinji', code: 'MC', region: 'Central' },
   { name: 'Nkhotakota', code: 'KK', region: 'Central' },
   { name: 'Ntcheu', code: 'NU', region: 'Central' },
-  { name: 'Ntchisi', code: 'NI', region: 'Central' },
+  { name: 'Ntchisi', code: 'NS', region: 'Central' },
   { name: 'Salima', code: 'SA', region: 'Central' },
 
   // Southern Region

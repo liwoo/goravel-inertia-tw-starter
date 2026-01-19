@@ -119,6 +119,7 @@ func (r *M20260112090000UpdateUsmeDistrictCodes) Up() error {
 				('BA', 'BLK', 2),     -- Balaka
 				('CR', 'CZ', 2),      -- Chiradzulu
 				('MG', 'MHG', 2),     -- Machinga
+				('NI', 'NS', 2),      -- Ntchisi
 				('TH', 'TO', 2),      -- Thyolo
 				('PH', 'PE', 2),      -- Phalombe
 				('ZO', 'ZA', 2);      -- Zomba
@@ -256,6 +257,7 @@ func (r *M20260112090000UpdateUsmeDistrictCodes) Up() error {
 				('BA', 'BLK'),     -- Balaka
 				('CR', 'CZ'),      -- Chiradzulu
 				('MG', 'MHG'),     -- Machinga
+				('NI', 'NS'),      -- Ntchisi
 				('MN', 'MH'),      -- Mangochi
 				('MW', 'MN'),      -- Mwanza
 				('NS', 'NE'),      -- Nsanje

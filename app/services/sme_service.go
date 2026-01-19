@@ -611,7 +611,7 @@ func getDistrictCode(data map[string]interface{}) (string, error) {
 		"Mchinji":    "MC",
 		"Nkhotakota": "KK",
 		"Ntcheu":     "NU",
-		"Ntchisi":    "NI",
+		"Ntchisi":    "NS",
 		"Salima":     "SA",
 
 		// Southern Region

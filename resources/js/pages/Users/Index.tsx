@@ -157,11 +157,11 @@ export default function UsersIndex({
         const data = await response.json();
         setSmes(data.data?.data || []);
       } else {
-        toast.error('Failed to load SMEs');
+        toast.error('Failed to load MSMEs');
       }
     } catch (error) {
       console.error('Error fetching SMEs:', error);
-      toast.error('Failed to load SMEs');
+      toast.error('Failed to load MSMEs');
     } finally {
       setIsLoadingSmes(false);
     }
@@ -218,17 +218,17 @@ export default function UsersIndex({
       const data = await response.json();
 
       if (response.ok) {
-        toast.success(data.message || 'User assigned to SME successfully');
+        toast.success(data.message || 'User assigned to MSME successfully');
         setShowAssignSmeDialog(false);
         setSelectedUserForSme(null);
         setSelectedSmeId('');
         router.reload({ only: ['data'] });
       } else {
-        toast.error(data.message || 'Failed to assign user to SME');
+        toast.error(data.message || 'Failed to assign user to MSME');
       }
     } catch (error) {
       console.error('Error assigning user to SME:', error);
-      toast.error('Failed to assign user to SME');
+      toast.error('Failed to assign user to MSME');
     } finally {
       setIsAssigning(false);
     }
@@ -299,21 +299,21 @@ export default function UsersIndex({
         </div>
       </div>
 
-      {/* Assign to SME Dialog */}
+      {/* Assign to MSME Dialog */}
       <Dialog open={showAssignSmeDialog} onOpenChange={setShowAssignSmeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign User to SME</DialogTitle>
+            <DialogTitle>Assign User to MSME</DialogTitle>
             <DialogDescription>
-              Select an SME to assign {selectedUserForSme?.name} to. This will link the user account to the selected SME.
+              Select an MSME to assign {selectedUserForSme?.name} to. This will link the user account to the selected MSME.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="sme">Select SME *</Label>
+              <Label htmlFor="sme">Select MSME *</Label>
               <Select value={selectedSmeId} onValueChange={setSelectedSmeId} disabled={isLoadingSmes}>
                 <SelectTrigger>
-                  <SelectValue placeholder={isLoadingSmes ? "Loading SMEs..." : "Select an SME"} />
+                  <SelectValue placeholder={isLoadingSmes ? "Loading MSMEs..." : "Select an MSME"} />
                 </SelectTrigger>
                 <SelectContent>
                   {smes.map((sme) => (
@@ -330,7 +330,7 @@ export default function UsersIndex({
               Cancel
             </Button>
             <Button onClick={handleAssignToSme} disabled={isAssigning || !selectedSmeId}>
-              {isAssigning ? 'Assigning...' : 'Assign to SME'}
+              {isAssigning ? 'Assigning...' : 'Assign to MSME'}
             </Button>
           </DialogFooter>
         </DialogContent>

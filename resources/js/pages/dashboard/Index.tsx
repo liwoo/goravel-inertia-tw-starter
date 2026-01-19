@@ -133,7 +133,7 @@ const DashboardPage: React.FC = () => {
                 Welcome back, {user.name}!
               </h1>
               <p className="text-muted-foreground">
-                Here is an overview of your SME database and upcoming activities.
+                Here is an overview of your MSME database and upcoming activities.
               </p>
             </>
           ) : (
@@ -142,7 +142,7 @@ const DashboardPage: React.FC = () => {
                 Dashboard
               </h1>
               <p className="text-muted-foreground">
-                Overview of your SME database and upcoming activities.
+                Overview of your MSME database and upcoming activities.
               </p>
             </>
           )}

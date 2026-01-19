@@ -218,7 +218,7 @@ export const createUserAdditionalActions = (callbacks: {
   if (callbacks.onAssignToSme) {
     actions.push({
       key: 'assign-to-sme',
-      label: 'Assign to SME',
+      label: 'Assign to MSME',
       icon: <Building2 className="h-4 w-4 text-emerald-600" />,
       onClick: (user: User) => callbacks.onAssignToSme!(user),
       // Only show for users with SME User role

@@ -27,6 +27,7 @@ The district codes have been updated to better align with national standards:
 | Kasungu | KS | KU |
 | Lilongwe | LI | LL |
 | Nkhotakota | NK | KK |
+| Ntchisi | NI | NS |
 | Balaka | BA | BLK |
 | Chiradzulu | CR | CZ |
 | Machinga | MG | MHG |
