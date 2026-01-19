@@ -73,7 +73,8 @@ export default function MyApplicationsIndex({
               My Applications
             </h1>
             <p className="text-muted-foreground">
-              Track the status of your applications and formalisation requests
+              <span className="hidden sm:inline">Track the status of your applications and formalisation requests</span>
+              <span className="sm:hidden">Track your applications</span>
             </p>
           </div>
           {smeName && (

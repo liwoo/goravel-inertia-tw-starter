@@ -194,15 +194,15 @@ export function SmeBusinessChartsCarousel({
   const chartInfo = [
     {
       title: "Economic Sector",
-      description: "SMEs by economic sector",
+      description: "MSMEs by economic sector",
     },
     {
       title: "Category Distribution",
-      description: "SMEs by business category",
+      description: "MSMEs by business category",
     },
     {
       title: "Classification",
-      description: "SMEs by MSME classification",
+      description: "MSMEs by MSME classification",
     },
   ];
 

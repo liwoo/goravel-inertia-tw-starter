@@ -120,7 +120,7 @@ export function DashboardKpiCards({
           <div className="text-2xl font-bold">
             {stats.totalSmes.toLocaleString()}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:block">
             Registered in the database
           </p>
         </CardContent>
@@ -143,8 +143,11 @@ export function DashboardKpiCards({
             </div>
             <TrendIndicator value={monthOverMonthChange} />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:inline">
             vs {stats.newLastMonth.toLocaleString()} last month
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 lg:hidden">
+            vs {stats.newLastMonth.toLocaleString()}
           </p>
         </CardContent>
       </Card>
@@ -172,8 +175,11 @@ export function DashboardKpiCards({
               </span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:inline">
             Total events organized
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 lg:hidden">
+            Events held
           </p>
         </CardContent>
       </Card>
@@ -201,8 +207,11 @@ export function DashboardKpiCards({
               </span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:inline">
             Total procurement notices
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 lg:hidden">
+            Active notices
           </p>
         </CardContent>
       </Card>

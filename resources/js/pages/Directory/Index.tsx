@@ -144,7 +144,8 @@ export default function DirectoryIndex({
             MSME Directory
           </h1>
           <p className="text-muted-foreground">
-            Search and explore registered Micro, Small and Medium Enterprises
+            <span className="hidden sm:inline">Search and explore registered Micro, Small and Medium Enterprises</span>
+            <span className="sm:hidden">Explore registered MSMEs</span>
           </p>
         </div>
 

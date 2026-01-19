@@ -124,7 +124,8 @@ export default function MemberIndex({
               Welcome{userName ? `, ${userName.split(' ')[0]}` : ''}
             </h1>
             <p className="text-muted-foreground">
-              Manage your team, track opportunities, and monitor your business progress.
+              <span className="hidden md:inline">Manage your team, track opportunities, and monitor your business progress.</span>
+              <span className="md:hidden">Manage your business progress.</span>
             </p>
           </div>
           {smeName && (

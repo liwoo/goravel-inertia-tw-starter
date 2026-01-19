@@ -206,11 +206,11 @@ export function SmeLocationChartsCarousel({
   const chartInfo = [
     {
       title: "Region Distribution",
-      description: "SMEs by geographic region",
+      description: "MSMEs by geographic region",
     },
     {
       title: "District Distribution",
-      description: "Top 15 districts by SME count",
+      description: "Top 15 districts by MSME count",
     },
   ];
 

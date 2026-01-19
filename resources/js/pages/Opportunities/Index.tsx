@@ -606,7 +606,8 @@ export default function OpportunitiesIndex({
               Opportunities
             </h1>
             <p className="text-muted-foreground">
-              Procurement opportunities matching your business profile and formalisation score
+              <span className="hidden md:inline">Procurement opportunities matching your business profile and formalisation score</span>
+              <span className="md:hidden">Opportunities for your business</span>
             </p>
           </div>
           {smeName && (

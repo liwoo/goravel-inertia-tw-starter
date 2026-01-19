@@ -82,7 +82,7 @@ export function SmeKpiCards({ stats }: SmeKpiCardsProps) {
           <div className="text-2xl font-bold">
             {stats.totalSmes.toLocaleString()}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:block">
             Registered in the database
           </p>
         </CardContent>
@@ -104,7 +104,8 @@ export function SmeKpiCards({ stats }: SmeKpiCardsProps) {
             <TrendIndicator value={monthOverMonthChange} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            vs {stats.newLastMonth.toLocaleString()} last month
+            <span className="hidden lg:inline">vs {stats.newLastMonth.toLocaleString()} last month</span>
+            <span className="lg:hidden">vs {stats.newLastMonth.toLocaleString()}</span>
           </p>
         </CardContent>
       </Card>
