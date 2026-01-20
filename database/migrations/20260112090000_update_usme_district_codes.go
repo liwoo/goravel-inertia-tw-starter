@@ -75,13 +75,13 @@ func (r *M20260112090000UpdateUsmeDistrictCodes) Up() error {
 		) AS $$
 		DECLARE
 			rec RECORD;
-			parts TEXT[];
-			old_code VARCHAR;
-			new_code VARCHAR;
-			new_usme_without_check VARCHAR;
-			new_check_digit CHAR;
-			updated_usme VARCHAR;
-			update_count INT := 0;
+			v_parts TEXT[];
+			v_old_code VARCHAR;
+			v_new_code VARCHAR;
+			v_new_usme_without_check VARCHAR;
+			v_new_check_digit CHAR;
+			v_updated_usme VARCHAR;
+			v_update_count INT := 0;
 		BEGIN
 			-- District code mapping: OLD -> NEW
 			-- Note: Order matters due to conflicts (e.g., MN->MH, MH->MZ)
@@ -134,39 +134,39 @@ func (r *M20260112090000UpdateUsmeDistrictCodes) Up() error {
 				ORDER BY id
 			LOOP
 				-- Parse the USME number: MW-YYYY-DD-CT-NNNNNN-C
-				parts := string_to_array(rec.usme_number, '-');
+				v_parts := string_to_array(rec.usme_number, '-');
 
-				IF array_length(parts, 1) >= 6 THEN
-					old_code := parts[3]; -- District code is the 3rd part
+				IF array_length(v_parts, 1) >= 6 THEN
+					v_old_code := v_parts[3]; -- District code is the 3rd part
 
 					-- Check if this district code needs updating
-					SELECT m.new_code INTO new_code
+					SELECT m.new_code INTO v_new_code
 					FROM district_code_mapping m
-					WHERE m.old_code = old_code
+					WHERE m.old_code = v_old_code
 					ORDER BY m.priority
 					LIMIT 1;
 
-					IF new_code IS NOT NULL THEN
+					IF v_new_code IS NOT NULL THEN
 						-- Build new USME without check digit
-						new_usme_without_check := parts[1] || '-' || parts[2] || '-' || new_code || '-' || parts[4] || '-' || parts[5];
+						v_new_usme_without_check := v_parts[1] || '-' || v_parts[2] || '-' || v_new_code || '-' || v_parts[4] || '-' || v_parts[5];
 
 						-- Calculate new Luhn check digit
-						new_check_digit := calculate_luhn_check_digit(new_usme_without_check);
+						v_new_check_digit := calculate_luhn_check_digit(v_new_usme_without_check);
 
 						-- Build complete new USME
-						updated_usme := new_usme_without_check || '-' || new_check_digit;
+						v_updated_usme := v_new_usme_without_check || '-' || v_new_check_digit;
 
 						-- Return the mapping for logging
 						sme_id := rec.id;
 						old_usme := rec.usme_number;
-						new_usme := updated_usme;
-						old_district_code := old_code;
-						new_district_code := new_code;
+						new_usme := v_updated_usme;
+						old_district_code := v_old_code;
+						new_district_code := v_new_code;
 						RETURN NEXT;
 
 						-- Update the record
-						UPDATE smes SET usme_number = updated_usme WHERE id = rec.id;
-						update_count := update_count + 1;
+						UPDATE smes SET usme_number = v_updated_usme WHERE id = rec.id;
+						v_update_count := v_update_count + 1;
 					END IF;
 				END IF;
 			END LOOP;
@@ -193,20 +193,20 @@ func (r *M20260112090000UpdateUsmeDistrictCodes) Up() error {
 					  usme_number LIKE 'MW-%-NE-%'
 				  )
 			LOOP
-				parts := string_to_array(rec.usme_number, '-');
-				IF array_length(parts, 1) >= 6 THEN
+				v_parts := string_to_array(rec.usme_number, '-');
+				IF array_length(v_parts, 1) >= 6 THEN
 					-- Rebuild without check digit
-					new_usme_without_check := parts[1] || '-' || parts[2] || '-' || parts[3] || '-' || parts[4] || '-' || parts[5];
-					new_check_digit := calculate_luhn_check_digit(new_usme_without_check);
-					updated_usme := new_usme_without_check || '-' || new_check_digit;
+					v_new_usme_without_check := v_parts[1] || '-' || v_parts[2] || '-' || v_parts[3] || '-' || v_parts[4] || '-' || v_parts[5];
+					v_new_check_digit := calculate_luhn_check_digit(v_new_usme_without_check);
+					v_updated_usme := v_new_usme_without_check || '-' || v_new_check_digit;
 
-					IF updated_usme != rec.usme_number THEN
-						UPDATE smes SET usme_number = updated_usme WHERE id = rec.id;
+					IF v_updated_usme != rec.usme_number THEN
+						UPDATE smes SET usme_number = v_updated_usme WHERE id = rec.id;
 					END IF;
 				END IF;
 			END LOOP;
 
-			RAISE NOTICE 'Updated % USME numbers with new district codes', update_count;
+			RAISE NOTICE 'Updated % USME numbers with new district codes', v_update_count;
 		END;
 		$$ LANGUAGE plpgsql;
 	`)
@@ -229,22 +229,22 @@ func (r *M20260112090000UpdateUsmeDistrictCodes) Up() error {
 		) AS $$
 		DECLARE
 			rec RECORD;
-			parts TEXT[];
-			old_code VARCHAR;
-			new_code VARCHAR;
-			new_usme_without_check VARCHAR;
-			new_check_digit CHAR;
-			updated_usme VARCHAR;
+			v_parts TEXT[];
+			v_old_code VARCHAR;
+			v_new_code VARCHAR;
+			v_new_usme_without_check VARCHAR;
+			v_new_check_digit CHAR;
+			v_updated_usme VARCHAR;
 		BEGIN
 			-- District code mapping: OLD -> NEW
 			CREATE TEMP TABLE IF NOT EXISTS district_code_mapping_preview (
-				old_code VARCHAR(3),
-				new_code VARCHAR(3)
+				mapping_old_code VARCHAR(3),
+				mapping_new_code VARCHAR(3)
 			) ON COMMIT DROP;
 
 			DELETE FROM district_code_mapping_preview;
 
-			INSERT INTO district_code_mapping_preview (old_code, new_code) VALUES
+			INSERT INTO district_code_mapping_preview (mapping_old_code, mapping_new_code) VALUES
 				('CT', 'CP'),      -- Chitipa
 				('KR', 'KA'),      -- Karonga
 				('LK', 'LA'),      -- Likoma
@@ -274,28 +274,28 @@ func (r *M20260112090000UpdateUsmeDistrictCodes) Up() error {
 				  AND s.deleted_at IS NULL
 				ORDER BY s.id
 			LOOP
-				parts := string_to_array(rec.usme_number, '-');
+				v_parts := string_to_array(rec.usme_number, '-');
 
-				IF array_length(parts, 1) >= 6 THEN
-					old_code := parts[3];
+				IF array_length(v_parts, 1) >= 6 THEN
+					v_old_code := v_parts[3];
 
-					SELECT m.new_code INTO new_code
+					SELECT m.mapping_new_code INTO v_new_code
 					FROM district_code_mapping_preview m
-					WHERE m.old_code = old_code
+					WHERE m.mapping_old_code = v_old_code
 					LIMIT 1;
 
-					IF new_code IS NOT NULL THEN
-						new_usme_without_check := parts[1] || '-' || parts[2] || '-' || new_code || '-' || parts[4] || '-' || parts[5];
-						new_check_digit := calculate_luhn_check_digit(new_usme_without_check);
-						updated_usme := new_usme_without_check || '-' || new_check_digit;
+					IF v_new_code IS NOT NULL THEN
+						v_new_usme_without_check := v_parts[1] || '-' || v_parts[2] || '-' || v_new_code || '-' || v_parts[4] || '-' || v_parts[5];
+						v_new_check_digit := calculate_luhn_check_digit(v_new_usme_without_check);
+						v_updated_usme := v_new_usme_without_check || '-' || v_new_check_digit;
 
 						sme_id := rec.id;
 						sme_name := rec.name;
 						district := rec.district;
 						old_usme := rec.usme_number;
-						new_usme := updated_usme;
-						old_district_code := old_code;
-						new_district_code := new_code;
+						new_usme := v_updated_usme;
+						old_district_code := v_old_code;
+						new_district_code := v_new_code;
 						RETURN NEXT;
 					END IF;
 				END IF;
