@@ -144,7 +144,7 @@ func (r *SmeCreateRequest) PassedValidation(ctx http.Context) error {
 	// Validate business registration if provided
 	if r.RegistrationNumber != nil && *r.RegistrationNumber != "" {
 		if !validator.ValidateBusinessRegistration(*r.RegistrationNumber) {
-			return errors.New("registration number must be in format BRNR-XXXXXX (e.g., BRNR-EP5CWE3)")
+			return errors.New("registration number must be in a valid MBRS format: BRN-XXXXXXX (sole proprietorship), COY-XXXXXX (company), PVT-XXXXXXXX (private limited), or BRNR-XXXXXX (legacy)")
 		}
 	}
 

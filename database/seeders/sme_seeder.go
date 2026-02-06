@@ -22,16 +22,16 @@ func (s *SmeSeeder) Run() error {
 	// Check if SMEs already exist - skip if we have data
 	existingCount, err := facades.Orm().Query().Model(&models.Sme{}).Count()
 	if err != nil {
-		return fmt.Errorf("failed to count existing SMEs: %v", err)
+		return fmt.Errorf("failed to count existing MSMEs: %v", err)
 	}
 
 	if existingCount > 0 {
-		facades.Log().Infof("SmeSeeder: Skipping - SMEs table already has %d records", existingCount)
-		fmt.Printf("SmeSeeder: Skipping - SMEs table already has %d records\n", existingCount)
+		facades.Log().Infof("SmeSeeder: Skipping - MSMEs table already has %d records", existingCount)
+		fmt.Printf("SmeSeeder: Skipping - MSMEs table already has %d records\n", existingCount)
 		return nil
 	}
 
-	fmt.Println("Seeding SMEs...")
+	fmt.Println("Seeding MSMEs...")
 
 	// Seed random generator
 	rand.Seed(time.Now().UnixNano())
@@ -68,7 +68,7 @@ func (s *SmeSeeder) Run() error {
 
 	// Create 100 SMEs
 	for i := 1; i <= 100; i++ {
-		fmt.Printf("Creating SME %d/100...\n", i)
+		fmt.Printf("Creating MSME %d/100...\n", i)
 
 		// Generate unique USME number
 		usmeNumber := fmt.Sprintf("USME-%06d", i)
@@ -166,7 +166,7 @@ func (s *SmeSeeder) Run() error {
 		}
 	}
 
-	fmt.Println("SME seeding completed successfully!")
+	fmt.Println("MSME seeding completed successfully!")
 	return nil
 }
 

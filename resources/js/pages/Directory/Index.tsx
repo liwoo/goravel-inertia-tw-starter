@@ -23,6 +23,8 @@ export default function DirectoryIndex({
   smes: initialSmes = [],
   filters: initialFilters,
   pagination: initialPagination,
+  userFormalisationScore = 0,
+  minScoreForContactView = 70,
 }: DirectoryPageProps) {
   const isMobile = useIsMobile();
 
@@ -132,17 +134,18 @@ export default function DirectoryIndex({
   const activeFilterCount = selectedSectors.length + selectedDistricts.length;
 
   return (
-    <Admin title="SME Directory">
-      <Head title="SME Directory" />
+    <Admin title="MSME Directory">
+      <Head title="MSME Directory" />
 
       <div className="p-4 md:p-6 flex flex-col gap-6">
         {/* Header */}
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">
-            SME Directory
+            MSME Directory
           </h1>
           <p className="text-muted-foreground">
-            Search and explore registered Small and Medium Enterprises
+            <span className="hidden sm:inline">Search and explore registered Micro, Small and Medium Enterprises</span>
+            <span className="sm:hidden">Explore registered MSMEs</span>
           </p>
         </div>
 
@@ -152,7 +155,7 @@ export default function DirectoryIndex({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search SMEs by name, sector, location..."
+              placeholder="Search MSMEs by name, sector, location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-10"
@@ -252,7 +255,7 @@ export default function DirectoryIndex({
             {hasSearched && (
               <div className="mb-6">
                 <h2 className="text-lg font-semibold">
-                  {isLoading ? "Searching..." : `${pagination.total} ${pagination.total === 1 ? "SME" : "SMEs"} found`}
+                  {isLoading ? "Searching..." : `${pagination.total} ${pagination.total === 1 ? "MSME" : "MSMEs"} found`}
                 </h2>
               </div>
             )}
@@ -269,19 +272,24 @@ export default function DirectoryIndex({
                 <Search className="mx-auto h-12 w-12 text-muted-foreground/50" />
                 <h3 className="mt-4 text-lg font-medium">Search the Directory</h3>
                 <p className="mt-2 text-muted-foreground max-w-sm mx-auto">
-                  Enter a search term or select filters to find SMEs
+                  Enter a search term or select filters to find MSMEs
                 </p>
               </div>
             ) : smes.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {smes.map((sme) => (
-                  <DirectorySMECard key={sme.usme_number} sme={sme} />
+                  <DirectorySMECard
+                    key={sme.usme_number}
+                    sme={sme}
+                    canViewContactDetails={userFormalisationScore >= minScoreForContactView}
+                    minScoreRequired={minScoreForContactView}
+                  />
                 ))}
               </div>
             ) : (
               <div className="text-center py-16 border rounded-lg bg-muted/30">
                 <p className="text-muted-foreground text-lg">
-                  No SMEs found matching your criteria.
+                  No MSMEs found matching your criteria.
                 </p>
                 <Button variant="outline" onClick={handleClearAllFilters} className="mt-4">
                   Clear all filters

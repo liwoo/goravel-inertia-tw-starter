@@ -650,11 +650,11 @@ export const ProcurementNoticeCreateForm = forwardRef<any, ProcurementNoticeCrea
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="details">Details *</Label>
-                                <div className="min-h-[200px] border rounded-md p-1">
+                                <div className="min-h-[400px] border rounded-md p-1">
                                     <MarkdownEditor
                                         value={formData.details}
                                         onChange={(value) => setFormData({ ...formData, details: value })}
-                                        height="200px"
+                                        height="400px"
                                     />
                                 </div>
                                 {errors.details && <p className="text-sm text-destructive">{errors.details}</p>}
@@ -662,11 +662,13 @@ export const ProcurementNoticeCreateForm = forwardRef<any, ProcurementNoticeCrea
 
                             <div className="space-y-2">
                                 <Label htmlFor="application_details">Application Details *</Label>
-                                <Input
-                                    id="application_details"
-                                    value={formData.application_details}
-                                    onChange={(e) => setFormData({ ...formData, application_details: e.target.value })}
-                                />
+                                <div className="min-h-[400px] border rounded-md p-1">
+                                    <MarkdownEditor
+                                        value={formData.application_details}
+                                        onChange={(value) => setFormData({ ...formData, application_details: value })}
+                                        height="400px"
+                                    />
+                                </div>
                                 {errors.application_details && <p className="text-sm text-destructive">{errors.application_details}</p>}
                             </div>
                         </CardContent>

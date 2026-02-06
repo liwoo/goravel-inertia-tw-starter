@@ -18,9 +18,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import Admin from '@/layouts/Admin';
 import {
   FormalisationScoreWidget,
-  EventsCalendarWidget,
   FormalisationData,
-  CalendarEvent
 } from '@/components/widgets';
 import { FormalisationEditSheet } from '@/components/FormalisationEditSheet';
 import axios from 'axios';
@@ -45,9 +43,7 @@ interface MemberIndexProps {
   stats?: {
     [key: string]: any;
   };
-  calendarEvents?: CalendarEvent[];
   formalisation?: FormalisationData;
-  district?: string;
   smeId?: number;
   userName?: string;
   smeName?: string;
@@ -62,9 +58,7 @@ export default function MemberIndex({
   filters,
   permissions,
   meta,
-  calendarEvents = [],
   formalisation,
-  district,
   smeId,
   userName,
   smeName,
@@ -119,8 +113,8 @@ export default function MemberIndex({
   ));
 
   return (
-    <Admin title={"SME Portal"}>
-      <Head title="SME Portal" />
+    <Admin title={"MSME Portal"}>
+      <Head title="MSME Portal" />
 
       <div className="p-4 md:p-6 flex flex-col gap-6">
         {/* Welcome Header */}
@@ -130,7 +124,8 @@ export default function MemberIndex({
               Welcome{userName ? `, ${userName.split(' ')[0]}` : ''}
             </h1>
             <p className="text-muted-foreground">
-              Manage your team, track opportunities, and monitor your business progress.
+              <span className="hidden md:inline">Manage your team, track opportunities, and monitor your business progress.</span>
+              <span className="md:hidden">Manage your business progress.</span>
             </p>
           </div>
           {smeName && (
@@ -163,48 +158,37 @@ export default function MemberIndex({
           )}
         </div>
 
-        {/* Main Content + Sidebar Row */}
-        <div className="flex flex-col xl:flex-row gap-6 items-start">
-          {/* Main Content Area - Left Side */}
-          <div className="flex-1 flex flex-col gap-6 min-w-0">
-            {/* Formalisation Score Widget */}
-            <FormalisationScoreWidget
-              formalisation={formalisation}
-              primaryOwner={primaryOwner}
-              additionalMembers={additionalMembers}
-              employeeSummary={employeeSummary}
-              isLoading={loading}
-              canEdit={!!smeId}
-              onEditClick={() => setIsEditModalOpen(true)}
-            />
+        {/* Formalisation Score Widget */}
+        <FormalisationScoreWidget
+          formalisation={formalisation}
+          primaryOwner={primaryOwner}
+          additionalMembers={additionalMembers}
+          employeeSummary={employeeSummary}
+          isLoading={loading}
+          canEdit={!!smeId}
+          onEditClick={() => setIsEditModalOpen(true)}
+        />
 
-            {/* Main CRUD Component */}
-            <div className="px-0">
-              <CrudPage<Member>
-                data={data}
-                filters={filters}
-                title="Team Members"
-                resourceName="additional_business_members"
-                displayName="Additional Member"
-                columns={isMobile ? memberColumnsMobile : memberColumns}
-                customFilters={memberFilters}
-                paginationConfig={meta?.pagination}
-                createForm={CreateFormWithSmeId}
-                editForm={MemberEditForm}
-                detailView={MemberDetailView}
-                onRefresh={handleRefresh}
-                canCreate={permissions.canCreate}
-                canEdit={permissions.canEdit}
-                canDelete={permissions.canDelete}
-                canView={true}
-              />
-            </div>
-          </div>
-
-          {/* Right Sidebar - Calendar Widget */}
-          <aside className="w-full xl:w-[380px] 2xl:w-[420px] shrink-0">
-            <EventsCalendarWidget events={calendarEvents} district={district} />
-          </aside>
+        {/* Main CRUD Component */}
+        <div className="px-0">
+          <CrudPage<Member>
+            data={data}
+            filters={filters}
+            title="Team Members"
+            resourceName="additional_business_members"
+            displayName="Additional Member"
+            columns={isMobile ? memberColumnsMobile : memberColumns}
+            customFilters={memberFilters}
+            paginationConfig={meta?.pagination}
+            createForm={CreateFormWithSmeId}
+            editForm={MemberEditForm}
+            detailView={MemberDetailView}
+            onRefresh={handleRefresh}
+            canCreate={permissions.canCreate}
+            canEdit={permissions.canEdit}
+            canDelete={permissions.canDelete}
+            canView={true}
+          />
         </div>
       </div>
 

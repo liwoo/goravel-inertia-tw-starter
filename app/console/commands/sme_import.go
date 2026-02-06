@@ -32,7 +32,7 @@ func (receiver *SmeImport) Signature() string {
 
 // Description The console command description.
 func (receiver *SmeImport) Description() string {
-	return "Import SME data from an Excel file"
+	return "Import MSME data from an Excel file"
 }
 
 // Extend The console command extend.
@@ -58,9 +58,9 @@ func (receiver *SmeImport) Extend() command.Extend {
 				Usage:   "Run without making database changes (for testing)",
 			},
 			&command.BoolFlag{
-				Name:    "skip-delete",
-				Aliases: []string{"s"},
-				Usage:   "Skip deleting existing SMEs before import",
+				Name:    "truncate",
+				Aliases: []string{"t"},
+				Usage:   "Delete ALL existing MSMEs before import (use with caution!)",
 			},
 			&command.IntFlag{
 				Name:    "start-row",
@@ -108,7 +108,7 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 	filePath := ctx.Option("file")
 	batchSize := ctx.OptionInt("batch-size")
 	dryRun := ctx.OptionBool("dry-run")
-	skipDelete := ctx.OptionBool("skip-delete")
+	truncate := ctx.OptionBool("truncate")
 	startRow := ctx.OptionInt("start-row")
 
 	// Database connection flags
@@ -163,7 +163,7 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 		defer closeCustomDB(customDB)
 	}
 
-	ctx.Info(fmt.Sprintf("Starting SME import from: %s", filePath))
+	ctx.Info(fmt.Sprintf("Starting MSME import from: %s", filePath))
 	ctx.Info(fmt.Sprintf("Batch size: %d", batchSize))
 	if dryRun {
 		ctx.Warning("DRY RUN MODE - No database changes will be made")
@@ -215,16 +215,22 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 		ctx.Info(fmt.Sprintf("Starting from row %d (skipping first %d rows)", startRow, startRow-1))
 	}
 
-	// Delete existing SMEs if not skipped (only if starting from row 1)
-	if !skipDelete && !dryRun && startRow == 1 {
-		ctx.Info("Deleting existing SMEs and related data...")
-		if err := deleteExistingSmes(ctx, customDB); err != nil {
-			ctx.Error(fmt.Sprintf("Failed to delete existing SMEs: %v", err))
-			return err
+	// Delete existing SMEs only if --truncate flag is explicitly set
+	if truncate {
+		if startRow > 1 {
+			ctx.Warning("Ignoring --truncate because --start-row is set (cannot truncate when resuming)")
+		} else if !dryRun {
+			ctx.Warning("TRUNCATE MODE: Deleting ALL existing MSMEs and related data...")
+			if err := deleteExistingSmes(ctx, customDB); err != nil {
+				ctx.Error(fmt.Sprintf("Failed to delete existing MSMEs: %v", err))
+				return err
+			}
+			ctx.Success("Existing MSMEs deleted successfully")
+		} else {
+			ctx.Warning("DRY RUN: Would delete all existing MSMEs (--truncate flag set)")
 		}
-		ctx.Success("Existing SMEs deleted successfully")
-	} else if startRow > 1 && !skipDelete {
-		ctx.Warning("Skipping delete because --start-row is set. Use --skip-delete to suppress this warning.")
+	} else {
+		ctx.Info("Running in incremental mode (duplicates will be skipped)")
 	}
 
 	// Process rows in batches, starting from the specified row
@@ -232,6 +238,7 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 	totalRows := len(dataRows)
 	successCount := 0
 	errorCount := 0
+	duplicateCount := 0
 	skippedCount := startRow - 1
 	var errors []string
 
@@ -280,6 +287,15 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 				continue
 			}
 
+			// Check for duplicates before creating
+			isDuplicate, matchReason := checkForDuplicate(smeData, customDB)
+			if isDuplicate {
+				duplicateCount++
+				ctx.Warning(fmt.Sprintf("Row %d: Skipped (duplicate) - %s '%s' already exists (%s)",
+					rowNum, "MSME", smeData.BusinessName, matchReason))
+				continue
+			}
+
 			// Create the SME with relationships in a transaction
 			err = createSmeWithRelationships(ctx, smeData, smeService, customDB)
 			if err != nil {
@@ -291,7 +307,7 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 			}
 
 			successCount++
-			ctx.Success(fmt.Sprintf("Row %d: SME '%s' imported successfully", rowNum, smeData.BusinessName))
+			ctx.Success(fmt.Sprintf("Row %d: MSME '%s' imported successfully", rowNum, smeData.BusinessName))
 		}
 	}
 
@@ -304,6 +320,9 @@ func (receiver *SmeImport) Handle(ctx console.Context) error {
 	}
 	ctx.Info(fmt.Sprintf("Rows processed: %d", rowsToProcess))
 	ctx.Success(fmt.Sprintf("Successful imports: %d", successCount))
+	if duplicateCount > 0 {
+		ctx.Warning(fmt.Sprintf("Duplicates skipped: %d", duplicateCount))
+	}
 	if errorCount > 0 {
 		ctx.Error(fmt.Sprintf("Failed imports: %d", errorCount))
 		ctx.NewLine()
@@ -546,6 +565,33 @@ func sanitizeName(name string) string {
 	return name
 }
 
+// sanitizePhoneNumber cleans and truncates phone numbers to fit database constraints
+// Max length is 50 characters (matching database schema)
+func sanitizePhoneNumber(phone string) string {
+	phone = strings.TrimSpace(phone)
+	if phone == "" {
+		return ""
+	}
+
+	// Remove any non-printable characters
+	phone = strings.Map(func(r rune) rune {
+		if r < 32 || r > 126 {
+			return -1
+		}
+		return r
+	}, phone)
+
+	// Truncate if too long (database limit is 50)
+	const maxPhoneLength = 50
+	if len(phone) > maxPhoneLength {
+		facades.Log().Warning(fmt.Sprintf("Phone number truncated from %d to %d chars: %s...",
+			len(phone), maxPhoneLength, phone[:20]))
+		phone = phone[:maxPhoneLength]
+	}
+
+	return phone
+}
+
 // validateParsedName checks if a parsed name looks suspicious and returns a warning message
 // Returns empty string if name looks valid
 func validateParsedName(firstName, lastName, originalFullName string) string {
@@ -648,7 +694,7 @@ func parseRowData(row []string, columnMap map[string]int, rowNum int) (*SmeImpor
 	data.OwnerMalawianStatus = sanitizeName(getCellValue(row, columnMap, "MALAWI STATUS"))
 	data.OwnerHasSpecialNeeds = parseYesNo(getCellValue(row, columnMap, "HAS SPECIAL NEED?"))
 	data.OwnerSpecialNeedsDesc = sanitizeName(getCellValue(row, columnMap, "SPECIAL NEEDS DESCRIPTION"))
-	data.OwnerPhone = strings.TrimSpace(getCellValue(row, columnMap, "CONTACT"))
+	data.OwnerPhone = sanitizePhoneNumber(getCellValue(row, columnMap, "CONTACT"))
 	data.OwnerEmail = strings.TrimSpace(getCellValue(row, columnMap, "EMAIL"))
 	data.OwnerPhysicalAddress = sanitizeName(getCellValue(row, columnMap, "PHYSICAL ADDRESS"))
 	data.OwnerPostalAddress = sanitizeName(getCellValue(row, columnMap, "POSTAL ADDRESS"))
@@ -656,7 +702,7 @@ func parseRowData(row []string, columnMap map[string]int, rowNum int) (*SmeImpor
 	data.OwnerDistrict = sanitizeName(getCellValue(row, columnMap, "DISTRICT"))
 	data.OwnerTA = sanitizeName(getCellValue(row, columnMap, "TRADITIONAL AUTHORITY"))
 	data.OwnerNextOfKinName = sanitizeName(getCellValue(row, columnMap, "NEXT OF KIN NAME"))
-	data.OwnerNextOfKinContact = strings.TrimSpace(getCellValue(row, columnMap, "NEXT OF KIN CONTACT"))
+	data.OwnerNextOfKinContact = sanitizePhoneNumber(getCellValue(row, columnMap, "NEXT OF KIN CONTACT"))
 
 	// Parse SME fields
 	data.BusinessName = sanitizeName(getCellValue(row, columnMap, "BUSINESS NAME"))
@@ -669,7 +715,7 @@ func parseRowData(row []string, columnMap map[string]int, rowNum int) (*SmeImpor
 	data.Sector = getCellValue(row, columnMap, "SECTOR")
 	data.SubSector = getCellValue(row, columnMap, "SUB SECTOR")
 	data.BusinessDescription = getCellValue(row, columnMap, "SERVICES DESCRIPTION")
-	data.ContactPhone = getCellValue(row, columnMap, "BUSINESS CONTACT")
+	data.ContactPhone = sanitizePhoneNumber(getCellValue(row, columnMap, "BUSINESS CONTACT"))
 	data.ContactEmail = getCellValue(row, columnMap, "BUSINESS EMAIL")
 	data.PhysicalAddress = getCellValue(row, columnMap, "BUSINESS PHYSICAL ADDRESS")
 	data.PostalAddress = getCellValue(row, columnMap, "BUSINESS POSTAL ADDRESS")
@@ -800,6 +846,137 @@ func generatePlaceholderEmail(businessName string) string {
 	}
 	// Use the constant from services package for consistency
 	return fmt.Sprintf("%s%s", cleaned, services.PlaceholderEmailDomain)
+}
+
+// isPlaceholderNationalID checks if a National ID is a known placeholder value
+// that should not be used for duplicate detection. These are commonly used
+// when the actual National ID is unknown or not provided during data collection.
+func isPlaceholderNationalID(nationalID string) bool {
+	if nationalID == "" {
+		return true
+	}
+
+	// Normalize for comparison
+	id := strings.ToLower(strings.TrimSpace(nationalID))
+
+	// Known placeholder patterns
+	placeholders := []string{
+		"00000000",
+		"0000000p",
+		"xxxxxxxx",
+		"hhhhh000",
+		"hhhhhh00",
+		"hhhhhhh0",
+		"n/a",
+		"na",
+		"none",
+		"-",
+		"unknown",
+		"pending",
+	}
+
+	for _, placeholder := range placeholders {
+		if id == placeholder {
+			return true
+		}
+	}
+
+	// Check for patterns like all zeros, all x's, all h's
+	if matched, _ := regexp.MatchString(`^0+p?$`, id); matched {
+		return true
+	}
+	if matched, _ := regexp.MatchString(`^x+$`, id); matched {
+		return true
+	}
+	if matched, _ := regexp.MatchString(`^h+0*$`, id); matched {
+		return true
+	}
+
+	return false
+}
+
+// checkForDuplicate checks if an SME with matching criteria already exists in the database.
+// Returns (isDuplicate bool, matchReason string).
+// Matching criteria (in order of priority):
+// 1. National ID number (most unique identifier) - skips placeholder values like "00000000"
+// 2. Business registration number (if registered)
+// 3. Business name + Owner name combination
+func checkForDuplicate(data *SmeImportData, customDB *gorm.DB) (bool, string) {
+	var count int64
+
+	// 1. Check by National ID (most reliable unique identifier)
+	// Skip placeholder IDs as they are not reliable for duplicate detection
+	if data.OwnerNationalID != "" && !isPlaceholderNationalID(data.OwnerNationalID) {
+		if customDB != nil {
+			customDB.Model(&models.PrimaryBusinessOwner{}).
+				Where("national_id_number = ?", data.OwnerNationalID).
+				Where("deleted_at IS NULL").
+				Count(&count)
+		} else {
+			count, _ = facades.Orm().Query().
+				Model(&models.PrimaryBusinessOwner{}).
+				Where("national_id_number = ?", data.OwnerNationalID).
+				Where("deleted_at IS NULL").
+				Count()
+		}
+		if count > 0 {
+			return true, fmt.Sprintf("National ID '%s' already registered", data.OwnerNationalID)
+		}
+	}
+
+	// 2. Check by Business Registration Number (if registered)
+	if data.RegistrationNumber != "" {
+		if customDB != nil {
+			customDB.Model(&models.Sme{}).
+				Where("registration_number = ?", data.RegistrationNumber).
+				Where("deleted_at IS NULL").
+				Count(&count)
+		} else {
+			count, _ = facades.Orm().Query().
+				Model(&models.Sme{}).
+				Where("registration_number = ?", data.RegistrationNumber).
+				Where("deleted_at IS NULL").
+				Count()
+		}
+		if count > 0 {
+			return true, fmt.Sprintf("Registration number '%s' already registered", data.RegistrationNumber)
+		}
+	}
+
+	// 3. Check by Business Name + Owner Name combination
+	// This catches cases where national ID or registration number might be missing
+	if data.BusinessName != "" && (data.OwnerFirstName != "" || data.OwnerLastName != "") {
+		ownerFirstName := strings.TrimSpace(data.OwnerFirstName)
+		ownerLastName := strings.TrimSpace(data.OwnerLastName)
+		businessName := strings.TrimSpace(data.BusinessName)
+
+		if customDB != nil {
+			customDB.Model(&models.Sme{}).
+				Joins("INNER JOIN primary_business_owner ON primary_business_owner.sme_id = smes.id").
+				Where("LOWER(smes.name) = LOWER(?)", businessName).
+				Where("LOWER(primary_business_owner.first_name) = LOWER(?)", ownerFirstName).
+				Where("LOWER(primary_business_owner.last_name) = LOWER(?)", ownerLastName).
+				Where("smes.deleted_at IS NULL").
+				Where("primary_business_owner.deleted_at IS NULL").
+				Count(&count)
+		} else {
+			count, _ = facades.Orm().Query().
+				Model(&models.Sme{}).
+				Join("INNER JOIN primary_business_owner ON primary_business_owner.sme_id = smes.id").
+				Where("LOWER(smes.name) = LOWER(?)", businessName).
+				Where("LOWER(primary_business_owner.first_name) = LOWER(?)", ownerFirstName).
+				Where("LOWER(primary_business_owner.last_name) = LOWER(?)", ownerLastName).
+				Where("smes.deleted_at IS NULL").
+				Where("primary_business_owner.deleted_at IS NULL").
+				Count()
+		}
+		if count > 0 {
+			return true, fmt.Sprintf("Business '%s' with owner '%s %s' already exists",
+				businessName, ownerFirstName, ownerLastName)
+		}
+	}
+
+	return false, ""
 }
 
 // deleteExistingSmes deletes all existing SMEs and related data

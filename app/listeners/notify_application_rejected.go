@@ -33,13 +33,14 @@ func (listener *NotifyApplicationRejected) Handle(args ...any) error {
 		return nil
 	}
 
-	rejectorUserID, ok := args[0].(uint)
+	// Note: After JSON serialization in queue, numbers come back as float64
+	rejectorUserID, ok := toUint(args[0])
 	if !ok {
 		facades.Log().Warning("NotifyApplicationRejected: Invalid rejectorUserID type")
 		return nil
 	}
 
-	applicationID, ok := args[1].(uint)
+	applicationID, ok := toUint(args[1])
 	if !ok {
 		facades.Log().Warning("NotifyApplicationRejected: Invalid applicationID type")
 		return nil

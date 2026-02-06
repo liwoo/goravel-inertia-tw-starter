@@ -132,8 +132,11 @@ const DashboardPage: React.FC = () => {
               <h1 className="text-2xl font-semibold tracking-tight">
                 Welcome back, {user.name}!
               </h1>
-              <p className="text-muted-foreground">
-                Here is an overview of your SME database and upcoming activities.
+              <p className="text-muted-foreground hidden md:inline">
+                Here is an overview of your MSME database and upcoming activities.
+              </p>
+              <p className="text-muted-foreground md:hidden">
+                Overview of your MSME database.
               </p>
             </>
           ) : (
@@ -141,8 +144,11 @@ const DashboardPage: React.FC = () => {
               <h1 className="text-2xl font-semibold tracking-tight">
                 Dashboard
               </h1>
-              <p className="text-muted-foreground">
-                Overview of your SME database and upcoming activities.
+              <p className="text-muted-foreground hidden md:inline">
+                Overview of your MSME database and upcoming activities.
+              </p>
+              <p className="text-muted-foreground md:hidden">
+                Overview of your MSME database.
               </p>
             </>
           )}

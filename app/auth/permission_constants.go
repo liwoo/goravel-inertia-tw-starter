@@ -96,7 +96,7 @@ func GetServiceDisplayName(service ServiceRegistry) string {
 	case ServiceConfig:
 		return "Configuration Management"
 	case ServiceSMEs:
-		return "SME Management"
+		return "MSME Management"
 	case ServicePrimaryBusinessOwners:
 		return "Primary Business Owner Management"
 	case ServiceAdditionalBusinessMembers:

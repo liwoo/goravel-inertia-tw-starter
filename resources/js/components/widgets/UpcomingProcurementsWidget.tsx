@@ -101,7 +101,8 @@ export function UpcomingProcurementsWidget({
             <FileText className="h-5 w-5" />
             Active Procurement Notices
           </CardTitle>
-          <CardDescription>Open tenders and procurement opportunities</CardDescription>
+          <CardDescription className="hidden xl:inline">Open tenders and procurement opportunities</CardDescription>
+          <CardDescription className="xl:hidden">Open tenders</CardDescription>
         </CardHeader>
         <CardContent className="flex-1">
           <div className="space-y-3">
@@ -122,7 +123,8 @@ export function UpcomingProcurementsWidget({
             <FileText className="h-5 w-5" />
             Active Procurement Notices
           </CardTitle>
-          <CardDescription>Open tenders and procurement opportunities</CardDescription>
+          <CardDescription className="hidden xl:inline">Open tenders and procurement opportunities</CardDescription>
+          <CardDescription className="xl:hidden">Open tenders</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-1 items-center justify-center py-8">
           <div className="text-center">

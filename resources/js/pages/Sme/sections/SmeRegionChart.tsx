@@ -36,7 +36,7 @@ const CHART_COLORS = [
 const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SMEs",
+      label: "MSMEs",
     },
   };
 
@@ -101,7 +101,7 @@ export function SmeRegionChart({ data, isLoading = false }: SmeRegionChartProps)
     <Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
         <CardTitle>Region Distribution</CardTitle>
-        <CardDescription>SMEs by geographic region</CardDescription>
+        <CardDescription>MSMEs by geographic region</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
@@ -174,7 +174,7 @@ export function SmeRegionChart({ data, isLoading = false }: SmeRegionChartProps)
                           y={(viewBox.cy || 0) + 24}
                           className="fill-muted-foreground text-sm"
                         >
-                          Total SMEs
+                          Total MSMEs
                         </tspan>
                       </text>
                     );

@@ -14,6 +14,7 @@ import { DistributionPoint } from "@/types/sme";
 interface SmeYouthChartProps {
   data: DistributionPoint[];
   isLoading?: boolean;
+  height?: number;
 }
 
 // Define specific colors for youth categories (lowercase keys for case-insensitive lookup)
@@ -42,7 +43,7 @@ const FALLBACK_COLORS = [
 const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SME Owners",
+      label: "MSME Owners",
     },
   };
 
@@ -57,7 +58,7 @@ const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   return config;
 };
 
-export function SmeYouthChart({ data, isLoading = false }: SmeYouthChartProps) {
+export function SmeYouthChart({ data, isLoading = false, height }: SmeYouthChartProps) {
   // Transform data for Recharts - assign colors based on youth status
   const chartData = React.useMemo(() => {
     return data.map((item, index) => ({
@@ -79,6 +80,20 @@ export function SmeYouthChart({ data, isLoading = false }: SmeYouthChartProps) {
   const youthData = data.find((d) => d.label === "Youth");
   const youthPercentage = youthData?.percentage ?? 0;
 
+  // Calculate dynamic radius based on height (scale proportionally)
+  const { innerRadius, outerRadius } = React.useMemo(() => {
+    if (height && height > 400) {
+      // Scale up for fullscreen - use ~30% of height for outer radius
+      const baseSize = Math.min(height * 0.35, 250);
+      return {
+        innerRadius: Math.floor(baseSize * 0.6),
+        outerRadius: Math.floor(baseSize),
+      };
+    }
+    // Default sizes for normal view
+    return { innerRadius: 60, outerRadius: 100 };
+  }, [height]);
+
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
@@ -99,11 +114,17 @@ export function SmeYouthChart({ data, isLoading = false }: SmeYouthChartProps) {
     );
   }
 
+  // Use dynamic height if provided, otherwise use default constraints
+  const containerClass = height
+    ? "mx-auto aspect-square"
+    : "mx-auto aspect-square h-full max-h-[300px] min-h-[250px]";
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <ChartContainer
         config={chartConfig}
-        className="mx-auto aspect-square h-full max-h-[300px] min-h-[250px]"
+        className={containerClass}
+        style={height ? { height: `${height}px` } : undefined}
       >
         <PieChart>
           <ChartTooltip
@@ -139,8 +160,8 @@ export function SmeYouthChart({ data, isLoading = false }: SmeYouthChartProps) {
             data={chartData}
             dataKey="value"
             nameKey="category"
-            innerRadius={60}
-            outerRadius={100}
+            innerRadius={innerRadius}
+            outerRadius={outerRadius}
             strokeWidth={2}
             stroke="hsl(var(--background))"
           >

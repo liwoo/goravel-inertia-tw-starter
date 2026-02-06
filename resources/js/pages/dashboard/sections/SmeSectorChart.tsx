@@ -32,7 +32,7 @@ const BAR_COLORS = [
 const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SMEs",
+      label: "MSMEs",
     },
   };
 
@@ -71,7 +71,7 @@ export function SmeSectorChart({ data, isLoading = false }: SmeSectorChartProps)
       <Card className="flex flex-col">
         <CardHeader>
           <CardTitle>Economic Sector Distribution</CardTitle>
-          <CardDescription>SMEs by economic sector</CardDescription>
+          <CardDescription>MSMEs by economic sector</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full animate-pulse rounded-md bg-muted" />
@@ -85,7 +85,7 @@ export function SmeSectorChart({ data, isLoading = false }: SmeSectorChartProps)
       <Card className="flex flex-col">
         <CardHeader>
           <CardTitle>Economic Sector Distribution</CardTitle>
-          <CardDescription>SMEs by economic sector</CardDescription>
+          <CardDescription>MSMEs by economic sector</CardDescription>
         </CardHeader>
         <CardContent className="flex h-[300px] items-center justify-center">
           <p className="text-muted-foreground">No data available</p>
@@ -98,7 +98,7 @@ export function SmeSectorChart({ data, isLoading = false }: SmeSectorChartProps)
     <Card className="flex flex-col overflow-hidden">
       <CardHeader>
         <CardTitle>Economic Sector Distribution</CardTitle>
-        <CardDescription>SMEs by economic sector (sorted by count)</CardDescription>
+        <CardDescription>MSMEs by economic sector (sorted by count)</CardDescription>
       </CardHeader>
       <CardContent className="overflow-hidden w-full">
         <ChartContainer config={chartConfig} className="h-[300px] w-full max-w-full">

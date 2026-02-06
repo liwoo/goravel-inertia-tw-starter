@@ -74,7 +74,8 @@ export function UpcomingEventsWidget({
             <Calendar className="h-5 w-5" />
             Upcoming Events
           </CardTitle>
-          <CardDescription>Events scheduled in the coming days</CardDescription>
+          <CardDescription className="hidden xl:inline">Events scheduled in the coming days</CardDescription>
+          <CardDescription className="xl:hidden">Upcoming events</CardDescription>
         </CardHeader>
         <CardContent className="flex-1">
           <div className="space-y-3">
@@ -95,7 +96,8 @@ export function UpcomingEventsWidget({
             <Calendar className="h-5 w-5" />
             Upcoming Events
           </CardTitle>
-          <CardDescription>Events scheduled in the coming days</CardDescription>
+          <CardDescription className="hidden xl:inline">Events scheduled in the coming days</CardDescription>
+          <CardDescription className="xl:hidden">Upcoming events</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-1 items-center justify-center py-8">
           <div className="text-center">

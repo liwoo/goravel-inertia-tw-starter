@@ -12,6 +12,9 @@ import (
 	"smedi-sme-db/app/models"
 )
 
+// Default minimum score required to view contact details in directory
+const defaultContactViewMinScore = 70
+
 // DirectoryController handles the public SME directory
 type DirectoryController struct{}
 
@@ -69,11 +72,34 @@ func (c *DirectoryController) ShowDirectory(ctx http.Context) http.Response {
 	// Get filter options
 	filters := c.getFilterOptions()
 
+	// Get the minimum score from env with fallback to default
+	minScore := facades.Config().GetInt("DIRECTORY_CONTACT_VIEW_MIN_SCORE", defaultContactViewMinScore)
+	if minScore <= 0 {
+		minScore = defaultContactViewMinScore
+	}
+
+	// Get the user's formalisation score
+	userFormalisationScore := 0
+	var user models.User
+	if err := facades.Auth(ctx).User(&user); err == nil && user.ID > 0 {
+		// Find the user's linked SME
+		var sme models.Sme
+		if err := facades.Orm().Query().Where("contact_email = ?", user.Email).First(&sme); err == nil && sme.ID > 0 {
+			// Get the formalisation record for this SME
+			var formalisation models.BusinessFormalisation
+			if err := facades.Orm().Query().Where("sme_id = ?", sme.ID).First(&formalisation); err == nil && formalisation.ID > 0 {
+				userFormalisationScore = formalisation.FormalisationScore
+			}
+		}
+	}
+
 	// Start with empty results - user must search or filter
 	return inertiaHelper.Render(ctx, "Directory/Index", map[string]interface{}{
-		"version": support.Version,
-		"smes":    []PublicSmeDTO{},
-		"filters": filters,
+		"version":                    support.Version,
+		"smes":                       []PublicSmeDTO{},
+		"filters":                    filters,
+		"userFormalisationScore":     userFormalisationScore,
+		"minScoreForContactView":     minScore,
 		"pagination": map[string]interface{}{
 			"total":      0,
 			"page":       1,

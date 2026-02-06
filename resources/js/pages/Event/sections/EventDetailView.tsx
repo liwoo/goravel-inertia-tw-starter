@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, BookOpen, FileText, Hash, Users, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CrudDetailViewProps } from '@/types/crud';
 import { Event } from '@/types/event';
 export function EventDetailView({
@@ -21,9 +22,18 @@ export function EventDetailView({
     });
   };
 
+  const attendeeCount = event.attending_sme_details?.length || 0;
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-6">
+    <Tabs defaultValue="details" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="details">Details</TabsTrigger>
+        <TabsTrigger value="attendees">
+          Attendees ({attendeeCount})
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="details" className="space-y-6 mt-6">
         <div>
           <h3 className="text-lg font-semibold mb-4 text-foreground">Event Information</h3>
           <div className="space-y-4">
@@ -99,26 +109,6 @@ export function EventDetailView({
 
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-muted">
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="flex-1 space-y-1">
-                <p className="text-sm text-muted-foreground">Attending SMEs</p>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {event.attending_sme_details && event.attending_sme_details.length > 0 ? (
-                    event.attending_sme_details.map((sme) => (
-                      <Badge key={sme.id} variant="outline">
-                        {sme.name}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-muted-foreground italic">No SMEs selected</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-muted">
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-1">
@@ -126,7 +116,6 @@ export function EventDetailView({
                 <p className="font-medium text-foreground whitespace-pre-wrap">{event.notes || '-'}</p>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -146,7 +135,38 @@ export function EventDetailView({
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </TabsContent>
+
+      <TabsContent value="attendees" className="space-y-6 mt-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4 text-foreground">Attending MSMEs</h3>
+          {event.attending_sme_details && event.attending_sme_details.length > 0 ? (
+            <div className="space-y-2">
+              <div className="rounded-md border">
+                <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 border-b font-medium text-sm">
+                  <div>MSME Name</div>
+                  <div>ID</div>
+                </div>
+                {event.attending_sme_details.map((sme) => (
+                  <div key={sme.id} className="grid grid-cols-2 gap-4 p-3 border-b last:border-b-0 hover:bg-muted/50 transition-colors">
+                    <div className="font-medium text-foreground">{sme.name}</div>
+                    <div className="text-muted-foreground">#{sme.id}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Total: {event.attending_sme_details.length} {event.attending_sme_details.length === 1 ? 'attendee' : 'attendees'}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center border rounded-md bg-muted/20">
+              <Users className="h-12 w-12 text-muted-foreground/50 mb-3" />
+              <p className="text-muted-foreground font-medium">No attendees yet</p>
+              <p className="text-sm text-muted-foreground mt-1">MSMEs can register for this event through their portal</p>
+            </div>
+          )}
+        </div>
+      </TabsContent>
+    </Tabs>
   );
 }

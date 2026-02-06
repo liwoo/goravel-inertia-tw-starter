@@ -89,7 +89,7 @@ func (c *SmeController) FetchPrimaryBusinessOwner(ctx http.Context) http.Respons
 	// Get ID from URL
 	id, err := c.ValidateID(ctx, "id")
 	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid SME ID", nil)
+		return c.BadRequestResponse(ctx, "Invalid MSME ID", nil)
 	}
 
 	// Check permissions
@@ -100,12 +100,12 @@ func (c *SmeController) FetchPrimaryBusinessOwner(ctx http.Context) http.Respons
 	// Call service layer
 	owner, err := c.smeService.GetPrimaryBusinessOwner(id)
 	if err != nil {
-		return c.NotFoundResponse(ctx, "SME not found")
+		return c.NotFoundResponse(ctx, "MSME not found")
 	}
 
 	// Return the primary business owner
 	if owner == nil {
-		return c.SuccessResponse(ctx, nil, "No primary business owner found for this SME")
+		return c.SuccessResponse(ctx, nil, "No primary business owner found for this MSME")
 	}
 
 	return c.SuccessResponse(ctx, owner, "Primary business owner retrieved successfully")
@@ -116,7 +116,7 @@ func (c *SmeController) FetchAdditionalBusinessMembers(ctx http.Context) http.Re
 	// Get ID from URL
 	id, err := c.ValidateID(ctx, "id")
 	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid SME ID", nil)
+		return c.BadRequestResponse(ctx, "Invalid MSME ID", nil)
 	}
 
 	// Check permissions
@@ -127,12 +127,12 @@ func (c *SmeController) FetchAdditionalBusinessMembers(ctx http.Context) http.Re
 	// Call service layer
 	members, err := c.smeService.GetAdditionalBusinessMembers(id)
 	if err != nil {
-		return c.NotFoundResponse(ctx, "SME not found")
+		return c.NotFoundResponse(ctx, "MSME not found")
 	}
 
 	// Return the additional business members
 	if members == nil || len(members) == 0 {
-		return c.SuccessResponse(ctx, []interface{}{}, "No additional business members found for this SME")
+		return c.SuccessResponse(ctx, []interface{}{}, "No additional business members found for this MSME")
 	}
 
 	return c.SuccessResponse(ctx, members, "Additional business members retrieved successfully")
@@ -143,7 +143,7 @@ func (c *SmeController) FetchBusinessFormalisation(ctx http.Context) http.Respon
 	// Get ID from URL
 	id, err := c.ValidateID(ctx, "id")
 	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid SME ID", nil)
+		return c.BadRequestResponse(ctx, "Invalid MSME ID", nil)
 	}
 
 	// Check permissions
@@ -154,12 +154,12 @@ func (c *SmeController) FetchBusinessFormalisation(ctx http.Context) http.Respon
 	// Call service layer
 	formalisation, err := c.smeService.GetBusinessFormalisation(id)
 	if err != nil {
-		return c.NotFoundResponse(ctx, "SME not found")
+		return c.NotFoundResponse(ctx, "MSME not found")
 	}
 
 	// Return the business formalisation
 	if formalisation == nil {
-		return c.SuccessResponse(ctx, nil, "No business formalisation found for this SME")
+		return c.SuccessResponse(ctx, nil, "No business formalisation found for this MSME")
 	}
 
 	return c.SuccessResponse(ctx, formalisation, "Business formalisation retrieved successfully")
@@ -170,7 +170,7 @@ func (c *SmeController) FetchBusinessEmployeeSummary(ctx http.Context) http.Resp
 	// Get ID from URL
 	id, err := c.ValidateID(ctx, "id")
 	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid SME ID", nil)
+		return c.BadRequestResponse(ctx, "Invalid MSME ID", nil)
 	}
 
 	// Check permissions
@@ -181,12 +181,12 @@ func (c *SmeController) FetchBusinessEmployeeSummary(ctx http.Context) http.Resp
 	// Call service layer
 	summary, err := c.smeService.GetBusinessEmployeeSummary(id)
 	if err != nil {
-		return c.NotFoundResponse(ctx, "SME not found")
+		return c.NotFoundResponse(ctx, "MSME not found")
 	}
 
 	// Return the employee summary
 	if summary == nil {
-		return c.SuccessResponse(ctx, nil, "No employee summary found for this SME")
+		return c.SuccessResponse(ctx, nil, "No employee summary found for this MSME")
 	}
 
 	return c.SuccessResponse(ctx, summary, "Employee summary retrieved successfully")
@@ -222,12 +222,12 @@ func (c *SmeController) BulkDeactivate(ctx http.Context) http.Response {
 	// Call service layer
 	affected, err := c.smeService.BulkDeactivate(request.IDs, updatedBy)
 	if err != nil {
-		return c.BadRequestResponse(ctx, "Failed to deactivate SMEs: "+err.Error(), nil)
+		return c.BadRequestResponse(ctx, "Failed to deactivate MSMEs: "+err.Error(), nil)
 	}
 
 	return c.SuccessResponse(ctx, map[string]interface{}{
 		"affected": affected,
-	}, fmt.Sprintf("%d SME(s) deactivated successfully", affected))
+	}, fmt.Sprintf("%d MSME(s) deactivated successfully", affected))
 }
 
 // BulkActivate POST /api/smes/bulk-activate
@@ -260,12 +260,12 @@ func (c *SmeController) BulkActivate(ctx http.Context) http.Response {
 	// Call service layer
 	affected, err := c.smeService.BulkActivate(request.IDs, updatedBy)
 	if err != nil {
-		return c.BadRequestResponse(ctx, "Failed to activate SMEs: "+err.Error(), nil)
+		return c.BadRequestResponse(ctx, "Failed to activate MSMEs: "+err.Error(), nil)
 	}
 
 	return c.SuccessResponse(ctx, map[string]interface{}{
 		"affected": affected,
-	}, fmt.Sprintf("%d SME(s) activated successfully", affected))
+	}, fmt.Sprintf("%d MSME(s) activated successfully", affected))
 }
 
 // RecalculateClassification POST /api/smes/{id}/recalculate-classification
@@ -273,7 +273,7 @@ func (c *SmeController) RecalculateClassification(ctx http.Context) http.Respons
 	// Get ID from URL
 	id, err := c.ValidateID(ctx, "id")
 	if err != nil {
-		return c.BadRequestResponse(ctx, "Invalid SME ID", nil)
+		return c.BadRequestResponse(ctx, "Invalid MSME ID", nil)
 	}
 
 	// Check permissions
@@ -308,7 +308,7 @@ func (c *SmeController) RecalculateAllClassifications(ctx http.Context) http.Res
 
 	return c.SuccessResponse(ctx, map[string]interface{}{
 		"processed": count,
-	}, fmt.Sprintf("%d SME(s) classifications recalculated", count))
+	}, fmt.Sprintf("%d MSME(s) classifications recalculated", count))
 }
 
 // FetchByUserEmail GET /api/smes/by-email - Returns the SME linked to the authenticated user's email
@@ -322,14 +322,14 @@ func (c *SmeController) FetchByUserEmail(ctx http.Context) http.Response {
 	// Call service layer to get SME by user's email
 	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
 	if err != nil {
-		return c.NotFoundResponse(ctx, "No SME linked to this user")
+		return c.NotFoundResponse(ctx, "No MSME linked to this user")
 	}
 
 	if sme == nil {
-		return c.NotFoundResponse(ctx, "No SME linked to this user")
+		return c.NotFoundResponse(ctx, "No MSME linked to this user")
 	}
 
-	return c.SuccessResponse(ctx, sme, "SME retrieved successfully")
+	return c.SuccessResponse(ctx, sme, "MSME retrieved successfully")
 }
 
 // FetchMySme GET /api/my-sme - Returns the full SME details for the authenticated user's linked SME
@@ -344,14 +344,14 @@ func (c *SmeController) FetchMySme(ctx http.Context) http.Response {
 	// Call service layer to get SME by user's email
 	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
 	if err != nil {
-		return c.NotFoundResponse(ctx, "No SME linked to this user")
+		return c.NotFoundResponse(ctx, "No MSME linked to this user")
 	}
 
 	if sme == nil {
-		return c.NotFoundResponse(ctx, "No SME linked to this user")
+		return c.NotFoundResponse(ctx, "No MSME linked to this user")
 	}
 
-	return c.SuccessResponse(ctx, sme, "SME retrieved successfully")
+	return c.SuccessResponse(ctx, sme, "MSME retrieved successfully")
 }
 
 // FetchMySmeOwner GET /api/my-sme/primary-owner - Returns the primary owner of the user's linked SME
@@ -365,7 +365,7 @@ func (c *SmeController) FetchMySmeOwner(ctx http.Context) http.Response {
 	// Get the user's linked SME
 	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
 	if err != nil || sme == nil {
-		return c.NotFoundResponse(ctx, "No SME linked to this user")
+		return c.NotFoundResponse(ctx, "No MSME linked to this user")
 	}
 
 	// Get the primary owner for this SME
@@ -375,7 +375,7 @@ func (c *SmeController) FetchMySmeOwner(ctx http.Context) http.Response {
 	}
 
 	if owner == nil {
-		return c.SuccessResponse(ctx, nil, "No primary business owner found for this SME")
+		return c.SuccessResponse(ctx, nil, "No primary business owner found for this MSME")
 	}
 
 	return c.SuccessResponse(ctx, owner, "Primary business owner retrieved successfully")
@@ -392,7 +392,7 @@ func (c *SmeController) UpdateMySme(ctx http.Context) http.Response {
 	// Get the user's linked SME
 	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
 	if err != nil || sme == nil {
-		return c.NotFoundResponse(ctx, "No SME linked to this user")
+		return c.NotFoundResponse(ctx, "No MSME linked to this user")
 	}
 
 	// Parse request body
@@ -404,10 +404,10 @@ func (c *SmeController) UpdateMySme(ctx http.Context) http.Response {
 	// Update the SME
 	updatedSme, err := c.smeService.Update(sme.ID, updateData)
 	if err != nil {
-		return c.BadRequestResponse(ctx, "Failed to update SME: "+err.Error(), nil)
+		return c.BadRequestResponse(ctx, "Failed to update MSME: "+err.Error(), nil)
 	}
 
-	return c.SuccessResponse(ctx, updatedSme, "SME updated successfully")
+	return c.SuccessResponse(ctx, updatedSme, "MSME updated successfully")
 }
 
 // FetchSmesByPrimaryOwnerEmail GET /api/smes/by-owner-email - Returns SMEs where primary owner email matches
@@ -426,10 +426,10 @@ func (c *SmeController) FetchSmesByPrimaryOwnerEmail(ctx http.Context) http.Resp
 	// Find SMEs where primary owner email matches
 	smes, err := c.smeService.GetSmesByPrimaryOwnerEmail(email)
 	if err != nil {
-		return c.BadRequestResponse(ctx, "Failed to fetch SMEs: "+err.Error(), nil)
+		return c.BadRequestResponse(ctx, "Failed to fetch MSMEs: "+err.Error(), nil)
 	}
 
-	return c.SuccessResponse(ctx, smes, "SMEs retrieved successfully")
+	return c.SuccessResponse(ctx, smes, "MSMEs retrieved successfully")
 }
 
 // UpdateMySmeOwner PUT /api/my-sme/primary-owner - Updates the primary owner of the user's linked SME
@@ -443,7 +443,7 @@ func (c *SmeController) UpdateMySmeOwner(ctx http.Context) http.Response {
 	// Get the user's linked SME
 	sme, err := c.smeService.GetSmeByUserEmail(user.Email)
 	if err != nil || sme == nil {
-		return c.NotFoundResponse(ctx, "No SME linked to this user")
+		return c.NotFoundResponse(ctx, "No MSME linked to this user")
 	}
 
 	// Get the primary owner for this SME

@@ -1608,8 +1608,8 @@ func (s *SmeControllerCRUDTestSuite) TestUBIGeneration() {
 	s.NotNil(data["usme_number"], "UBI should be generated as usme_number")
 	ubi := data["usme_number"].(string)
 
-	// Verify UBI format: MW-YYYY-DD-CT-NNNNNN-C (DD and CT are now 2-letter codes)
-	s.Regexp(`^MW-\d{4}-[A-Z]{2}-[A-Z]{2}-\d{6}-\d$`, ubi, "UBI should match expected format")
+	// Verify UBI format: MW-YYYY-DD-CT-NNNNNN-C (DD is 2-3 letter district code, CT is 2-letter category code)
+	s.Regexp(`^MW-\d{4}-[A-Z]{2,3}-[A-Z]{2}-\d{6}-\d$`, ubi, "UBI should match expected format")
 
 	// Verify components
 	parts := strings.Split(ubi, "-")
@@ -1621,8 +1621,8 @@ func (s *SmeControllerCRUDTestSuite) TestUBIGeneration() {
 	year, _ := strconv.Atoi(parts[1])
 	s.Equal(currentYear, year, "Year should be current year")
 
-	// District code should be LI for Lilongwe
-	s.Equal("LI", parts[2], "District code for Lilongwe should be LI")
+	// District code should be LL for Lilongwe
+	s.Equal("LL", parts[2], "District code for Lilongwe should be LL")
 
 	// Category should be MI for Micro (first 2 letters of "Micro")
 	s.Equal("MI", parts[3], "Category should be MI for Micro business")
@@ -1635,15 +1635,15 @@ func (s *SmeControllerCRUDTestSuite) TestUBIGeneration() {
 }
 
 func (s *SmeControllerCRUDTestSuite) TestUBIDistrictCodes() {
-	// Test that different districts get correct two-letter ISO 3166-2:MW codes
+	// Test that different districts get correct codes
 	testCases := []struct {
 		district     string
 		expectedCode string
 	}{
-		{"Lilongwe", "LI"},
+		{"Lilongwe", "LL"},
 		{"Blantyre", "BT"},
 		{"Mzuzu", "MZ"},
-		{"Zomba", "ZO"},
+		{"Zomba", "ZA"},
 	}
 
 	for _, tc := range testCases {

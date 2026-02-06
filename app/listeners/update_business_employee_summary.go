@@ -29,15 +29,9 @@ func (listener *UpdateBusinessEmployeeSummary) Queue(args ...any) event.Queue {
 // Handle processes the event asynchronously
 func (listener *UpdateBusinessEmployeeSummary) Handle(args ...any) error {
 	// Extract the smeId from the event args
-	var smeId int
-
-	if len(args) > 0 {
-		if id, ok := args[0].(int); ok {
-			smeId = id
-		}
-	}
-
-	if smeId == 0 {
+	// Note: After JSON serialization in queue, numbers come back as float64
+	smeId, ok := toInt(args[0])
+	if !ok || smeId == 0 {
 		facades.Log().Warning("UpdateBusinessEmployeeSummary: Invalid smeId")
 		return nil
 	}

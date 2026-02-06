@@ -42,8 +42,8 @@ func (r *FormalisationAmendmentRequest) Rules(ctx http.Context) map[string]strin
 
 func (r *FormalisationAmendmentRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"sme_id.required": "SME ID is required",
-		"sme_id.integer":  "SME ID must be a valid number",
+		"sme_id.required": "MSME ID is required",
+		"sme_id.integer":  "MSME ID must be a valid number",
 	}
 }
 

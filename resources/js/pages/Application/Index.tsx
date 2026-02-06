@@ -117,14 +117,14 @@ export default function ApplicationIndex({
         setSmes(smesData);
 
         if (applicantEmail && smesData.length === 0) {
-          toast.info('No SMEs found matching the applicant\'s email. You can create a new SME.');
+          toast.info('No MSMEs found matching the applicant\'s email. You can create a new MSME.');
         }
       } else {
-        toast.info('Failed to load SMEs');
+        toast.info('Failed to load MSMEs');
       }
     } catch (error) {
-      console.error('Error fetching SMEs:', error);
-      toast.info('Failed to load SMEs');
+      console.error('Error fetching MSMEs:', error);
+      toast.info('Failed to load MSMEs');
     } finally {
       setIsLoadingSmes(false);
     }
@@ -183,7 +183,7 @@ export default function ApplicationIndex({
     if (!selectedApplication) return;
 
     if (!selectedSmeId) {
-      toast.info('Please select an SME');
+      toast.info('Please select an MSME');
       return;
     }
 
@@ -291,7 +291,7 @@ export default function ApplicationIndex({
 
   // Handle SME creation success - auto-approve the application with the new SME
   const handleSmeCreated = async (newSme: any) => {
-    toast.success('SME created successfully');
+    toast.success('MSME created successfully');
     setShowCreateSmeDialog(false);
 
     if (!selectedApplication || !newSme?.id) {
@@ -486,16 +486,16 @@ SMEDI Team`;
           <DialogHeader>
             <DialogTitle>Approve Application</DialogTitle>
             <DialogDescription>
-              Select an SME to link with this applicant. Only SMEs where the primary owner's email matches
+              Select an MSME to link with this applicant. Only MSMEs where the primary owner's email matches
               the applicant's email ({selectedApplication?.email}) are shown. A user account will be created.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="sme">Select SME *</Label>
+              <Label htmlFor="sme">Select MSME *</Label>
               <Select value={selectedSmeId} onValueChange={setSelectedSmeId} disabled={isLoadingSmes}>
                 <SelectTrigger>
-                  <SelectValue placeholder={isLoadingSmes ? "Loading SMEs..." : "Select an SME"} />
+                  <SelectValue placeholder={isLoadingSmes ? "Loading MSMEs..." : "Select an MSME"} />
                 </SelectTrigger>
                 <SelectContent>
                   {smes.map((sme) => (
@@ -513,7 +513,7 @@ SMEDI Team`;
                 onClick={() => setShowCreateSmeDialog(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Create New SME
+                Create New MSME
               </Button>
             </div>
           </div>
@@ -593,19 +593,19 @@ SMEDI Team`;
         </DialogContent>
       </Dialog>
 
-      {/* Create SME Dialog - Full Screen */}
+      {/* Create MSME Dialog - Full Screen */}
       <Dialog open={showCreateSmeDialog} onOpenChange={setShowCreateSmeDialog}>
         <DialogContent className="!max-w-[95vw] !w-[95vw] !h-[90vh] !max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New SME</DialogTitle>
+            <DialogTitle>Create New MSME</DialogTitle>
             <DialogDescription>
-              Create a new SME to associate with this application. Form has been prefilled with application data.
+              Create a new MSME to associate with this application. Form has been prefilled with application data.
             </DialogDescription>
           </DialogHeader>
           <SmeCreateForm
             onSuccess={() => {}} // No-op since we handle the SME data via onSmeCreated
             onSmeCreated={handleSmeCreated}
-            onError={(error) => toast.error(error?.message || 'Failed to create SME')}
+            onError={(error) => toast.error(error?.message || 'Failed to create MSME')}
             onCancel={() => setShowCreateSmeDialog(false)}
             initialData={getInitialSmeDataFromApplication(selectedApplication)}
           />
@@ -619,13 +619,13 @@ SMEDI Team`;
             <DialogTitle>Approve Amendment Request</DialogTitle>
             <DialogDescription>
               Are you sure you want to approve this formalisation amendment request?
-              This will update the SME's formalisation data with the proposed changes.
+              This will update the MSME's formalisation data with the proposed changes.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {selectedApplication && (
               <div className="bg-muted p-3 rounded-md text-sm space-y-1">
-                <p><strong>SME:</strong> {selectedApplication.sme}</p>
+                <p><strong>MSME:</strong> {selectedApplication.sme}</p>
                 <p><strong>Submitted by:</strong> {selectedApplication.email}</p>
               </div>
             )}
@@ -669,7 +669,7 @@ SMEDI Team`;
           <div className="py-4">
             {selectedApplication && (
               <div className="bg-muted p-3 rounded-md text-sm space-y-1">
-                <p><strong>SME:</strong> {selectedApplication.sme}</p>
+                <p><strong>MSME:</strong> {selectedApplication.sme}</p>
                 <p><strong>Applicant:</strong> {selectedApplication.registrant_name || `${selectedApplication.first_name} ${selectedApplication.last_name}`}</p>
                 <p><strong>Email:</strong> {selectedApplication.email}</p>
               </div>

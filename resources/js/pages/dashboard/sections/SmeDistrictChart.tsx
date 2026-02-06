@@ -12,6 +12,7 @@ import { DistributionPoint } from "@/types/sme";
 interface SmeDistrictChartProps {
   data: DistributionPoint[];
   isLoading?: boolean;
+  height?: number;
 }
 
 // Use purple shade variations for bar charts
@@ -25,7 +26,7 @@ const BAR_COLORS = [
 const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SMEs",
+      label: "MSMEs",
     },
   };
 
@@ -40,7 +41,7 @@ const generateChartConfig = (data: DistributionPoint[]): ChartConfig => {
   return config;
 };
 
-export function SmeDistrictChart({ data, isLoading = false }: SmeDistrictChartProps) {
+export function SmeDistrictChart({ data, isLoading = false, height }: SmeDistrictChartProps) {
   // Transform and sort data by value descending, take top 15 for readability
   const chartData = React.useMemo(() => {
     return [...data]
@@ -80,9 +81,15 @@ export function SmeDistrictChart({ data, isLoading = false }: SmeDistrictChartPr
     );
   }
 
+  // Use dynamic height if provided, otherwise use default constraints
+  const containerStyle = height ? { height: `${height}px` } : undefined;
+  const containerClass = height
+    ? "w-full max-w-full"
+    : "h-[300px] w-full max-w-full min-h-[280px]";
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
-      <ChartContainer config={chartConfig} className="h-[300px] w-full max-w-full min-h-[280px]">
+      <ChartContainer config={chartConfig} className={containerClass} style={containerStyle}>
         <BarChart
           data={chartData}
           layout="vertical"

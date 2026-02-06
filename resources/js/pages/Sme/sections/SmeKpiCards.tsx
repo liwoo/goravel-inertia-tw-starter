@@ -70,11 +70,11 @@ export function SmeKpiCards({ stats }: SmeKpiCardsProps) {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {/* Total SMEs Card */}
+      {/* Total MSMEs Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total SMEs
+            Total MSMEs
           </CardTitle>
           <Building2 className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
@@ -82,7 +82,7 @@ export function SmeKpiCards({ stats }: SmeKpiCardsProps) {
           <div className="text-2xl font-bold">
             {stats.totalSmes.toLocaleString()}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:block">
             Registered in the database
           </p>
         </CardContent>
@@ -104,7 +104,8 @@ export function SmeKpiCards({ stats }: SmeKpiCardsProps) {
             <TrendIndicator value={monthOverMonthChange} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            vs {stats.newLastMonth.toLocaleString()} last month
+            <span className="hidden lg:inline">vs {stats.newLastMonth.toLocaleString()} last month</span>
+            <span className="lg:hidden">vs {stats.newLastMonth.toLocaleString()}</span>
           </p>
         </CardContent>
       </Card>

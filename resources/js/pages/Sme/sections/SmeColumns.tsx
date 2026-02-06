@@ -206,7 +206,7 @@ export const smeColumns: CrudColumn<Sme>[] = [
 export const smeColumnsMobile: CrudColumn<Sme>[] = [
   {
     key: 'combined',
-    label: 'SME',
+    label: 'MSME',
     sortable: false,
     render: (sme) => {
       const isActive = sme.isActive ?? (sme as any).is_active ?? true;

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/goravel/framework/contracts/http"
@@ -134,7 +135,7 @@ func (c *SearchController) searchSMEs(query string) []SearchResult {
 				Title:    sme.Name,
 				Subtitle: subtitle,
 				Type:     "sme",
-				URL:      fmt.Sprintf("/admin/smes?search=%s", query),
+				URL:      fmt.Sprintf("/admin/smes?search=%s", url.QueryEscape(sme.Name)),
 			})
 		}
 	}
@@ -171,7 +172,7 @@ func (c *SearchController) searchBDSPs(query string) []SearchResult {
 				Title:    bdsp.Name,
 				Subtitle: subtitle,
 				Type:     "bdsp",
-				URL:      fmt.Sprintf("/admin/bdsps?search=%s", query),
+				URL:      fmt.Sprintf("/admin/bdsps?search=%s", url.QueryEscape(bdsp.Name)),
 			})
 		}
 	}
@@ -208,7 +209,7 @@ func (c *SearchController) searchEvents(query string) []SearchResult {
 				Title:    event.Title,
 				Subtitle: subtitle,
 				Type:     "event",
-				URL:      fmt.Sprintf("/admin/events?search=%s", query),
+				URL:      fmt.Sprintf("/admin/events?search=%s", url.QueryEscape(event.Title)),
 			})
 		}
 	}
@@ -245,7 +246,7 @@ func (c *SearchController) searchProcurements(query string) []SearchResult {
 				Title:    procurement.Invitation,
 				Subtitle: subtitle,
 				Type:     "procurement",
-				URL:      fmt.Sprintf("/admin/procurements?search=%s", query),
+				URL:      fmt.Sprintf("/admin/procurements?search=%s", url.QueryEscape(procurement.Invitation)),
 			})
 		}
 	}
@@ -278,7 +279,7 @@ func (c *SearchController) searchUsers(query string) []SearchResult {
 				Title:    user.Name,
 				Subtitle: user.Email,
 				Type:     "user",
-				URL:      fmt.Sprintf("/admin/users?search=%s", query),
+				URL:      fmt.Sprintf("/admin/users?search=%s", url.QueryEscape(user.Name)),
 			})
 		}
 	}
@@ -316,7 +317,7 @@ func (c *SearchController) searchConfigs(query string) []SearchResult {
 				Title:    config.Name,
 				Subtitle: subtitle,
 				Type:     "config",
-				URL:      fmt.Sprintf("/admin/configs?search=%s", query),
+				URL:      fmt.Sprintf("/admin/configs?search=%s", url.QueryEscape(config.Name)),
 			})
 		}
 	}
@@ -353,7 +354,7 @@ func (c *SearchController) searchApplications(query string) []SearchResult {
 				Title:    application.RegistrantName,
 				Subtitle: subtitle,
 				Type:     "application",
-				URL:      fmt.Sprintf("/admin/applications?search=%s", query),
+				URL:      fmt.Sprintf("/admin/applications?search=%s", url.QueryEscape(application.RegistrantName)),
 			})
 		}
 	}

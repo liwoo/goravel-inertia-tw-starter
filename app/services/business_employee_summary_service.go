@@ -117,7 +117,7 @@ func (s *BusinessEmployeeSummaryService) GetFilterDefinitions() []contracts.Filt
 	return []contracts.FilterDefinition{
 		contracts.NewFilterDefinition(
 			"sme_id",
-			"SME ID",
+			"MSME ID",
 			contracts.FilterTypeNumber,
 			nil,
 		),

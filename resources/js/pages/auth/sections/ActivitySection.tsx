@@ -52,7 +52,7 @@ function getEntityIcon(entityType: string) {
 function getEntityLabel(entityType: string): string {
   switch (entityType) {
     case "sme":
-      return "SME";
+      return "MSME";
     case "event":
       return "Event";
     case "procurement":

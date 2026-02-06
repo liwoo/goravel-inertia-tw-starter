@@ -132,12 +132,13 @@ func (s *DashboardService) GetUpcomingEvents(limit int) []UpcomingEventDTO {
 
 // CalendarEventDTO represents event data for the calendar widget
 type CalendarEventDTO struct {
-	ID       uint   `json:"id"`
-	Title    string `json:"title"`
-	Date     string `json:"date"`
-	EndDate  string `json:"endDate,omitempty"`
-	Venue    string `json:"venue"`
-	District string `json:"district,omitempty"`
+	ID          uint   `json:"id"`
+	Title       string `json:"title"`
+	Date        string `json:"date"`
+	EndDate     string `json:"endDate,omitempty"`
+	Venue       string `json:"venue"`
+	District    string `json:"district,omitempty"`
+	IsAttending bool   `json:"isAttending,omitempty"`
 }
 
 // GetEventsForDistrict returns events visible to an SME in a specific district
@@ -172,6 +173,57 @@ func (s *DashboardService) GetEventsForDistrict(district string) []CalendarEvent
 			Date:     event.Date.ToDateTimeString(),
 			Venue:    event.Venue,
 			District: event.District,
+		}
+		if !event.EndDate.IsZero() {
+			result[i].EndDate = event.EndDate.ToDateTimeString()
+		}
+	}
+
+	return result
+}
+
+// GetEventsForDistrictWithAttendance returns events visible to an SME in a specific district
+// with isAttending flag indicating if the given SME is attending each event
+func (s *DashboardService) GetEventsForDistrictWithAttendance(district string, smeId uint) []CalendarEventDTO {
+	now := time.Now()
+	var events []models.Event
+
+	// Get events where:
+	// 1. Date is in the future (or ongoing - end_date > now)
+	// 2. District matches OR district is empty/null (available to all)
+	query := facades.Orm().Query().Model(&models.Event{}).
+		Where("(date > ? OR end_date > ?)", now, now)
+
+	if district != "" {
+		// Events in SME's district OR events with no district (available to all)
+		query = query.Where("(district = ? OR district = '' OR district IS NULL)", district)
+	}
+
+	err := query.Order("date ASC").Find(&events)
+
+	if err != nil {
+		return []CalendarEventDTO{}
+	}
+
+	// Convert to DTOs with attendance check
+	result := make([]CalendarEventDTO, len(events))
+	for i, event := range events {
+		// Check if SME is in the AttendingSmes list
+		isAttending := false
+		for _, attendingSmeId := range event.AttendingSmes {
+			if attendingSmeId == int(smeId) {
+				isAttending = true
+				break
+			}
+		}
+
+		result[i] = CalendarEventDTO{
+			ID:          event.ID,
+			Title:       event.Title,
+			Date:        event.Date.ToDateTimeString(),
+			Venue:       event.Venue,
+			District:    event.District,
+			IsAttending: isAttending,
 		}
 		if !event.EndDate.IsZero() {
 			result[i].EndDate = event.EndDate.ToDateTimeString()

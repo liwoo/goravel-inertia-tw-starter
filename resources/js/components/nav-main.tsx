@@ -123,7 +123,7 @@ export function NavMain({
                   <DropdownMenuSeparator />
                   {canPerformAction('smes', 'create') && (
                     <DropdownMenuItem onClick={() => router.visit('/smes/create')}>
-                      SME
+                      MSME
                     </DropdownMenuItem>
                   )}
                   {canPerformAction('bdsps', 'create') && (

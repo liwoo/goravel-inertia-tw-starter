@@ -106,13 +106,13 @@ export function DashboardKpiCards({
   // Collect visible cards
   const cards: React.ReactNode[] = [];
 
-  // Total SMEs Card - only if user can view SMEs
+  // Total MSMEs Card - only if user can view SMEs
   if (canViewSmes) {
     cards.push(
       <Card key="total-smes">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total SMEs
+            Total MSMEs
           </CardTitle>
           <Building2 className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
@@ -120,7 +120,7 @@ export function DashboardKpiCards({
           <div className="text-2xl font-bold">
             {stats.totalSmes.toLocaleString()}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:block">
             Registered in the database
           </p>
         </CardContent>
@@ -143,8 +143,11 @@ export function DashboardKpiCards({
             </div>
             <TrendIndicator value={monthOverMonthChange} />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:inline">
             vs {stats.newLastMonth.toLocaleString()} last month
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 lg:hidden">
+            vs {stats.newLastMonth.toLocaleString()}
           </p>
         </CardContent>
       </Card>
@@ -172,8 +175,11 @@ export function DashboardKpiCards({
               </span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:inline">
             Total events organized
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 lg:hidden">
+            Events held
           </p>
         </CardContent>
       </Card>
@@ -201,8 +207,11 @@ export function DashboardKpiCards({
               </span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 hidden lg:inline">
             Total procurement notices
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 lg:hidden">
+            Active notices
           </p>
         </CardContent>
       </Card>

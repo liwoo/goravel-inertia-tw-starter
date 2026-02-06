@@ -110,7 +110,7 @@ export function ApplicationDetailView({
           )}
           <TabsTrigger value="owner" title="Primary Owner">
             <User className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{isAmendment ? 'SME Info' : 'Primary Owner'}</span>
+            <span className="hidden sm:inline">{isAmendment ? 'MSME Info' : 'Primary Owner'}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -252,7 +252,7 @@ export function ApplicationDetailView({
                     <FileText className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm text-muted-foreground">SME</p>
+                    <p className="text-sm text-muted-foreground">MSME</p>
                     <p className="font-medium text-foreground">{application.sme}</p>
                   </div>
                 </div>
@@ -285,13 +285,13 @@ export function ApplicationDetailView({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex-1 space-y-1">
-                  <p className="text-sm text-muted-foreground">SME Registration Number</p>
+                  <p className="text-sm text-muted-foreground">MSME Registration Number</p>
                   <p className="font-medium text-foreground">{application.sme_registration_number}</p>
                 </div>
 
                 <div className="flex items-start gap-3">
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm text-muted-foreground">SME Tax Identification Number</p>
+                    <p className="text-sm text-muted-foreground">MSME Tax Identification Number</p>
                     <p className="font-medium text-foreground">{application.sme_tax_identification_number}</p>
                   </div>
                 </div>
@@ -320,20 +320,20 @@ export function ApplicationDetailView({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                {isAmendment ? 'SME Contact Information' : 'Primary Business Owner'}
+                {isAmendment ? 'MSME Contact Information' : 'Primary Business Owner'}
               </CardTitle>
               <CardDescription>
                 {isAmendment
-                  ? 'Contact details for the SME submitting the amendment'
+                  ? 'Contact details for the MSME submitting the amendment'
                   : 'Details of the primary business owner'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {isAmendment ? (
-                // For amendment applications, show SME contact info
+                // For amendment applications, show MSME contact info
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DetailRow label="SME Name" value={amendmentData?.sme_name || application.sme} />
+                    <DetailRow label="MSME Name" value={amendmentData?.sme_name || application.sme} />
                     <DetailRow label="Contact Email" value={application.email} />
                     <DetailRow label="Contact Phone" value={application.phone} />
                   </div>

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ArrowLeft, Edit, Save, Command } from 'lucide-react';
+import { ArrowLeft, Edit, Save, Command, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DrawerProps } from '@/types/crud';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,11 @@ import {
   SheetContent,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CrudDrawerProps extends DrawerProps {
@@ -20,6 +25,7 @@ interface CrudDrawerProps extends DrawerProps {
   isSaving?: boolean;
   resourceName?: string;
   displayName?: string; // Optional display name override for cleaner titles
+  fullscreen?: boolean; // Use fullscreen dialog instead of sidebar drawer
 }
 
 export function CrudDrawer({
@@ -38,7 +44,8 @@ export function CrudDrawer({
   canSave = false,
   isSaving = false,
   resourceName = '',
-  displayName
+  displayName,
+  fullscreen = false
 }: CrudDrawerProps) {
   // Keyboard shortcuts
   useEffect(() => {
@@ -82,6 +89,66 @@ export function CrudDrawer({
      type === 'edit' ? `Edit ${formattedName}` :
      type === 'view' ? `${formattedName} Details` : title) : title;
 
+  // Fullscreen mode uses Dialog
+  if (fullscreen) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent
+          showCloseButton={false}
+          className={cn(
+            "fixed inset-4 w-auto max-w-none h-auto translate-x-0 translate-y-0 top-0 left-0 p-0 flex flex-col gap-0",
+            className
+          )}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border shrink-0">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <DialogTitle className="text-lg font-semibold">
+                {displayTitle}
+              </DialogTitle>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Save button for Create/Edit modes */}
+              {(type === 'create' || type === 'edit') && canSave && onSave && (
+                <Button
+                  onClick={onSave}
+                  size="sm"
+                  disabled={isSaving}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground group"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? 'Saving...' : 'Save'}
+                  {!isSaving && (
+                    <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-primary-foreground/20 px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-primary-foreground/30">
+                      <Command className="h-3 w-3" />S
+                    </kbd>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <ScrollArea className="flex-1">
+            <div className="p-4 sm:p-6">
+              {children}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Default sidebar mode uses Sheet
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent

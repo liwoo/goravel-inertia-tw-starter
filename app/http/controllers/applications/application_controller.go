@@ -339,7 +339,7 @@ func (c *ApplicationController) CheckPendingAmendment(ctx http.Context) http.Res
 	// Get SME ID from path parameter
 	smeID, err := strconv.ParseUint(ctx.Request().Input("smeId"), 10, 32)
 	if err != nil || smeID == 0 {
-		return c.BadRequestResponse(ctx, "Invalid SME ID", nil)
+		return c.BadRequestResponse(ctx, "Invalid MSME ID", nil)
 	}
 
 	// Check for pending amendment

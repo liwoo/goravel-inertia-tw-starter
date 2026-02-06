@@ -28,6 +28,7 @@ export interface AgeGenderDistributionPoint {
 interface SmeAgePyramidChartProps {
   data: AgeGenderDistributionPoint[];
   isLoading?: boolean;
+  height?: number;
 }
 
 // Colors for male and female - using primary/contrast for binary distinction
@@ -45,7 +46,7 @@ const chartConfig: ChartConfig = {
   },
 };
 
-export function SmeAgePyramidChart({ data, isLoading = false }: SmeAgePyramidChartProps) {
+export function SmeAgePyramidChart({ data, isLoading = false, height }: SmeAgePyramidChartProps) {
   // Transform data for pyramid chart
   // Males will be negative (extend left), females positive (extend right)
   const chartData = React.useMemo(() => {
@@ -124,7 +125,11 @@ export function SmeAgePyramidChart({ data, isLoading = false }: SmeAgePyramidCha
         </div>
       </div>
 
-      <ChartContainer config={chartConfig} className="h-[260px] w-full min-h-[200px]">
+      <ChartContainer
+        config={chartConfig}
+        className={height ? "w-full" : "h-[260px] w-full min-h-[200px]"}
+        style={height ? { height: `${height - 40}px` } : undefined}
+      >
         <BarChart
           data={chartData}
           layout="vertical"

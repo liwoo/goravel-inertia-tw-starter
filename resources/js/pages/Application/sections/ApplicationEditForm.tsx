@@ -60,7 +60,7 @@ export const ApplicationEditForm = forwardRef<any, ApplicationEditFormProps>(({
     const newErrors: Record<string, string> = {};
 
     // Basic validation
-    if (!formData.sme?.trim()) newErrors.sme = 'SME is required';
+    if (!formData.sme?.trim()) newErrors.sme = 'MSME is required';
     if (!formData.registrant_name?.trim()) newErrors.registrant_name = 'Registrant Name is required';
     if (!formData.email?.trim()) newErrors.email = 'Email is required';
     if (!formData.phone?.trim()) newErrors.phone = 'Phone is required';
@@ -126,14 +126,14 @@ export const ApplicationEditForm = forwardRef<any, ApplicationEditFormProps>(({
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sme">SME *</Label>
+                <Label htmlFor="sme">MSME *</Label>
                 <div className="relative">
                   <FileText className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="sme"
                     value={formData.sme}
                     onChange={(e) => setFormData({ ...formData, sme: e.target.value })}
-                    placeholder="Enter SME name"
+                    placeholder="Enter MSME name"
                     className={`pl-9 ${errors.sme ? 'border-destructive' : ''}`}
                   />
                 </div>
@@ -415,7 +415,7 @@ export const ApplicationEditForm = forwardRef<any, ApplicationEditFormProps>(({
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sme_registration_number">SME Registration Number *</Label>
+                <Label htmlFor="sme_registration_number">MSME Registration Number *</Label>
                 <Input
                   id="sme_registration_number"
                   value={formData.sme_registration_number}

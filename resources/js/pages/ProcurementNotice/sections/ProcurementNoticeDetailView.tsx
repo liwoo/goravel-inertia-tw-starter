@@ -34,7 +34,7 @@ export function ProcurementNoticeDetailView({
                 });
                 setSmeMap(map);
             } catch (error) {
-                console.error('Error fetching SMEs:', error);
+                console.error('Error fetching MSMEs:', error);
             }
         };
 
@@ -177,16 +177,16 @@ export function ProcurementNoticeDetailView({
                                 </div>
                             )} />
 
-                            <DetailRow label="Interested SMEs" render={() => (
+                            <DetailRow label="Interested MSMEs" render={() => (
                                 <div className="flex flex-wrap gap-2 mt-1">
                                     {notice.interested_smes && notice.interested_smes.length > 0 ? (
                                         notice.interested_smes.map((smeId) => (
                                             <Badge key={smeId} variant="outline">
-                                                {smeMap[smeId] || `SME #${smeId}`}
+                                                {smeMap[smeId] || `MSME #${smeId}`}
                                             </Badge>
                                         ))
                                     ) : (
-                                        <span className="text-muted-foreground italic">No SMEs selected</span>
+                                        <span className="text-muted-foreground italic">No MSMEs interested yet</span>
                                     )}
                                 </div>
                             )} />

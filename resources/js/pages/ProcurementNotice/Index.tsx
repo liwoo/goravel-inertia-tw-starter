@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import { SharedData } from '@/types/app.d';
 import { Download, Globe, GlobeLock } from 'lucide-react';
+import axios from 'axios';
 import {
     ProcurementNotice,
     ProcurementNoticeListResponse,
@@ -90,25 +91,13 @@ export default function ProcurementNoticeIndex({
     // Handle toggle publish
     const handleTogglePublish = async (item: ProcurementNotice) => {
         try {
-            const response = await fetch(`/api/procurement-notices/${item.id}/toggle-publish`, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                const statusText = result.data?.is_published ? 'published' : 'unpublished';
-                toast.success(`Procurement notice ${statusText} successfully`);
-                router.reload({ only: ['data'] });
-            } else {
-                const errorData = await response.json().catch(() => ({}));
-                toast.error(errorData.message || 'Failed to update publish status');
-            }
-        } catch (error) {
-            toast.error('Failed to update publish status');
+            const response = await axios.post(`/api/procurement-notices/${item.id}/toggle-publish`);
+            const statusText = response.data?.data?.is_published ? 'published' : 'unpublished';
+            toast.success(`Procurement notice ${statusText} successfully`);
+            router.reload({ only: ['data'] });
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Failed to update publish status';
+            toast.error(errorMessage);
         }
     };
 

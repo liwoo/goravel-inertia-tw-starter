@@ -170,12 +170,42 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
     if (!notification.is_read) {
       await markAsRead(notification.id);
     }
-    
+
     // Handle navigation based on notification type
-    if (notification.related_type && notification.related_id) {
-      // Navigate to related resource
-      // This would be implemented based on your routing structure
-      console.log(`Navigate to ${notification.related_type}:${notification.related_id}`);
+    const route = getNotificationRoute(notification);
+    if (route) {
+      setIsOpen(false);
+      router.visit(route);
+    }
+  };
+
+  const getNotificationRoute = (notification: Notification): string | null => {
+    // Route based on related_type if available
+    if (notification.related_type) {
+      switch (notification.related_type) {
+        case "application":
+          // For application notifications, go to admin applications page
+          return "/admin/applications";
+        case "event":
+        case "procurement":
+          // Events and procurement opportunities go to opportunities page
+          return "/opportunities";
+      }
+    }
+
+    // Fallback to notification type if no related_type
+    switch (notification.type) {
+      case "application_approved":
+      case "application_rejected":
+        return "/admin/applications";
+      case "event":
+      case "procurement":
+        return "/opportunities";
+      case "message":
+      case "mention":
+        return "/portal";
+      default:
+        return null;
     }
   };
 
@@ -278,7 +308,7 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
               className="mb-4 p-3 rounded-lg border border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors"
               onClick={() => {
                 setIsOpen(false);
-                router.visit('/applications');
+                router.visit('/admin/applications');
               }}
             >
               <div className="flex items-center gap-3">

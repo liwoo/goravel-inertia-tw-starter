@@ -69,8 +69,8 @@ func (r *BusinessFormalisationUpdateRequest) Rules(ctx http.Context) map[string]
 // Messages defines custom validation messages for updates
 func (r *BusinessFormalisationUpdateRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"sme_id.required":                   "SME ID is required",
-		"sme_id.numeric":                    "SME ID must be a number",
+		"sme_id.required":                   "MSME ID is required",
+		"sme_id.numeric":                    "MSME ID must be a number",
 		"has_bank_account.boolean":          "Has Bank Account must be true or false",
 		"has_tax_clarification.boolean":     "Has Tax Clarification must be true or false",
 		"is_registered_for_vat.boolean":     "Is Registered for VAT must be true or false",

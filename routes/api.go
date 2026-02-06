@@ -17,6 +17,8 @@ import (
 	"smedi-sme-db/app/http/controllers/events"
 	"smedi-sme-db/app/http/controllers/lenders"
 	"smedi-sme-db/app/http/controllers/messages"
+	"smedi-sme-db/app/http/controllers/opportunities"
+	"smedi-sme-db/app/http/controllers/portal"
 	"smedi-sme-db/app/http/controllers/primary_business_owners"
 	"smedi-sme-db/app/http/controllers/procurement_notices"
 	"smedi-sme-db/app/http/controllers/smes"
@@ -348,5 +350,19 @@ func Api(router route.Router) {
 		presenceRouter.Get("/check", presenceController.CheckOnline)
 		presenceRouter.Get("/user/{id}", presenceController.GetUserStatus)
 		presenceRouter.Post("/bulk", presenceController.GetBulkStatus)
+	})
+
+	// SME Portal Event Routes (for SME users to attend/unattend events)
+	portalEventsController := portal.NewPortalEventsController()
+	router.Middleware(jwtAuth).Prefix("portal/events").Group(func(portalEventRouter route.Router) {
+		portalEventRouter.Post("/{id}/attend", portalEventsController.Attend)
+		portalEventRouter.Delete("/{id}/attend", portalEventsController.Unattend)
+	})
+
+	// SME Portal Opportunities Routes (for SME users to show/withdraw interest)
+	opportunitiesController := opportunities.NewOpportunitiesPageController()
+	router.Middleware(jwtAuth).Prefix("portal/opportunities").Group(func(opportunitiesRouter route.Router) {
+		opportunitiesRouter.Post("/{id}/interest", opportunitiesController.ShowInterest)
+		opportunitiesRouter.Delete("/{id}/interest", opportunitiesController.WithdrawInterest)
 	})
 }

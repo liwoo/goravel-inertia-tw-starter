@@ -50,7 +50,7 @@ export const applicationColumns: CrudColumn<Application>[] = [
   },
   {
     key: 'sme',
-    label: 'SME',
+    label: 'MSME',
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
@@ -114,7 +114,7 @@ export const applicationColumns: CrudColumn<Application>[] = [
   },
   {
     key: 'sme_registration_number',
-    label: 'SME Registration Number',
+    label: 'MSME Registration Number',
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
@@ -125,7 +125,7 @@ export const applicationColumns: CrudColumn<Application>[] = [
   },
   {
     key: 'sme_tax_identification_number',
-    label: 'SME Tax Identification Number',
+    label: 'MSME Tax Identification Number',
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
@@ -218,9 +218,9 @@ export const applicationFilters: CrudFilter[] = [
   },
   {
     key: 'sme',
-    label: 'SME',
+    label: 'MSME',
     type: 'text',
-    placeholder: 'Enter SME',
+    placeholder: 'Enter MSME',
   },
   {
     key: 'registrant_name',
@@ -242,14 +242,14 @@ export const applicationFilters: CrudFilter[] = [
   },
   {
     key: 'sme_registration_number',
-    label: 'SME Registration Number',
+    label: 'MSME Registration Number',
     type: 'text',
-    placeholder: 'Enter SME registration number',
+    placeholder: 'Enter MSME registration number',
   },
   {
     key: 'sme_tax_identification_number',
-    label: 'SME Tax Identification Number',
+    label: 'MSME Tax Identification Number',
     type: 'text',
-    placeholder: 'Enter SME tax identification number',
+    placeholder: 'Enter MSME tax identification number',
   },
 ];

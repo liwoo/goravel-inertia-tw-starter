@@ -11,7 +11,9 @@ import {
 } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import axios from "axios";
 
 // Interface for calendar event data
 export interface CalendarEvent {
@@ -21,12 +23,14 @@ export interface CalendarEvent {
   endDate?: string;
   venue: string;
   district?: string;
+  isAttending?: boolean;
 }
 
 interface EventsCalendarWidgetProps {
   events: CalendarEvent[];
   district?: string;
   isLoading?: boolean;
+  smeId?: number;
 }
 
 // Format date for display
@@ -98,8 +102,21 @@ export function EventsCalendarWidget({
   events,
   district,
   isLoading = false,
+  smeId,
 }: EventsCalendarWidgetProps) {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
+  const [attendingEvents, setAttendingEvents] = React.useState<Set<number>>(new Set());
+
+  // Initialize attending events from props
+  React.useEffect(() => {
+    const attending = new Set<number>();
+    events.forEach((event) => {
+      if (event.isAttending) {
+        attending.add(event.id);
+      }
+    });
+    setAttendingEvents(attending);
+  }, [events]);
 
   // Get dates that have events
   const eventDates = React.useMemo(() => {
@@ -143,6 +160,44 @@ export function EventsCalendarWidget({
 
   // Display events - selected date or upcoming
   const displayEvents = selectedDate ? eventsForSelectedDate : upcomingEvents;
+
+  // Handle toggle attendance
+  const handleToggleAttendance = async (eventId: number) => {
+    if (!smeId) return;
+
+    const isCurrentlyAttending = attendingEvents.has(eventId);
+
+    // Optimistic update
+    setAttendingEvents((prev) => {
+      const next = new Set(prev);
+      if (isCurrentlyAttending) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+
+    try {
+      if (isCurrentlyAttending) {
+        await axios.delete(`/api/portal/events/${eventId}/attend`);
+      } else {
+        await axios.post(`/api/portal/events/${eventId}/attend`);
+      }
+    } catch (error) {
+      // Revert on error
+      setAttendingEvents((prev) => {
+        const next = new Set(prev);
+        if (isCurrentlyAttending) {
+          next.add(eventId);
+        } else {
+          next.delete(eventId);
+        }
+        return next;
+      });
+      console.error("Error toggling attendance:", error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -226,11 +281,12 @@ export function EventsCalendarWidget({
                 {displayEvents.map((event) => {
                   const daysUntil = getDaysUntil(event.date);
                   const urgency = getUrgencyBadge(daysUntil);
+                  const isAttending = attendingEvents.has(event.id);
 
                   return (
                     <div
                       key={event.id}
-                      className="flex flex-col gap-0.5 rounded-md border p-2 transition-colors hover:bg-muted/50"
+                      className="flex flex-col gap-1 rounded-md border p-2 transition-colors hover:bg-muted/50"
                     >
                       <div className="flex items-start justify-between gap-1">
                         <h5 className="font-medium text-xs leading-tight line-clamp-1">
@@ -252,6 +308,19 @@ export function EventsCalendarWidget({
                           </span>
                         )}
                       </div>
+                      {smeId && (
+                        <Button
+                          size="sm"
+                          variant={isAttending ? "default" : "outline"}
+                          className="w-full mt-1 h-7 text-[10px]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleAttendance(event.id);
+                          }}
+                        >
+                          {isAttending ? "Attending ✓" : "Attend"}
+                        </Button>
+                      )}
                     </div>
                   );
                 })}

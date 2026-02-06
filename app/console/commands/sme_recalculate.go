@@ -202,8 +202,8 @@ func (receiver *SmeRecalculate) recalculateSingle(ctx console.Context, smeID uin
 	}
 
 	if err != nil || sme.ID == 0 {
-		ctx.Error(fmt.Sprintf("SME with ID %d not found", smeID))
-		return fmt.Errorf("SME not found")
+		ctx.Error(fmt.Sprintf("MSME with ID %d not found", smeID))
+		return fmt.Errorf("MSME not found")
 	}
 
 	ctx.Info(fmt.Sprintf("Processing SME: %s (ID: %d)", sme.Name, sme.ID))

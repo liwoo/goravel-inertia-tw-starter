@@ -101,7 +101,7 @@ func NewMyApplicationsPageController() *MyApplicationsPageController {
 		}
 		sme, err := smeService.GetSmeByUserEmail(user.Email)
 		if err != nil || sme == nil {
-			return "No SME linked to your account", nil
+			return "No MSME linked to your account", nil
 		}
 		return "", nil
 	})
@@ -143,7 +143,7 @@ func (c *MyApplicationsPageController) Index(ctx http.Context) http.Response {
 				"canDelete": false,
 			},
 			"userName": user.Name,
-			"error":    "No SME linked to your account",
+			"error":    "No MSME linked to your account",
 		})
 	}
 

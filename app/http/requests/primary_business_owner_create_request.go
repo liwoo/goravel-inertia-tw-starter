@@ -98,8 +98,8 @@ func (r *PrimaryBusinessOwnerCreateRequest) Messages(ctx http.Context) map[strin
 		"alt_contact_name.max_len":         "Alternate Contact Name cannot exceed 100 characters",
 		"alt_contact_relationship.max_len": "Alternate Contact Relationship cannot exceed 50 characters",
 		"alt_contact_phone.max_len":        "Alternate Contact Phone cannot exceed 20 characters",
-		"sme_id.required":                  "SME ID is required",
-		"sme_id.numeric":                   "SME ID must be a number",
+		"sme_id.required":                  "MSME ID is required",
+		"sme_id.numeric":                   "MSME ID must be a number",
 	}
 }
 

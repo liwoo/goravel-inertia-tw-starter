@@ -16,6 +16,7 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { ChartActions } from "@/components/ui/chart-actions";
 import { DistributionPoint } from "@/types/sme";
 import { SmeDistrictChart } from "./SmeDistrictChart";
 
@@ -42,7 +43,7 @@ const CHART_COLORS = [
 const generateRegionChartConfig = (data: DistributionPoint[]): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SMEs",
+      label: "MSMEs",
     },
   };
 
@@ -59,9 +60,10 @@ const generateRegionChartConfig = (data: DistributionPoint[]): ChartConfig => {
 
 interface RegionChartContentProps {
   data: DistributionPoint[];
+  height?: number;
 }
 
-function RegionChartContent({ data }: RegionChartContentProps) {
+function RegionChartContent({ data, height }: RegionChartContentProps) {
   const chartData = React.useMemo(() => {
     return data.map((item, index) => ({
       region: item.label.toLowerCase().replace(/\s+/g, "_"),
@@ -78,6 +80,20 @@ function RegionChartContent({ data }: RegionChartContentProps) {
     return data.reduce((acc, curr) => acc + curr.value, 0);
   }, [data]);
 
+  // Calculate dynamic radius based on height (scale proportionally)
+  const { innerRadius, outerRadius } = React.useMemo(() => {
+    if (height && height > 400) {
+      // Scale up for fullscreen - use ~30% of height for outer radius
+      const baseSize = Math.min(height * 0.35, 250);
+      return {
+        innerRadius: Math.floor(baseSize * 0.6),
+        outerRadius: Math.floor(baseSize),
+      };
+    }
+    // Default sizes for normal view
+    return { innerRadius: 60, outerRadius: 100 };
+  }, [height]);
+
   if (!data || data.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center pb-0">
@@ -86,10 +102,16 @@ function RegionChartContent({ data }: RegionChartContentProps) {
     );
   }
 
+  // Use dynamic height if provided, otherwise use default constraints
+  const containerClass = height
+    ? "mx-auto aspect-square"
+    : "mx-auto aspect-square h-full max-h-[300px] min-h-[250px]";
+
   return (
     <ChartContainer
       config={chartConfig}
-      className="mx-auto aspect-square h-full max-h-[300px] min-h-[250px]"
+      className={containerClass}
+      style={height ? { height: `${height}px` } : undefined}
     >
       <PieChart>
         <ChartTooltip
@@ -124,8 +146,8 @@ function RegionChartContent({ data }: RegionChartContentProps) {
           data={chartData}
           dataKey="value"
           nameKey="region"
-          innerRadius={60}
-          outerRadius={100}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
           strokeWidth={2}
           stroke="hsl(var(--background))"
         >
@@ -154,7 +176,7 @@ function RegionChartContent({ data }: RegionChartContentProps) {
                       y={(viewBox.cy || 0) + 24}
                       className="fill-muted-foreground text-sm"
                     >
-                      Total SMEs
+                      Total MSMEs
                     </tspan>
                   </text>
                 );
@@ -184,15 +206,59 @@ export function SmeLocationChartsCarousel({
   const chartInfo = [
     {
       title: "Region Distribution",
-      description: "SMEs by geographic region",
+      description: "MSMEs by geographic region",
     },
     {
       title: "District Distribution",
-      description: "Top 15 districts by SME count",
+      description: "Top 15 districts by MSME count",
     },
   ];
 
   const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  // Create refs for each chart slide
+  const chartRef1 = React.useRef<HTMLDivElement>(null);
+  const chartRef2 = React.useRef<HTMLDivElement>(null);
+
+  // Prepare CSV-friendly data for each chart
+  const csvData1 = React.useMemo(() => {
+    return regionData.map(item => ({
+      "Region": item.label,
+      "Count": item.value,
+      "Percentage (%)": item.percentage.toFixed(1),
+    }));
+  }, [regionData]);
+
+  const csvData2 = React.useMemo(() => {
+    return districtData.map(item => ({
+      "District": item.label,
+      "Count": item.value,
+      "Percentage (%)": item.percentage.toFixed(1),
+    }));
+  }, [districtData]);
+
+  // Create arrays to switch between charts based on currentIndex
+  const chartRefs = [chartRef1, chartRef2];
+  const csvDataSets = [csvData1, csvData2];
+  const filenames = ["sme-region-distribution", "sme-district-distribution"];
+
+  // Render function for fullscreen charts
+  const renderFullscreen = React.useCallback((width: number, height: number) => {
+    const chartHeight = height - 20; // Leave some padding
+    if (currentIndex === 0) {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <RegionChartContent data={regionData} height={chartHeight} />
+        </div>
+      );
+    } else {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <SmeDistrictChart data={districtData} height={chartHeight} />
+        </div>
+      );
+    }
+  }, [currentIndex, regionData, districtData]);
 
   // Track current index for card header update
   const handleCarouselChange = (index: number) => {
@@ -215,19 +281,28 @@ export function SmeLocationChartsCarousel({
 
   return (
     <Card className="flex flex-col overflow-hidden">
-      <CardHeader className="items-center pb-0">
+      <CardHeader className="items-center pb-0 relative">
+        <div className="absolute right-4 top-4">
+          <ChartActions
+            chartRef={chartRefs[currentIndex]}
+            data={csvDataSets[currentIndex]}
+            filename={filenames[currentIndex]}
+            title={chartInfo[currentIndex].title}
+            renderFullscreen={renderFullscreen}
+          />
+        </div>
         <CardTitle>{chartInfo[currentIndex].title}</CardTitle>
         <CardDescription>{chartInfo[currentIndex].description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-4 overflow-hidden">
         <CarouselWithCallback onIndexChange={handleCarouselChange}>
           {/* Chart 1: Region Distribution (Donut) */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef1} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <RegionChartContent data={regionData} />
           </div>
 
           {/* Chart 2: District Distribution (Bar) */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef2} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <SmeDistrictChart data={districtData} />
           </div>
         </CarouselWithCallback>

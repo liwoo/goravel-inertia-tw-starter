@@ -16,6 +16,7 @@ import {
   ChartLegendContent,
   ChartTooltip,
 } from "@/components/ui/chart";
+import { ChartActions } from "@/components/ui/chart-actions";
 import { Carousel } from "@/components/ui/carousel";
 import { DistributionPoint } from "@/types/sme";
 import { SmeYouthChart } from "./SmeYouthChart";
@@ -57,7 +58,7 @@ const FALLBACK_COLORS = [
 const generateGenderChartConfig = (data: DistributionPoint[]): ChartConfig => {
   const config: ChartConfig = {
     value: {
-      label: "SME Owners",
+      label: "MSME Owners",
     },
   };
 
@@ -74,9 +75,10 @@ const generateGenderChartConfig = (data: DistributionPoint[]): ChartConfig => {
 
 interface GenderChartContentProps {
   data: DistributionPoint[];
+  height?: number;
 }
 
-function GenderChartContent({ data }: GenderChartContentProps) {
+function GenderChartContent({ data, height }: GenderChartContentProps) {
   const chartData = React.useMemo(() => {
     return data.map((item, index) => ({
       gender: item.label.toLowerCase().replace(/\s+/g, "_"),
@@ -93,6 +95,20 @@ function GenderChartContent({ data }: GenderChartContentProps) {
     return data.reduce((acc, curr) => acc + curr.value, 0);
   }, [data]);
 
+  // Calculate dynamic radius based on height (scale proportionally)
+  const { innerRadius, outerRadius } = React.useMemo(() => {
+    if (height && height > 400) {
+      // Scale up for fullscreen - use ~30% of height for outer radius
+      const baseSize = Math.min(height * 0.35, 250);
+      return {
+        innerRadius: Math.floor(baseSize * 0.6),
+        outerRadius: Math.floor(baseSize),
+      };
+    }
+    // Default sizes for normal view
+    return { innerRadius: 60, outerRadius: 100 };
+  }, [height]);
+
   if (!data || data.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center pb-0">
@@ -101,10 +117,16 @@ function GenderChartContent({ data }: GenderChartContentProps) {
     );
   }
 
+  // Use dynamic height if provided, otherwise use default constraints
+  const containerClass = height
+    ? "mx-auto aspect-square"
+    : "mx-auto aspect-square h-full max-h-[300px] min-h-[250px]";
+
   return (
     <ChartContainer
       config={chartConfig}
-      className="mx-auto aspect-square h-full max-h-[300px] min-h-[250px]"
+      className={containerClass}
+      style={height ? { height: `${height}px` } : undefined}
     >
       <PieChart>
         <ChartTooltip
@@ -139,8 +161,8 @@ function GenderChartContent({ data }: GenderChartContentProps) {
           data={chartData}
           dataKey="value"
           nameKey="gender"
-          innerRadius={60}
-          outerRadius={100}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
           strokeWidth={2}
           stroke="hsl(var(--background))"
         >
@@ -200,11 +222,11 @@ export function SmeOwnerChartsCarousel({
   const chartInfo = [
     {
       title: "Owner Gender Distribution",
-      description: "Primary SME owners by gender",
+      description: "Primary MSME owners by gender",
     },
     {
       title: "Owner Youth Distribution",
-      description: "SME owners by age group (18-35 = Youth)",
+      description: "MSME owners by age group (18-35 = Youth)",
     },
     {
       title: "Age & Gender Distribution",
@@ -213,6 +235,65 @@ export function SmeOwnerChartsCarousel({
   ];
 
   const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  // Create refs for each chart slide
+  const chartRef1 = React.useRef<HTMLDivElement>(null);
+  const chartRef2 = React.useRef<HTMLDivElement>(null);
+  const chartRef3 = React.useRef<HTMLDivElement>(null);
+
+  // Prepare CSV-friendly data for each chart
+  const csvData1 = React.useMemo(() => {
+    return genderData.map(item => ({
+      "Gender": item.label,
+      "Count": item.value,
+      "Percentage (%)": item.percentage.toFixed(1),
+    }));
+  }, [genderData]);
+
+  const csvData2 = React.useMemo(() => {
+    return youthData.map(item => ({
+      "Category": item.label,
+      "Count": item.value,
+      "Percentage (%)": item.percentage.toFixed(1),
+    }));
+  }, [youthData]);
+
+  const csvData3 = React.useMemo(() => {
+    return ageGenderData.map(item => ({
+      "Age Group": item.ageGroup,
+      "Male": item.male,
+      "Female": item.female,
+    }));
+  }, [ageGenderData]);
+
+  // Create arrays to switch between charts based on currentIndex
+  const chartRefs = [chartRef1, chartRef2, chartRef3];
+  const csvDataSets = [csvData1, csvData2, csvData3];
+  const filenames = ["sme-owner-gender-distribution", "sme-owner-youth-distribution", "sme-owner-age-gender-pyramid"];
+
+  // Render function for fullscreen charts
+  const renderFullscreen = React.useCallback((width: number, height: number) => {
+    const chartHeight = height - 20; // Leave some padding
+    if (currentIndex === 0) {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <GenderChartContent data={genderData} height={chartHeight} />
+        </div>
+      );
+    } else if (currentIndex === 1) {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <SmeYouthChart data={youthData} height={chartHeight} />
+        </div>
+      );
+    } else {
+      return (
+        <div style={{ width, height: chartHeight }}>
+          <SmeAgePyramidChart data={ageGenderData} height={chartHeight} />
+        </div>
+      );
+    }
+  }, [currentIndex, genderData, youthData, ageGenderData]);
 
   // Track current index for card header update
   const handleCarouselChange = (index: number) => {
@@ -235,24 +316,33 @@ export function SmeOwnerChartsCarousel({
 
   return (
     <Card className="flex flex-col overflow-hidden">
-      <CardHeader className="items-center pb-0">
+      <CardHeader className="items-center pb-0 relative">
+        <div className="absolute right-4 top-4">
+          <ChartActions
+            chartRef={chartRefs[currentIndex]}
+            data={csvDataSets[currentIndex]}
+            filename={filenames[currentIndex]}
+            title={chartInfo[currentIndex].title}
+            renderFullscreen={renderFullscreen}
+          />
+        </div>
         <CardTitle>{chartInfo[currentIndex].title}</CardTitle>
         <CardDescription>{chartInfo[currentIndex].description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-4 overflow-hidden">
         <CarouselWithCallback onIndexChange={handleCarouselChange}>
           {/* Chart 1: Gender Distribution */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef1} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <GenderChartContent data={genderData} />
           </div>
 
           {/* Chart 2: Youth Distribution */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef2} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <SmeYouthChart data={youthData} />
           </div>
 
           {/* Chart 3: Age/Gender Pyramid */}
-          <div className="pt-2 pb-10 h-[340px] overflow-hidden">
+          <div ref={chartRef3} className="pt-2 pb-10 h-[340px] overflow-hidden">
             <SmeAgePyramidChart data={ageGenderData} />
           </div>
         </CarouselWithCallback>
