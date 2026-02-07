@@ -248,7 +248,7 @@ jobs:
     timeout-minutes: 30
     env:
       REGISTRY: ${{ vars.DOCKER_REGISTRY || 'docker.io' }}
-      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME || 'smedi-database' }}
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME || 'books-database' }}
     outputs:
       image-digest: ${{ steps.build-push.outputs.digest }}
       image-tags: ${{ steps.meta.outputs.tags }}

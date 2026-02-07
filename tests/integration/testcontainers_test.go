@@ -113,7 +113,7 @@ func (s *TestContainersIntegrationSuite) TestIsolatedFromProduction() {
 	s.T().Logf("Database: %s, User: %s, Port: %s", dbName, dbUser, dbPort)
 
 	// These should be test values, not production
-	s.NotEqual("smedi", dbName, "Should not be using production database")
+	s.NotEqual("books", dbName, "Should not be using production database")
 	s.NotEqual("55000", dbPort, "Should NOT be using production port 55000")
 }
 

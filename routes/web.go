@@ -1,16 +1,17 @@
 package routes
 
 import (
-	"smedi-sme-db/app/http/controllers"
-	"smedi-sme-db/app/http/controllers/applications"
-	"smedi-sme-db/app/http/controllers/auth"
-	"smedi-sme-db/app/http/controllers/auth/perimissions"
-	"smedi-sme-db/app/http/controllers/auth/users"
-	"smedi-sme-db/app/http/controllers/books"
-	"smedi-sme-db/app/http/controllers/configs"
-	"smedi-sme-db/app/http/controllers/lenders"
-	inertiaHelper "smedi-sme-db/app/http/inertia"
-	"smedi-sme-db/app/http/middleware"
+	"books-database/app/http/controllers"
+	"books-database/app/http/controllers/applications"
+	"books-database/app/http/controllers/auth"
+	"books-database/app/http/controllers/auth/perimissions"
+	"books-database/app/http/controllers/auth/users"
+	"books-database/app/http/controllers/authors"
+	"books-database/app/http/controllers/books"
+	"books-database/app/http/controllers/configs"
+	"books-database/app/http/controllers/lenders"
+	inertiaHelper "books-database/app/http/inertia"
+	"books-database/app/http/middleware"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
@@ -57,6 +58,7 @@ func Web() {
 	userPageController := users.NewUserPageController()
 	configsPageController := configs.NewConfigPageController()
 	lendersPageController := lenders.NewLenderPageController()
+	authorsPageController := authors.NewAuthorsPageController()
 	applicationsPageController := applications.NewApplicationPageController()
 
 	facades.Route().Post("/login", authController.Login)
@@ -110,6 +112,9 @@ func Web() {
 
 		// Lenders management page
 		router.Get("/admin/lenders", lendersPageController.Index)
+
+		// Authors management page
+		router.Get("/admin/authors", authorsPageController.Index)
 
 		// Applications management page
 		router.Get("/admin/applications", applicationsPageController.Index)

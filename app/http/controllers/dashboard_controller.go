@@ -1,9 +1,9 @@
 package controllers
 
 import (
+	"books-database/app/http/inertia"
+	"books-database/app/services"
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/http/inertia"
-	"smedi-sme-db/app/services"
 )
 
 type DashboardController struct {

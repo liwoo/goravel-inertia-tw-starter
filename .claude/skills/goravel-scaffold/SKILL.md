@@ -95,6 +95,17 @@ See `/goravel-crud-request`, `/goravel-crud-controller`, and `/goravel-crud-rout
 
 See `/goravel-crud-test` for details.
 
+### GATE: All CRUD Tests Must Pass Before UI Work
+
+**STOP. Do NOT proceed to Phase 5 until all CRUD tests pass.**
+
+Run the full test suite and confirm green:
+```bash
+APP_ENV=testing go test -v ./tests/feature/crud -run Test<Entity>CRUDTestSuite
+```
+
+This catches backend bugs (Bind issues, validation key mismatches, GORM column mapping, permission errors) that are much harder to debug through the UI. Skipping this step leads to wasted frontend work on a broken backend.
+
 ### Phase 5: UI & Navigation
 
 - [ ] **Step 21**: Generate page controller

@@ -1,9 +1,9 @@
 package providers
 
 import (
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/helpers"
+	"books-database/app/auth"
+	"books-database/app/contracts"
+	"books-database/app/helpers"
 
 	accessImpl "github.com/goravel/framework/auth/access"
 	"github.com/goravel/framework/contracts/auth/access"

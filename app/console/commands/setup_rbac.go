@@ -7,9 +7,9 @@ import (
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/database/seeders"
+	"books-database/app/auth"
+	"books-database/app/models"
+	"books-database/database/seeders"
 )
 
 type SetupRBAC struct {

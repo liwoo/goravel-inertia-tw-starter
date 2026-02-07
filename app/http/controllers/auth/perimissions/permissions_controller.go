@@ -3,10 +3,10 @@ package perimissions
 import (
 	"fmt"
 
+	"books-database/app/auth"
+	"books-database/app/models"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
 )
 
 // PermissionsController handles API endpoints for permission assignment

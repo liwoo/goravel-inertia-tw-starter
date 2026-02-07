@@ -1,12 +1,12 @@
 package applications
 
 import (
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/events"
-	"smedi-sme-db/app/http/requests"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
+	"books-database/app/auth"
+	"books-database/app/contracts"
+	"books-database/app/events"
+	"books-database/app/http/requests"
+	"books-database/app/models"
+	"books-database/app/services"
 
 	"github.com/goravel/framework/contracts/event"
 	"github.com/goravel/framework/contracts/http"

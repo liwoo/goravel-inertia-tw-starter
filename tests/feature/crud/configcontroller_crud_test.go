@@ -15,9 +15,9 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/tests"
-	"smedi-sme-db/tests/helpers"
+	"books-database/app/models"
+	"books-database/tests"
+	"books-database/tests/helpers"
 )
 
 type ConfigControllerCRUDTestSuite struct {

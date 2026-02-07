@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"books-database/app/models"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
 )
 
 // Cache TTL for permissions

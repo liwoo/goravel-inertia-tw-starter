@@ -15,8 +15,8 @@ import (
     "github.com/goravel/framework/facades"
     "github.com/stretchr/testify/suite"
 
-    "smedi-sme-db/app/models"
-    "smedi-sme-db/tests"
+    "books-database/app/models"
+    "books-database/tests"
 )
 
 type <ModelName>ModelTestSuite struct {

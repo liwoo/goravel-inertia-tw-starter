@@ -1,0 +1,86 @@
+{
+  "page": {
+    "title": "Authors",
+    "headTitle": "Authors - Library Management",
+    "myAuthors": "My Authors",
+    "noResults": "No authors found. Create one to get started."
+  },
+  "stats": {
+    "totalAuthors": "Total Authors",
+    "active": "Active",
+    "inactive": "Inactive",
+    "percentActive": "{{percent}}% active",
+    "percentInactive": "{{percent}}% inactive"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "unknown": "Unknown"
+  },
+  "columns": {
+    "authorDetails": "Author Details",
+    "name": "Name",
+    "email": "Email",
+    "nationality": "Nationality",
+    "status": "Status",
+    "added": "Added",
+    "author": "Author",
+    "noEmail": "No email",
+    "noNationality": "Not specified"
+  },
+  "filters": {
+    "status": "Status",
+    "allStatus": "All Status",
+    "nationality": "Nationality",
+    "filterByNationality": "Filter by nationality",
+    "allNationalities": "All Nationalities",
+    "allAuthors": "All Authors",
+    "recentlyAdded": "Recently Added"
+  },
+  "actions": {
+    "exportAuthors": "Export Authors"
+  },
+  "form": {
+    "authorInfo": "Author Information",
+    "contactDetails": "Contact Details",
+    "additionalInfo": "Additional Information",
+    "metadata": "Metadata",
+    "firstName": "First Name *",
+    "lastName": "Last Name *",
+    "email": "Email",
+    "website": "Website",
+    "bio": "Biography",
+    "birthDate": "Birth Date",
+    "nationality": "Nationality",
+    "photoUrl": "Photo URL",
+    "status": "Status",
+    "enterFirstName": "Enter first name",
+    "enterLastName": "Enter last name",
+    "enterEmail": "Enter email address",
+    "enterWebsite": "Enter website URL",
+    "enterBio": "Enter author biography",
+    "enterNationality": "Enter nationality",
+    "selectNationality": "Select nationality",
+    "enterPhotoUrl": "Enter photo URL",
+    "selectStatus": "Select status",
+    "authorId": "Author ID",
+    "created": "Created",
+    "lastUpdated": "Last Updated",
+    "isActive": "Is Active",
+    "yes": "Yes",
+    "no": "No",
+    "notSpecified": "Not specified"
+  },
+  "validation": {
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required",
+    "emailInvalid": "Please enter a valid email address"
+  },
+  "toast": {
+    "created": "Author created successfully",
+    "updated": "Author updated successfully"
+  },
+  "confirm": {
+    "bulkDelete": "Are you sure you want to delete {{count}} author(s)? This action cannot be undone."
+  }
+}

@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"books-database/app/contracts"
+	"books-database/app/models"
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
 )
 
 // MessageService - Simplified version using generic CRUD service

@@ -7,11 +7,11 @@ import (
 	"os"
 	"path/filepath"
 
+	inertia_http "books-database/app/http/inertia"
 	"github.com/gin-gonic/gin/render"
 	"github.com/goravel/framework/contracts/route"
 	"github.com/goravel/framework/facades"
 	ginfacades "github.com/goravel/gin/facades"
-	inertia_http "smedi-sme-db/app/http/inertia"
 )
 
 func init() {

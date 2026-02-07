@@ -9,10 +9,10 @@ import (
 	goravelhttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 
-	authpkg "smedi-sme-db/app/auth"
-	"smedi-sme-db/app/http/requests"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
+	authpkg "books-database/app/auth"
+	"books-database/app/http/requests"
+	"books-database/app/models"
+	"books-database/app/services"
 )
 
 // TOTPController handles TOTP 2FA operations

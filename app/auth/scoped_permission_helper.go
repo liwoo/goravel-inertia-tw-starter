@@ -1,8 +1,8 @@
 package auth
 
 import (
+	"books-database/app/models"
 	"fmt"
-	"smedi-sme-db/app/models"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"

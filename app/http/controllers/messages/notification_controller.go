@@ -4,10 +4,10 @@ import (
 	"strconv"
 	"time"
 
+	"books-database/app/auth"
+	"books-database/app/contracts"
+	"books-database/app/services"
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/services"
 )
 
 type NotificationController struct {

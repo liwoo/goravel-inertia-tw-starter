@@ -12,7 +12,7 @@
 #   docker compose -f docker-compose.test.yml run --rm e2e-test
 # =============================================================================
 
-name: smedi-database-test
+name: books-database-test
 
 services:
   # ===========================================================================
@@ -23,7 +23,7 @@ services:
       context: ..
       dockerfile: Dockerfile
       target: go-builder
-    container_name: smedi-test-runner
+    container_name: books-test-runner
     working_dir: /app
     command: >
       sh -c "
@@ -43,9 +43,9 @@ services:
       DB_CONNECTION: postgres
       DB_HOST: postgres-test
       DB_PORT: 5432
-      DB_DATABASE: smedi_test
-      DB_USERNAME: smedi_test
-      DB_PASSWORD: smedi_test_password
+      DB_DATABASE: books_test
+      DB_USERNAME: books_test
+      DB_PASSWORD: books_test_password
 
       # Redis
       REDIS_HOST: redis-test
@@ -64,14 +64,14 @@ services:
       redis-test:
         condition: service_healthy
     networks:
-      - smedi-network-test
+      - books-network-test
 
   # ===========================================================================
   # Frontend Test Runner
   # ===========================================================================
   frontend-test:
     image: node:20-alpine
-    container_name: smedi-frontend-test
+    container_name: books-frontend-test
     working_dir: /app
     command: >
       sh -c "
@@ -84,37 +84,37 @@ services:
       - ..:/app
       - node-modules-test:/app/node_modules
     networks:
-      - smedi-network-test
+      - books-network-test
 
   # ===========================================================================
   # PostgreSQL Test Database
   # ===========================================================================
   postgres-test:
     image: postgres:16-alpine
-    container_name: smedi-postgres-test
+    container_name: books-postgres-test
     environment:
-      POSTGRES_DB: smedi_test
-      POSTGRES_USER: smedi_test
-      POSTGRES_PASSWORD: smedi_test_password
+      POSTGRES_DB: books_test
+      POSTGRES_USER: books_test
+      POSTGRES_PASSWORD: books_test_password
       PGDATA: /var/lib/postgresql/data/pgdata
     # Use tmpfs for faster test runs
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smedi_test -d smedi_test"]
+      test: ["CMD-SHELL", "pg_isready -U books_test -d books_test"]
       interval: 2s
       timeout: 5s
       retries: 10
       start_period: 5s
     networks:
-      - smedi-network-test
+      - books-network-test
 
   # ===========================================================================
   # Redis Test Instance
   # ===========================================================================
   redis-test:
     image: redis:7-alpine
-    container_name: smedi-redis-test
+    container_name: books-redis-test
     command: redis-server --appendonly no
     # Use tmpfs for faster test runs
     tmpfs:
@@ -125,7 +125,7 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - smedi-network-test
+      - books-network-test
 
   # ===========================================================================
   # Application for E2E Testing
@@ -134,7 +134,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    container_name: smedi-app-test
+    container_name: books-app-test
     environment:
       APP_ENV: testing
       APP_DEBUG: "true"
@@ -146,9 +146,9 @@ services:
       DB_CONNECTION: postgres
       DB_HOST: postgres-test
       DB_PORT: 5432
-      DB_DATABASE: smedi_test
-      DB_USERNAME: smedi_test
-      DB_PASSWORD: smedi_test_password
+      DB_DATABASE: books_test
+      DB_USERNAME: books_test
+      DB_PASSWORD: books_test_password
 
       # Redis
       REDIS_HOST: redis-test
@@ -168,14 +168,14 @@ services:
     profiles:
       - e2e
     networks:
-      - smedi-network-test
+      - books-network-test
 
   # ===========================================================================
   # End-to-End Test Runner (Playwright)
   # ===========================================================================
   e2e-test:
     image: mcr.microsoft.com/playwright:v1.40.0-jammy
-    container_name: smedi-e2e-test
+    container_name: books-e2e-test
     working_dir: /app
     command: >
       sh -c "
@@ -195,7 +195,7 @@ services:
     profiles:
       - e2e
     networks:
-      - smedi-network-test
+      - books-network-test
 
 # =============================================================================
 # Volumes
@@ -214,5 +214,5 @@ volumes:
 # Networks
 # =============================================================================
 networks:
-  smedi-network-test:
+  books-network-test:
     driver: bridge

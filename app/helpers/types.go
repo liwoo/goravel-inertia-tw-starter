@@ -1,6 +1,6 @@
 package helpers
 
-import "smedi-sme-db/app/contracts"
+import "books-database/app/contracts"
 
 // Type aliases for backward compatibility
 type ListRequest = contracts.ListRequest

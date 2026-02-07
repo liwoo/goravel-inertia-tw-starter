@@ -28,7 +28,7 @@ env:
   HELM_VERSION: 'v3.14.0'
   KUBECTL_VERSION: 'v1.29.0'
   REGISTRY: ${{ vars.DOCKER_REGISTRY || 'docker.io' }}
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME || 'smedi-database' }}
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.DOCKER_IMAGE_NAME || 'books-database' }}
 
 # Only allow one deployment at a time per environment
 concurrency:

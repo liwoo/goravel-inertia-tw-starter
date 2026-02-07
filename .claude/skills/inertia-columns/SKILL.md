@@ -240,6 +240,50 @@ Ensure these keys exist in the entity's i18n namespace (`locales/en/<entities>.j
 }
 ```
 
+## Price/Currency Column Pattern
+
+For decimal/currency fields, always format to avoid floating-point display issues like `23.989999771118164`:
+
+```tsx
+{
+    key: 'price',
+    label: t('columns.price'),
+    sortable: true,
+    className: 'w-28',
+    render: (entity) => (
+        <div className="text-sm text-foreground font-medium">
+            ${entity.price?.toFixed(2) ?? '0.00'}
+        </div>
+    ),
+},
+```
+
+For locale-aware formatting:
+```tsx
+render: (entity) => (
+    <div className="text-sm text-foreground font-medium">
+        {entity.price?.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+        }) ?? '$0.00'}
+    </div>
+),
+```
+
+**Never display raw `float64` values** — they may have precision artifacts from JSON deserialization.
+
+## Verify
+
+After creating column definitions:
+
+```bash
+# TypeScript compiles (catches wrong Entity property access)
+npx tsc --noEmit
+
+# Lint the columns file
+npx eslint "resources/js/pages/<EntityName>/sections/<EntityName>Columns.tsx" --max-warnings=0
+```
+
 ## Reference
 
 See `resources/js/pages/Books/sections/BookColumns.tsx` for a complete i18n-aware example.

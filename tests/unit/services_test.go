@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"smedi-sme-db/app/services"
+	"books-database/app/services"
 )
 
 // Test BookService field mapping functionality

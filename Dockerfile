@@ -86,8 +86,8 @@ FROM alpine:${ALPINE_VERSION} AS runtime
 # Labels for container metadata
 LABEL org.opencontainers.image.title="Goravel Blog" \
       org.opencontainers.image.description="Goravel application with React/Inertia frontend" \
-      org.opencontainers.image.vendor="SMEDI" \
-      org.opencontainers.image.source="https://github.com/Tiyeni/smedi-database" \
+      org.opencontainers.image.vendor="Books" \
+      org.opencontainers.image.source="https://github.com/Tiyeni/books-database" \
       org.opencontainers.image.licenses="MIT"
 
 # Install only runtime dependencies

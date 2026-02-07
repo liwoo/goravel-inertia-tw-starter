@@ -1,10 +1,10 @@
 package services
 
 import (
+	"books-database/app/contracts"
+	"books-database/app/helpers"
+	"books-database/app/models"
 	"fmt"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/helpers"
-	"smedi-sme-db/app/models"
 	"strings"
 
 	"github.com/goravel/framework/facades"

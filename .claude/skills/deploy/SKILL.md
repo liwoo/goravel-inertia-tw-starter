@@ -30,7 +30,7 @@ Before deploying, verify ALL of these:
 
 ## Build Phase (skip if --skip-build)
 
-Read `DOCKER_REGISTRY` and `DOCKER_IMAGE_NAME` from `.env` (fallbacks: `docker.io` and `smedi-database`).
+Read `DOCKER_REGISTRY` and `DOCKER_IMAGE_NAME` from `.env` (fallbacks: `docker.io` and `books-database`).
 Construct the full image name: `$DOCKER_REGISTRY/<dockerhub-username>/$DOCKER_IMAGE_NAME`
 
 1. **Build Docker image:**
@@ -65,7 +65,7 @@ helm diff upgrade goravel-blog helm/goravel-blog -f helm/goravel-blog/values.<en
 Stop here for dry-run.
 
 ### Actual Deployment
-1. **Determine namespace**: `smedi-staging` or `smedi-production`
+1. **Determine namespace**: `books-staging` or `books-production`
 2. **Run Helm upgrade:**
    ```bash
    helm upgrade --install goravel-blog helm/goravel-blog \
@@ -114,6 +114,6 @@ Output a deployment summary table:
 | Environment | staging/production |
 | Version | x.y.z |
 | Image | $DOCKER_REGISTRY/<username>/$DOCKER_IMAGE_NAME:tag |
-| Namespace | smedi-xxx |
+| Namespace | books-xxx |
 | Status | SUCCESS/FAILED |
 | URL | https://... |

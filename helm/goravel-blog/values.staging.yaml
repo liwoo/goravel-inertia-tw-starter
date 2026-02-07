@@ -27,14 +27,14 @@ ingress:
     # Disable request buffering for streaming
     nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
   hosts:
-    - host: smedi.dartsmw.com
+    - host: books.dartsmw.com
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: smedi-dartsmw-tls
+    - secretName: books-dartsmw-tls
       hosts:
-        - smedi.dartsmw.com
+        - books.dartsmw.com
 
 resources:
   limits:
@@ -54,10 +54,10 @@ networkPolicy:
   enabled: false
 
 app:
-  name: "[STG] SMEDI Database"
+  name: "[STG] Books Database"
   env: "staging"
   debug: true
-  url: "https://smedi.dartsmw.com"
+  url: "https://books.dartsmw.com"
 
   # Auth configuration
   auth:
@@ -67,7 +67,7 @@ app:
     connection: "postgres"
     host: "my-pgbouncer.doorbell.svc.cluster.local"
     port: 5432
-    database: "smedi_db"
+    database: "books_db"
     username: "admin"
     password: "postgrespw"
     sslmode: "disable"

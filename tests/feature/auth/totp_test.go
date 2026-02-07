@@ -18,9 +18,9 @@ import (
 	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
-	"smedi-sme-db/tests/helpers"
+	"books-database/app/models"
+	"books-database/app/services"
+	"books-database/tests/helpers"
 )
 
 // TOTPTestSuite provides comprehensive tests for TOTP 2FA functionality

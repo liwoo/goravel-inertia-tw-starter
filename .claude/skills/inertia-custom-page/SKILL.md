@@ -27,8 +27,8 @@ package pagename
 
 import (
     "github.com/goravel/framework/contracts/http"
-    inertiaHelper "smedi-sme-db/app/http/inertia"
-    "smedi-sme-db/app/services"
+    inertiaHelper "books-database/app/http/inertia"
+    "books-database/app/services"
 )
 
 type PageNameController struct {
@@ -255,6 +255,21 @@ useEffect(() => {
 5. Make responsive with grid `grid-cols-1 md:grid-cols-3`
 6. **Create dedicated i18n namespace** for the page
 7. All user-visible strings go through `t()` — no hardcoded text
+
+## Verify
+
+After creating the custom page:
+
+```bash
+# Backend compiles
+go build ./...
+
+# Frontend compiles
+npx tsc --noEmit
+
+# Lint the new page
+npx eslint "resources/js/pages/<PageName>/**/*.tsx" --max-warnings=0
+```
 
 ## Reference
 

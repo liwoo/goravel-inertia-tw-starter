@@ -1,8 +1,8 @@
 package requests
 
 import (
+	"books-database/app/contracts"
 	"fmt"
-	"smedi-sme-db/app/contracts"
 	"strings"
 
 	"github.com/goravel/framework/contracts/http"
@@ -12,6 +12,7 @@ import (
 type BookCreateRequest struct {
 	Title       string   `form:"title" json:"title"`
 	Author      string   `form:"author" json:"author"`
+	AuthorID    *uint    `form:"authorId" json:"authorId"`
 	ISBN        string   `form:"isbn" json:"isbn"`
 	Description string   `form:"description" json:"description"`
 	Price       float64  `form:"price" json:"price"`
@@ -105,6 +106,10 @@ func (r *BookCreateRequest) ToCreateData() map[string]interface{} {
 	}
 
 	// Only include optional fields if they have values
+	if r.AuthorID != nil {
+		data["authorId"] = *r.AuthorID
+	}
+
 	if r.PublishedAt != "" {
 		data["publishedAt"] = r.PublishedAt
 	}
@@ -120,6 +125,7 @@ func (r *BookCreateRequest) ToCreateData() map[string]interface{} {
 type BookUpdateRequest struct {
 	Title       *string   `form:"title" json:"title"`
 	Author      *string   `form:"author" json:"author"`
+	AuthorID    *uint     `form:"authorId" json:"authorId"`
 	ISBN        *string   `form:"isbn" json:"isbn"`
 	Description *string   `form:"description" json:"description"`
 	Price       *float64  `form:"price" json:"price"`
@@ -218,6 +224,9 @@ func (r *BookUpdateRequest) ToUpdateData() map[string]interface{} {
 	}
 	if r.Author != nil {
 		data["author"] = *r.Author
+	}
+	if r.AuthorID != nil {
+		data["authorId"] = *r.AuthorID
 	}
 	if r.ISBN != nil {
 		data["isbn"] = *r.ISBN

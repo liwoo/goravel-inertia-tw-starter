@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
-	"smedi-sme-db/tests"
+	"books-database/app/contracts"
+	"books-database/app/models"
+	"books-database/app/services"
+	"books-database/tests"
 )
 
 type ServiceScopedPermissionsTestSuite struct {

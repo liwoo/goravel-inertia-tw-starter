@@ -105,6 +105,18 @@ Or for documents section:
 2. Verify the i18n key resolves correctly (check `nav.json`)
 3. Log in as a user without the required permission — item should be hidden
 
+## Verify
+
+After adding the navigation entry and i18n key:
+
+```bash
+# TypeScript compiles (catches wrong icon imports, missing fields)
+npx tsc --noEmit
+
+# Lint the navigation config
+npx eslint resources/js/config/navigation.ts --max-warnings=0
+```
+
 ## Reference
 
 See `resources/js/config/navigation.ts` for existing entries.

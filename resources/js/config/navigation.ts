@@ -8,6 +8,7 @@ import {
     LandmarkIcon,
     LayoutDashboardIcon,
     NotebookTabsIcon,
+    PenToolIcon,
     ShieldIcon,
     UsersIcon,
 } from "lucide-react"
@@ -65,6 +66,13 @@ export const navigationConfig: NavigationConfig = {
             url: "/admin/books",
             icon: BookIcon,
             requiredService: "books",
+            requiredAction: "read" as const,
+        },
+        {
+            title: "main.authors",
+            url: "/admin/authors",
+            icon: PenToolIcon,
+            requiredService: "authors",
             requiredAction: "read" as const,
         },
         {

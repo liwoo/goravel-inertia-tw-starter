@@ -1,22 +1,22 @@
 apiVersion: v2
 name: goravel-blog
-description: A Helm chart for SMEDI Database - Goravel Application with React/Inertia frontend
+description: A Helm chart for Books Database - Goravel Application with React/Inertia frontend
 type: application
 version: 0.2.0
 appVersion: "0.27.7"
 keywords:
   - goravel
-  - smedi
+  - books
   - golang
   - react
   - inertia
   - postgresql
 maintainers:
-  - name: SMEDI Team
-    email: team@smedi.example.com
-home: https://github.com/Tiyeni/smedi-database
+  - name: Books Team
+    email: team@books.example.com
+home: https://github.com/Tiyeni/books-database
 sources:
-  - https://github.com/Tiyeni/smedi-database
+  - https://github.com/Tiyeni/books-database
 kubeVersion: ">=1.25.0-0"
 annotations:
   category: Application

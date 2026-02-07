@@ -9,8 +9,8 @@ import (
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
 
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
+	"books-database/app/auth"
+	"books-database/app/models"
 )
 
 type CreateAdminUser struct {

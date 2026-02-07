@@ -5,8 +5,8 @@ import (
 	"github.com/goravel/framework/contracts/foundation"
 	"github.com/goravel/framework/facades"
 
-	"smedi-sme-db/app/events"
-	"smedi-sme-db/app/listeners"
+	"books-database/app/events"
+	"books-database/app/listeners"
 )
 
 type EventServiceProvider struct {

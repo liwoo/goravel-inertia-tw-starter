@@ -297,7 +297,7 @@ go run . artisan make:ctrl --model=business_formalisation business_formalisation
 **Steps:**
 1. Add import:
    ```go
-   "smedi-sme-db/app/http/controllers/<entity_name>s"
+   "books-database/app/http/controllers/<entity_name>s"
    ```
 
 2. Initialize controller in `Api()` function:

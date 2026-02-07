@@ -8,10 +8,10 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/listeners"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
-	"smedi-sme-db/tests"
+	"books-database/app/listeners"
+	"books-database/app/models"
+	"books-database/app/services"
+	"books-database/tests"
 )
 
 // ApplicationStatusNotificationTestSuite tests the application approval/rejection notification system

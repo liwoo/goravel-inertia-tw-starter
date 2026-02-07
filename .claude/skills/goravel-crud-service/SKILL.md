@@ -102,6 +102,18 @@ func (s *EntityService) GetEntityStatistics() (map[string]interface{}, error) {
 }
 ```
 
+## Verify
+
+After configuring the service builder:
+
+```bash
+# Check for issues in the service
+go vet ./app/services/...
+
+# Confirm full project compiles
+go build ./...
+```
+
 ## Next Step
 
 Run `/goravel-crud-permissions` to register permissions for this entity.

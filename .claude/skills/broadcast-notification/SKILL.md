@@ -53,7 +53,7 @@ package listeners
 import (
     "github.com/goravel/framework/contracts/event"
     "github.com/goravel/framework/facades"
-    "smedi-sme-db/app/services"
+    "books-database/app/services"
 )
 
 type BroadcastEntityNotification struct{}
@@ -232,7 +232,7 @@ func (s *NotificationService) getEligibleUsersForEntity(filterValue string) []ui
 In the controller's `afterStore` or `afterUpdate` hook:
 
 ```go
-import "smedi-sme-db/app/events"
+import "books-database/app/events"
 
 // In the afterStore callback:
 go func() {

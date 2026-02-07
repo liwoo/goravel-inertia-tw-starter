@@ -1,789 +1,607 @@
-# Goravel Blog Application
+# Books Database
 
-[![CI](https://github.com/liwoo/goravel-inertia-tw-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/liwoo/goravel-inertia-tw-starter/actions/workflows/ci.yml)
+[![CI](https://github.com/Tiyeni/books-database/actions/workflows/ci.yml/badge.svg)](https://github.com/Tiyeni/books-database/actions/workflows/ci.yml)
 [![Go Version](https://img.shields.io/badge/Go-1.24-blue.svg)](https://go.dev/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://hub.docker.com/r/liwoo/goravel-inertia-tw-starter)
-[![codecov](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter/branch/main/graph/badge.svg)](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter)
+[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://hub.docker.com/)
 
-A modern web application built with Goravel (Go) and React, featuring JWT authentication, RBAC permissions, CRUD generators, dark mode, and a responsive UI.
+A Goravel-based admin portal with React/Inertia.js frontend, featuring JWT auth, RBAC permissions, CRUD scaffolding, i18n, dark mode, and client-side data exports.
 
-## 📊 Build Status
+## Prerequisites
 
-| Branch | Status | Coverage |
-|--------|--------|----------|
-| main   | [![CI](https://github.com/liwoo/goravel-inertia-tw-starter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/liwoo/goravel-inertia-tw-starter/actions) | [![codecov](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter/branch/main/graph/badge.svg)](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter) |
-| develop | [![CI](https://github.com/liwoo/goravel-inertia-tw-starter/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/liwoo/goravel-inertia-tw-starter/actions) | [![codecov](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter/branch/develop/graph/badge.svg)](https://codecov.io/gh/liwoo/goravel-inertia-tw-starter) |
+- **Go 1.24+** — [golang.org/dl](https://golang.org/dl/)
+- **Node.js 20+** — [nodejs.org](https://nodejs.org/)
+- **PostgreSQL 16+** — via Docker or local install
+- **Docker** — for testcontainers and dev environment
 
-## 🚀 Quick Start
+Optional:
+- **Air** for Go hot reload: `go install github.com/air-verse/air@latest`
+- **Claude Code** for agentic development (see [Agentic Mode](#agentic-mode))
+
+## Quick Start
 
 ```bash
-# 1. Clone and install dependencies
-git clone <repository-url>
-cd blog
+# Clone and install
+git clone <repository-url> && cd blog
 go mod download
 npm install
 
-# 2. Setup environment
+# Setup environment
 cp .env.example .env
-# Edit .env with your database credentials
+# Edit .env with your database credentials (see Environment Variables below)
 
-# 3. Initialize database
-go run . artisan migrate
+# Initialize database
 go run . artisan key:generate
-go run . artisan seed  # Seeds RBAC permissions and sample data
+go run . artisan migrate
+go run . artisan seed          # Seeds RBAC permissions + sample data
 
-# 4. Create admin user
+# Create admin user
 go run . artisan user:create-admin
 
-# 5. Run the application (need 2 terminals)
-# Terminal 1: Backend
-air  # or: go run .
+# Run (two terminals)
+air                             # Terminal 1: Backend (or: go run .)
+npm run dev                     # Terminal 2: Frontend
 
-# Terminal 2: Frontend
-npm run dev
-
-# 6. Open http://localhost:3500
+# Open http://localhost:3500
 ```
 
-## 📋 Prerequisites
+## Environment Variables
 
-- **Go 1.18+** - [Download Go](https://golang.org/dl/)
-- **Node.js 16+** - [Download Node.js](https://nodejs.org/)
-- **Database** - One of:
-  - SQLite (default, no setup needed)
-  - MySQL 5.7+
-  - PostgreSQL 12+
-- **Air** (optional, for hot reload):
-  ```bash
-  go install github.com/cosmtrek/air@latest
-  ```
+### Application (.env)
 
-## 🧪 Testing
+```env
+APP_NAME="Books Database"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost
+APP_HOST=127.0.0.1
+APP_PORT=3000
+APP_KEY=                        # Generate with: go run . artisan key:generate
 
-### Quick Test Run
+JWT_SECRET=                     # Any random string for local dev
+
+DB_CONNECTION=postgres
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=books_db
+DB_USERNAME=postgres
+DB_PASSWORD=yourpassword
+
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+
+AUTH_REQUIRE_2FA=true           # Set false for simpler local dev
+```
+
+### Test Credentials
+
+For E2E browser testing (Playwright MCP) and local development, set these variables so test scripts know which user to authenticate as:
+
+```env
+TEST_USER=admin@example.com     # Email of an admin user created via user:create-admin
+TEST_PASSWORD=your-test-pass    # That user's password
+```
+
+These are used by:
+- `/e2e-entity-suite` — logs into the app via the browser to test CRUD flows
+- `/playwright-ui-test` — verifies page rendering, forms, and navigation
+- Local smoke testing after seeding
+
+Create the test user once:
+```bash
+go run . artisan user:create-admin
+# Use the email/password you set in TEST_USER/TEST_PASSWORD
+```
+
+---
+
+## Manual Mode
+
+Step-by-step commands for building a new CRUD entity without Claude Code.
+
+### 1. Database & Model
 
 ```bash
-# Run all tests with proper environment setup
-APP_ENV=testing go test ./tests/... -v
+# Create table migration
+go run . artisan make:migration create_lenders_table
+# Edit the generated file in database/migrations/, then:
+go run . artisan migrate
 
-# Or use the convenience script
-./run_tests.sh
+# Add audit fields (created_by, updated_by, deleted_by, ip_address, user_agent)
+go run . artisan make:audit --table=lenders
+# Remove duplicate deleted_at from generated file if present, then:
+go run . artisan migrate
 
-# Run specific test suites
-APP_ENV=testing go test ./tests/unit -v
-APP_ENV=testing go test ./tests/integration -v
-APP_ENV=testing go test ./tests/feature -v
+# Register both migrations in database/kernel.go
+
+# Generate model from table
+go run . artisan make:model-from-table --table=lenders --model=Lender
+# Fix: array fields, carbon.DateTime types, SearchFields, TableName
 ```
 
-## 🔍 Code Quality
-
-### Linting
-
-The project uses `golangci-lint` for code quality checks:
+### 2. Service & Permissions
 
 ```bash
-# Install golangci-lint
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
+# Generate service
+go run . artisan make:svc --svc=Lender
+# Configure builder: search fields, sort, filter, validation, scope
 
-# Run linter
-golangci-lint run
+# Register in app/auth/permission_constants.go:
+#   ServiceLenders ServiceRegistry = "lenders"
 
-# Auto-fix issues
-golangci-lint run --fix
+# Sync to database
+go run . artisan permissions:setup
 ```
 
-### Pre-commit Hooks
-
-Enable automatic code quality checks before each commit:
+### 3. Requests & Controller
 
 ```bash
-# Option 1: Use git hooks directory
-./enable-hooks.sh
+# Generate request validators
+go run . artisan make:req --model=Lender --resource=Lender
+# Fix: validation rules, snake_case form tags, ToCreateData/ToUpdateData
 
-# Option 2: Use pre-commit framework
-./setup-hooks.sh
+# Generate API controller
+go run . artisan make:api-ctrl --controller=Lender
+# Fix: service constant must match permission_constants.go
+
+# Register in routes/api.go (search/filter routes BEFORE {id} route)
 ```
 
-The pre-commit hook will:
-- Format Go code with `gofmt`
-- Run `go mod tidy`
-- Run `golangci-lint`
-- Check for large files (>5MB)
-- Prevent commits with linting errors
+### 4. Testing
 
-To skip hooks for a single commit:
 ```bash
-git commit --no-verify
+# Generate CRUD tests
+go run . artisan make:crud-test --svc=lender
+
+# Run tests (uses PostgreSQL testcontainer)
+./scripts/run_tests.sh -v ./tests/feature/crud -run TestLenderCrudSuite
 ```
 
-### Test Categories
+**STOP**: All tests must pass before proceeding to UI work.
 
-| Category | Description | Path |
-|----------|-------------|------|
-| Unit | Business logic, isolated components | `tests/unit/` |
-| Integration | Service layer, API endpoints | `tests/integration/` |
-| Feature | Full user workflows, UI interactions | `tests/feature/` |
+### 5. Frontend
 
-### Writing Tests
+```bash
+# Generate page controller
+go run . artisan make:page-ctrl --controller=Lender
 
-```go
-// Example test structure
-package tests
+# Generate complete UI hierarchy
+go run . artisan make:ui --page=Lender --request=Lender
+# Creates: pages/Lender/Index.tsx, sections/*.tsx, types/lender.ts
 
-import (
-    "testing"
-    "github.com/stretchr/testify/suite"
-    "smedi-sme-db/tests"
-)
+# Register web route in routes/web.go:
+#   router.Get("/admin/lenders", lendersPageController.Index)
 
-type YourTestSuite struct {
-    suite.Suite
-    tests.TestCase  // Provides database helpers
-}
+# Add to resources/js/config/navigation.ts
+# Add to search_controller.go + search_config.tsx for CMD+K search
+```
 
-func TestYourTestSuite(t *testing.T) {
-    suite.Run(t, new(YourTestSuite))
-}
+### 6. Verify
 
-func (s *YourTestSuite) SetupTest() {
-    s.RefreshDatabase()  // Clean database for each test
-}
+```bash
+go build ./...                  # Go compiles
+npx tsc --noEmit                # TypeScript compiles
+go run . artisan migrate        # Dev DB migrated
+# Visit http://localhost:3500/admin/lenders
+```
 
-func (s *YourTestSuite) TestExample() {
-    // Your test logic
-    s.Equal(expected, actual)
-}
+### Quick Reference (Manual)
+
+| # | Command / Action | Purpose |
+|---|-----------------|---------|
+| 1 | `make:migration` | Create table schema |
+| 2 | `migrate` | Apply migration |
+| 3 | `make:audit` | Add audit fields |
+| 4 | `migrate` | Apply audit migration |
+| 5 | Register in `kernel.go` | Wire migrations |
+| 6 | `make:model-from-table` | Generate model |
+| 7 | `make:svc` | Generate service |
+| 8 | Edit `permission_constants.go` | Register service |
+| 9 | `permissions:setup` | Sync permissions |
+| 10 | `make:req` | Generate request validators |
+| 11 | `make:api-ctrl` | Generate API controller |
+| 12 | Register in `routes/api.go` | Wire API endpoints |
+| 13 | `make:crud-test` | Generate tests |
+| 14 | `run_tests.sh` | Run & fix tests |
+| 15 | `make:page-ctrl` | Generate page controller |
+| 16 | `make:ui` | Generate UI files |
+| 17 | Register in `routes/web.go` | Wire page route |
+| 18 | Add to `navigation.ts` | Sidebar entry |
+| 19 | Update `search_controller.go` | Global search (optional) |
+
+---
+
+## Agentic Mode
+
+Use [Claude Code](https://claude.ai/claude-code) with the project's skill system to scaffold entities end-to-end. Skills are step-by-step recipes that Claude executes using the project's artisan generators, then fixes the output automatically.
+
+### Agent Personas
+
+| Agent | Persona | Focus |
+|-------|---------|-------|
+| `goravel-crud-engineer` | Chikondi Banda | Backend: migrations, models, services, controllers, routes, tests |
+| `goravel-inertia-ui-engineer` | Thoko Nkhoma | Frontend: types, pages, forms, columns, detail views, exports |
+| `goravel-qa-engineer` | Blessings Phiri | QA: CRUD review, type checking, test suites, E2E browser tests |
+| `goravel-devops-engineer` | Kondwani Mwale | DevOps: Docker, Helm, CI/CD, deploy, infrastructure debug |
+
+### Backend Skills (Chikondi)
+
+| Skill | Purpose |
+|-------|---------|
+| `/goravel-crud-migration` | Create table + audit migrations |
+| `/goravel-crud-model` | Generate model with post-gen fixes |
+| `/goravel-crud-service` | Service layer with builder pattern |
+| `/goravel-crud-permissions` | Register in permission system |
+| `/goravel-crud-request` | Create/update request validators |
+| `/goravel-crud-controller` | API controller with permissions |
+| `/goravel-crud-routes` | Register API + web routes |
+| `/goravel-crud-test` | Generate & fix CRUD tests |
+| `/goravel-crud-page` | Page controller + UI generation |
+| `/goravel-crud-nav` | Navigation entry with i18n |
+| `/goravel-crud-search` | Global search (CMD+K) |
+| `/goravel-enum` | Go enum + TypeScript generation |
+| `/goravel-scaffold` | Full backend orchestrator (19 steps) |
+| `/fake-data` | Database seeder with 25+ records |
+
+### Frontend Skills (Thoko)
+
+| Skill | Purpose |
+|-------|---------|
+| `/inertia-types` | TypeScript interfaces + i18n namespace |
+| `/inertia-page` | Index.tsx with CrudPage wrapper |
+| `/inertia-columns` | Table columns, mobile columns, filters |
+| `/inertia-form` | Create/edit forms with validation |
+| `/inertia-detail` | Read-only detail view |
+| `/inertia-page-config` | Stats, filters, page actions, bulk actions |
+| `/inertia-page-ctrl` | Go page controller for Inertia |
+| `/inertia-custom-page` | Non-CRUD pages (dashboards, reports) |
+| `/inertia-form-review` | Audit forms for i18n, types, consistency |
+| `/inertia-scaffold` | Full frontend orchestrator (17 steps) |
+| `/multi-step-form` | Wizard-style multi-step forms |
+| `/ui-ux-audit` | Table density, icons, dropdowns, colors |
+| `/file-downloads` | CSV/Excel/PDF/JSON export |
+
+### QA Skills (Blessings)
+
+| Skill | Purpose |
+|-------|---------|
+| `/goravel-crud-review` | Full CRUD implementation audit |
+| `/goravel-type-check` | Go struct <> TypeScript interface consistency |
+| `/goravel-test-suite` | Write comprehensive test suites |
+| `/playwright-ui-test` | Browser UI verification |
+| `/e2e-entity-suite` | 14-phase, 30-test E2E suite |
+
+### DevOps Skills (Kondwani)
+
+| Skill | Purpose |
+|-------|---------|
+| `/deploy` | Deploy to staging/production |
+| `/docker-dev` | Local Docker development |
+| `/infra-debug` | Debug pods, containers, logs |
+| `/helm-values` | Update Helm chart values |
+| `/ci-check` | Run CI pipeline locally |
+
+### Cross-Cutting Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `/rebrand` | Rename the app across all files |
+| `/broadcast-notification` | Entity-specific notification system |
+| `/custom-pages` | Non-CRUD pages (portals, modals, widgets) |
+| `/dashboard-visualization` | Charts, KPIs, data dashboards |
+
+### Full Entity Scaffold (Agentic)
+
+To scaffold a complete entity end-to-end:
+
+**Backend first** — run `/goravel-scaffold EntityName table_name`:
+```
+Phase 1: Database & Model (migration, audit, model)
+Phase 2: Service & Permissions
+Phase 3: Requests, Controller & Routes
+Phase 4: CRUD Tests (must all pass before UI)
+Phase 5: Page controller, UI files, navigation, search
+```
+
+**Frontend next** — run `/inertia-scaffold EntityName`:
+```
+Steps 1-9:   Types, page controller, UI files, columns, forms, detail, config
+Steps 10-13: Index page, navigation, search, form review
+Steps 14-15: File downloads, UX audit
+Steps 16-17: Seed data, E2E browser testing
+```
+
+### E2E Testing with Playwright MCP
+
+After scaffolding, run `/e2e-entity-suite EntityName` to execute browser tests:
+
+```
+Phase 1:  Login & Navigation
+Phase 2:  Page Structure (stats, filters, columns)
+Phase 3:  Create Entity (form validation, submission)
+Phase 4:  Detail View
+Phase 5:  Edit Entity
+Phase 6:  Table Search
+Phase 7:  Filter Tabs
+Phase 8:  Sorting (requires 25+ seeded records)
+Phase 9:  Pagination
+Phase 10: Global Search (CMD+K)
+Phase 11: Row Actions (edit, delete from menu)
+Phase 12: Cross-Entity Integration (conditional)
+Phase 13: Responsive Layout
+Phase 14: Console Errors & Network Failures
+```
+
+Requires `TEST_USER` and `TEST_PASSWORD` env vars and seeded data (`/fake-data`).
+
+---
+
+## Docker Development
+
+### Local with Docker Compose
+
+```bash
+cd docker-compose
+
+# Standard (built image)
+docker compose up -d
+
+# With hot reload (source mounted)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# With admin tools (pgAdmin on :5050, Redis Commander on :8081)
+docker compose --profile tools up -d
+
+# Tear down
+docker compose down           # Keep data
+docker compose down -v        # Remove volumes
+```
+
+### Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| App | 3000 | Go backend + frontend |
+| PostgreSQL | 5432 | Database |
+| Redis | 6379 | Cache + sessions |
+| pgAdmin | 5050 | DB management (tools profile) |
+| Redis Commander | 8081 | Cache browser (tools profile) |
+| MinIO | 9000/9001 | S3 storage (storage profile) |
+| Mailhog | 8025 | Email testing (mail profile) |
+
+### Docker Build
+
+3-stage build: Go builder, Node builder, Alpine runtime.
+
+```bash
+docker build -t books-database .
+# Binary compressed with UPX, runs as non-root user
+```
+
+---
+
+## Testing
+
+### Automated Tests (Go)
+
+Tests use PostgreSQL 16 via testcontainers — no local DB setup needed.
+
+```bash
+# Run all tests
+./scripts/run_tests.sh -v ./tests/...
+
+# Run specific suite
+./scripts/run_tests.sh -v ./tests/feature/crud -run TestBookCrudSuite
+
+# Run with coverage
+./scripts/run_tests.sh ./tests/... -v -coverprofile=coverage.out
+go tool cover -func=coverage.out | tail -15
+```
+
+The test script (`scripts/run_tests.sh`):
+- Starts a PostgreSQL 16 container on a random port
+- Sets `APP_ENV=testing`, `AUTH_REQUIRE_2FA=false`
+- Creates isolated storage directories
+- Runs tests with `-p=1` (sequential packages, prevents migration races)
+- Auto-cleans up container on exit
+
+### Frontend Tests
+
+```bash
+npm run test                    # Vitest in watch mode
+npm run test -- --run           # Single run
+npm run test:coverage -- --run  # With coverage
 ```
 
 ### Test Helpers
 
-- **Authentication**: Use `helpers.SetupJWTUser()` for creating test users
-- **Database**: Tests automatically use SQLite in-memory database
-- **HTTP Testing**: Use `httptest.NewServer(facades.Route())` for API tests
+| Helper | Purpose |
+|--------|---------|
+| `helpers.SetupJWTUser(email, password, role)` | Create test user with role |
+| `helpers.AssignPermissionToRole(role, perms)` | Grant permissions |
+| `helpers.CleanTestDatabase()` | Reset between tests |
+| `s.loginUser(email, password)` | Get auth cookie |
 
-### Common Test Commands
+### Writing Tests
 
-```bash
-# Run with coverage
-APP_ENV=testing go test ./tests/... -v -cover
-
-# Run specific test
-APP_ENV=testing go test -v ./tests/feature -run TestBookCRUD
-
-# Run tests in watch mode (requires entr)
-find . -name "*.go" | entr -c go test ./tests/... -v
-
-# Clean test artifacts
-rm -rf tests/*/database/
-rm -rf tests/*/storage/
-```
-
-## 🔧 Detailed Setup
-
-### First-Time Developer Setup
-
-```bash
-# 1. Install Go (if not installed)
-# macOS: brew install go
-# Ubuntu: sudo apt install golang-go
-# Windows: Download from https://golang.org/dl/
-
-# 2. Install Node.js (if not installed)
-# macOS: brew install node
-# Ubuntu: curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - && sudo apt install nodejs
-# Windows: Download from https://nodejs.org/
-
-# 3. Install Air for hot reload (recommended)
-go install github.com/cosmtrek/air@latest
-
-# 4. Verify installations
-go version      # Should show 1.18+
-node --version  # Should show 16+
-air -v          # Should show air version
-```
-
-### 1. Initial Setup
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd blog
-
-# Install Go dependencies
-go mod download
-go mod tidy  # Clean up any issues
-
-# Install frontend dependencies
-npm install  # or: yarn install
-
-# Setup environment
-cp .env.example .env
-```
-
-### 2. Configure Database
-
-For quickest setup, use SQLite (default):
-
-```env
-# .env file - SQLite (no setup needed)
-DB_CONNECTION=sqlite
-DB_DATABASE=database/database.sqlite
-```
-
-For MySQL/PostgreSQL:
-
-```env
-# MySQL
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=goravel_blog
-DB_USERNAME=root
-DB_PASSWORD=yourpassword
-
-# PostgreSQL
-DB_CONNECTION=postgresql
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_DATABASE=goravel_blog
-DB_USERNAME=postgres
-DB_PASSWORD=yourpassword
-```
-
-### 3. Initialize Application
-
-```bash
-# Generate application key
-go run . artisan key:generate
-
-# Run database migrations
-go run . artisan migrate
-
-# Seed RBAC permissions system
-go run . artisan seed --seeder=rbac
-```
-
-### 4. Create Admin User
-
-```bash
-# Interactive admin user creation
-go run . artisan user:create-admin
-
-# Or create a regular user
-go run . artisan user:create
-```
-
-### 5. Run Development Servers
-
-You need two terminal windows:
-
-**Terminal 1 - Backend Server:**
-```bash
-# With hot reload (recommended)
-air
-
-# Or standard Go run
-go run . serve
-```
-
-**Terminal 2 - Frontend Assets:**
-```bash
-npm run dev
-# or
-yarn dev
-```
-
-The application will be available at `http://localhost:3500`
-
-## 🏗️ Project Structure
-
-```
-├── app/                      # Application code
-│   ├── auth/                 # Authentication & permissions
-│   │   ├── permission_service.go
-│   │   ├── permission_constants.go
-│   │   └── permission_helper.go
-│   ├── console/              # Artisan commands
-│   │   └── commands/         # Custom commands
-│   ├── contracts/            # Interfaces & contracts
-│   ├── http/                 # HTTP layer
-│   │   ├── controllers/      # API & page controllers
-│   │   ├── middleware/       # HTTP middleware
-│   │   └── requests/         # Request validation
-│   ├── models/               # Database models
-│   ├── providers/            # Service providers
-│   └── services/             # Business logic
-├── database/                 # Database files
-│   ├── migrations/           # Schema migrations
-│   └── seeders/              # Data seeders
-├── resources/                # Frontend resources
-│   ├── css/                  # Stylesheets
-│   └── js/                   # React/TypeScript
-│       ├── components/       # Reusable components
-│       ├── contexts/         # React contexts
-│       ├── pages/            # Page components
-│       └── types/            # TypeScript types
-├── routes/                   # Route definitions
-│   ├── api.go                # API routes
-│   ├── web.go                # Web routes
-│   └── permissions.go        # Permission routes
-└── docs/                     # Documentation
-```
-
-### Authentication & Authorization
-
-- JWT-based authentication with HTTP-only cookies
-- Role-Based Access Control (RBAC)
-- Protected routes with middleware
-- Global permission context in React
-
-### Modern UI
-
-- React with TypeScript
-- Inertia.js for SPA-like experience
-- Dark/Light theme toggle
-- Responsive design with Tailwind CSS
-- shadcn/ui component library
-
-## 📝 Common Artisan Commands
-
-### User Management
-```bash
-# Create admin user
-go run . artisan user:create-admin
-
-# Create regular user
-go run . artisan user:create
-
-# Assign role to user
-go run . artisan role:assign user@example.com role-slug
-```
-
-### Database Operations
-```bash
-# Run migrations
-go run . artisan migrate
-
-# Rollback migrations
-go run . artisan migrate:rollback
-
-# Fresh migration (drop all tables and re-run)
-go run . artisan migrate:fresh
-
-# Run seeders
-go run . artisan seed
-go run . artisan seed --seeder=rbac
-```
-
-### CRUD Scaffolding (In Order)
-```bash
-# 1. Database Setup
-go run . artisan make:migration create_lenders_table   # Create table migration
-go run . artisan migrate                                # Run migration
-go run . artisan make:audit lenders                    # Add audit fields (optional)
-go run . artisan migrate                                # Run audit migration
-
-# 2. Backend Generation
-go run . artisan make:model-from-table --table=lenders --model=Lender  # Model from DB
-go run . artisan make:svc --svc=Lender                                 # Service
-# (Add to permission_constants.go, then run permissions:setup)
-go run . artisan make:req --model=Lender --resource=Lender             # Request validators
-go run . artisan make:api-ctrl --controller=Lender                     # API controller
-# (Register routes in routes/api.go)
-
-# 3. Optional: Documentation & Tests
-go run . artisan make:swagger-docs --controller=Lender  # Swagger docs (optional)
-go run . artisan make:crud-test --svc=lender            # API tests (optional)
-
-# 4. Frontend Generation
-go run . artisan make:page-ctrl --controller=Lender     # Page controller
-go run . artisan make:ui --page=Lender --request=Lender # Complete UI hierarchy
-# (Register page route in routes/web.go and add to navigation.ts)
-```
-
-### Permission Management
-```bash
-# Setup permissions (creates all service-action combinations)
-go run . artisan permissions:setup
-
-# Setup RBAC system
-go run . artisan rbac:setup
-```
-
-## 🔒 Permission System Usage
-
-### Backend - Page Controller
 ```go
-func (c *BooksPageController) Index(ctx http.Context) http.Response {
-    // Enforce permission check
-    permHelper := auth.GetPermissionHelper()
-    _, err := permHelper.RequireServicePermission(ctx, auth.ServiceBooks, auth.PermissionRead)
-    if err != nil {
-        return ctx.Response().Status(403).Json(map[string]interface{}{
-            "error": "Forbidden",
-        })
-    }
-    
-    // Continue with rendering...
+type LenderCrudSuite struct {
+    suite.Suite
+    tests.TestCase
+    server     *httptest.Server
+    client     *http.Client
+    authCookie *http.Cookie
+    testUser   *models.User
+}
+
+func (s *LenderCrudSuite) SetupSuite() {
+    s.InitApp()
+    s.server = httptest.NewServer(facades.Route())
+    jar, _ := cookiejar.New(nil)
+    s.client = &http.Client{Jar: jar}
+    role, _ := helpers.AssignPermissionToRole("admin", allPermissions)
+    user, _ := helpers.SetupJWTUser("test@example.com", "password", role)
+    s.testUser = user
+    s.authCookie = s.loginUser("test@example.com", "password")
 }
 ```
 
-### Frontend - Auto Detection
-```tsx
-// CrudPage automatically detects permissions
-<CrudPage
-    resourceName="books"  // Auto-detects books_create, books_read, etc.
-    title="Books Management"
-    columns={bookColumns}
-    data={data}
-    filters={filters}
-/>
-```
+---
 
-### Frontend - Permission Hooks
-```tsx
-import { usePermissions } from '@/contexts/PermissionsContext';
+## CI/CD
 
-function MyComponent() {
-    const { canPerformAction, isSuperAdmin } = usePermissions();
-    
-    if (canPerformAction('books', 'create')) {
-        // Show create button
-    }
-}
-```
+### CI Pipeline (GitHub Actions)
 
-## 🧪 Development Workflow
+8 parallel jobs on push to `main`/`develop`:
 
-### 1. Creating a New CRUD Resource (Complete Workflow)
+| Job | What it does |
+|-----|-------------|
+| `go-lint` | golangci-lint + go vet |
+| `go-test` | Full test suite with testcontainers + coverage |
+| `go-build` | CGO_ENABLED=0 static binary |
+| `frontend-lint` | ESLint + TypeScript type check |
+| `frontend-test` | Vitest with coverage |
+| `frontend-build` | Vite production build |
+| `dependency-scan` | govulncheck + npm audit |
+| `docker-build` | Build, Trivy scan, push (if DEPLOYABLE=true) |
+| `helm-lint` | Helm lint + template validation |
 
-```bash
-# =========================================
-# BACKEND SETUP (Database → API)
-# =========================================
+### CD Pipeline
 
-# Step 1: Generate database migration
-go run . artisan make:migration create_lenders_table
-# Edit database/migrations/TIMESTAMP_create_lenders_table.go
+Sequential deploy with safety gates:
+1. Build, scan, push Docker image
+2. `helm upgrade --atomic` (auto-rollback on failure)
+3. Smoke test (`/health` endpoint)
+4. Auto-rollback job if smoke test fails
 
-# Step 2: Run the migration
-go run . artisan migrate
-
-# Step 3: Generate audit fields migration (optional but recommended)
-go run . artisan make:audit lenders
-# This adds created_by, updated_by, deleted_by, ip_address, user_agent
-
-# Step 4: Run audit migration
-go run . artisan migrate
-
-# Step 5: Generate model from database table
-go run . artisan make:model-from-table --table=lenders --model=Lender
-# Creates app/models/lender.go with fields matching database schema
-
-# Step 6: Generate service from model
-go run . artisan make:svc --svc=Lender
-# Creates app/services/lender_service.go with CRUD operations
-
-# Step 7: Add service to permission constants
-# Edit app/auth/permission_constants.go and add:
-# ServiceLenders ServiceRegistry = "lenders"
-
-# Step 8: Enable scope filtering for the new service
-# Edit app/contracts/service_builder.go
-# In the WithScopeFiltering() method, add "lenders" to the serviceMap (around line 111):
-# serviceMap := map[string]auth.ServiceRegistry{
-#     "books":       "books",
-#     "users":       "users",
-#     "roles":       "roles",
-#     "permissions": "permissions",
-#     "lenders":     "lenders",  // <-- Add this
-# }
-
-# Step 9: Add model to scoped permission helper
-# Edit app/auth/scoped_permission_helper.go
-# Add Lender case to both isResourceCreatedBy() and isResourceCreatedByRoleLevel() methods:
-# case *models.Lender:
-#     return r.CreatedBy != nil && *r.CreatedBy == userID
-
-# Step 10: Sync permissions to database
-go run . artisan permissions:setup
-
-# Step 9: Generate request validators from model
-go run . artisan make:req --model=Lender --resource=Lender
-# Creates app/http/requests/lender_create_request.go
-# Creates app/http/requests/lender_update_request.go
-
-# Step 10: Generate API controller
-go run . artisan make:api-ctrl --controller=Lender
-# Creates app/http/controllers/lenders/lender_api_controller.go
-
-# Step 11: Register API endpoints
-# Edit routes/api.go and add the routes (instructions provided by make:api-ctrl)
-
-# Step 12: Generate Swagger docs (OPTIONAL)
-go run . artisan make:swagger-docs --controller=Lender
-
-# Step 13: Generate API tests (OPTIONAL)
-go run . artisan make:crud-test --svc=lender
-
-# =========================================
-# FRONTEND SETUP (UI Generation)
-# =========================================
-
-# Step 14: Generate page controller
-go run . artisan make:page-ctrl --controller=Lender
-# Creates app/http/controllers/lenders/lender_page_controller.go
-
-# Step 15: Generate complete UI hierarchy
-go run . artisan make:ui --page=Lender --request=Lender
-# Creates:
-# - resources/js/Pages/Lender/Index.tsx
-# - resources/js/Pages/Lender/sections/*.tsx (6 files)
-# - resources/js/types/lender.ts
-
-# Step 16: Register admin page endpoint
-# Edit routes/web.go and add:
-# lendersPageController := lenders.NewLenderPageController()
-# router.Get("/admin/lenders", lendersPageController.Index)
-
-# Step 17: Add navigation menu item
-# Edit resources/js/config/navigation.ts and add:
-# {
-#   title: "Lenders",
-#   url: "/admin/lenders",
-#   icon: Users, // Import from lucide-react
-#   requiredService: "lenders",
-#   requiredAction: "read" as const,
-# }
-
-# =========================================
-# OPTIONAL: ADD TO GLOBAL SEARCH (CMD+K)
-# =========================================
-
-# Step 18: Add search method to SearchController
-# Edit app/http/controllers/search_controller.go
-# 1. Add search check in GlobalSearch method (around line 70):
-#    if permHelper.CheckServicePermission(ctx, auth.ServiceLenders, auth.PermissionRead) {
-#        lenderResults := c.searchLenders(query)
-#        results = append(results, lenderResults...)
-#    }
-#
-# 2. Add search method at the end of the file:
-#    func (c *SearchController) searchLenders(query string) []SearchResult {
-#        results := []SearchResult{}
-#        lenderService := services.NewLenderService()
-#        paginatedResult, err := lenderService.Search(query, contracts.ListRequest{
-#            Page: 1, PageSize: 10,
-#        })
-#        if err != nil || paginatedResult == nil {
-#            return results
-#        }
-#        for _, item := range paginatedResult.Data {
-#            if lender, ok := item.(models.Lender); ok {
-#                results = append(results, SearchResult{
-#                    ID: lender.ID,
-#                    Title: lender.Name,
-#                    Subtitle: lender.Email,
-#                    Type: "lender",
-#                    URL: fmt.Sprintf("/admin/lenders?search=%s", query),
-#                })
-#            }
-#        }
-#        return results
-#    }
-
-# Step 19: Add search config to frontend
-# Edit resources/js/config/search_config.tsx
-# 1. Add to SearchEntityType (line 19):
-#    export type SearchEntityType = 'book' | 'user' | 'lender';
-#
-# 2. Add to SEARCH_ENTITIES array (around line 64):
-#    {
-#      type: 'lender',
-#      label: 'Lenders',
-#      icon: <Landmark className="h-4 w-4" />,  // Import Landmark from lucide-react
-#      permissionService: 'lenders',
-#      permissionAction: 'read' as const,
-#      colors: {
-#        light: 'bg-orange-100 text-orange-800',
-#        dark: 'dark:bg-orange-900/30 dark:text-orange-400',
-#      },
-#      urlPrefix: '/admin/lenders',
-#    },
-
-# =========================================
-# RESTART & TEST
-# =========================================
-
-# Restart both servers
-# Terminal 1: air (or go run .)
-# Terminal 2: npm run dev
-
-# Visit: http://localhost:3500/admin/lenders
-```
-
-#### Quick Reference Order
-
-1. **make:migration** → Create table schema
-2. **migrate** → Apply migration
-3. **make:audit** → Add audit fields (optional)
-4. **migrate** → Apply audit migration
-5. **make:model-from-table** → Generate model from DB
-6. **make:svc** → Generate service
-7. **Add to permission_constants.go** → Register service
-8. **permissions:setup** → Sync to database
-9. **make:req** → Generate request validators
-10. **make:api-ctrl** → Generate API controller
-11. **Register in routes/api.go** → Add API endpoints
-12. **make:swagger-docs** → Generate docs (optional)
-13. **make:crud-test** → Generate tests (optional)
-14. **make:page-ctrl** → Generate page controller
-15. **make:ui** → Generate UI files
-16. **Register in routes/web.go** → Add page route
-17. **Add to navigation.ts** → Add menu item
-18. **Update search_controller.go** → Add to global search (optional)
-19. **Update search_config.tsx** → Add search frontend config (optional)
-
-### 2. Managing Permissions
-
-1. Visit `/admin/permissions` as super admin
-2. Create/edit roles
-3. Assign permissions using the matrix grid
-4. Test with different user accounts
-
-### 3. Testing
+### Helm Chart
 
 ```bash
-# Create test users
-go run . artisan user:create test@example.com testpass
-go run . artisan role:assign test@example.com member
+# Lint
+helm lint helm/goravel-blog
 
-# Test API endpoints
-curl -X GET "http://localhost:3500/api/books"
+# Template with staging values
+helm template goravel-blog helm/goravel-blog \
+  --values helm/goravel-blog/values.yaml \
+  --values helm/goravel-blog/values.staging.yaml
 
-# Check server logs for permission debugging
-# Look for: DEBUG HasPermission: user 1 has permissions: [books_create, books_read]
+# Deploy
+helm upgrade --install goravel-blog helm/goravel-blog \
+  --values helm/goravel-blog/values.staging.yaml \
+  --set secrets.jwtSecret=$JWT_SECRET \
+  --atomic --timeout 5m
 ```
 
-## 🐛 Troubleshooting
+3 value files: `values.yaml` (defaults), `values.staging.yaml`, `values.production.yaml`.
+
+---
+
+## Project Structure
+
+```
+app/
+  auth/                         # Permission constants, helpers, scoped access
+  console/commands/             # Artisan commands
+  contracts/                    # Interfaces (ServiceBuilder, etc.)
+  http/
+    controllers/                # API + page controllers (per entity)
+    middleware/                  # JWT, CORS, permissions
+    requests/                   # Request validation structs
+  models/                       # GORM models
+  providers/                    # Service providers
+  services/                     # Business logic (builder pattern)
+database/
+  migrations/                   # Schema migrations
+  seeders/                      # Data seeders
+resources/js/
+  components/                   # Reusable UI (CrudPage, ExportDialog, etc.)
+  config/                       # navigation.ts, search_config.tsx
+  contexts/                     # React contexts (permissions, theme)
+  hooks/                        # Custom hooks (useExport, etc.)
+  locales/en/                   # i18n translation JSON files
+  pages/                        # Entity pages (Index.tsx + sections/)
+  types/                        # TypeScript interfaces
+  utils/                        # Utilities (exportUtils, etc.)
+routes/
+  api.go                        # API routes
+  web.go                        # Web/Inertia routes
+helm/goravel-blog/              # Helm chart
+docker-compose/                 # Docker Compose files
+scripts/                        # Shell scripts (tests, linting, hooks)
+.claude/skills/                 # Claude Code skill definitions
+.github/workflows/              # CI/CD pipelines
+```
+
+## Key Conventions
+
+- **Endpoints**: hyphenated (`/entity-names` not `/entity_names`)
+- **Request struct tags**: snake_case (`form:"first_name" json:"first_name"`)
+- **Create data**: camelCase keys (matches model json tags)
+- **Update data**: snake_case keys (matches DB columns via GORM)
+- **i18n**: `useTranslation('namespace')` in components, `t: TFunction` param in configs
+- **Permissions**: `auth.ServiceEntity` + `auth.PermissionAction` pattern
+- **Services**: `contracts.NewServiceBuilder[T]` builder pattern
+
+## Troubleshooting
 
 ### Test Issues
+
 ```bash
-# Tests failing with "panic: test timed out"
-# - Increase timeout: go test -timeout 30s
-# - Check for infinite loops or deadlocks
+# Migration race conditions
+# Use -p=1 flag (run_tests.sh does this automatically)
+./scripts/run_tests.sh -v ./tests/...
 
-# Database/migration errors in tests
-# - Tests use SQLite by default, no setup needed
-# - Ensure APP_ENV=testing is set
-# - Clean test databases: rm -rf tests/*/database/
+# JWT returns 302 redirect (not 401)
+# JWT middleware redirects unauthenticated requests — use cookie jar in tests
+# For unauthenticated tests, use a FRESH http.Client (no jar)
 
-# "sql: Scan error" with dates
-# - Check migration uses DateTime() not String() for date fields
-# - Ensure model uses *time.Time for nullable dates
+# JSON numbers decode as float64
+# Assert with float64 type: s.Equal(float64(100), result["price"])
 
-# Mock errors in tests
-# - Use real facades for integration tests
-# - For unit tests, see helpers in tests/helpers/
-
-# Permission errors in tests
-# - Use helpers.SetupJWTUser() for test users with roles
-# - Check CLAUDE.md for test examples
+# Timestamps have second precision only
+# TimestampsTz() creates timestamp(0) — don't rely on millisecond ordering
 ```
 
 ### Database Issues
+
 ```bash
-# Connection errors
-# - Check .env database credentials
-# - Ensure database server is running
-# - For SQLite: touch database/database.sqlite
-
-# Migration errors
-go run . artisan migrate:rollback
+# Fresh start
 go run . artisan migrate:fresh
+go run . artisan seed
 
-# Foreign key constraint errors
-# - Check migration order in database/kernel.go
-# - Ensure related tables exist first
+# Foreign key order errors
+# Check migration order in database/kernel.go
+
+# Dev DB not updated after test changes
+# Tests use testcontainers — run migrate on dev DB separately:
+go run . artisan migrate
+```
+
+### Frontend Issues
+
+```bash
+# TypeScript errors
+npx tsc --noEmit
+
+# Clear build cache
+rm -rf node_modules/.vite
+npm run dev
+
+# Full reinstall
+rm -rf node_modules package-lock.json && npm install
 ```
 
 ### Permission Issues
+
 ```bash
-# Permissions not working
-# 1. Enable debug logging: LOG_LEVEL=debug
-# 2. Check logs for "CheckScopedPermission" entries
-# 3. Verify permission format: service_action (e.g., books_create)
-# 4. Re-seed permissions:
-go run . artisan seed --seeder=rbac
+# Re-sync permissions
+go run . artisan permissions:setup
 
-# User can't access features
-# - Check user role: go run . artisan user:show email@example.com
-# - Verify permissions: visit /admin/permissions as admin
-# - Check scoped permissions (by_all, by_me, by_my_role)
+# Check user role
+go run . artisan user:show email@example.com
+
+# Debug: set LOG_LEVEL=debug, look for "CheckScopedPermission" in logs
 ```
 
-### Development Server Issues
-```bash
-# Backend not starting
-# - Check port 3500 is free: lsof -i :3500
-# - Verify Go modules: go mod tidy
-# - Check .env file exists and is valid
+## License
 
-# Frontend not building
-# - Clear node_modules: rm -rf node_modules && npm install
-# - Check Node version: node --version (needs 16+)
-# - Clear Vite cache: rm -rf node_modules/.vite
-
-# Hot reload not working
-# - Install Air: go install github.com/cosmtrek/air@latest
-# - Check .air.toml configuration
-# - Use 'air' instead of 'go run .'
-```
-
-### Common API Errors
-```go
-// "unexpected end of JSON input" in validation
-// Replace ValidateRequest with manual binding:
-var request requests.YourRequest
-if err := ctx.Request().Bind(&request); err != nil {
-    return ctx.Response().Json(http.StatusBadRequest, map[string]string{
-        "error": "Invalid request format",
-    })
-}
-
-// JWT token issues
-// - Token stored in HTTP-only cookie named "token"
-// - Check cookie domain matches your URL
-// - For tests, use helpers.SetupJWTUser()
-```
-
-## 📚 Documentation
-
-Detailed documentation available in the `docs/` directory:
-
-- **[CRUD Resource Scaffolding](#crud-resource-scaffolding)** - Quick-start guide for `make:svc`, `make:req`, `make:ctrl` commands
-- [Permission System Guide](docs/PERMISSION_SYSTEM_GUIDE.md) - Complete permission system documentation
-- [CRUD E2E Guide](docs/CRUD_E2E_GUIDE.md) - Step-by-step CRUD implementation
-- [Artisan Commands](docs/ARTISAN_COMMANDS.md) - All available commands
-- [RBAC Implementation](docs/RBAC_IMPLEMENTATION.md) - Role-based access control details
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Follow the existing code style and conventions
-4. Write tests for new features
-5. Commit your changes: `git commit -m 'Add feature: description'`
-6. Push to the branch: `git push origin feature-name`
-7. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Built with [Goravel](https://www.goravel.dev/) - The Laravel-inspired Go framework
-- UI components from [shadcn/ui](https://ui.shadcn.com/)
-- Icons from [Lucide](https://lucide.dev/)
+MIT

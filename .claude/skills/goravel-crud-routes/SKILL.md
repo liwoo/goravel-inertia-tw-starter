@@ -20,7 +20,7 @@ import (
 )
 ```
 
-The module path is `smedi-sme-db`.
+The module path is `books-database`.
 
 ### Step 2: Initialize Controller
 
@@ -42,16 +42,19 @@ optionalAuthRouter.Get("/<entity-names>/filters", entityController.FilterMetadat
 optionalAuthRouter.Get("/<entity-names>/{id}", entityController.Show)
 ```
 
-### Step 4: Add Protected Routes (Auth-Required Mutations)
+### Step 4: Add Protected Routes (Auth-Required Mutations + Statistics)
 
 Add inside the `router.Middleware(jwtAuth, require2FA).Group(...)` block:
 
 ```go
 // Entity routes
+protectedRouter.Get("/<entity-names>/statistics", entityController.Statistics)  // Must be before {id}
 protectedRouter.Post("/<entity-names>", entityController.Store)
 protectedRouter.Put("/<entity-names>/{id}", entityController.Update)
 protectedRouter.Delete("/<entity-names>/{id}", entityController.Delete)
 ```
+
+**Statistics endpoints go in `protectedRouter`**, not `optionalAuthRouter` — they expose aggregate data that should require authentication.
 
 ### Endpoint Naming Conventions
 
@@ -95,6 +98,20 @@ See `routes/api.go` and `routes/web.go` for existing patterns:
 **Web routes** (`routes/web.go`):
 - All admin pages under `router.Get("/admin/...")`
 
+## Verify
+
+After registering all routes:
+
+```bash
+# This is critical — catches import errors, missing controllers, wrong method signatures
+go build ./...
+```
+
+If the build fails, check:
+- Import path matches the controller package name
+- Controller method signatures match route expectations (GET/POST/PUT/DELETE)
+- Route ordering is correct (search before `{id}`)
+
 ## Next Step
 
-Run `/goravel-crud-test` to generate comprehensive CRUD tests, OR run `/goravel-crud-page` if you need the UI.
+Run `/goravel-crud-test` to generate and run comprehensive CRUD tests. **All API tests MUST pass before starting any UI/frontend work.** This catches data-flow bugs (Bind, validation keys, GORM mapping) that are much harder to debug through the UI.

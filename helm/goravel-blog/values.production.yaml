@@ -23,14 +23,14 @@ ingress:
     # Disable request buffering for streaming
     nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
   hosts:
-    - host: smedi.example.com
+    - host: books.example.com
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: smedi-tls-secret
+    - secretName: books-tls-secret
       hosts:
-        - smedi.example.com
+        - books.example.com
 
 resources:
   limits:
@@ -55,10 +55,10 @@ networkPolicy:
   enabled: true
 
 app:
-  name: "SMEDI Database"
+  name: "Books Database"
   env: "production"
   debug: false
-  url: "https://smedi.example.com"
+  url: "https://books.example.com"
 
   # Auth configuration
   auth:
@@ -68,8 +68,8 @@ app:
     connection: "postgres"
     host: "postgresql.data.svc.cluster.local"
     port: 5432
-    database: "smedi_db_production"
-    username: "smedi_production"
+    database: "books_db_production"
+    username: "books_production"
     sslmode: "require"
 
   redis:

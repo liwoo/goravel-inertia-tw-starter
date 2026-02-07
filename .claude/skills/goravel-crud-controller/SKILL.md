@@ -127,6 +127,18 @@ func (c *EntityController) Statistics(ctx http.Context) http.Response {
 }
 ```
 
+## Verify
+
+After fixing the controller:
+
+```bash
+# Vet the controller package
+go vet ./app/http/controllers/...
+
+# Confirm full project compiles (catches service constant mismatches)
+go build ./...
+```
+
 ## Next Step
 
 Run `/goravel-crud-routes` to register the API routes.

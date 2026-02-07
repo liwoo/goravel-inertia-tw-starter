@@ -1,6 +1,6 @@
 # Docker Compose Setup
 
-This folder contains Docker Compose configurations for the SMEDI Database application.
+This folder contains Docker Compose configurations for the Books Database application.
 
 ## Files
 
@@ -89,9 +89,9 @@ The compose files set sensible defaults for local development. Key variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DB_DATABASE` | smedi_db | PostgreSQL database name |
-| `DB_USERNAME` | smedi | PostgreSQL user |
-| `DB_PASSWORD` | smedi_password | PostgreSQL password |
+| `DB_DATABASE` | books_db | PostgreSQL database name |
+| `DB_USERNAME` | books | PostgreSQL user |
+| `DB_PASSWORD` | books_password | PostgreSQL password |
 | `REDIS_HOST` | redis | Redis hostname |
 | `APP_ENV` | local | Application environment |
 
@@ -128,7 +128,7 @@ docker compose up -d --build
 ### Connect to PostgreSQL
 
 ```bash
-docker compose exec postgres psql -U smedi -d smedi_db
+docker compose exec postgres psql -U books -d books_db
 ```
 
 ### Connect to Redis

@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"strings"
 
+	"books-database/app/auth"
+	"books-database/app/services"
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/services"
 )
 
 // PresenceController handles user presence/online status endpoints

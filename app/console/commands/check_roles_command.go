@@ -1,11 +1,11 @@
 package commands
 
 import (
+	"books-database/app/models"
 	"fmt"
 	"github.com/goravel/framework/contracts/console"
 	"github.com/goravel/framework/contracts/console/command"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
 )
 
 type CheckRolesCommand struct{}

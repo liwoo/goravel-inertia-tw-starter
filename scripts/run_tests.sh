@@ -30,10 +30,10 @@ trap cleanup EXIT INT TERM
 
 # Start a PostgreSQL container
 CONTAINER_ID=$(docker run -d \
-    --name smedi-test-db-$TEST_RUN_ID \
+    --name books-test-db-$TEST_RUN_ID \
     -e POSTGRES_USER=testuser \
     -e POSTGRES_PASSWORD=testpassword123 \
-    -e POSTGRES_DB=smedi_test \
+    -e POSTGRES_DB=books_test \
     -p 0:5432 \
     postgres:16-alpine)
 
@@ -47,7 +47,7 @@ echo "Container started: $CONTAINER_ID"
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to be ready..."
 for i in {1..30}; do
-    if docker exec "$CONTAINER_ID" pg_isready -U testuser -d smedi_test > /dev/null 2>&1; then
+    if docker exec "$CONTAINER_ID" pg_isready -U testuser -d books_test > /dev/null 2>&1; then
         echo "PostgreSQL is ready!"
         break
     fi
@@ -68,7 +68,7 @@ fi
 echo "PostgreSQL available on port: $MAPPED_PORT"
 
 # Create isolated storage directory for tests
-TEST_STORAGE_DIR="/tmp/smedi-test-storage-$TEST_RUN_ID"
+TEST_STORAGE_DIR="/tmp/books-test-storage-$TEST_RUN_ID"
 mkdir -p "$TEST_STORAGE_DIR/framework/sessions"
 mkdir -p "$TEST_STORAGE_DIR/framework/cache"
 mkdir -p "$TEST_STORAGE_DIR/logs"
@@ -78,7 +78,7 @@ echo "Test storage directory: $TEST_STORAGE_DIR"
 export APP_ENV=testing
 export APP_DEBUG=true
 export APP_KEY=testkeyfortestingonlyabc12345678
-export APP_NAME=smedi_test
+export APP_NAME=books_test
 
 # Disable 2FA requirement for tests (allows simple JWT auth without TOTP)
 export AUTH_REQUIRE_2FA=false
@@ -87,7 +87,7 @@ export AUTH_REQUIRE_2FA=false
 export DB_CONNECTION=postgres
 export DB_HOST=127.0.0.1
 export DB_PORT=$MAPPED_PORT
-export DB_DATABASE=smedi_test
+export DB_DATABASE=books_test
 export DB_USERNAME=testuser
 export DB_PASSWORD=testpassword123
 export DB_SSLMODE=disable
@@ -98,7 +98,7 @@ export STORAGE_PATH="$TEST_STORAGE_DIR"
 # Session - use isolated file storage
 export SESSION_DRIVER=file
 export SESSION_FILES_PATH="$TEST_STORAGE_DIR/framework/sessions"
-export SESSION_COOKIE="smedi_test_session_$TEST_RUN_ID"
+export SESSION_COOKIE="books_test_session_$TEST_RUN_ID"
 
 # JWT - use a completely different secret for tests
 export JWT_SECRET="test-jwt-secret-$TEST_RUN_ID-isolated-from-prod"

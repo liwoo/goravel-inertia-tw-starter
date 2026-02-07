@@ -19,7 +19,7 @@ The following critical issues have been fixed:
 
 ### ✅ FIXED - Lender API Routes
 **File:** `routes/api.go`
-- Added import for `smedi-sme-db/app/http/controllers/lenders`
+- Added import for `books-database/app/http/controllers/lenders`
 - Added `lenderController` initialization
 - Added GET routes: `/lenders`, `/lenders/search`, `/lenders/filters`, `/lenders/{id}`
 - Added protected routes: POST `/lenders`, PUT `/lenders/{id}`, DELETE `/lenders/{id}`
@@ -81,7 +81,7 @@ The test suite execution revealed **multiple critical failures** across backend 
 
 #### 1. Missing Lender API Routes
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/routes/api.go`
+**Location:** `/Users/liwu/GolandProjects/books-database/routes/api.go`
 
 **Symptom:** All LenderCRUDTestSuite tests return 404 status codes
 
@@ -103,11 +103,11 @@ Error: expected: 201, actual: 404
 
 **Root Cause:** The Lender controller exists and the model/migration are registered, but no routes are defined in `routes/api.go` for the lender endpoints.
 
-**Required Fix:** Add lender routes to `/Users/liwu/GolandProjects/smedi-database/routes/api.go`:
+**Required Fix:** Add lender routes to `/Users/liwu/GolandProjects/books-database/routes/api.go`:
 
 ```go
 // Add this import if not present
-"smedi-sme-db/app/http/controllers/lenders"
+"books-database/app/http/controllers/lenders"
 
 // Add in the Api function, after other controller initializations:
 lenderController := lenders.NewLenderController()
@@ -128,7 +128,7 @@ protectedRouter.Delete("/lenders/{id}", lenderController.Delete)
 
 #### 2. Migration Index Naming Mismatch
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/database/migrations/20251127085740_add_performance_indexes.go`
+**Location:** `/Users/liwu/GolandProjects/books-database/database/migrations/20251127085740_add_performance_indexes.go`
 
 **Symptom:** Migration rollback fails with "no such index" errors during test setup
 
@@ -203,7 +203,7 @@ SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'smes';
 
 #### 3. User CRUD Test Database State Issues
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/tests/feature/user_crud_test.go`
+**Location:** `/Users/liwu/GolandProjects/books-database/tests/feature/user_crud_test.go`
 
 **Symptom:** All UserCRUDTestSuite tests fail with "email already exists" error
 
@@ -250,7 +250,7 @@ func (s *UserCRUDTestSuite) generateUniqueEmail(prefix string) string {
 
 #### 4. SME Creation Validation Failures
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/tests/feature/crud/smecontroller_crud_test.go`
+**Location:** `/Users/liwu/GolandProjects/books-database/tests/feature/crud/smecontroller_crud_test.go`
 
 **Symptom:** All SME-related tests return 422 (Unprocessable Entity) when trying to create SMEs
 
@@ -275,7 +275,7 @@ Test: TestSmeControllerCRUDTestSuite/TestUBIGeneration
 **Required Investigation:**
 1. Check the SME model for required fields
 2. Check the SME controller's Store validation rules
-3. Review recent changes to `/Users/liwu/GolandProjects/smedi-database/app/services/sme_service.go`
+3. Review recent changes to `/Users/liwu/GolandProjects/books-database/app/services/sme_service.go`
 
 **Suggested Debug Step:** Add logging to capture the actual validation error:
 ```go
@@ -290,7 +290,7 @@ if resp.StatusCode == 422 {
 
 #### 5. Primary Business Owner Test Failures
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/tests/feature/crud/sme/primary_business_owner_controller_crud_test.go`
+**Location:** `/Users/liwu/GolandProjects/books-database/tests/feature/crud/sme/primary_business_owner_controller_crud_test.go`
 
 **Symptom:** All tests fail because parent SME cannot be created
 
@@ -323,7 +323,7 @@ Messages: Failed to create SME for validation test
 
 #### 6. Book Statistics Test Data Pollution
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/tests/feature/crud/book_advanced_features_test.go`
+**Location:** `/Users/liwu/GolandProjects/books-database/tests/feature/crud/book_advanced_features_test.go`
 
 **Symptom:** Statistics counts don't match expected values
 
@@ -353,7 +353,7 @@ func (s *BookAdvancedFeaturesTestSuite) TearDownTest() {
 
 #### 7. Additional Business Member Test Failures
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/tests/feature/crud/additional_business_member_controller_crud_test.go`
+**Location:** `/Users/liwu/GolandProjects/books-database/tests/feature/crud/additional_business_member_controller_crud_test.go`
 
 **Test Failures:**
 - TestFilterMetadata
@@ -368,7 +368,7 @@ func (s *BookAdvancedFeaturesTestSuite) TearDownTest() {
 
 #### 8. Procurement Notice Test Failures
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/tests/feature/crud/procurementnoticecontroller_crud_test.go`
+**Location:** `/Users/liwu/GolandProjects/books-database/tests/feature/crud/procurementnoticecontroller_crud_test.go`
 
 **Test Failures:**
 - TestDeleteProcurementNotice
@@ -390,7 +390,7 @@ Error: Not equal: expected: 201, actual: 422
 
 #### 9. Permission Scope Test Failures
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/tests/feature/permissions/`
+**Location:** `/Users/liwu/GolandProjects/books-database/tests/feature/permissions/`
 
 **Test Failures:**
 - TestCountQueriesRespectScope
@@ -403,7 +403,7 @@ Error: Not equal: expected: 201, actual: 422
 
 #### 10. Frontend CrudPage Integration Test Failures
 
-**Location:** `/Users/liwu/GolandProjects/smedi-database/resources/js/components/Crud/__tests__/CrudPage.integration.test.tsx`
+**Location:** `/Users/liwu/GolandProjects/books-database/resources/js/components/Crud/__tests__/CrudPage.integration.test.tsx`
 
 **Test Failures (26 total):**
 - should handle simple filter tab interactions correctly
@@ -502,12 +502,12 @@ export APP_ENV=testing && go run artisan migrate:rollback
 
 | Priority | File | Action Required |
 |----------|------|-----------------|
-| CRITICAL | `/Users/liwu/GolandProjects/smedi-database/database/migrations/20251127085740_add_performance_indexes.go` | Fix index names in Down() method |
-| CRITICAL | `/Users/liwu/GolandProjects/smedi-database/routes/api.go` | Add lender routes |
-| HIGH | `/Users/liwu/GolandProjects/smedi-database/tests/feature/user_crud_test.go` | Fix test data isolation |
-| HIGH | `/Users/liwu/GolandProjects/smedi-database/app/services/sme_service.go` | Review validation changes |
-| MEDIUM | `/Users/liwu/GolandProjects/smedi-database/tests/feature/crud/book_advanced_features_test.go` | Fix test cleanup |
-| LOW | `/Users/liwu/GolandProjects/smedi-database/resources/js/components/Crud/__tests__/CrudPage.integration.test.tsx` | Update test assertions |
+| CRITICAL | `/Users/liwu/GolandProjects/books-database/database/migrations/20251127085740_add_performance_indexes.go` | Fix index names in Down() method |
+| CRITICAL | `/Users/liwu/GolandProjects/books-database/routes/api.go` | Add lender routes |
+| HIGH | `/Users/liwu/GolandProjects/books-database/tests/feature/user_crud_test.go` | Fix test data isolation |
+| HIGH | `/Users/liwu/GolandProjects/books-database/app/services/sme_service.go` | Review validation changes |
+| MEDIUM | `/Users/liwu/GolandProjects/books-database/tests/feature/crud/book_advanced_features_test.go` | Fix test cleanup |
+| LOW | `/Users/liwu/GolandProjects/books-database/resources/js/components/Crud/__tests__/CrudPage.integration.test.tsx` | Update test assertions |
 
 ---
 

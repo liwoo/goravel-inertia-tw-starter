@@ -1,8 +1,8 @@
 package services
 
 import (
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
+	"books-database/app/contracts"
+	"books-database/app/models"
 )
 
 // LenderService implements business logic for lenders using the builder pattern

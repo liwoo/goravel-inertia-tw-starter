@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { CrudEditFormProps } from '@/types/crud';
 import { Book, BookUpdateData, BookStatus } from '@/types/book';
 import { Calendar, DollarSign, Hash, Plus, Tag, X } from 'lucide-react';
+
+interface AuthorOption {
+  id: number;
+  firstName: string;
+  lastName: string;
+}
 
 interface BookEditFormProps extends CrudEditFormProps<Book> {
   setIsSaving?: (saving: boolean) => void;
@@ -26,6 +32,7 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
   const [formData, setFormData] = useState<BookUpdateData>({
     title: book.title,
     author: book.author,
+    authorId: book.authorId,
     isbn: book.isbn,
     description: book.description || '',
     price: book.price,
@@ -36,6 +43,19 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tagInput, setTagInput] = useState('');
+  const [authors, setAuthors] = useState<AuthorOption[]>([]);
+
+  useEffect(() => {
+    fetch('/api/authors?pageSize=100&sort=first_name&direction=ASC', {
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(res => res.json())
+      .then(res => {
+        const items = res?.data?.data || res?.data || [];
+        setAuthors(items.map((a: any) => ({ id: a.id, firstName: a.firstName, lastName: a.lastName })));
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async () => {
 
@@ -139,13 +159,38 @@ export const BookEditForm = forwardRef<any, BookEditFormProps>(({
 
         <div className="space-y-2">
           <Label htmlFor="author">{t('form.author')}</Label>
-          <Input
-            id="author"
-            value={formData.author}
-            onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-            placeholder={t('form.enterAuthor')}
-            className={errors.author ? 'border-destructive' : ''}
-          />
+          {authors.length > 0 ? (
+            <Select
+              value={formData.authorId?.toString() || ''}
+              onValueChange={(value) => {
+                const selected = authors.find(a => a.id === Number(value));
+                setFormData({
+                  ...formData,
+                  authorId: Number(value),
+                  author: selected ? `${selected.firstName} ${selected.lastName}` : formData.author,
+                });
+              }}
+            >
+              <SelectTrigger className={errors.author ? 'border-destructive' : ''}>
+                <SelectValue placeholder={t('form.selectAuthor')} />
+              </SelectTrigger>
+              <SelectContent>
+                {authors.map((a) => (
+                  <SelectItem key={a.id} value={a.id.toString()}>
+                    {a.firstName} {a.lastName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              id="author"
+              value={formData.author}
+              onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+              placeholder={t('form.enterAuthor')}
+              className={errors.author ? 'border-destructive' : ''}
+            />
+          )}
           {errors.author && (
             <p className="text-sm text-destructive">{errors.author}</p>
           )}

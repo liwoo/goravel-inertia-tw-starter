@@ -11,8 +11,8 @@ import (
 	"github.com/goravel/framework/facades"
 	inertia "github.com/petaki/inertia-go"
 
-	"smedi-sme-db/app/auth"   // Import auth for permission helper
-	"smedi-sme-db/app/models" // Import the User model
+	"books-database/app/auth"   // Import auth for permission helper
+	"books-database/app/models" // Import the User model
 )
 
 // Version represents the current asset version

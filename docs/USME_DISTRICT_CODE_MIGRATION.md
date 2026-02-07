@@ -59,7 +59,7 @@ go run . artisan migrate
 Or if using the compiled binary:
 
 ```bash
-./smedi-sme-db artisan migrate
+./books-database artisan migrate
 ```
 
 ### Step 2: Preview Changes (Recommended)

@@ -12,7 +12,7 @@ Generate complete frontend UI for `$ARGUMENTS`.
 
 ## Prerequisites
 
-Before running this scaffold, ensure the backend is ready:
+Before running this scaffold, ensure the backend is ready AND tested:
 - [ ] Migration created and run (`/goravel-crud-migration`)
 - [ ] Model generated and fixed (`/goravel-crud-model`)
 - [ ] Service layer created (`/goravel-crud-service`)
@@ -20,6 +20,9 @@ Before running this scaffold, ensure the backend is ready:
 - [ ] Request validators created (`/goravel-crud-request`)
 - [ ] API controller created (`/goravel-crud-controller`)
 - [ ] API routes registered (`/goravel-crud-routes`)
+- [ ] **CRUD tests generated, fixed, and ALL passing** (`/goravel-crud-test`)
+
+**CRITICAL**: Do NOT start UI work until all CRUD tests pass. Backend bugs (Bind, validation key mismatches, GORM mapping) are much harder to debug through the UI.
 
 ## Scaffold Sequence
 
@@ -223,6 +226,58 @@ Run audit on all frontend files to verify:
 
 ---
 
+### Step 14: File Downloads & Export
+**Skill**: `/file-downloads`
+
+Add export functionality to the entity page:
+- Define export fields with formatters (dates, currency, arrays)
+- Wire ExportDialog with format picker and field selection
+- Add export button to page actions
+- Add i18n keys for export labels
+
+---
+
+### Step 15: UX Audit
+**Skill**: `/ui-ux-audit`
+
+Review all generated UI for quality:
+- Table columns: max 3-4, no icon overuse, no data duplication
+- Forms: dropdowns for constrained fields (nationality, gender, etc.), proper validation
+- Status colors: consistent palette, dark mode `/30` opacity
+- Loading/empty states: translated messages, proper error handling
+- Shared config: extract reusable option lists to `config/options.ts`
+
+**Fix issues before proceeding to seeding and E2E testing.**
+
+---
+
+### Step 16: Seed Data
+**Skill**: `/fake-data`
+
+Create a database seeder with 25+ realistic records:
+- Run `/fake-data EntityName` to create the seeder file
+- Register in `database_seeder.go` and `kernel.go`
+- Run `go run . artisan db:seed --seeder=EntitySeeder`
+
+**Required for E2E testing** — sorting, pagination, and filter tests need sufficient data.
+
+---
+
+### Step 17: E2E Browser Testing
+**Skill**: `/e2e-entity-suite`
+
+Run the full Playwright MCP test suite to verify all UI functionality end-to-end:
+- Login, navigation, page structure
+- CRUD operations (create, detail view, edit, delete)
+- Table search, sorting, pagination
+- Global search (CMD+K), filter tabs
+- Row action menus, FK dropdowns
+- Console errors, network failures
+
+**This step catches bugs that static checks miss** (nullable field errors, float precision, missing migrations on dev DB, search integration gaps).
+
+---
+
 ## Post-Scaffold Verification
 
 ```bash
@@ -232,11 +287,17 @@ npx tsc --noEmit
 # 2. Go compiles
 go build ./...
 
-# 3. i18n keys complete (manual check)
+# 3. Dev DB migrated
+go run . artisan migrate
+
+# 4. i18n keys complete (manual check)
 # Open the translation JSON and verify all sections exist
 
-# 4. Dev server runs
+# 5. Dev server runs
 # pnpm dev (manual check)
+
+# 6. E2E browser tests
+# /e2e-entity-suite EntityName
 ```
 
 ## i18n Quick Reference
@@ -268,3 +329,7 @@ go build ./...
 | 11 | `/goravel-crud-nav` | `navigation.ts` + `nav.json` |
 | 12 | `/goravel-crud-search` | `search_controller.go` + `search_config.tsx` |
 | 13 | `/inertia-form-review` | Review only |
+| 14 | `/file-downloads` | Export fields + ExportDialog in `Index.tsx` |
+| 15 | `/ui-ux-audit` | Columns, forms, colors, loading states audit |
+| 16 | `/fake-data` | `database/seeders/<entity>_seeder.go` |
+| 17 | `/e2e-entity-suite` | Playwright browser testing (all CRUD + search + filters) |

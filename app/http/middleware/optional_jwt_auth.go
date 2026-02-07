@@ -1,9 +1,9 @@
 package middleware
 
 import (
+	"books-database/app/models"
 	contractshttp "github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
 	"strings"
 )
 

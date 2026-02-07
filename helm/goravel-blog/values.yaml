@@ -9,7 +9,7 @@ replicaCount: 2
 image:
   # Default image repository - overridden at deploy time via CI/CD:
   #   --set image.repository=$REGISTRY/$IMAGE_NAME
-  repository: smedi-database
+  repository: books-database
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
@@ -84,7 +84,7 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
   hosts:
-    - host: smedi.example.com
+    - host: books.example.com
       paths:
         - path: /
           pathType: Prefix
@@ -152,11 +152,11 @@ affinity:
 # Application Configuration
 # =============================================================================
 app:
-  name: "SMEDI Database"
+  name: "Books Database"
   env: "production"
   key: ""  # Will be auto-generated if not provided
   debug: false
-  url: "https://smedi.example.com"
+  url: "https://books.example.com"
   timezone: "UTC"
   version: ""  # Set via CI/CD from package.json, falls back to Chart.AppVersion
 
@@ -165,7 +165,7 @@ app:
     connection: "postgres"
     host: "my-pgbouncer.doorbell.svc.cluster.local"
     port: 5432
-    database: "smedi_db"
+    database: "books_db"
     username: "admin"
     password: ""  # Set via secrets: DATABASE_PASSWORD
     sslmode: "disable"
@@ -211,8 +211,8 @@ app:
     username: ""
     password: ""
     encryption: "tls"
-    from_address: "noreply@smedi.example.com"
-    from_name: "SMEDI"
+    from_address: "noreply@books.example.com"
+    from_name: "Books"
 
   # Logging configuration
   logging:

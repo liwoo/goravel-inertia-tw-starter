@@ -1,10 +1,10 @@
 package applications
 
 import (
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	inertiaHelper "smedi-sme-db/app/http/inertia"
-	"smedi-sme-db/app/services"
+	"books-database/app/auth"
+	"books-database/app/contracts"
+	inertiaHelper "books-database/app/http/inertia"
+	"books-database/app/services"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/support"

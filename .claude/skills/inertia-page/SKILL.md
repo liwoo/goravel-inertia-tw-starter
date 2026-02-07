@@ -161,6 +161,18 @@ The `GenericPageController.Index()` passes:
 - `stats` - Optional statistics (if `StatsEnabled=true`)
 - `meta` - Pagination config
 
+## Verify
+
+After wiring up the Index page:
+
+```bash
+# TypeScript compiles (catches missing imports, wrong prop types)
+npx tsc --noEmit
+
+# Lint the page
+npx eslint "resources/js/pages/<EntityName>/Index.tsx" --max-warnings=0
+```
+
 ## Reference
 
 See `resources/js/pages/Books/Index.tsx` for a complete i18n-aware example.

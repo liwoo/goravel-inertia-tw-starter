@@ -61,6 +61,7 @@
     "tags": "Tags",
     "enterTitle": "Enter book title",
     "enterAuthor": "Enter author name",
+    "selectAuthor": "Select an author",
     "enterIsbn": "Enter ISBN number",
     "enterDescription": "Enter book description",
     "pricePlaceholder": "0.00",

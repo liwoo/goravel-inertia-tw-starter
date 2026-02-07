@@ -7,8 +7,8 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/foundation"
 
-	_ "smedi-sme-db/config"
-	"smedi-sme-db/tests/helpers"
+	_ "books-database/config"
+	"books-database/tests/helpers"
 )
 
 func TestMain(m *testing.M) {

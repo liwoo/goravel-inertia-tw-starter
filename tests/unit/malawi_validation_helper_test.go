@@ -1,7 +1,7 @@
 package unit
 
 import (
-	"smedi-sme-db/app/helpers"
+	"books-database/app/helpers"
 	"testing"
 )
 

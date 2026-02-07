@@ -9,12 +9,13 @@ import exportNs from './en/export.json';
 import dashboard from './en/dashboard.json';
 import users from './en/users.json';
 import books from './en/books.json';
+import authors from './en/authors.json';
 import settings from './en/settings.json';
 
 i18n.use(initReactI18next).init({
   lng: 'en',
   fallbackLng: 'en',
-  ns: ['common', 'crud', 'nav', 'auth', 'export', 'dashboard', 'users', 'books', 'settings'],
+  ns: ['common', 'crud', 'nav', 'auth', 'export', 'dashboard', 'users', 'books', 'authors', 'settings'],
   defaultNS: 'common',
   resources: {
     en: {
@@ -26,6 +27,7 @@ i18n.use(initReactI18next).init({
       dashboard,
       users,
       books,
+      authors,
       settings,
     },
   },

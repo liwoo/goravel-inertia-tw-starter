@@ -1,0 +1,2 @@
+[     400ms] [WARNING] SSE: No auth token found in cookies or localStorage @ http://localhost:5173/resources/js/services/sseManager.ts:32
+[   16032ms] [ERROR] SSE: Connection error Event @ http://localhost:5173/resources/js/services/sseManager.ts:64

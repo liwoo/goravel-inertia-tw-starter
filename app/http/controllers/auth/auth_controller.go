@@ -1,14 +1,14 @@
 package auth
 
 import (
+	authpkg "books-database/app/auth"
+	"books-database/app/models"
+	"books-database/app/services"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	nethttp "net/http"
-	authpkg "smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
 	"time"
 
 	"github.com/goravel/framework/contracts/http"

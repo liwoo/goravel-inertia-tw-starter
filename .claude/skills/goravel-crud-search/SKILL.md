@@ -107,8 +107,8 @@ Ensure these are imported in `search_controller.go`:
 
 ```go
 import (
-    "smedi-sme-db/app/models"
-    "smedi-sme-db/app/services"
+    "books-database/app/models"
+    "books-database/app/services"
 )
 ```
 

@@ -89,6 +89,8 @@ Check that the JSON file has all required sections:
 - [ ] Correct API endpoint: `/api/entity-names` (hyphenated, plural)
 - [ ] Headers include all three: `Content-Type`, `Accept`, `X-Requested-With`
 - [ ] Request body converts camelCase -> snake_case for backend
+- [ ] **Nullable fields use `|| null`** (NOT empty string `""`) — PostgreSQL rejects `""` for date, numeric columns
+- [ ] Required fields keep their value as-is (no `|| null`)
 - [ ] Error response maps `errorData.errors` to field-level errors
 - [ ] `setIsSaving?.(true)` before fetch, `setIsSaving?.(false)` in finally
 
@@ -113,11 +115,29 @@ Check for fields that should be dropdowns but are free-text:
 - [ ] Type/category fields -> should use enum Select
 - [ ] Country/region fields -> should use predefined options
 - [ ] Boolean-like fields (yes/no, active/inactive) -> should use Switch or Select
+- [ ] **FK relationship fields** -> should use Select fetching related entity (e.g., `authorId` -> Author dropdown)
 
 If free-text fields should be dropdowns:
 1. Check if Go enum exists in `app/http/requests/`
 2. Check if TS enum exists in `resources/js/types/`
-3. If neither exists, recommend creating with `/goravel-enum`
+3. If FK field, check if related entity API exists (`/api/related-entities`)
+4. If neither exists, recommend creating with `/goravel-enum`
+
+### 9. Decimal/Float Field Display
+
+- [ ] Price/decimal fields in edit forms use `parseFloat(value.toFixed(2))` for initialization
+- [ ] Price/decimal columns use `.toFixed(2)` or `toLocaleString()` for display
+- [ ] Never display raw float64 values (may show precision artifacts like `23.989999771118164`)
+
+### 10. FK Dropdown Integration
+
+For entities with foreign key relationships:
+
+- [ ] Form fetches related records via `useEffect` with appropriate API call
+- [ ] Uses `<Select>` when records are available, `<Input>` fallback when not
+- [ ] Sets BOTH FK ID (`relatedId`) and display name on selection
+- [ ] Handles `res?.data?.data || res?.data || []` for nested paginated response
+- [ ] Edit form pre-selects the current FK value via `value={formData.relatedId?.toString() || ''}`
 
 ### 9. Accessibility
 

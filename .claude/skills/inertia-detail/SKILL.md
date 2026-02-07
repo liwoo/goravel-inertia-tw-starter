@@ -229,6 +229,25 @@ const statusConfig = {
 }
 ```
 
+## Price/Currency Display Pattern
+
+For decimal/currency fields, always format to avoid floating-point precision artifacts:
+
+```tsx
+const formatCurrency = (value: number | undefined | null) => {
+    if (value == null) return t('form.notSpecified');
+    return `$${value.toFixed(2)}`;
+};
+
+// Or locale-aware:
+const formatCurrency = (value: number | undefined | null) => {
+    if (value == null) return t('form.notSpecified');
+    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+};
+```
+
+**Never display raw `float64` values** — they may show `23.989999771118164` instead of `23.99`.
+
 ## Key Differences from Forms
 
 - **Functional component** (NOT forwardRef)
@@ -236,6 +255,18 @@ const statusConfig = {
 - Uses `CrudDetailViewProps<Entity>` interface
 - Same icon layout pattern as forms for visual consistency
 - Always include Metadata section with ID, Created, Updated
+
+## Verify
+
+After creating the detail view:
+
+```bash
+# TypeScript compiles
+npx tsc --noEmit
+
+# Lint the detail view
+npx eslint "resources/js/pages/<EntityName>/sections/<EntityName>DetailView.tsx" --max-warnings=0
+```
 
 ## Reference
 

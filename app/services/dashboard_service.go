@@ -1,8 +1,8 @@
 package services
 
 import (
+	"books-database/app/models"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
 )
 
 // DashboardService provides methods for dashboard statistics and widgets

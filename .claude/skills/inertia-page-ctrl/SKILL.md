@@ -23,9 +23,9 @@ This creates `app/http/controllers/<entity>s/<entity>s_page_controller.go`.
 package entitynames
 
 import (
-    "smedi-sme-db/app/auth"
-    "smedi-sme-db/app/contracts"
-    "smedi-sme-db/app/services"
+    "books-database/app/auth"
+    "books-database/app/contracts"
+    "books-database/app/services"
 )
 
 type EntityPageController struct {
@@ -127,6 +127,18 @@ StatsBuilder: func(controller *contracts.GenericPageController) map[string]inter
     stats, _ := entityService.GetEntityStatistics()
     return stats
 },
+```
+
+## Verify
+
+After configuring the page controller and registering the web route:
+
+```bash
+# Vet the controllers package
+go vet ./app/http/controllers/...
+
+# Confirm full project compiles
+go build ./...
 ```
 
 ## Reference

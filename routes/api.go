@@ -1,22 +1,23 @@
 package routes
 
 import (
-	"smedi-sme-db/app/http/controllers"
-	"smedi-sme-db/app/http/controllers/account"
-	"smedi-sme-db/app/http/controllers/applications"
-	"smedi-sme-db/app/http/controllers/auth"
-	"smedi-sme-db/app/http/controllers/auth/perimissions"
-	"smedi-sme-db/app/http/controllers/auth/roles"
-	"smedi-sme-db/app/http/controllers/auth/users"
-	"smedi-sme-db/app/http/controllers/books"
-	"smedi-sme-db/app/http/controllers/configs"
-	"smedi-sme-db/app/http/controllers/lenders"
-	"smedi-sme-db/app/http/controllers/messages"
+	"books-database/app/http/controllers"
+	"books-database/app/http/controllers/account"
+	"books-database/app/http/controllers/applications"
+	"books-database/app/http/controllers/auth"
+	"books-database/app/http/controllers/auth/perimissions"
+	"books-database/app/http/controllers/auth/roles"
+	"books-database/app/http/controllers/auth/users"
+	"books-database/app/http/controllers/authors"
+	"books-database/app/http/controllers/books"
+	"books-database/app/http/controllers/configs"
+	"books-database/app/http/controllers/lenders"
+	"books-database/app/http/controllers/messages"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
 
-	"smedi-sme-db/app/http/middleware"
+	"books-database/app/http/middleware"
 )
 
 // Api defines the routes for the API.
@@ -42,6 +43,7 @@ func Api(router route.Router) {
 	swaggerController := controllers.NewSwaggerController()
 	configController := configs.NewConfigController()
 	lenderController := lenders.NewLenderController()
+	authorController := authors.NewAuthorController()
 	applicationController := applications.NewApplicationController()
 	accountController := account.NewAccountController()
 	totpController := auth.NewTOTPController()
@@ -84,6 +86,12 @@ func Api(router route.Router) {
 		optionalAuthRouter.Get("/lenders/filters", lenderController.FilterMetadata)
 		optionalAuthRouter.Get("/lenders/{id}", lenderController.Show)
 
+		// Authors
+		optionalAuthRouter.Get("/authors", authorController.Index)
+		optionalAuthRouter.Get("/authors/search", authorController.Search)          // Search endpoint (must be before {id})
+		optionalAuthRouter.Get("/authors/filters", authorController.FilterMetadata) // Filter metadata endpoint
+		optionalAuthRouter.Get("/authors/{id}", authorController.Show)              // Must be last to avoid conflicts
+
 		// Public application submission (no auth required)
 		optionalAuthRouter.Post("/applications", applicationController.PublicStore)
 	})
@@ -112,6 +120,12 @@ func Api(router route.Router) {
 		protectedRouter.Post("/lenders", lenderController.Store)
 		protectedRouter.Put("/lenders/{id}", lenderController.Update)
 		protectedRouter.Delete("/lenders/{id}", lenderController.Delete)
+
+		// Author routes
+		protectedRouter.Get("/authors/statistics", authorController.Statistics) // Must be before {id}
+		protectedRouter.Post("/authors", authorController.Store)
+		protectedRouter.Put("/authors/{id}", authorController.Update)
+		protectedRouter.Delete("/authors/{id}", authorController.Delete)
 
 		protectedRouter.Get("/applications", applicationController.Index)
 		protectedRouter.Get("/applications/search", applicationController.Search)

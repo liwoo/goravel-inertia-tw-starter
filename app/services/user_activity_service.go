@@ -3,9 +3,9 @@ package services
 import (
 	"encoding/json"
 
+	"books-database/app/models"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
 )
 
 // UserActivityService handles user activity logging and retrieval

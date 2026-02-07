@@ -53,19 +53,29 @@ orm.Query().Exec("DELETE FROM entitycontrollers")
 orm.Query().Exec("DELETE FROM entity_names")
 ```
 
-### Fix 4: Add Valid Test Data
+### Fix 4: Add Valid Test Data (snake_case Keys)
+
+API request payloads MUST use **snake_case** keys (matching request struct `form`/`json` tags):
 
 ```go
 func (s *TestSuite) TestCreateEntity() {
     data := map[string]interface{}{
-        "title":       "Test Entity",
-        "description": "A test description",
+        "first_name":  "Test",           // snake_case — NOT "firstName"
+        "last_name":   "Entity",         // snake_case — NOT "lastName"
+        "description": "A test",
         "status":      "ACTIVE",
-        "tags":        []string{"tag1", "tag2"},  // Include arrays
+        "birth_date":  "1990-01-15",     // snake_case — NOT "birthDate"
+        "tags":        []string{"tag1"}, // Include arrays
     }
     resp, result := s.makeRequest("POST", "/api/entities", data)
     s.Equal(http.StatusCreated, resp.StatusCode)
 }
+```
+
+**API responses** return **camelCase** (from model json tags), so assertions use camelCase:
+```go
+data := result["data"].(map[string]interface{})
+s.Equal("Test", data["firstName"])  // camelCase in response
 ```
 
 ### Fix 5: Initialize ALL Required Fields for ORM-Created Models
@@ -109,7 +119,53 @@ func (s *TestSuite) SetupTest() {
 }
 ```
 
-## Step 3: Add Read-Only Field Tests (if applicable)
+## Step 3: Unauthenticated Request Tests
+
+### Fresh HTTP Client (CRITICAL)
+
+The test suite's `s.client` has a **cookie jar** that holds the auth token from `SetupTest()` login. For unauthenticated tests, you MUST use a separate client without the cookie jar:
+
+```go
+func (s *TestSuite) makeUnauthenticatedRequest(method, path string, body interface{}) (*http.Response, map[string]interface{}) {
+    // ... build request ...
+
+    // MUST use fresh client — s.client's cookie jar auto-sends auth token
+    unauthClient := &http.Client{
+        Timeout: 10 * time.Second,
+        CheckRedirect: func(req *http.Request, via []*http.Request) error {
+            return http.ErrUseLastResponse
+        },
+    }
+    resp, err := unauthClient.Do(req)
+    // ...
+}
+```
+
+### JWT Middleware Response Codes
+
+The JWT middleware returns **302 redirect** (not 401/403) for unauthenticated non-Inertia API requests. Test assertions should use `NotEqual` against success codes:
+
+```go
+resp, _ := s.makeUnauthenticatedRequest("POST", "/api/entities", data)
+s.NotEqual(http.StatusCreated, resp.StatusCode,
+    "Unauthenticated request should not create an entity")
+```
+
+## Step 3b: Timestamp Precision in Sort Tests
+
+`TimestampsTz()` creates `timestamp(0)` columns — **second precision only**. Records created within the same second have identical timestamps, making sort order indeterminate. Don't rely on millisecond sleeps for ordering:
+
+```go
+// WRONG — 10ms sleep doesn't help with timestamp(0) precision
+s.createTestEntity("First")
+time.Sleep(10 * time.Millisecond)
+s.createTestEntity("Second")
+
+// CORRECT — use deterministic fields (name, ID) for sort order tests
+// or accept any valid result for timestamp sorts
+```
+
+## Step 4: Add Read-Only Field Tests (if applicable)
 
 ```go
 func (s *TestSuite) TestReadOnlyFieldCannotBeSet() {
@@ -125,7 +181,15 @@ func (s *TestSuite) TestReadOnlyFieldCannotBeSet() {
 }
 ```
 
-## Step 4: Run Tests (TDD Loop)
+## Step 4: Verify Test Compiles
+
+Before running tests, ensure the test file compiles:
+
+```bash
+go vet ./tests/feature/crud/...
+```
+
+## Step 5: Run Tests (TDD Loop)
 
 ```bash
 APP_ENV=testing go test -v ./tests/feature/crud -run Test<Entity>CRUDTestSuite
@@ -149,4 +213,8 @@ Fix each failure, re-run, iterate until all pass.
 
 ## Next Step
 
-After all tests pass, run `/goravel-crud-page` to generate the UI, or `/goravel-crud-nav` if backend is complete.
+After **ALL tests pass**, proceed to frontend work:
+- Run `/inertia-types` to create TypeScript types and i18n translations
+- OR run `/inertia-scaffold` to generate all frontend components at once
+
+**Do NOT start UI work until all CRUD tests pass.** Backend bugs (Bind issues, validation key mismatches, GORM mapping errors) are much easier to catch and fix via API tests than through the UI.

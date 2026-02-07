@@ -8,9 +8,9 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
-	"smedi-sme-db/tests"
+	"books-database/app/models"
+	"books-database/app/services"
+	"books-database/tests"
 )
 
 // uniqueEmail generates a unique email address using timestamp to avoid conflicts

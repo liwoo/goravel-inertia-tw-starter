@@ -3,9 +3,9 @@ package auth
 import (
 	"fmt"
 
+	"books-database/app/models"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/models"
 )
 
 // TwoFactorRequiredError is returned when 2FA is required but not enabled

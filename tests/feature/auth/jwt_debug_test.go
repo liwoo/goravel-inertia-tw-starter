@@ -1,11 +1,11 @@
 package feature
 
 import (
+	"books-database/app/models"
+	"books-database/tests"
 	"fmt"
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/assert"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/tests"
 	"testing"
 )
 

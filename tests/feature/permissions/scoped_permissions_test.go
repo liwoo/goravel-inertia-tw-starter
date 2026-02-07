@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"books-database/app/auth"
+	"books-database/app/models"
+	"books-database/tests"
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/tests"
 )
 
 type ScopedPermissionsTestSuite struct {

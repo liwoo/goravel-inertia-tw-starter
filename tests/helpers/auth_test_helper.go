@@ -1,9 +1,9 @@
 package helpers
 
 import (
+	"books-database/app/models"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/testing/mock"
-	"smedi-sme-db/app/models"
 )
 
 // CreateAuthenticatedContext creates a mock context with an authenticated user

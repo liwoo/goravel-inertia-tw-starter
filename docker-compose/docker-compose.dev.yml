@@ -11,7 +11,7 @@
 #   - Source code mounted for live changes
 # =============================================================================
 
-name: smedi-database-dev
+name: books-database-dev
 
 services:
   # ===========================================================================
@@ -19,7 +19,7 @@ services:
   # ===========================================================================
   backend:
     image: golang:1.24-alpine
-    container_name: smedi-backend-dev
+    container_name: books-backend-dev
     working_dir: /app
     command: >
       sh -c "
@@ -30,7 +30,7 @@ services:
       - "3000:3000"
     environment:
       # Application
-      APP_NAME: "SMEDI Database"
+      APP_NAME: "Books Database"
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: "http://localhost:3000"
@@ -42,9 +42,9 @@ services:
       DB_CONNECTION: postgres
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_DATABASE: smedi_db
-      DB_USERNAME: smedi
-      DB_PASSWORD: smedi_password
+      DB_DATABASE: books_db
+      DB_USERNAME: books
+      DB_PASSWORD: books_password
 
       # Redis
       REDIS_HOST: redis
@@ -75,14 +75,14 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - smedi-network-dev
+      - books-network-dev
 
   # ===========================================================================
   # Vite Frontend Dev Server
   # ===========================================================================
   frontend:
     image: node:20-alpine
-    container_name: smedi-frontend-dev
+    container_name: books-frontend-dev
     working_dir: /app
     command: npm run dev -- --host
     ports:
@@ -93,38 +93,38 @@ services:
       - ..:/app
       - node-modules:/app/node_modules
     networks:
-      - smedi-network-dev
+      - books-network-dev
 
   # ===========================================================================
   # PostgreSQL Database
   # ===========================================================================
   postgres:
     image: postgres:16-alpine
-    container_name: smedi-postgres-dev
+    container_name: books-postgres-dev
     environment:
-      POSTGRES_DB: smedi_db
-      POSTGRES_USER: smedi
-      POSTGRES_PASSWORD: smedi_password
+      POSTGRES_DB: books_db
+      POSTGRES_USER: books
+      POSTGRES_PASSWORD: books_password
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
       - postgres-data-dev:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smedi -d smedi_db"]
+      test: ["CMD-SHELL", "pg_isready -U books -d books_db"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 10s
     networks:
-      - smedi-network-dev
+      - books-network-dev
 
   # ===========================================================================
   # Redis Cache
   # ===========================================================================
   redis:
     image: redis:7-alpine
-    container_name: smedi-redis-dev
+    container_name: books-redis-dev
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
@@ -136,7 +136,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - smedi-network-dev
+      - books-network-dev
 
 # =============================================================================
 # Volumes
@@ -157,5 +157,5 @@ volumes:
 # Networks
 # =============================================================================
 networks:
-  smedi-network-dev:
+  books-network-dev:
     driver: bridge

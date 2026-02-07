@@ -4,7 +4,7 @@ import (
 	"github.com/goravel/framework/contracts/event"
 	"github.com/goravel/framework/facades"
 
-	"smedi-sme-db/app/services"
+	"books-database/app/services"
 )
 
 // NotifyApplicationRejected listener sends notification to SME when their application is rejected

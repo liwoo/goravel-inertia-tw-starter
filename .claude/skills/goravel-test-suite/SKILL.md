@@ -35,7 +35,7 @@ Write/run tests for `$ARGUMENTS`.
 
 **What `run_tests.sh` does:**
 1. Starts a PostgreSQL 16 Alpine Docker container with random port
-2. Creates isolated temp storage directory (`/tmp/smedi-test-storage-{PID}`)
+2. Creates isolated temp storage directory (`/tmp/books-test-storage-{PID}`)
 3. Sets environment variables (`APP_ENV=testing`, `DB_*`, `JWT_SECRET`, etc.)
 4. Runs `go test -p=1` (sequential packages to avoid migration conflicts)
 5. Cleans up container + temp dir on exit (even on CTRL+C)
@@ -95,9 +95,9 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/tests"
-	"smedi-sme-db/tests/helpers"
+	"books-database/app/models"
+	"books-database/tests"
+	"books-database/tests/helpers"
 )
 
 // ============================================================================
@@ -459,8 +459,8 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/goravel/framework/foundation"
 
-	_ "smedi-sme-db/config"
-	"smedi-sme-db/tests/helpers"
+	_ "books-database/config"
+	"books-database/tests/helpers"
 )
 
 func TestMain(m *testing.M) {
@@ -639,10 +639,10 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/tests"
+	"books-database/app/models"
+	"books-database/app/services"
+	"books-database/app/contracts"
+	"books-database/tests"
 )
 
 type EntityServiceTestSuite struct {
@@ -714,7 +714,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"smedi-sme-db/app/services"
+	"books-database/app/services"
 )
 
 func TestEntityServiceFieldMapping(t *testing.T) {

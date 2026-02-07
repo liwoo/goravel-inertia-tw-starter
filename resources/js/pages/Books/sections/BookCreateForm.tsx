@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,12 @@ import { CrudFormProps } from '@/types/crud';
 import { BookCreateData, BookStatus } from '@/types/book';
 import { Calendar, DollarSign, Hash, Plus, Tag, X, BookOpen, User, Clock, FileText } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+
+interface AuthorOption {
+  id: number;
+  firstName: string;
+  lastName: string;
+}
 
 interface BookCreateFormProps extends CrudFormProps {
   setIsSaving?: (saving: boolean) => void;
@@ -36,6 +42,19 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [tagInput, setTagInput] = useState('');
+  const [authors, setAuthors] = useState<AuthorOption[]>([]);
+
+  useEffect(() => {
+    fetch('/api/authors?pageSize=100&sort=first_name&direction=ASC', {
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(res => res.json())
+      .then(res => {
+        const items = res?.data?.data || res?.data || [];
+        setAuthors(items.map((a: any) => ({ id: a.id, firstName: a.firstName, lastName: a.lastName })));
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async () => {
     // Basic validation
@@ -148,13 +167,38 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
               </div>
               <div className="flex-1 space-y-2">
                 <Label htmlFor="author">{t('form.author')}</Label>
-                <Input
-                  id="author"
-                  value={formData.author}
-                  onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                  placeholder={t('form.enterAuthor')}
-                  className={errors.author ? 'border-destructive' : ''}
-                />
+                {authors.length > 0 ? (
+                  <Select
+                    value={formData.authorId?.toString() || ''}
+                    onValueChange={(value) => {
+                      const selected = authors.find(a => a.id === Number(value));
+                      setFormData({
+                        ...formData,
+                        authorId: Number(value),
+                        author: selected ? `${selected.firstName} ${selected.lastName}` : formData.author,
+                      });
+                    }}
+                  >
+                    <SelectTrigger className={errors.author ? 'border-destructive' : ''}>
+                      <SelectValue placeholder={t('form.selectAuthor')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {authors.map((a) => (
+                        <SelectItem key={a.id} value={a.id.toString()}>
+                          {a.firstName} {a.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="author"
+                    value={formData.author}
+                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                    placeholder={t('form.enterAuthor')}
+                    className={errors.author ? 'border-destructive' : ''}
+                  />
+                )}
                 {errors.author && (
                   <p className="text-sm text-destructive">{errors.author}</p>
                 )}

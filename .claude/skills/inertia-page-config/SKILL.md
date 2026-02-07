@@ -195,6 +195,18 @@ export { getEntityColumns, getEntityColumnsMobile, getEntityFilters } from './En
 export { getEntityStatsConfigs, getEntitySimpleFilters, getEntityPageActions, getEntityBulkActions } from './EntityPageConfig';
 ```
 
+## Verify
+
+After creating the page config:
+
+```bash
+# TypeScript compiles
+npx tsc --noEmit
+
+# Lint the page config
+npx eslint "resources/js/pages/<EntityName>/sections/<EntityName>PageConfig.tsx" --max-warnings=0
+```
+
 ## Reference
 
 See `resources/js/pages/Books/sections/bookPageConfig.tsx` for a complete i18n-aware example.

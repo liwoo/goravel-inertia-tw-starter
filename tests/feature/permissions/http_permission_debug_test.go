@@ -12,9 +12,9 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/assert"
 
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/tests"
+	"books-database/app/auth"
+	"books-database/app/models"
+	"books-database/tests"
 )
 
 type HTTPPermissionDebugTestSuite struct {

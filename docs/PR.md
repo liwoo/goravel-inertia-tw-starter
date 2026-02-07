@@ -135,7 +135,7 @@ When pulling updates from origin codebase:
 
 **Date**: 2025-10-20
 **Framework Version**: Goravel v1.16.3
-**Applied To**: smedi-database project
+**Applied To**: books-database project
 **Status**: ✅ Fixed locally, ⏳ Pending upstream
 
 ---

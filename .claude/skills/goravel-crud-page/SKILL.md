@@ -126,6 +126,18 @@ export const entitySimpleFilters = (stats: any): SimpleFilterConfig[] => [
 ];
 ```
 
+## Verify
+
+After all page generation steps:
+
+```bash
+# Backend compiles (page controller + web route)
+go build ./...
+
+# Frontend compiles (generated UI components)
+npx tsc --noEmit
+```
+
 ## Next Step
 
 Run `/goravel-crud-nav` to add navigation and search integration.

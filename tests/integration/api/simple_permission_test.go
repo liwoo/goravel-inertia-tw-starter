@@ -1,8 +1,8 @@
 package integration
 
 import (
+	"books-database/app/models"
 	"github.com/stretchr/testify/assert"
-	"smedi-sme-db/app/models"
 	"strings"
 	"testing"
 )

@@ -3,7 +3,7 @@ package bootstrap
 import (
 	"github.com/goravel/framework/foundation"
 
-	"smedi-sme-db/config"
+	"books-database/config"
 )
 
 func Boot() {

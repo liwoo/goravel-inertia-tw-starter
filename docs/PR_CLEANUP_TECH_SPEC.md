@@ -266,7 +266,7 @@ Add the following configuration categories to the configurations system:
 | Config Type | Description | Example Values |
 |-------------|-------------|----------------|
 | `procured_by` | Entities that can procure | "Ministry of Trade", "World Bank", "UNDP" |
-| `organisations` | Organisations list | "Tiyeni", "MoIT", "SMEDI" |
+| `organisations` | Organisations list | "Tiyeni", "MoIT", "Books" |
 | `procurement_types` | Types of procurement | "Goods", "Services", "Works", "Consulting" |
 | `classifications` | Procurement classifications | "Open", "Restricted", "Direct" |
 | `localisations` | Localisation options | "Local", "International", "Regional" |

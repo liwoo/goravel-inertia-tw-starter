@@ -6,7 +6,7 @@ import (
 	contractshttp "github.com/goravel/framework/contracts/http" // Alias for Goravel contracts
 	"github.com/goravel/framework/facades"
 
-	"smedi-sme-db/app/models"
+	"books-database/app/models"
 )
 
 // AdminAuth returns a middleware function that conforms to contractshttp.Middleware (func(Context)).

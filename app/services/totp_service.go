@@ -16,7 +16,7 @@ import (
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 
-	"smedi-sme-db/app/models"
+	"books-database/app/models"
 )
 
 // TOTPService handles TOTP 2FA operations

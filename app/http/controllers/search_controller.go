@@ -5,11 +5,12 @@ import (
 	"net/url"
 	"strings"
 
+	"books-database/app/auth"
+	"books-database/app/contracts"
+	"books-database/app/models"
+	"books-database/app/services"
+
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
 )
 
 // Note: This controller searches Users, Configs, and Applications
@@ -74,6 +75,12 @@ func (c *SearchController) GlobalSearch(ctx http.Context) http.Response {
 	if permHelper.CheckServicePermission(ctx, auth.ServiceApplications, auth.PermissionRead) {
 		applicationResults := c.searchApplications(query)
 		results = append(results, applicationResults...)
+	}
+
+	// Search Authors if user has permission
+	if permHelper.CheckServicePermission(ctx, auth.ServiceAuthors, auth.PermissionRead) {
+		authorResults := c.searchAuthors(query)
+		results = append(results, authorResults...)
 	}
 
 	return ctx.Response().Json(http.StatusOK, SearchResponse{
@@ -183,6 +190,42 @@ func (c *SearchController) searchApplications(query string) []SearchResult {
 				Subtitle: subtitle,
 				Type:     "application",
 				URL:      fmt.Sprintf("/admin/applications?search=%s", url.QueryEscape(application.RegistrantName)),
+			})
+		}
+	}
+
+	return results
+}
+
+// searchAuthors performs fuzzy search on authors using the AuthorService
+func (c *SearchController) searchAuthors(query string) []SearchResult {
+	results := []SearchResult{}
+
+	authorService := services.NewAuthorService()
+
+	paginatedResult, err := authorService.Search(query, contracts.ListRequest{
+		Page:     1,
+		PageSize: 10,
+	})
+
+	if err != nil || paginatedResult == nil {
+		return results
+	}
+
+	for _, item := range paginatedResult.Data {
+		if author, ok := item.(models.Author); ok {
+			title := fmt.Sprintf("%s %s", author.FirstName, author.LastName)
+			subtitle := author.Status
+			if author.Email != nil && *author.Email != "" {
+				subtitle = fmt.Sprintf("%s • %s", *author.Email, author.Status)
+			}
+
+			results = append(results, SearchResult{
+				ID:       author.ID,
+				Title:    title,
+				Subtitle: subtitle,
+				Type:     "author",
+				URL:      fmt.Sprintf("/admin/authors?search=%s", url.QueryEscape(title)),
 			})
 		}
 	}

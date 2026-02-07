@@ -45,6 +45,8 @@ Open the generated file in `database/migrations/` and define the table schema.
 go run . artisan migrate
 ```
 
+**IMPORTANT**: This runs migrations on the **dev database**. If you've only been running tests (which use testcontainers), the dev DB may not have the new tables. Always run `go run . artisan migrate` against the dev DB before attempting to use the UI.
+
 ## Step 4: Add Audit Fields
 
 ```bash
@@ -74,6 +76,25 @@ func (kernel Kernel) Migrations() []schema.Migration {
     }
 }
 ```
+
+## Verify
+
+After registering in `database/kernel.go`, confirm the project compiles:
+
+```bash
+go build ./...
+```
+
+If there are import errors or type mismatches in the migration, fix them before proceeding.
+
+## Post-Migration Checklist
+
+- [ ] Migrations registered in `database/kernel.go`
+- [ ] `go build ./...` passes
+- [ ] `go run . artisan migrate` run against **dev database** (not just test containers)
+- [ ] If adding FK to existing table, verify existing records handle nullable FK gracefully
+
+**Common mistake**: Only running migrations in test (via testcontainers) but forgetting to run on the dev DB. This causes 500 errors when accessing the UI because the table doesn't exist in dev.
 
 ## Next Step
 

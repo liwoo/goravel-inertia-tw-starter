@@ -102,6 +102,18 @@ Reference `app/auth/permission_constants.go` for existing patterns:
 - `ServiceLenders` = "lenders"
 - `ServiceApplications` = "applications"
 
+## Verify
+
+After editing `permission_constants.go`:
+
+```bash
+# Vet the auth package for issues
+go vet ./app/auth/...
+
+# Confirm full project compiles (catches typos in constants)
+go build ./...
+```
+
 ## Next Step
 
 Run `/goravel-crud-request` to generate request validators.

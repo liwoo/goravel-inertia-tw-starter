@@ -1,8 +1,8 @@
 package database
 
 import (
-	"smedi-sme-db/database/migrations"
-	"smedi-sme-db/database/seeders"
+	"books-database/database/migrations"
+	"books-database/database/seeders"
 
 	"github.com/goravel/framework/contracts/database/schema"
 	"github.com/goravel/framework/contracts/database/seeder"
@@ -42,6 +42,9 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20251214160001CreateTotpBackupCodesTable{},
 		&migrations.M20251216102504AddTypeToApplicationsTable{},
 		&migrations.M20251216143111AlterApplicationsNullableFields{},
+		&migrations.M20260207000001CreateAuthorsTable{},
+		&migrations.M20260207000002AddAuditFieldsToAuthorsTable{},
+		&migrations.M20260207000003AddAuthorIdToBooksTable{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {

@@ -1,6 +1,7 @@
 import {
   Users,
   FileText,
+  PenTool,
   Settings,
 } from 'lucide-react';
 
@@ -14,7 +15,7 @@ import {
  * 3. Ensure the backend search controller handles the entity type
  */
 
-export type SearchEntityType = 'user' | 'config' | 'application';
+export type SearchEntityType = 'user' | 'config' | 'application' | 'author';
 
 export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'export' | 'bulk_update' | 'bulk_delete' | 'write' | 'manage';
 
@@ -72,6 +73,18 @@ export const SEARCH_ENTITIES: SearchEntityConfig[] = [
       dark: 'dark:bg-amber-900/30 dark:text-amber-400',
     },
     urlPrefix: '/admin/applications',
+  },
+  {
+    type: 'author',
+    label: 'Authors',
+    icon: <PenTool className="h-4 w-4" />,
+    permissionService: 'authors',
+    permissionAction: 'read',
+    colors: {
+      light: 'bg-emerald-100 text-emerald-800',
+      dark: 'dark:bg-emerald-900/30 dark:text-emerald-400',
+    },
+    urlPrefix: '/admin/authors',
   },
 ];
 

@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"smedi-sme-db/app/http/requests"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
+	"books-database/app/http/requests"
+	"books-database/app/models"
+	"books-database/app/services"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/validation"

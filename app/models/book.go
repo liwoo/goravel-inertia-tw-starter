@@ -2,8 +2,9 @@ package models
 
 import (
 	"encoding/json"
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // Book entity - now using BaseAuditableModel for consistent audit fields
@@ -12,6 +13,8 @@ type Book struct {
 
 	Title       string     `json:"title" gorm:"not null"`
 	Author      string     `json:"author" gorm:"not null"`
+	AuthorID    *uint      `json:"authorId" gorm:"column:author_id;index"`
+	AuthorRef   *Author    `json:"authorRef,omitempty" gorm:"foreignKey:AuthorID"`
 	ISBN        string     `json:"isbn" gorm:"unique;not null"`
 	Description string     `json:"description"`
 	Price       float64    `json:"price" gorm:"default:0"`

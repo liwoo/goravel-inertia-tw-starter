@@ -1,5 +1,5 @@
 # =============================================================================
-# Makefile for SMEDI Database Application
+# Makefile for Books Database Application
 # =============================================================================
 
 .PHONY: help build test lint dev clean docker helm deploy
@@ -11,7 +11,7 @@
 # Variables
 # =============================================================================
 DOCKER_REGISTRY ?= docker.io
-DOCKER_IMAGE_NAME ?= smedi-database
+DOCKER_IMAGE_NAME ?= books-database
 APP_NAME := $(DOCKER_IMAGE_NAME)
 GO_VERSION := 1.24
 NODE_VERSION := 20
@@ -23,7 +23,7 @@ HELM_CHART := ./helm/goravel-blog
 # Help
 # =============================================================================
 help: ## Show this help message
-	@echo "SMEDI Database - Development Commands"
+	@echo "Books Database - Development Commands"
 	@echo ""
 	@echo "Usage: make [target]"
 	@echo ""

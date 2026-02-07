@@ -2,6 +2,7 @@
   "main": {
     "dashboard": "Dashboard",
     "books": "Books",
+    "authors": "Authors",
     "lenders": "Lenders"
   },
   "clouds": {

@@ -90,8 +90,8 @@ import (
     "testing"
     "github.com/goravel/framework/facades"
     "github.com/stretchr/testify/suite"
-    "smedi-sme-db/app/models"
-    "smedi-sme-db/tests"
+    "books-database/app/models"
+    "books-database/tests"
 )
 
 type <ModelName>ModelTestSuite struct {
@@ -162,6 +162,18 @@ Fill in the TODO fields based on the actual model fields, then run:
 
 ```bash
 APP_ENV=testing go test -v ./tests/unit -run Test<ModelName>ModelTestSuite
+```
+
+## Verify
+
+After fixing the model and before moving on:
+
+```bash
+# Check for common Go issues
+go vet ./app/models/...
+
+# Confirm full project compiles
+go build ./...
 ```
 
 ## Next Step

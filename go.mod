@@ -1,4 +1,4 @@
-module smedi-sme-db
+module books-database
 
 go 1.24.0
 

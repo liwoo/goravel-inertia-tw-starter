@@ -1,10 +1,10 @@
 package services
 
 import (
+	"books-database/app/contracts"
+	"books-database/app/http/requests"
+	"books-database/app/models"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/http/requests"
-	"smedi-sme-db/app/models"
 )
 
 // ConfigService implements business logic for configs using the builder pattern

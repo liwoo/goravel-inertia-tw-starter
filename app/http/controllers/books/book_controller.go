@@ -1,13 +1,13 @@
 package books
 
 import (
+	"books-database/app/auth"
+	"books-database/app/contracts"
+	"books-database/app/http/requests"
+	"books-database/app/models"
+	"books-database/app/services"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/http/requests"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
 )
 
 // BookController handles API endpoints for book management

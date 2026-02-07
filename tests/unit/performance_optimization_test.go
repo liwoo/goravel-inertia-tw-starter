@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"books-database/app/auth"
+	"books-database/app/models"
 	"github.com/stretchr/testify/assert"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
 )
 
 // TestRequestScopedCacheCreation tests that the request-scoped cache is created correctly

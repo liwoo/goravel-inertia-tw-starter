@@ -80,10 +80,19 @@ export const EntityCreateForm = forwardRef<any, EntityCreateFormProps>(({
         setIsSaving?.(true);
 
         try {
+            // CRITICAL: Transform camelCase form state → snake_case for API
+            // Goravel's ctx.Request().Bind() requires snake_case keys
+            //
+            // CRITICAL: Nullable fields MUST use `|| null` (NOT empty string "")
+            // PostgreSQL rejects "" for date, numeric, and other typed columns.
+            // Required fields keep their value as-is; optional fields use `|| null`.
             const requestData = {
-                name: formData.name,
-                description: formData.description,
-                // config_type: formData.configType,  // camelCase → snake_case
+                first_name: formData.firstName,       // required: keep value
+                last_name: formData.lastName,         // required: keep value
+                description: formData.description || null,  // optional: || null
+                birth_date: formData.birthDate || null,     // optional date: || null (CRITICAL)
+                photo_url: formData.photoUrl || null,       // optional: || null
+                email: formData.email || null,              // optional: || null
             };
 
             const response = await fetch('/api/entity-names', {
@@ -366,9 +375,120 @@ onSuccess(t('toast.updated'));  // Edit form
 1. **forwardRef + useImperativeHandle**: MUST expose `handleSubmit` for CrudPage drawer
 2. **displayName**: MUST set `ComponentName.displayName = 'ComponentName'`
 3. **useTranslation**: MUST use entity namespace for all user-visible strings
-4. **camelCase -> snake_case**: Convert field names in requestData before API call
+4. **camelCase -> snake_case in requestData**: Multi-word fields MUST be converted before API call (`firstName` -> `first_name`, `birthDate` -> `birth_date`). Goravel's `ctx.Request().Bind()` only works with snake_case JSON keys.
 5. **X-Requested-With header**: Required for CSRF/auth
 6. **Icon layout**: Every field wrapped in `flex items-start gap-3` with icon box
+
+## Nullable Field Pattern (CRITICAL)
+
+All optional/nullable fields MUST be converted to `null` before sending to the API. Sending empty string `""` causes PostgreSQL errors for typed columns (date, numeric, etc.).
+
+```tsx
+// WRONG — causes "invalid input syntax for type date" error
+const requestData = {
+    birth_date: formData.birthDate,       // sends "" when empty
+    email: formData.email,                // sends "" when empty
+};
+
+// CORRECT — converts empty strings to null
+const requestData = {
+    birth_date: formData.birthDate || null,   // sends null when empty
+    email: formData.email || null,            // sends null when empty
+    status: formData.status,                  // required field: keep as-is
+};
+```
+
+**Rule**: Required fields keep their value. Optional/nullable fields use `|| null`.
+
+## Decimal/Price Field Formatting
+
+When initializing edit form state for decimal fields, round to avoid floating-point display issues:
+
+```tsx
+// WRONG — displays "23.989999771118164" in the input
+price: book.price,
+
+// CORRECT — displays "23.99"
+price: book.price ? parseFloat(book.price.toFixed(2)) : 0,
+```
+
+## Foreign Key Dropdown Pattern
+
+When an entity has a foreign key to another entity (e.g., Book → Author), use a dropdown instead of free-text input:
+
+```tsx
+interface RelatedOption {
+  id: number;
+  name: string; // or firstName + lastName, etc.
+}
+
+// Fetch related records on mount
+const [relatedItems, setRelatedItems] = useState<RelatedOption[]>([]);
+
+useEffect(() => {
+    fetch('/api/related-entities?pageSize=100&sort=name&direction=ASC', {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+        .then(res => res.json())
+        .then(res => {
+            const items = res?.data?.data || res?.data || [];
+            setRelatedItems(items.map((a: any) => ({ id: a.id, name: a.name })));
+        })
+        .catch(() => {});
+}, []);
+
+// In the render — dropdown with fallback to text input
+{relatedItems.length > 0 ? (
+    <Select
+        value={formData.relatedId?.toString() || ''}
+        onValueChange={(value) => {
+            const selected = relatedItems.find(a => a.id === Number(value));
+            setFormData({
+                ...formData,
+                relatedId: Number(value),
+                relatedName: selected?.name || formData.relatedName,
+            });
+        }}
+    >
+        <SelectTrigger className={errors.relatedName ? 'border-destructive' : ''}>
+            <SelectValue placeholder={t('form.selectRelated')} />
+        </SelectTrigger>
+        <SelectContent>
+            {relatedItems.map((item) => (
+                <SelectItem key={item.id} value={item.id.toString()}>
+                    {item.name}
+                </SelectItem>
+            ))}
+        </SelectContent>
+    </Select>
+) : (
+    <Input
+        value={formData.relatedName}
+        onChange={(e) => setFormData({ ...formData, relatedName: e.target.value })}
+        placeholder={t('form.enterRelatedName')}
+        className={errors.relatedName ? 'border-destructive' : ''}
+    />
+)}
+```
+
+**Key points:**
+- Fetch related records in `useEffect` with `pageSize=100` for reasonable dropdown size
+- Use `res?.data?.data || res?.data || []` to handle nested paginated response
+- Set BOTH the FK ID (`relatedId`) and display name field on selection
+- Fallback to `<Input>` if API returns no results (graceful degradation)
+- Add `selectRelated` translation key to the i18n namespace
+
+## Verify
+
+After creating both forms:
+
+```bash
+# TypeScript compiles (catches wrong prop types, missing imports)
+npx tsc --noEmit
+
+# Lint both forms
+npx eslint "resources/js/pages/<EntityName>/sections/<EntityName>CreateForm.tsx" "resources/js/pages/<EntityName>/sections/<EntityName>EditForm.tsx" --max-warnings=0
+```
 
 ## Reference
 

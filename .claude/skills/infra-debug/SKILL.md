@@ -15,8 +15,8 @@ Parse arguments:
 - Second argument: what to inspect (`pods`, `logs`, `events`, `ingress`, `describe`, `all`). Default to `all`.
 
 Namespace mapping:
-- staging → `smedi-staging`
-- production → `smedi-production`
+- staging → `books-staging`
+- production → `books-production`
 
 ## Debug Commands
 

@@ -1,10 +1,10 @@
 package helpers
 
 import (
+	"books-database/app/auth"
+	"books-database/app/contracts"
+	"books-database/app/models"
 	"context"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
 
 	accessImpl "github.com/goravel/framework/auth/access"
 	"github.com/goravel/framework/contracts/auth/access"

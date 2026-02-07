@@ -5,6 +5,14 @@ import { BaseModel, PaginatedResult, ListRequest } from './crud';
 export interface Book extends BaseModel {
   title: string;
   author: string;
+  authorId?: number;
+  authorRef?: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    status: string;
+  };
   isbn: string;
   description?: string;
   price: number;
@@ -26,6 +34,7 @@ export type BookStatus = 'AVAILABLE' | 'BORROWED' | 'MAINTENANCE' | 'RESERVED';
 export interface BookCreateData {
   title: string;
   author: string;
+  authorId?: number;
   isbn: string;
   description?: string;
   price: number;
@@ -38,6 +47,7 @@ export interface BookCreateData {
 export interface BookUpdateData {
   title?: string;
   author?: string;
+  authorId?: number;
   isbn?: string;
   description?: string;
   price?: number;

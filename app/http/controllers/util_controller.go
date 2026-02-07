@@ -1,8 +1,8 @@
 package controllers
 
 import (
+	"books-database/app/http/inertia"
 	"github.com/goravel/framework/contracts/http"
-	"smedi-sme-db/app/http/inertia"
 )
 
 type UtilController struct {

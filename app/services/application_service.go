@@ -1,11 +1,11 @@
 package services
 
 import (
+	"books-database/app/auth"
+	"books-database/app/contracts"
+	"books-database/app/models"
 	"fmt"
 	"math/rand"
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
 
 	"github.com/goravel/framework/facades"
 )

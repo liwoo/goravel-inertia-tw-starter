@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"books-database/app/contracts"
 	"github.com/stretchr/testify/suite"
-	"smedi-sme-db/app/contracts"
 )
 
 type CustomFiltersTestSuite struct {

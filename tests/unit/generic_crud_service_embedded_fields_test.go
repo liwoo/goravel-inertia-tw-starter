@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"books-database/app/models"
 	"github.com/stretchr/testify/assert"
-	"smedi-sme-db/app/models"
 )
 
 // TestReflectionWithEmbeddedStructs tests the reflection logic that handles embedded structs

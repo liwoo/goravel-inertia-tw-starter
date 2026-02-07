@@ -3,8 +3,8 @@ package seeders
 import (
 	"fmt"
 
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/models"
+	"books-database/app/auth"
+	"books-database/app/models"
 
 	"github.com/goravel/framework/facades"
 )

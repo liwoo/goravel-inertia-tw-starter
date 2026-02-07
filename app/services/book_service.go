@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	"books-database/app/contracts"
+	"books-database/app/models"
+
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/facades"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
 )
 
 // BookService implements book-specific business logic using the builder pattern
@@ -34,7 +35,7 @@ func NewBookService() *BookService {
 			"tags":        "array",
 			"tags.*":      "string|max:50",
 		}).
-		WithRelations("Creator", "Updater").                       // Optional
+		WithRelations("Creator", "Updater", "AuthorRef").          // Optional
 		WithDefaultSort("created_at", "DESC").                     // Optional
 		WithSoftDeletes().                                         // Optional
 		WithScopeFiltering("books", "created_by").                 // Optional
@@ -122,6 +123,7 @@ func (s *BookService) GetColumnMapping() map[string]string {
 	mapping["updatedAt"] = "updated_at"
 	mapping["title"] = "title"
 	mapping["author"] = "author"
+	mapping["authorId"] = "author_id"
 	mapping["price"] = "price"
 	return mapping
 }

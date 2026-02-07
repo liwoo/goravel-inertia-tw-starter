@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	TestDBName     = "smedi_test"
+	TestDBName     = "books_test"
 	TestDBUser     = "testuser"
 	TestDBPassword = "testpassword123"
 )

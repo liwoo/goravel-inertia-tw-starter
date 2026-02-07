@@ -27,7 +27,7 @@ node_modules
 # Go binaries
 players
 goravel
-smedi-sme-db
+books-database
 *.out
 
 # Test binary, built with `go test -c`

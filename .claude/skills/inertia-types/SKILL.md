@@ -9,6 +9,14 @@ allowed-tools: Read, Write, Edit, Grep, Glob
 
 Create types and translations for `$ARGUMENTS`.
 
+## Prerequisite: CRUD Tests Must Pass
+
+Before creating frontend types, ensure all backend CRUD tests pass:
+```bash
+APP_ENV=testing go test -v ./tests/feature/crud -run Test<Entity>CRUDTestSuite
+```
+If tests haven't been written yet, run `/goravel-crud-test` first. Backend bugs (Bind, validation, GORM mapping) are much harder to debug through the UI.
+
 ## Step 1: TypeScript Type File
 
 Create `resources/js/types/<entity_name>.ts`:
@@ -210,6 +218,18 @@ export interface Entity {
     configType?: string;    // camelCase for TS code
     config_type?: string;   // snake_case from Go JSON
 }
+```
+
+## Verify
+
+After creating types and registering the i18n namespace:
+
+```bash
+# TypeScript compiles without errors
+npx tsc --noEmit
+
+# Lint the new type file
+npx eslint resources/js/types/<entity_name>.ts --max-warnings=0
 ```
 
 ## Reference

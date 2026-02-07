@@ -10,12 +10,12 @@ import (
 	"github.com/goravel/framework/facades"
 	"github.com/stretchr/testify/suite"
 
-	"smedi-sme-db/app/auth"
-	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
-	"smedi-sme-db/app/services"
-	"smedi-sme-db/tests"
-	"smedi-sme-db/tests/helpers"
+	"books-database/app/auth"
+	"books-database/app/contracts"
+	"books-database/app/models"
+	"books-database/app/services"
+	"books-database/tests"
+	"books-database/tests/helpers"
 )
 
 // MockContext for testing
