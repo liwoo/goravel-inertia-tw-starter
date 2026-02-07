@@ -6,16 +6,9 @@ import (
 	"smedi-sme-db/app/http/controllers/auth"
 	"smedi-sme-db/app/http/controllers/auth/perimissions"
 	"smedi-sme-db/app/http/controllers/auth/users"
-	"smedi-sme-db/app/http/controllers/bdsps"
 	"smedi-sme-db/app/http/controllers/books"
 	"smedi-sme-db/app/http/controllers/configs"
-	"smedi-sme-db/app/http/controllers/directory"
-	"smedi-sme-db/app/http/controllers/events"
-	"smedi-sme-db/app/http/controllers/members"
-	"smedi-sme-db/app/http/controllers/myapplications"
-	"smedi-sme-db/app/http/controllers/opportunities"
-	"smedi-sme-db/app/http/controllers/procurementnotices"
-	"smedi-sme-db/app/http/controllers/smes"
+	"smedi-sme-db/app/http/controllers/lenders"
 	inertiaHelper "smedi-sme-db/app/http/inertia"
 	"smedi-sme-db/app/http/middleware"
 
@@ -63,15 +56,8 @@ func Web() {
 	permissionsPageController := perimissions.NewPermissionsPageController()
 	userPageController := users.NewUserPageController()
 	configsPageController := configs.NewConfigPageController()
-	smesPageController := smes.NewSmePageController()
-	bdspsPageController := bdsps.NewBdspPageController()
-	eventsPageController := events.NewEventPageController()
-	procurementnoticesPageController := procurementnotices.NewProcurementNoticePageController()
+	lendersPageController := lenders.NewLenderPageController()
 	applicationsPageController := applications.NewApplicationPageController()
-	membersPageController := members.NewMemberPageController()
-	opportunitiesPageController := opportunities.NewOpportunitiesPageController()
-	myApplicationsPageController := myapplications.NewMyApplicationsPageController()
-	directoryController := directory.NewDirectoryController()
 
 	facades.Route().Post("/login", authController.Login)
 	facades.Route().Post("/verify-2fa", authController.Verify2FA) // 2FA verification during web login
@@ -89,9 +75,6 @@ func Web() {
 			"version": support.Version,
 		})
 	})
-
-	// Public Application Page
-	facades.Route().Get("/apply", applicationsPageController.ShowPublicApply)
 
 	// Authenticated routes with 2FA enforcement
 	// The Require2FA middleware checks if AUTH_REQUIRE_2FA is enabled and redirects
@@ -125,17 +108,8 @@ func Web() {
 		// Books management page
 		router.Get("/admin/books", booksPageController.Index)
 
-		// SMEs management page
-		router.Get("/admin/smes", smesPageController.Index)
-
-		// BDSPs management page
-		router.Get("/admin/bdsps", bdspsPageController.Index)
-
-		// Event management page
-		router.Get("/admin/events", eventsPageController.Index)
-
-		// Procurement Notice management page
-		router.Get("/admin/procurement-notices", procurementnoticesPageController.Index)
+		// Lenders management page
+		router.Get("/admin/lenders", lendersPageController.Index)
 
 		// Applications management page
 		router.Get("/admin/applications", applicationsPageController.Index)
@@ -150,24 +124,6 @@ func Web() {
 
 		// User management pages (super admin only)
 		router.Get("/admin/users", userPageController.Index)
-
-		router.Get("/portal", membersPageController.Index)
-
-		// Opportunities page (for SME users)
-		router.Get("/opportunities", opportunitiesPageController.Index)
-
-		// My Applications page (for SME users to track their formalisation change requests)
-		router.Get("/applications", myApplicationsPageController.Index)
-
-		// SME Directory (accessible to all authenticated users)
-		router.Get("/directory", directoryController.ShowDirectory)
-
-		// SSE Test page (for development/testing)
-		router.Get("/test/sse", func(ctx http.Context) http.Response {
-			return inertiaHelper.Render(ctx, "test/SSETest", map[string]interface{}{
-				"version": support.Version,
-			})
-		})
 	})
 
 	// Add more routes as needed

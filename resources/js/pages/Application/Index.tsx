@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { CheckCircle, XCircle, Plus, Copy, Mail, FileEdit } from 'lucide-react';
+import { CheckCircle, XCircle, Copy, Mail } from 'lucide-react';
 import {
   Application,
   ApplicationListResponse,
   ApplicationListRequest,
-  ApplicationType
 } from '@/types/application';
 import { CrudPage } from '@/components/Crud/CrudPage';
 import {
@@ -26,16 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { SmeCreateForm, type InitialSmeData } from '@/pages/Sme/sections';
 import { Textarea } from '@/components/ui/textarea';
 
 // Props interface for the Application Index page
@@ -56,12 +47,6 @@ interface ApplicationIndexProps {
   };
 }
 
-interface Sme {
-  id: number;
-  name: string;
-  usme_number: string;
-}
-
 export default function ApplicationIndex({
   data,
   filters,
@@ -69,65 +54,23 @@ export default function ApplicationIndex({
   meta
 }: ApplicationIndexProps) {
   const isMobile = useIsMobile();
-  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
-  const [showCreateSmeDialog, setShowCreateSmeDialog] = useState(false);
   const [showWelcomeEmailDialog, setShowWelcomeEmailDialog] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
-  const [selectedSmeId, setSelectedSmeId] = useState<string>('');
-  const [smes, setSmes] = useState<Sme[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingSmes, setIsLoadingSmes] = useState(false);
   const [needsReload, setNeedsReload] = useState(false);
   const [rejectionReason, setRejectionReason] = useState<string>('');
-  const [showAmendmentConfirmDialog, setShowAmendmentConfirmDialog] = useState(false);
+  const [showApproveConfirmDialog, setShowApproveConfirmDialog] = useState(false);
   const [showSignupRejectConfirmDialog, setShowSignupRejectConfirmDialog] = useState(false);
   const [welcomeEmailData, setWelcomeEmailData] = useState<{
     username: string;
     password: string;
     loginUrl: string;
-    smeName: string;
     applicantName: string;
   } | null>(null);
 
   const handleRefresh = () => {
     router.reload({ only: ['data'] });
-  };
-
-  // Fetch SMEs that match the applicant's email (primary owner email match)
-  const fetchSmes = async (applicantEmail?: string) => {
-    setIsLoadingSmes(true);
-    try {
-      // If we have an applicant email, filter by primary owner email
-      const url = applicantEmail
-        ? `/api/smes/by-owner-email?email=${encodeURIComponent(applicantEmail)}`
-        : '/api/smes';
-
-      const response = await fetch(url, {
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Handle both filtered response (array) and paginated response (nested data)
-        const smesData = Array.isArray(data.data) ? data.data : (data.data?.data || []);
-        setSmes(smesData);
-
-        if (applicantEmail && smesData.length === 0) {
-          toast.info('No MSMEs found matching the applicant\'s email. You can create a new MSME.');
-        }
-      } else {
-        toast.info('Failed to load MSMEs');
-      }
-    } catch (error) {
-      console.error('Error fetching MSMEs:', error);
-      toast.info('Failed to load MSMEs');
-    } finally {
-      setIsLoadingSmes(false);
-    }
   };
 
   const handleApproveClick = (application: Application) => {
@@ -136,23 +79,15 @@ export default function ApplicationIndex({
       return;
     }
     setSelectedApplication(application);
-
-    // Amendment applications don't need SME selection - show confirmation first
-    if (application.type === 'amend_formalisation') {
-      setShowAmendmentConfirmDialog(true);
-      return;
-    }
-
-    // Signup applications need SME selection
-    // Filter SMEs by applicant's email to only show SMEs they own
-    setShowApprovalDialog(true);
-    fetchSmes(application.email);
+    setShowApproveConfirmDialog(true);
   };
 
-  const handleApproveAmendment = async (application: Application) => {
+  const handleApprove = async () => {
+    if (!selectedApplication) return;
+
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/applications/${application.id}/approve`, {
+      const response = await fetch(`/api/applications/${selectedApplication.id}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -165,60 +100,24 @@ export default function ApplicationIndex({
       const data = await response.json();
 
       if (response.ok) {
-        toast.success(data.message || 'Amendment application approved successfully');
-        setSelectedApplication(null);
-        router.reload({ only: ['data'] });
-      } else {
-        toast.error(data.message || 'Failed to approve amendment application');
-      }
-    } catch (error) {
-      console.error('Error approving amendment application:', error);
-      toast.error('Failed to approve amendment application');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleApprove = async () => {
-    if (!selectedApplication) return;
-
-    if (!selectedSmeId) {
-      toast.info('Please select an MSME');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/applications/${selectedApplication.id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify({ sme_id: parseInt(selectedSmeId) }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
         toast.success(data.message || 'Application approved successfully');
-        setShowApprovalDialog(false);
+        setShowApproveConfirmDialog(false);
 
-        // Show welcome email dialog with user credentials
-        const selectedSme = smes.find(s => s.id === parseInt(selectedSmeId));
-        setWelcomeEmailData({
-          username: data.data?.user?.email,
-          password: data.data?.user?.password || 'Generated by system',
-          loginUrl: window.location.origin + '/login',
-          smeName: selectedSme?.name || '',
-          applicantName: selectedApplication.registrant_name || `${selectedApplication.first_name} ${selectedApplication.last_name}`,
-        });
-        setShowWelcomeEmailDialog(true);
-        setNeedsReload(true);
+        // Show welcome email dialog with user credentials if available
+        if (data.data?.user?.email) {
+          setWelcomeEmailData({
+            username: data.data.user.email,
+            password: data.data.user.password || 'Generated by system',
+            loginUrl: window.location.origin + '/login',
+            applicantName: selectedApplication.registrant_name || '',
+          });
+          setShowWelcomeEmailDialog(true);
+          setNeedsReload(true);
+        } else {
+          router.reload({ only: ['data'] });
+        }
 
         setSelectedApplication(null);
-        setSelectedSmeId('');
       } else {
         toast.error(data.message || 'Failed to approve application');
       }
@@ -245,7 +144,7 @@ export default function ApplicationIndex({
       return;
     }
 
-    // Amendment applications go directly to rejection reason dialog
+    // Other applications go directly to rejection reason dialog
     setShowRejectionDialog(true);
   };
 
@@ -289,74 +188,11 @@ export default function ApplicationIndex({
     }
   };
 
-  // Handle SME creation success - auto-approve the application with the new SME
-  const handleSmeCreated = async (newSme: any) => {
-    toast.success('MSME created successfully');
-    setShowCreateSmeDialog(false);
-
-    if (!selectedApplication || !newSme?.id) {
-      await fetchSmes();
-      return;
-    }
-
-    // Auto-approve the application with the newly created SME
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/applications/${selectedApplication.id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify({ sme_id: newSme.id }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success(data.message || 'Application approved successfully');
-        setShowApprovalDialog(false);
-
-        // Show welcome email dialog with user credentials
-        setWelcomeEmailData({
-          username: data.data?.user?.email,
-          password: data.data?.user?.password || 'Generated by system',
-          loginUrl: window.location.origin + '/login',
-          smeName: newSme.name || '',
-          applicantName: selectedApplication.registrant_name || `${selectedApplication.first_name} ${selectedApplication.last_name}`,
-        });
-        setShowWelcomeEmailDialog(true);
-        setNeedsReload(true);
-
-        setSelectedApplication(null);
-        setSelectedSmeId('');
-      } else {
-        toast.error(data.message || 'Failed to approve application');
-        // Still refresh SMEs list in case of error
-        await fetchSmes();
-        if (newSme?.id) {
-          setSelectedSmeId(newSme.id.toString());
-        }
-      }
-    } catch (error) {
-      console.error('Error approving application:', error);
-      toast.error('Failed to approve application');
-      // Still refresh SMEs list in case of error
-      await fetchSmes();
-      if (newSme?.id) {
-        setSelectedSmeId(newSme.id.toString());
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Generate welcome email text
   const generateWelcomeEmail = () => {
     if (!welcomeEmailData) return '';
 
-    return `Subject: Welcome to the SMEDI Database - Your Account Has Been Approved
+    return `Subject: Welcome - Your Account Has Been Approved
 
 Dear ${welcomeEmailData.applicantName},
 
@@ -364,7 +200,6 @@ Congratulations! Your application has been approved and your account has been su
 
 Your account details:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SME: ${welcomeEmailData.smeName}
 Username: ${welcomeEmailData.username}
 Password: ${welcomeEmailData.password}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -377,7 +212,7 @@ For security reasons, we recommend changing your password after your first login
 If you have any questions or need assistance, please don't hesitate to contact our support team.
 
 Best regards,
-SMEDI Team`;
+The Team`;
   };
 
   const handleCopyWelcomeEmail = async () => {
@@ -397,45 +232,6 @@ SMEDI Team`;
       setNeedsReload(false);
       router.reload({ only: ['data'] });
     }
-  };
-
-  // Map application data to SME initial data for prefilling the form
-  const getInitialSmeDataFromApplication = (application: Application | null): InitialSmeData | undefined => {
-    if (!application) return undefined;
-
-    return {
-      // Business Information (Step 1)
-      name: application.sme || '',
-      registrationNumber: application.sme_registration_number || '',
-      taxIdentificationNumber: application.sme_tax_identification_number || '',
-      contactPhone: application.phone || '',
-      contactEmail: application.email || '',
-      physicalAddress: application.physical_address || '',
-      postalAddress: application.postal_address || '',
-      district: application.district || '',
-      traditionalAuthority: application.traditional_authority || '',
-      // Primary Owner (Step 2)
-      ownerFirstName: application.first_name || '',
-      ownerLastName: application.last_name || '',
-      ownerOtherNames: application.other_names || '',
-      ownerNationality: application.nationality || '',
-      ownerNationalIdNumber: application.national_id_number || '',
-      ownerDateOfBirth: application.date_of_birth || '',
-      ownerGender: application.gender || '',
-      ownerEducationLevel: application.education_level || '',
-      ownerMalawianStatus: application.malawian_status || '',
-      ownerHasSpecialNeeds: application.has_special_needs || false,
-      ownerPhoneNumber: application.phone || '',
-      ownerLandlineNumber: application.landline_number || '',
-      ownerEmail: application.email || '',
-      ownerPhysicalAddress: application.physical_address || '',
-      ownerPostalAddress: application.postal_address || '',
-      ownerDistrict: application.district || '',
-      ownerTraditionalAuthority: application.traditional_authority || '',
-      ownerAltContactName: application.alt_contact_name || '',
-      ownerAltContactRelationship: application.alt_contact_relationship || '',
-      ownerAltContactPhone: application.alt_contact_phone || '',
-    };
   };
 
   // Custom row actions for approve/reject - only show for pending applications
@@ -480,48 +276,39 @@ SMEDI Team`;
         </div>
       </div>
 
-      {/* Approval Dialog */}
-      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+      {/* Approval Confirmation Dialog */}
+      <Dialog open={showApproveConfirmDialog} onOpenChange={setShowApproveConfirmDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Approve Application</DialogTitle>
             <DialogDescription>
-              Select an MSME to link with this applicant. Only MSMEs where the primary owner's email matches
-              the applicant's email ({selectedApplication?.email}) are shown. A user account will be created.
+              Are you sure you want to approve this application?
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="sme">Select MSME *</Label>
-              <Select value={selectedSmeId} onValueChange={setSelectedSmeId} disabled={isLoadingSmes}>
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingSmes ? "Loading MSMEs..." : "Select an MSME"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {smes.map((sme) => (
-                    <SelectItem key={sme.id} value={sme.id.toString()}>
-                      {sme.name} ({sme.usme_number})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowCreateSmeDialog(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create New MSME
-              </Button>
-            </div>
+          <div className="py-4">
+            {selectedApplication && (
+              <div className="bg-muted p-3 rounded-md text-sm space-y-1">
+                <p><strong>Organization:</strong> {selectedApplication.sme}</p>
+                <p><strong>Applicant:</strong> {selectedApplication.registrant_name}</p>
+                <p><strong>Email:</strong> {selectedApplication.email}</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowApprovalDialog(false)} disabled={isLoading}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowApproveConfirmDialog(false);
+                setSelectedApplication(null);
+              }}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
-            <Button onClick={handleApprove} disabled={isLoading || !selectedSmeId}>
+            <Button
+              onClick={handleApprove}
+              disabled={isLoading}
+            >
               {isLoading ? 'Approving...' : 'Approve Application'}
             </Button>
           </DialogFooter>
@@ -534,9 +321,7 @@ SMEDI Team`;
           <DialogHeader>
             <DialogTitle>Reject Application</DialogTitle>
             <DialogDescription>
-              {selectedApplication?.type === 'amend_formalisation'
-                ? 'Reject this formalisation amendment request. The applicant will be notified.'
-                : 'Reject this signup application. This action cannot be undone.'}
+              Reject this application. The applicant will be notified.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -593,69 +378,6 @@ SMEDI Team`;
         </DialogContent>
       </Dialog>
 
-      {/* Create MSME Dialog - Full Screen */}
-      <Dialog open={showCreateSmeDialog} onOpenChange={setShowCreateSmeDialog}>
-        <DialogContent className="!max-w-[95vw] !w-[95vw] !h-[90vh] !max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New MSME</DialogTitle>
-            <DialogDescription>
-              Create a new MSME to associate with this application. Form has been prefilled with application data.
-            </DialogDescription>
-          </DialogHeader>
-          <SmeCreateForm
-            onSuccess={() => {}} // No-op since we handle the SME data via onSmeCreated
-            onSmeCreated={handleSmeCreated}
-            onError={(error) => toast.error(error?.message || 'Failed to create MSME')}
-            onCancel={() => setShowCreateSmeDialog(false)}
-            initialData={getInitialSmeDataFromApplication(selectedApplication)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Amendment Approval Confirmation Dialog */}
-      <Dialog open={showAmendmentConfirmDialog} onOpenChange={setShowAmendmentConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Approve Amendment Request</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to approve this formalisation amendment request?
-              This will update the MSME's formalisation data with the proposed changes.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {selectedApplication && (
-              <div className="bg-muted p-3 rounded-md text-sm space-y-1">
-                <p><strong>MSME:</strong> {selectedApplication.sme}</p>
-                <p><strong>Submitted by:</strong> {selectedApplication.email}</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowAmendmentConfirmDialog(false);
-                setSelectedApplication(null);
-              }}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setShowAmendmentConfirmDialog(false);
-                if (selectedApplication) {
-                  handleApproveAmendment(selectedApplication);
-                }
-              }}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Approving...' : 'Yes, Approve Amendment'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Signup Rejection Confirmation Dialog */}
       <Dialog open={showSignupRejectConfirmDialog} onOpenChange={setShowSignupRejectConfirmDialog}>
         <DialogContent>
@@ -669,8 +391,8 @@ SMEDI Team`;
           <div className="py-4">
             {selectedApplication && (
               <div className="bg-muted p-3 rounded-md text-sm space-y-1">
-                <p><strong>MSME:</strong> {selectedApplication.sme}</p>
-                <p><strong>Applicant:</strong> {selectedApplication.registrant_name || `${selectedApplication.first_name} ${selectedApplication.last_name}`}</p>
+                <p><strong>Organization:</strong> {selectedApplication.sme}</p>
+                <p><strong>Applicant:</strong> {selectedApplication.registrant_name}</p>
                 <p><strong>Email:</strong> {selectedApplication.email}</p>
               </div>
             )}

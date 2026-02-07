@@ -1,0 +1,104 @@
+{
+  "page": {
+    "title": "User Management",
+    "headTitle": "Users - Management",
+    "crudTitle": "Users"
+  },
+  "stats": {
+    "totalUsers": "Total Users",
+    "activeUsers": "Active Users",
+    "inactiveUsers": "Inactive Users",
+    "superAdmins": "Super Admins",
+    "fullSystemAccess": "Full system access"
+  },
+  "columns": {
+    "id": "ID",
+    "name": "Name",
+    "roles": "Roles",
+    "status": "Status",
+    "verified": "Verified",
+    "memberSince": "Member Since",
+    "user": "User",
+    "noRoles": "No roles",
+    "active": "Active",
+    "inactive": "Inactive",
+    "lastLogin": "Last Login"
+  },
+  "actions": {
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "resetPassword": "Reset Password",
+    "impersonate": "Impersonate",
+    "sendWelcomeEmail": "Send Welcome Email",
+    "importUsers": "Import Users",
+    "exportUsers": "Export Users"
+  },
+  "filters": {
+    "status": "Status",
+    "allStatus": "All Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "adminType": "Admin Type",
+    "allTypes": "All Types",
+    "superAdmin": "Super Admin",
+    "regularUser": "Regular User",
+    "emailStatus": "Email Status",
+    "allEmailStatus": "All",
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "role": "Role",
+    "allRoles": "All Roles",
+    "allUsers": "All Users",
+    "superAdmins": "Super Admins"
+  },
+  "form": {
+    "userInfo": "User Information",
+    "accountSettings": "Account Settings",
+    "accountDetails": "Account Details",
+    "fullName": "Full Name",
+    "emailAddress": "Email Address",
+    "password": "Password",
+    "newPassword": "New Password",
+    "role": "Role",
+    "accountStatus": "Account Status",
+    "superAdministrator": "Super Administrator",
+    "emailVerified": "Email Verified",
+    "adminStatus": "Admin Status",
+    "noRolesAssigned": "No roles assigned",
+    "enterFullName": "Enter full name",
+    "emailPlaceholder": "user@example.com",
+    "enterPassword": "Enter password (min 8 characters)",
+    "leaveBlankPassword": "Leave blank to keep current password",
+    "selectRole": "Select role",
+    "canLogin": "User can login and access the system",
+    "cannotLogin": "User cannot login",
+    "hasFullAccess": "Has full system access",
+    "limitedPermissions": "Limited to role permissions",
+    "avatarHint": "Avatar is automatically generated based on email address",
+    "minCharsHint": "Minimum 8 characters if changing"
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "emailRequired": "Email is required",
+    "passwordRequired": "Password is required",
+    "passwordMinLength": "Password must be at least 8 characters"
+  },
+  "toast": {
+    "created": "User created successfully",
+    "updated": "User updated successfully",
+    "activated": "User activated successfully",
+    "deactivated": "User deactivated successfully",
+    "passwordResetSent": "Password reset email sent successfully",
+    "welcomeEmailSent": "Welcome email sent successfully"
+  },
+  "confirm": {
+    "resetPassword": "Are you sure you want to reset this user's password?",
+    "impersonate": "Are you sure you want to impersonate this user?"
+  },
+  "detail": {
+    "userId": "User ID",
+    "fullName": "Full Name",
+    "emailAddress": "Email Address",
+    "memberSince": "Member Since"
+  }
+}

@@ -13,15 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { DISTRICT_NAMES } from '@/constants/districts';
 import { NATIONALITY_OPTIONS } from '@/types/nationalities';
 import { EDUCATION_OPTIONS } from '@/types/education';
-import { MALAWIAN_STATUS_OPTIONS } from '@/types/malawian-status';
-import {
-  formatMalawiPhone,
-  validateMalawiPhone,
-  validateBusinessRegistration,
-  validateTIN,
-  VALIDATION_MESSAGES,
-  EXAMPLE_FORMATS
-} from '@/lib/malawi-validators';
+import { CITIZENSHIP_STATUS_OPTIONS } from '@/types/malawian-status';
 
 interface ApplicationCreateFormProps extends CrudFormProps {
   setIsSaving?: (saving: boolean) => void;
@@ -71,25 +63,13 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
     const newErrors: Record<string, string> = {};
 
     // Basic validation
-    if (!formData.sme?.trim()) newErrors.sme = 'MSME is required';
+    if (!formData.sme?.trim()) newErrors.sme = 'Organization is required';
     if (!formData.registrant_name?.trim()) newErrors.registrant_name = 'Registrant Name is required';
     if (!formData.email?.trim()) newErrors.email = 'Email is required';
 
-    // Phone validation with Malawi format
+    // Phone validation
     if (!formData.phone?.trim()) {
       newErrors.phone = 'Phone is required';
-    } else if (!validateMalawiPhone(formData.phone)) {
-      newErrors.phone = VALIDATION_MESSAGES.PHONE;
-    }
-
-    // Business Registration Number is optional, but validate format if provided
-    if (formData.sme_registration_number?.trim() && !validateBusinessRegistration(formData.sme_registration_number)) {
-      newErrors.sme_registration_number = VALIDATION_MESSAGES.BUSINESS_REG;
-    }
-
-    // Tax ID is optional, but validate format if provided
-    if (formData.sme_tax_identification_number?.trim() && !validateTIN(formData.sme_tax_identification_number)) {
-      newErrors.sme_tax_identification_number = VALIDATION_MESSAGES.TIN;
     }
 
     // Owner validation
@@ -99,7 +79,7 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
     if (!formData.national_id_number?.trim()) newErrors.national_id_number = 'National ID is required';
     if (!formData.date_of_birth) newErrors.date_of_birth = 'Date of Birth is required';
     if (!formData.education_level?.trim()) newErrors.education_level = 'Education Level is required';
-    if (!formData.malawian_status?.trim()) newErrors.malawian_status = 'Malawian Status is required';
+    if (!formData.malawian_status?.trim()) newErrors.malawian_status = 'Citizenship Status is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -150,14 +130,14 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sme">MSME *</Label>
+                <Label htmlFor="sme">Organization *</Label>
                 <div className="relative">
                   <FileText className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="sme"
                     value={formData.sme}
                     onChange={(e) => setFormData({ ...formData, sme: e.target.value })}
-                    placeholder="Enter MSME name"
+                    placeholder="Enter organization name"
                     className={`pl-9 ${errors.sme ? 'border-destructive' : ''}`}
                   />
                 </div>
@@ -202,11 +182,8 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                   <Input
                     id="phone"
                     value={formData.phone}
-                    onChange={(e) => {
-                      const formatted = formatMalawiPhone(e.target.value);
-                      setFormData({ ...formData, phone: formatted });
-                    }}
-                    placeholder={EXAMPLE_FORMATS.PHONE}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Enter phone number"
                     className={`pl-9 ${errors.phone ? 'border-destructive' : ''}`}
                   />
                 </div>
@@ -229,7 +206,7 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                   id="sme_registration_number"
                   value={formData.sme_registration_number}
                   onChange={(e) => setFormData({ ...formData, sme_registration_number: e.target.value.toUpperCase() })}
-                  placeholder={EXAMPLE_FORMATS.BUSINESS_REG}
+                  placeholder="Enter registration number"
                   className={errors.sme_registration_number ? 'border-destructive' : ''}
                 />
                 {errors.sme_registration_number && <p className="text-sm text-destructive">{errors.sme_registration_number}</p>}
@@ -241,7 +218,7 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                   id="sme_tax_identification_number"
                   value={formData.sme_tax_identification_number}
                   onChange={(e) => setFormData({ ...formData, sme_tax_identification_number: e.target.value })}
-                  placeholder={EXAMPLE_FORMATS.TIN}
+                  placeholder="Enter tax ID"
                   className={errors.sme_tax_identification_number ? 'border-destructive' : ''}
                 />
                 {errors.sme_tax_identification_number && <p className="text-sm text-destructive">{errors.sme_tax_identification_number}</p>}
@@ -314,7 +291,7 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                   id="national_id_number"
                   value={formData.national_id_number}
                   onChange={(e) => setFormData({ ...formData, national_id_number: e.target.value.toUpperCase() })}
-                  placeholder={EXAMPLE_FORMATS.NATIONAL_ID}
+                  placeholder="Enter national ID"
                   maxLength={8}
                   className={errors.national_id_number ? 'border-destructive' : ''}
                 />
@@ -369,7 +346,7 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                 {errors.education_level && <p className="text-sm text-destructive">{errors.education_level}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="malawian_status">Malawian Status *</Label>
+                <Label htmlFor="malawian_status">Citizenship Status *</Label>
                 <Select
                   value={formData.malawian_status}
                   onValueChange={(value) => setFormData({ ...formData, malawian_status: value })}
@@ -378,7 +355,7 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MALAWIAN_STATUS_OPTIONS.map((status) => (
+                    {CITIZENSHIP_STATUS_OPTIONS.map((status) => (
                       <SelectItem key={status.value} value={status.value}>
                         {status.label}
                       </SelectItem>
@@ -412,11 +389,8 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                 <Input
                   id="landline_number"
                   value={formData.landline_number || ''}
-                  onChange={(e) => {
-                    const formatted = formatMalawiPhone(e.target.value);
-                    setFormData({ ...formData, landline_number: formatted });
-                  }}
-                  placeholder={EXAMPLE_FORMATS.PHONE}
+                  onChange={(e) => setFormData({ ...formData, landline_number: e.target.value })}
+                  placeholder="Enter landline number"
                 />
               </div>
               <div className="space-y-2">
@@ -503,11 +477,8 @@ export const ApplicationCreateForm = forwardRef<any, ApplicationCreateFormProps>
                 <Input
                   id="alt_contact_phone"
                   value={formData.alt_contact_phone || ''}
-                  onChange={(e) => {
-                    const formatted = formatMalawiPhone(e.target.value);
-                    setFormData({ ...formData, alt_contact_phone: formatted });
-                  }}
-                  placeholder={EXAMPLE_FORMATS.PHONE}
+                  onChange={(e) => setFormData({ ...formData, alt_contact_phone: e.target.value })}
+                  placeholder="Enter phone number"
                 />
               </div>
             </div>

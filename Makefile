@@ -10,10 +10,12 @@
 # =============================================================================
 # Variables
 # =============================================================================
-APP_NAME := smedi-database
+DOCKER_REGISTRY ?= docker.io
+DOCKER_IMAGE_NAME ?= smedi-database
+APP_NAME := $(DOCKER_IMAGE_NAME)
 GO_VERSION := 1.24
 NODE_VERSION := 20
-IMAGE_NAME := ghcr.io/tiyeni/smedi-database
+IMAGE_NAME := $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)
 HELM_RELEASE := goravel-blog
 HELM_CHART := ./helm/goravel-blog
 

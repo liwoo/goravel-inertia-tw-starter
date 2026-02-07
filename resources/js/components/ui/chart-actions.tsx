@@ -42,7 +42,7 @@ export interface ChartActionsProps {
   title?: string;
 
   /**
-   * Optional: application name for export headers (defaults to "SMEDI Dashboard")
+   * Optional: application name for export headers (defaults to "Admin Portal")
    */
   appName?: string;
 
@@ -71,7 +71,7 @@ export function ChartActions({
   data,
   filename,
   title,
-  appName = "SMEDI Dashboard",
+  appName = "Admin Portal",
   className,
   renderFullscreen,
 }: ChartActionsProps) {
@@ -311,11 +311,10 @@ export function ChartActions({
 
       // Capture the wrapper element as canvas
       const canvas = await html2canvas(wrapper, {
-        backgroundColor: null,
         scale: 2, // Higher quality
         logging: false,
         useCORS: true,
-      });
+      } as any);
 
       // Clean up
       document.body.removeChild(wrapper);

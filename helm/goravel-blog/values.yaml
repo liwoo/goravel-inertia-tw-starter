@@ -7,8 +7,9 @@
 replicaCount: 2
 
 image:
-  # DockerHub repository for the application image
-  repository: jeremiahchienda/smedi-database
+  # Default image repository - overridden at deploy time via CI/CD:
+  #   --set image.repository=$REGISTRY/$IMAGE_NAME
+  repository: smedi-database
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""

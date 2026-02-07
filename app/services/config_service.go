@@ -3,11 +3,11 @@ package services
 import (
 	"github.com/goravel/framework/facades"
 	"smedi-sme-db/app/contracts"
-	"smedi-sme-db/app/models"
 	"smedi-sme-db/app/http/requests"
+	"smedi-sme-db/app/models"
 )
 
-// ConfigService implements business logic for sme_config using the builder pattern
+// ConfigService implements business logic for configs using the builder pattern
 type ConfigService struct {
 	contracts.CrudServiceContract // Embedded interface - automatically exposes all CRUD methods!
 }
@@ -15,7 +15,7 @@ type ConfigService struct {
 // NewConfigService creates a new Config service using the builder pattern
 func NewConfigService() *ConfigService {
 	// Build the service with all required configurations
-	service := contracts.NewServiceBuilder[models.Config]("sme_config", "id").
+	service := contracts.NewServiceBuilder[models.Config]("configs", "id").
 		WithSearchFields("name", "config_type", "description").                                 // Fields that will be searchable via the search query parameter
 		WithSortFields("id", "created_at", "updated_at", "name", "config_type", "description"). // Fields that can be used for sorting results
 		WithFilterFields("name", "config_type").                                                // Fields that can be filtered on
@@ -24,8 +24,8 @@ func NewConfigService() *ConfigService {
 			"config_type": "required|string|max:255",
 			"description": "string|max:255",
 		}).
-		WithDefaultSort("created_at", "DESC").          // Default sorting when none specified
-		WithScopeFiltering("sme_config", "created_by"). // Enable permission-based filtering
+		WithDefaultSort("created_at", "DESC").       // Default sorting when none specified
+		WithScopeFiltering("configs", "created_by"). // Enable permission-based filtering
 
 		Build() // Returns a fully configured CrudServiceContract
 

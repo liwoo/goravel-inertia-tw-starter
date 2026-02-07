@@ -8,6 +8,7 @@ import { useForm, usePage, Link, router } from '@inertiajs/react';
 import React, { useState } from 'react';
 import { toast } from "sonner";
 import axios from "@/lib/axios";
+import { useTranslation } from 'react-i18next';
 import {
   Shield,
   ArrowLeft,
@@ -28,6 +29,7 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"form">) {
+  const { t } = useTranslation('auth');
   const { data, setData, errors, reset } = useForm({
     email: '',
     password: '',
@@ -107,10 +109,10 @@ export function LoginForm({
         } else if (errorData?.message) {
           toast.error(errorData.message);
         } else {
-          toast.error('Invalid credentials');
+          toast.error(t('login.invalidCredentials'));
         }
       } else {
-        toast.error('An unexpected error occurred');
+        toast.error(t('login.unexpectedError'));
       }
     } finally {
       setIsLoggingIn(false);
@@ -122,14 +124,14 @@ export function LoginForm({
     setTwoFactorError(null);
 
     if (!twoFactorCode) {
-      setTwoFactorError('Please enter your authentication code');
+      setTwoFactorError(t('twoFactor.enterCodeError'));
       return;
     }
 
     // Validate code format
     const isBackupCode = twoFactorState.useBackupCode || twoFactorCode.length === 8;
     if (!isBackupCode && twoFactorCode.length !== 6) {
-      setTwoFactorError('Please enter a valid 6-digit code');
+      setTwoFactorError(t('twoFactor.invalidCodeFormat'));
       return;
     }
 
@@ -143,7 +145,7 @@ export function LoginForm({
       });
 
       // On success, the backend sets the session cookies
-      toast.success('Login successful');
+      toast.success(t('twoFactor.loginSuccess'));
 
       // Use Inertia router to navigate to the dashboard
       router.visit('/dashboard', { replace: true });
@@ -154,22 +156,22 @@ export function LoginForm({
         if (error.response.status === 401) {
           setTwoFactorError(
             twoFactorState.useBackupCode
-              ? 'Invalid backup code. Please try again.'
-              : 'Invalid authentication code. Please try again.'
+              ? t('twoFactor.invalidBackupCode')
+              : t('twoFactor.invalidAuthCode')
           );
         } else if (error.response.status === 410) {
           // Token expired
-          setTwoFactorError('Your login session has expired. Please start over.');
+          setTwoFactorError(t('twoFactor.sessionExpired'));
           setTimeout(() => {
             handleBack();
           }, 2000);
         } else if (errorData.errors?.code) {
           setTwoFactorError(errorData.errors.code[0]);
         } else {
-          setTwoFactorError(errorData.message || 'Failed to verify code');
+          setTwoFactorError(errorData.message || t('twoFactor.verifyFailed'));
         }
       } else {
-        setTwoFactorError('An unexpected error occurred. Please try again.');
+        setTwoFactorError(t('twoFactor.unexpectedError'));
       }
     } finally {
       setIsVerifying2FA(false);
@@ -202,11 +204,11 @@ export function LoginForm({
             <Shield className="h-8 w-8 text-purple-600 dark:text-purple-400" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold">Two-Factor Authentication</h3>
+            <h3 className="text-xl font-semibold">{t('twoFactor.title')}</h3>
             <p className="text-sm text-muted-foreground mt-1">
               {twoFactorState.useBackupCode
-                ? 'Enter one of your backup codes'
-                : 'Enter the code from your authenticator app'}
+                ? t('twoFactor.enterBackupCode')
+                : t('twoFactor.enterCode')}
             </p>
           </div>
         </div>
@@ -221,7 +223,7 @@ export function LoginForm({
         <div className="grid gap-6">
           <div className="grid gap-2">
             <Label htmlFor="2fa-code">
-              {twoFactorState.useBackupCode ? 'Backup Code' : 'Authentication Code'}
+              {twoFactorState.useBackupCode ? t('twoFactor.backupCodeLabel') : t('twoFactor.authCodeLabel')}
             </Label>
             <div className="relative">
               <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -247,8 +249,8 @@ export function LoginForm({
             </div>
             <p className="text-xs text-muted-foreground text-center">
               {twoFactorState.useBackupCode
-                ? 'Enter an 8-character backup code'
-                : 'Enter the 6-digit code from your authenticator app'}
+                ? t('twoFactor.backupCodeHint')
+                : t('twoFactor.authCodeHint')}
             </p>
           </div>
 
@@ -256,10 +258,10 @@ export function LoginForm({
             {isVerifying2FA ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Verifying...
+                {t('twoFactor.verifying')}
               </>
             ) : (
-              'Verify'
+              t('twoFactor.verify')
             )}
           </Button>
 
@@ -268,7 +270,7 @@ export function LoginForm({
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or</span>
+              <span className="bg-background px-2 text-muted-foreground">{t('common:labels.or')}</span>
             </div>
           </div>
 
@@ -280,8 +282,8 @@ export function LoginForm({
             disabled={isVerifying2FA}
           >
             {twoFactorState.useBackupCode
-              ? 'Use authenticator app'
-              : 'Use a backup code'}
+              ? t('twoFactor.useAuthenticator')
+              : t('twoFactor.useBackupCode')}
           </Button>
 
           <Button
@@ -292,7 +294,7 @@ export function LoginForm({
             disabled={isVerifying2FA}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to login
+            {t('twoFactor.backToLogin')}
           </Button>
         </div>
       </form>
@@ -303,16 +305,12 @@ export function LoginForm({
   return (
     <form onSubmit={handleSubmit} className={cn("flex flex-col gap-6 pb-8", className)} {...props}>
       <div className="flex flex-col items-start gap-2 text-center">
-        <div className="flex items-center gap-3 w-full">
-          <img src="/images/mw-coat.svg" alt="MW Gov Emblem" className="w-1/5" />
-          <div className="flex flex-col items-start">
-            <h3 className="text-xl font-semibold uppercase text-nowrap">National MSME's Database</h3>
-            <h4>Management Information System</h4>
-          </div>
+        <div className="flex flex-col items-start w-full">
+          <h3 className="text-xl font-semibold">{t('login.title')}</h3>
+          <p className="text-balance text-sm text-muted-foreground">
+            {t('login.subtitle')}
+          </p>
         </div>
-        <p className="text-balance text-sm text-muted-foreground">
-          Enter your email below to login to your account
-        </p>
       </div>
 
       {/* Display general errors */}
@@ -324,11 +322,11 @@ export function LoginForm({
 
       <div className="grid gap-6">
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t('login.email')}</Label>
           <Input
             id="email"
             type="email"
-            placeholder="m@example.com"
+            placeholder={t('login.emailPlaceholder')}
             value={data.email}
             onChange={(e) => setData('email', e.target.value)}
             required
@@ -341,13 +339,7 @@ export function LoginForm({
         </div>
         <div className="grid gap-2">
           <div className="flex items-center">
-            <Label htmlFor="password">Password</Label>
-            {/* <a
-              href="#"
-              className="ml-auto text-sm underline-offset-4 hover:underline"
-            >
-              Forgot your password?
-            </a> */}
+            <Label htmlFor="password">{t('login.password')}</Label>
           </div>
           <Input
             id="password"
@@ -363,18 +355,18 @@ export function LoginForm({
           )}
         </div>
         <Button type="submit" className="w-full" disabled={isLoggingIn}>
-          {isLoggingIn ? 'Logging in...' : 'Login'}
+          {isLoggingIn ? t('login.submitting') : t('login.submit')}
         </Button>
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or</span>
+            <span className="bg-background px-2 text-muted-foreground">{t('common:labels.or')}</span>
           </div>
         </div>
         <Button variant="outline" className="w-full" asChild>
-          <Link href="/apply">Apply for Access</Link>
+          <Link href="/una">{t('common:labels.register')}</Link>
         </Button>
       </div>
     </form>

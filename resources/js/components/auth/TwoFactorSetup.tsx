@@ -11,6 +11,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
   onOpenChange,
   onSuccess,
 }) => {
+  const { t } = useTranslation('settings');
   const [step, setStep] = useState<SetupStep>('password');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -94,7 +96,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
 
   const handlePasswordSubmit = async () => {
     if (!password) {
-      setErrors({ password: 'Password is required' });
+      setErrors({ password: t('validation.passwordRequired') });
       return;
     }
 
@@ -110,14 +112,14 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
       if (axios.isAxiosError(error) && error.response) {
         const errorData = error.response.data as ApiErrorResponse;
         if (error.response.status === 401 || error.response.status === 403) {
-          setErrors({ password: 'Incorrect password' });
+          setErrors({ password: t('validation.incorrectPassword') });
         } else if (errorData.errors?.password) {
           setErrors({ password: errorData.errors.password[0] });
         } else {
-          setErrors({ general: errorData.message || 'Failed to initiate 2FA setup' });
+          setErrors({ general: errorData.message || t('twoFactor.failedSetup') });
         }
       } else {
-        setErrors({ general: 'An unexpected error occurred' });
+        setErrors({ general: t('errors.unexpectedError') });
       }
     } finally {
       setIsLoading(false);
@@ -126,7 +128,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
 
   const handleVerifyCode = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
-      setErrors({ code: 'Please enter a 6-digit code' });
+      setErrors({ code: t('twoFactor.enterSixDigitCode') });
       return;
     }
 
@@ -138,17 +140,17 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
       // Backend wraps response in { success, message, data } structure
       setBackupCodes(response.data.data.backup_codes);
       setStep('backup-codes');
-      toast.success('Two-factor authentication enabled successfully');
+      toast.success(t('twoFactor.enabledSuccess'));
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response) {
         const errorData = error.response.data as ApiErrorResponse;
         if (errorData.errors?.code) {
           setErrors({ code: errorData.errors.code[0] });
         } else {
-          setErrors({ code: errorData.message || 'Invalid verification code' });
+          setErrors({ code: errorData.message || t('twoFactor.invalidCode') });
         }
       } else {
-        setErrors({ code: 'An unexpected error occurred' });
+        setErrors({ code: t('errors.unexpectedError') });
       }
     } finally {
       setIsLoading(false);
@@ -165,18 +167,18 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
         setCopiedCodes(true);
         setTimeout(() => setCopiedCodes(false), 2000);
       }
-      toast.success(`${type === 'secret' ? 'Secret key' : 'Backup codes'} copied to clipboard`);
+      toast.success(type === 'secret' ? t('backupCodes.secretCopied') : t('backupCodes.codesCopied'));
     } catch {
-      toast.error('Failed to copy to clipboard');
+      toast.error(t('backupCodes.copyFailed'));
     }
   };
 
   const downloadBackupCodes = () => {
     const content = [
-      'SMEDI Database - Two-Factor Authentication Backup Codes',
+      t('backupCodes.downloadHeader'),
       '========================================================',
       '',
-      'Store these codes in a safe place. Each code can only be used once.',
+      t('backupCodes.downloadInstruction'),
       '',
       ...backupCodes.map((code, i) => `${i + 1}. ${code}`),
       '',
@@ -187,12 +189,12 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'smedi-2fa-backup-codes.txt';
+    a.download = '2fa-backup-codes.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success('Backup codes downloaded');
+    toast.success(t('backupCodes.downloaded'));
   };
 
   const handleComplete = () => {
@@ -209,9 +211,9 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
             <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
           <div>
-            <DialogTitle>Enable Two-Factor Authentication</DialogTitle>
+            <DialogTitle>{t('twoFactor.enableTitle')}</DialogTitle>
             <DialogDescription>
-              Confirm your password to continue with 2FA setup
+              {t('twoFactor.enableDescription')}
             </DialogDescription>
           </div>
         </div>
@@ -219,8 +221,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
 
       <div className="space-y-4 py-4">
         <p className="text-sm text-muted-foreground">
-          Two-factor authentication adds an extra layer of security to your account.
-          You will need to enter a code from your authenticator app each time you sign in.
+          {t('twoFactor.securityInfo')}
         </p>
 
         {errors.general && (
@@ -231,14 +232,14 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="setup-password">Current Password</Label>
+          <Label htmlFor="setup-password">{t('security.currentPassword')}</Label>
           <div className="relative">
             <Input
               id="setup-password"
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder={t('backupCodes.enterPassword')}
               className={`pr-10 ${errors.password ? 'border-destructive' : ''}`}
               disabled={isLoading}
               onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
@@ -269,16 +270,16 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
 
       <DialogFooter>
         <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-          Cancel
+          {t('common:actions.cancel')}
         </Button>
         <Button onClick={handlePasswordSubmit} disabled={isLoading || !password}>
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Verifying...
+              {t('twoFactor.verifying')}
             </>
           ) : (
-            'Continue'
+            t('twoFactor.continue')
           )}
         </Button>
       </DialogFooter>
@@ -293,9 +294,9 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
             <QrCode className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
           <div>
-            <DialogTitle>Scan QR Code</DialogTitle>
+            <DialogTitle>{t('twoFactor.scanQRCode')}</DialogTitle>
             <DialogDescription>
-              Use your authenticator app to scan this QR code
+              {t('twoFactor.scanQRCodeDescription')}
             </DialogDescription>
           </div>
         </div>
@@ -305,8 +306,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
         <div className="flex items-start gap-2 text-sm text-muted-foreground">
           <Smartphone className="h-4 w-4 mt-0.5 flex-shrink-0" />
           <p>
-            Open your authenticator app (like Google Authenticator, Authy, or 1Password)
-            and scan the QR code below.
+            {t('twoFactor.scanInstruction')}
           </p>
         </div>
 
@@ -316,7 +316,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
               <CardContent className="flex justify-center p-6">
                 <img
                   src={setupData.qr_code}
-                  alt="2FA QR Code"
+                  alt={t('twoFactor.qrCodeAlt')}
                   className="w-48 h-48"
                 />
               </CardContent>
@@ -324,7 +324,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
 
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">
-                Can't scan? Enter this key manually:
+                {t('twoFactor.cantScan')}
               </Label>
               <div className="flex items-center gap-2">
                 <code className="flex-1 p-3 bg-muted rounded-md font-mono text-sm break-all">
@@ -350,10 +350,10 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
 
       <DialogFooter>
         <Button variant="outline" onClick={handleClose}>
-          Cancel
+          {t('common:actions.cancel')}
         </Button>
         <Button onClick={() => setStep('verify')}>
-          I've Scanned the Code
+          {t('twoFactor.scannedCode')}
         </Button>
       </DialogFooter>
     </>
@@ -367,9 +367,9 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
             <Key className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
           <div>
-            <DialogTitle>Verify Code</DialogTitle>
+            <DialogTitle>{t('twoFactor.verifyCode')}</DialogTitle>
             <DialogDescription>
-              Enter the 6-digit code from your authenticator app
+              {t('twoFactor.verifyCodeDescription')}
             </DialogDescription>
           </div>
         </div>
@@ -377,11 +377,11 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
 
       <div className="space-y-4 py-4">
         <p className="text-sm text-muted-foreground">
-          Enter the verification code displayed in your authenticator app to complete setup.
+          {t('twoFactor.verifyInstruction')}
         </p>
 
         <div className="space-y-2">
-          <Label htmlFor="verification-code">Verification Code</Label>
+          <Label htmlFor="verification-code">{t('twoFactor.verificationCode')}</Label>
           <Input
             id="verification-code"
             type="text"
@@ -412,7 +412,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
 
       <DialogFooter>
         <Button variant="outline" onClick={() => setStep('qr-code')} disabled={isLoading}>
-          Back
+          {t('twoFactor.back')}
         </Button>
         <Button
           onClick={handleVerifyCode}
@@ -421,10 +421,10 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Verifying...
+              {t('twoFactor.verifying')}
             </>
           ) : (
-            'Verify & Enable'
+            t('twoFactor.verifyAndEnable')
           )}
         </Button>
       </DialogFooter>
@@ -439,9 +439,9 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
             <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <DialogTitle>Save Your Backup Codes</DialogTitle>
+            <DialogTitle>{t('backupCodes.title')}</DialogTitle>
             <DialogDescription>
-              Store these codes safely - you'll need them if you lose access to your authenticator
+              {t('backupCodes.description')}
             </DialogDescription>
           </div>
         </div>
@@ -451,8 +451,7 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
         <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
           <AlertCircle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-700 dark:text-amber-300">
-            <strong>Important:</strong> Each backup code can only be used once.
-            Store them in a secure location like a password manager.
+            {t('backupCodes.importantMessage')}
           </AlertDescription>
         </Alert>
 
@@ -480,25 +479,25 @@ export const TwoFactorSetup: React.FC<TwoFactorSetupProps> = ({
             {copiedCodes ? (
               <>
                 <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                Copied!
+                {t('backupCodes.copied')}
               </>
             ) : (
               <>
                 <Copy className="h-4 w-4 mr-2" />
-                Copy All
+                {t('backupCodes.copyAll')}
               </>
             )}
           </Button>
           <Button variant="outline" className="flex-1" onClick={downloadBackupCodes}>
             <Download className="h-4 w-4 mr-2" />
-            Download
+            {t('backupCodes.download')}
           </Button>
         </div>
       </div>
 
       <DialogFooter>
         <Button onClick={handleComplete} className="w-full">
-          I've Saved My Backup Codes
+          {t('backupCodes.savedCodes')}
         </Button>
       </DialogFooter>
     </>

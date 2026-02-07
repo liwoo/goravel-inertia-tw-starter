@@ -25,12 +25,12 @@ type MessagePermissionTestSuite struct {
 	messageService *services.MessageService
 
 	// Users with different role levels
-	superAdmin   *models.User
-	admin        *models.User // Level 80
-	moderator    *models.User // Level 40
-	member       *models.User // Level 20
-	guest        *models.User // Level 10
-	noRoleUser   *models.User // Level 0 (no role)
+	superAdmin *models.User
+	admin      *models.User // Level 80
+	moderator  *models.User // Level 40
+	member     *models.User // Level 20
+	guest      *models.User // Level 10
+	noRoleUser *models.User // Level 0 (no role)
 
 	// Roles
 	adminRole     *models.Role

@@ -2,27 +2,28 @@ import React, { useState } from 'react';
 // @ts-ignore
 import { Head, router } from '@inertiajs/react';
 import { Download, Upload, FileText, BarChart3, BookOpen, Users } from 'lucide-react';
-import { 
-  Book, 
-  BookListResponse, 
-  BookListRequest, 
+import { useTranslation } from 'react-i18next';
+import {
+  Book,
+  BookListResponse,
+  BookListRequest,
   BookStats,
   BookBulkOperation,
   BookExportOptions,
-  BookImportData 
+  BookImportData
 } from '@/types/book';
 import { CrudPage } from '@/components/Crud/CrudPage';
-import { 
-  BookCreateForm, 
-  BookEditForm, 
+import {
+  BookCreateForm,
+  BookEditForm,
   BookDetailView,
-  bookColumns, 
-  bookColumnsMobile, 
-  bookFilters,
-  bookStatsConfigs,
-  bookSimpleFilters,
+  getBookColumns,
+  getBookColumnsMobile,
+  getBookFilters,
+  getBookStatsConfigs,
+  getBookSimpleFilters,
   getBookPageActions,
-  bookBulkActions
+  getBookBulkActions
 } from './sections';
 import { 
   BulkStatusUpdateDialog, 
@@ -62,15 +63,15 @@ interface BooksIndexProps {
   };
 }
 
-export default function BooksIndex({ 
-  data, 
-  filters, 
+export default function BooksIndex({
+  data,
+  filters,
   stats,
   permissions,
   meta
 }: BooksIndexProps) {
   const isMobile = useIsMobile();
-  
+  const { t } = useTranslation('books');
 
   // Dialog states
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -86,6 +87,8 @@ export default function BooksIndex({
     // Get selected book objects
     const selected = data.data.filter(book => selectedIds.includes(book.id));
     setSelectedBooks(selected);
+
+    const bookBulkActions = getBookBulkActions(t);
 
     const operations: Record<string, () => void> = {
       delete: () => bookBulkActions.handleBulkDelete(selectedIds),
@@ -139,10 +142,10 @@ export default function BooksIndex({
   };
 
   // Use extracted configurations
-  const simpleFilters = createSimpleFilters(bookSimpleFilters(stats));
-  
+  const simpleFilters = createSimpleFilters(getBookSimpleFilters(t, stats));
+
   const pageActions = createPageActions(
-    getBookPageActions(permissions, {
+    getBookPageActions(t, permissions, {
       onImport: () => setShowImportDialog(true),
       onExport: () => setShowExportDialog(true),
       onReports: () => router.visit('/admin/books/reports'),
@@ -150,12 +153,12 @@ export default function BooksIndex({
   );
 
   return (
-    <Admin title={"Books"}>
-      <Head title="Books - Library Management" />
-      
+    <Admin title={t('page.title')}>
+      <Head title={t('page.headTitle')} />
+
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         {/* Statistics Cards */}
-        {renderStatsCards(stats, bookStatsConfigs)}
+        {renderStatsCards(stats, getBookStatsConfigs(t))}
 
 
         {/* Main CRUD Component */}
@@ -163,10 +166,10 @@ export default function BooksIndex({
           <CrudPage<Book>
           data={data}
           filters={filters}
-          title="My Books"
+          title={t('page.myBooks')}
           resourceName="books"
-          columns={isMobile ? bookColumnsMobile : bookColumns}
-          customFilters={bookFilters}
+          columns={isMobile ? getBookColumnsMobile(t) : getBookColumns(t)}
+          customFilters={getBookFilters(t)}
           simpleFilters={simpleFilters}
           pageActions={pageActions}
           paginationConfig={meta?.pagination}

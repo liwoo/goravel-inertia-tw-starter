@@ -1,0 +1,27 @@
+{
+  "main": {
+    "dashboard": "Dashboard",
+    "books": "Books",
+    "lenders": "Lenders"
+  },
+  "clouds": {
+    "capture": "Capture",
+    "proposal": "Proposal",
+    "prompts": "Prompts",
+    "activeProposals": "Active Proposals",
+    "archived": "Archived"
+  },
+  "secondary": {
+    "rolesPermissions": "Roles & Permissions",
+    "users": "Users",
+    "getHelp": "Get Help"
+  },
+  "documents": {
+    "applications": "Applications",
+    "configurations": "Configurations"
+  },
+  "sidebar": {
+    "portalName": "Admin Portal",
+    "searchPlaceholder": "Search..."
+  }
+}

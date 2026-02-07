@@ -1,4 +1,5 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,13 +15,14 @@ interface BookCreateFormProps extends CrudFormProps {
   setIsSaving?: (saving: boolean) => void;
 }
 
-export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({ 
+export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
   onSuccess,
   onError,
-  onCancel, 
+  onCancel,
   isLoading = false,
   setIsSaving
 }, ref) => {
+  const { t } = useTranslation('books');
   const [formData, setFormData] = useState<BookCreateData>({
     title: '',
     author: '',
@@ -39,29 +41,29 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
     // Basic validation
     const newErrors: Record<string, string> = {};
     if (!formData.title.trim()) {
-      newErrors.title = 'Title is required';
+      newErrors.title = t('validation.titleRequired');
     }
     if (!formData.author.trim()) {
-      newErrors.author = 'Author is required';
+      newErrors.author = t('validation.authorRequired');
     }
     if (!formData.isbn.trim()) {
-      newErrors.isbn = 'ISBN is required';
+      newErrors.isbn = t('validation.isbnRequired');
     }
     if (formData.price < 0) {
-      newErrors.price = 'Price must be a positive number';
+      newErrors.price = t('validation.pricePositive');
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    
+
     setErrors({});
     setIsSaving?.(true);
-    
+
     try {
       // Send data as is - backend will handle field name transformation
-      
+
       const response = await fetch('/api/books', {
         method: 'POST',
         headers: {
@@ -73,7 +75,7 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
       });
 
       if (response.ok) {
-        onSuccess('Book created successfully');
+        onSuccess(t('toast.created'));
       } else {
         const errorData = await response.json().catch(() => ({}));
         onError?.(errorData);
@@ -119,19 +121,19 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
       {/* Book Information */}
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">Book Information</h3>
+          <h3 className="text-lg font-semibold mb-4 text-foreground">{t('form.bookInfo')}</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-muted">
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="title">Title *</Label>
+                <Label htmlFor="title">{t('form.title')}</Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter book title"
+                  placeholder={t('form.enterTitle')}
                   className={errors.title ? 'border-destructive' : ''}
                 />
                 {errors.title && (
@@ -145,12 +147,12 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
                 <User className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="author">Author *</Label>
+                <Label htmlFor="author">{t('form.author')}</Label>
                 <Input
                   id="author"
                   value={formData.author}
                   onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                  placeholder="Enter author name"
+                  placeholder={t('form.enterAuthor')}
                   className={errors.author ? 'border-destructive' : ''}
                 />
                 {errors.author && (
@@ -164,12 +166,12 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
                 <Hash className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="isbn">ISBN *</Label>
+                <Label htmlFor="isbn">{t('form.isbn')}</Label>
                 <Input
                   id="isbn"
                   value={formData.isbn}
                   onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
-                  placeholder="Enter ISBN number"
+                  placeholder={t('form.enterIsbn')}
                   className={errors.isbn ? 'border-destructive' : ''}
                 />
                 {errors.isbn && (
@@ -183,12 +185,12 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description">{t('form.description')}</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Enter book description"
+                  placeholder={t('form.enterDescription')}
                   rows={4}
                   className="resize-none"
                 />
@@ -201,7 +203,7 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
 
         {/* Publication Details */}
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">Publication Details</h3>
+          <h3 className="text-lg font-semibold mb-4 text-foreground">{t('form.publicationDetails')}</h3>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
@@ -209,14 +211,14 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <Label htmlFor="price">Price</Label>
+                  <Label htmlFor="price">{t('form.price')}</Label>
                   <Input
                     id="price"
                     type="number"
                     step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                    placeholder="0.00"
+                    placeholder={t('form.pricePlaceholder')}
                     className={errors.price ? 'border-destructive' : ''}
                   />
                   {errors.price && (
@@ -230,7 +232,7 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <Label htmlFor="publishedAt">Published Date</Label>
+                  <Label htmlFor="publishedAt">{t('form.publishedDate')}</Label>
                   <Input
                     id="publishedAt"
                     type="date"
@@ -246,19 +248,19 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status">{t('form.status')}</Label>
                 <Select
                   value={formData.status}
                   onValueChange={(value) => setFormData({ ...formData, status: value as BookStatus })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder={t('form.selectStatus')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="AVAILABLE">Available</SelectItem>
-                    <SelectItem value="BORROWED">Borrowed</SelectItem>
-                    <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
-                    <SelectItem value="RESERVED">Reserved</SelectItem>
+                    <SelectItem value="AVAILABLE">{t('status.available')}</SelectItem>
+                    <SelectItem value="BORROWED">{t('status.borrowed')}</SelectItem>
+                    <SelectItem value="MAINTENANCE">{t('status.maintenance')}</SelectItem>
+                    <SelectItem value="RESERVED">{t('status.reserved')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -269,14 +271,14 @@ export const BookCreateForm = forwardRef<any, BookCreateFormProps>(({
                 <Tag className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="tags">Tags</Label>
+                <Label htmlFor="tags">{t('form.tags')}</Label>
                 <div className="flex gap-2">
                   <Input
                     id="tags"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Add tags (press Enter)"
+                    placeholder={t('form.addTags')}
                   />
                   <Button
                     type="button"

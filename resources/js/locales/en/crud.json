@@ -1,0 +1,18 @@
+{
+  "drawer": {
+    "createNew": "Create New {{name}}",
+    "edit": "Edit {{name}}",
+    "details": "{{name}} Details"
+  },
+  "page": {
+    "addResource": "Add {{name}}",
+    "searchResource": "Search {{resource}}...",
+    "totalItems_one": "{{count}} total item",
+    "totalItems_other": "{{count}} total items",
+    "clearSearch": "Clear search"
+  },
+  "validation": {
+    "validationFailed": "Validation failed:",
+    "operationFailed": "Operation failed"
+  }
+}

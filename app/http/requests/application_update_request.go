@@ -6,14 +6,12 @@ import (
 
 // ApplicationUpdateRequest handles application update validation
 type ApplicationUpdateRequest struct {
-	SME *string `form:"sme" json:"sme"`
+	SME            *string `form:"sme" json:"sme"`
 	RegistrantName *string `form:"registrant_name" json:"registrant_name"`
-	Email *string `form:"email" json:"email"`
-	Phone *string `form:"phone" json:"phone"`
-	SMERegistrationNumber *string `form:"sme_registration_number" json:"sme_registration_number"`
-	SMETaxIdentificationNumber *string `form:"sme_tax_identification_number" json:"sme_tax_identification_number"`
-	Status *string `form:"status" json:"status"`
-	ID uint `form:"-" json:"-"` // Set by controller
+	Email          *string `form:"email" json:"email"`
+	Phone          *string `form:"phone" json:"phone"`
+	Status         *string `form:"status" json:"status"`
+	ID             uint    `form:"-" json:"-"` // Set by controller
 }
 
 // Rules defines validation rules for application updates
@@ -36,14 +34,6 @@ func (r *ApplicationUpdateRequest) Rules(ctx http.Context) map[string]string {
 	if r.Phone != nil {
 		rules["phone"] = "required|string|max:255"
 	}
-	// Only validate SMERegistrationNumber if provided
-	if r.SMERegistrationNumber != nil {
-		rules["sme_registration_number"] = "required|string|max:255"
-	}
-	// Only validate SMETaxIdentificationNumber if provided
-	if r.SMETaxIdentificationNumber != nil {
-		rules["sme_tax_identification_number"] = "required|string|max:255"
-	}
 	// Only validate Status if provided
 	if r.Status != nil {
 		rules["status"] = "required|string|max:255"
@@ -60,20 +50,16 @@ func (r *ApplicationUpdateRequest) Rules(ctx http.Context) map[string]string {
 // Messages defines custom validation messages for updates
 func (r *ApplicationUpdateRequest) Messages(ctx http.Context) map[string]string {
 	return map[string]string{
-		"sme.required": "Sme is required",
-		"sme.max": "Sme cannot exceed 255 characters",
+		"sme.required":             "Organization name is required",
+		"sme.max":                  "Organization name cannot exceed 255 characters",
 		"registrant_name.required": "Registrant Name is required",
-		"registrant_name.max": "Registrant Name cannot exceed 255 characters",
-		"email.required": "Email is required",
-		"email.max": "Email cannot exceed 255 characters",
-		"phone.required": "Phone is required",
-		"phone.max": "Phone cannot exceed 255 characters",
-		"sme_registration_number.required": "Sme Registration Number is required",
-		"sme_registration_number.max": "Sme Registration Number cannot exceed 255 characters",
-		"sme_tax_identification_number.required": "Sme Tax Identification Number is required",
-		"sme_tax_identification_number.max": "Sme Tax Identification Number cannot exceed 255 characters",
-		"status.required": "Status is required",
-		"status.max": "Status cannot exceed 255 characters",
+		"registrant_name.max":      "Registrant Name cannot exceed 255 characters",
+		"email.required":           "Email is required",
+		"email.max":                "Email cannot exceed 255 characters",
+		"phone.required":           "Phone is required",
+		"phone.max":                "Phone cannot exceed 255 characters",
+		"status.required":          "Status is required",
+		"status.max":               "Status cannot exceed 255 characters",
 	}
 }
 
@@ -81,22 +67,16 @@ func (r *ApplicationUpdateRequest) Messages(ctx http.Context) map[string]string 
 func (r *ApplicationUpdateRequest) Attributes(ctx http.Context) map[string]string {
 	return map[string]string{
 		// Add custom attribute name mappings here
-		// e.g., "fieldName": "Field Display Name",
 	}
 }
 
 // Authorize determines if the user is authorized to update this application
 func (r *ApplicationUpdateRequest) Authorize(ctx http.Context) error {
-	// TODO: Implement authorization logic
-	// Example: Check if user can update this specific application
-	// return facades.Gate().Allows("update.applications", application)
 	return nil
 }
 
 // PrepareForValidation allows modification of input before validation
 func (r *ApplicationUpdateRequest) PrepareForValidation(ctx http.Context) error {
-	// TODO: Add data preparation logic for updates
-	// Example: Normalize data if provided
 	return nil
 }
 
@@ -124,14 +104,6 @@ func (r *ApplicationUpdateRequest) ToUpdateData() map[string]interface{} {
 	// Only include Phone if provided
 	if r.Phone != nil {
 		data["phone"] = *r.Phone
-	}
-	// Only include SMERegistrationNumber if provided
-	if r.SMERegistrationNumber != nil {
-		data["sme_registration_number"] = *r.SMERegistrationNumber
-	}
-	// Only include SMETaxIdentificationNumber if provided
-	if r.SMETaxIdentificationNumber != nil {
-		data["sme_tax_identification_number"] = *r.SMETaxIdentificationNumber
 	}
 	// Only include Status if provided
 	if r.Status != nil {

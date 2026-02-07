@@ -349,9 +349,9 @@ func (s *UserCRUDTestSuite) TestCreateUser_ReproduceUIValidationError_Debug() {
 	// Exact data from the UI error report with unique email
 	testEmail := uniqueEmail("debug")
 	userData := map[string]interface{}{
-		"name":           "Test User",  // 9 characters - should pass max:255
-		"email":          testEmail,    // unique email
-		"password":       "12345678",   // 8 characters - should pass min:8
+		"name":           "Test User", // 9 characters - should pass max:255
+		"email":          testEmail,   // unique email
+		"password":       "12345678",  // 8 characters - should pass min:8
 		"is_active":      true,
 		"is_super_admin": false,
 		"role_id":        float64(s.testRole.ID),

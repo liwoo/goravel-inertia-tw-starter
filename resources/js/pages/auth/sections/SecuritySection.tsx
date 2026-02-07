@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,6 +45,8 @@ interface SecuritySectionProps {
 }
 
 export const SecuritySection: React.FC<SecuritySectionProps> = () => {
+  const { t } = useTranslation('settings');
+
   // Password change state
   const [formData, setFormData] = useState<ChangePasswordRequest>({
     current_password: '',
@@ -93,32 +96,32 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
     const newErrors: PasswordFormErrors = {};
 
     if (!formData.current_password) {
-      newErrors.current_password = 'Current password is required';
+      newErrors.current_password = t('validation.currentPasswordRequired');
     }
 
     if (!formData.new_password) {
-      newErrors.new_password = 'New password is required';
+      newErrors.new_password = t('validation.newPasswordRequired');
     } else if (formData.new_password.length < 8) {
-      newErrors.new_password = 'Password must be at least 8 characters';
+      newErrors.new_password = t('validation.passwordMinLength');
     } else if (formData.new_password.length > 128) {
-      newErrors.new_password = 'Password must not exceed 128 characters';
+      newErrors.new_password = t('validation.passwordMaxLength');
     } else if (!/[A-Z]/.test(formData.new_password)) {
-      newErrors.new_password = 'Password must contain at least one uppercase letter';
+      newErrors.new_password = t('validation.passwordUppercase');
     } else if (!/[a-z]/.test(formData.new_password)) {
-      newErrors.new_password = 'Password must contain at least one lowercase letter';
+      newErrors.new_password = t('validation.passwordLowercase');
     } else if (!/[0-9]/.test(formData.new_password)) {
-      newErrors.new_password = 'Password must contain at least one number';
+      newErrors.new_password = t('validation.passwordNumber');
     }
 
     if (!formData.confirm_password) {
-      newErrors.confirm_password = 'Please confirm your new password';
+      newErrors.confirm_password = t('validation.confirmPasswordRequired');
     } else if (formData.new_password !== formData.confirm_password) {
-      newErrors.confirm_password = 'Passwords do not match';
+      newErrors.confirm_password = t('validation.passwordsDoNotMatch');
     }
 
     if (formData.current_password && formData.new_password &&
         formData.current_password === formData.new_password) {
-      newErrors.new_password = 'New password must be different from current password';
+      newErrors.new_password = t('validation.newPasswordSameAsCurrent');
     }
 
     setErrors(newErrors);
@@ -144,8 +147,8 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
         confirm_password: '',
       });
       setErrors({});
-      setSuccessMessage('Your password has been changed successfully.');
-      toast.success('Password changed successfully');
+      setSuccessMessage(t('security.passwordChangedMessage'));
+      toast.success(t('security.passwordChanged'));
     } catch (error: unknown) {
       console.error('Failed to change password:', error);
       setSuccessMessage(null);
@@ -169,13 +172,13 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
 
         // Handle specific error messages
         if (error.response.status === 401 || error.response.status === 403) {
-          setErrors({ current_password: 'Current password is incorrect' });
-          toast.error('Current password is incorrect');
+          setErrors({ current_password: t('validation.currentPasswordIncorrect') });
+          toast.error(t('validation.currentPasswordIncorrect'));
         } else {
-          toast.error(errorData.message || 'Failed to change password');
+          toast.error(errorData.message || t('validation.failedToChangePassword'));
         }
       } else {
-        toast.error('An unexpected error occurred');
+        toast.error(t('errors.unexpectedError'));
       }
     } finally {
       setIsSaving(false);
@@ -193,15 +196,15 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
 
-    if (score <= 2) return { level: 1, label: 'Weak', color: 'bg-red-500' };
-    if (score <= 4) return { level: 2, label: 'Fair', color: 'bg-yellow-500' };
-    if (score <= 5) return { level: 3, label: 'Good', color: 'bg-blue-500' };
-    return { level: 4, label: 'Strong', color: 'bg-green-500' };
+    if (score <= 2) return { level: 1, label: t('security.strengthWeak'), color: 'bg-red-500' };
+    if (score <= 4) return { level: 2, label: t('security.strengthFair'), color: 'bg-yellow-500' };
+    if (score <= 5) return { level: 3, label: t('security.strengthGood'), color: 'bg-blue-500' };
+    return { level: 4, label: t('security.strengthStrong'), color: 'bg-green-500' };
   };
 
   const handleRegenerateBackupCodes = async () => {
     if (!regeneratePassword) {
-      setRegenerateError('Password is required');
+      setRegenerateError(t('validation.passwordRequired'));
       return;
     }
 
@@ -212,19 +215,19 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
       const response = await regenerateBackupCodes(regeneratePassword);
       // Backend wraps response in { success, message, data } structure
       setRegeneratedCodes(response.data.data.backup_codes);
-      toast.success('Backup codes regenerated successfully');
+      toast.success(t('backupCodes.regeneratedSuccess'));
       // Refresh status to get new count
       fetchTOTPStatus();
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response) {
         const errorData = error.response.data as ApiErrorResponse;
         if (error.response.status === 401 || error.response.status === 403) {
-          setRegenerateError('Incorrect password');
+          setRegenerateError(t('validation.incorrectPassword'));
         } else {
-          setRegenerateError(errorData.message || 'Failed to regenerate backup codes');
+          setRegenerateError(errorData.message || t('backupCodes.failedRegenerate'));
         }
       } else {
-        setRegenerateError('An unexpected error occurred');
+        setRegenerateError(t('errors.unexpectedError'));
       }
     } finally {
       setIsRegenerating(false);
@@ -242,18 +245,18 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
   const copyBackupCodes = async (codes: string[]) => {
     try {
       await navigator.clipboard.writeText(codes.join('\n'));
-      toast.success('Backup codes copied to clipboard');
+      toast.success(t('backupCodes.codesCopied'));
     } catch {
-      toast.error('Failed to copy to clipboard');
+      toast.error(t('backupCodes.copyFailed'));
     }
   };
 
   const downloadBackupCodes = (codes: string[]) => {
     const content = [
-      'SMEDI Database - Two-Factor Authentication Backup Codes',
+      t('backupCodes.downloadHeader'),
       '========================================================',
       '',
-      'Store these codes in a safe place. Each code can only be used once.',
+      t('backupCodes.downloadInstruction'),
       '',
       ...codes.map((code, i) => `${i + 1}. ${code}`),
       '',
@@ -264,12 +267,12 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'smedi-2fa-backup-codes.txt';
+    a.download = '2fa-backup-codes.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success('Backup codes downloaded');
+    toast.success(t('backupCodes.downloaded'));
   };
 
   const passwordStrength = getPasswordStrength(formData.new_password);
@@ -284,9 +287,9 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
               <ShieldCheck className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <CardTitle>Change Password</CardTitle>
+              <CardTitle>{t('security.changePassword')}</CardTitle>
               <CardDescription>
-                Update your password to keep your account secure
+                {t('security.changePasswordDescription')}
               </CardDescription>
             </div>
           </div>
@@ -304,7 +307,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
 
             {/* Current Password */}
             <div className="space-y-2">
-              <Label htmlFor="current_password">Current Password</Label>
+              <Label htmlFor="current_password">{t('security.currentPassword')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -312,7 +315,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                   type={showCurrentPassword ? 'text' : 'password'}
                   value={formData.current_password}
                   onChange={(e) => setFormData({ ...formData, current_password: e.target.value })}
-                  placeholder="Enter your current password"
+                  placeholder={t('security.enterCurrentPassword')}
                   className={`pl-10 pr-10 ${errors.current_password ? 'border-destructive' : ''}`}
                   disabled={isSaving}
                 />
@@ -341,7 +344,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
 
             {/* New Password */}
             <div className="space-y-2">
-              <Label htmlFor="new_password">New Password</Label>
+              <Label htmlFor="new_password">{t('security.newPassword')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -349,7 +352,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                   type={showNewPassword ? 'text' : 'password'}
                   value={formData.new_password}
                   onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
-                  placeholder="Enter your new password"
+                  placeholder={t('security.enterNewPassword')}
                   className={`pl-10 pr-10 ${errors.new_password ? 'border-destructive' : ''}`}
                   disabled={isSaving}
                 />
@@ -388,7 +391,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                     passwordStrength.level === 3 ? 'text-blue-500' :
                     'text-green-500'
                   }`}>
-                    Password strength: {passwordStrength.label}
+                    {t('security.passwordStrength', { level: passwordStrength.label })}
                   </p>
                 </div>
               )}
@@ -399,13 +402,13 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                Password must be at least 8 characters and contain uppercase, lowercase, and numbers.
+                {t('security.passwordHint')}
               </p>
             </div>
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <Label htmlFor="confirm_password">Confirm New Password</Label>
+              <Label htmlFor="confirm_password">{t('security.confirmNewPassword')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -413,7 +416,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirm_password}
                   onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                  placeholder="Confirm your new password"
+                  placeholder={t('security.confirmYourNewPassword')}
                   className={`pl-10 pr-10 ${errors.confirm_password ? 'border-destructive' : ''}`}
                   disabled={isSaving}
                 />
@@ -441,7 +444,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
               {formData.confirm_password && formData.new_password === formData.confirm_password && !errors.confirm_password && (
                 <p className="text-sm text-green-600 flex items-center gap-1">
                   <CheckCircle2 className="h-3 w-3" />
-                  Passwords match
+                  {t('security.passwordsMatch')}
                 </p>
               )}
             </div>
@@ -455,12 +458,12 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Changing Password...
+                  {t('security.changingPassword')}
                 </>
               ) : (
                 <>
                   <Lock className="h-4 w-4 mr-2" />
-                  Change Password
+                  {t('security.changePassword')}
                 </>
               )}
             </Button>
@@ -478,7 +481,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
               </div>
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  Two-Factor Authentication
+                  {t('twoFactor.title')}
                   {isLoadingStatus ? (
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   ) : (
@@ -486,12 +489,12 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                       variant={totpStatus?.enabled ? 'default' : 'secondary'}
                       className={totpStatus?.enabled ? 'bg-green-600 hover:bg-green-600' : ''}
                     >
-                      {totpStatus?.enabled ? 'Enabled' : 'Disabled'}
+                      {totpStatus?.enabled ? t('twoFactor.enabled') : t('twoFactor.disabled')}
                     </Badge>
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Add an extra layer of security to your account using a TOTP authenticator app
+                  {t('twoFactor.description')}
                 </CardDescription>
               </div>
             </div>
@@ -504,9 +507,9 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                 <div className="flex items-center gap-3">
                   <Key className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">Backup Codes</p>
+                    <p className="text-sm font-medium">{t('backupCodes.label')}</p>
                     <p className="text-xs text-muted-foreground">
-                      {totpStatus.backup_codes_remaining} codes remaining
+                      {t('backupCodes.codesRemaining', { count: totpStatus.backup_codes_remaining })}
                     </p>
                   </div>
                 </div>
@@ -516,7 +519,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                   onClick={() => setShowRegenerateDialog(true)}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Regenerate
+                  {t('backupCodes.regenerate')}
                 </Button>
               </div>
 
@@ -524,8 +527,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                 <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-amber-700 dark:text-amber-300">
-                    You have only {totpStatus.backup_codes_remaining} backup code{totpStatus.backup_codes_remaining !== 1 ? 's' : ''} remaining.
-                    Consider regenerating your backup codes.
+                    {t('backupCodes.lowCodesWarning', { count: totpStatus.backup_codes_remaining })}
                   </AlertDescription>
                 </Alert>
               )}
@@ -534,7 +536,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    You have no backup codes remaining. Regenerate new codes immediately to avoid being locked out.
+                    {t('backupCodes.noCodesWarning')}
                   </AlertDescription>
                 </Alert>
               )}
@@ -556,12 +558,10 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
           {!isLoadingStatus && !totpStatus?.enabled && (
             <div className="text-sm text-muted-foreground">
               <p>
-                Two-factor authentication adds an extra layer of security to your account.
-                When enabled, you will need to enter a code from your authenticator app
-                each time you sign in.
+                {t('twoFactor.securityInfo')}
               </p>
               <p className="mt-2">
-                We recommend using apps like Google Authenticator, Authy, or 1Password.
+                {t('twoFactor.recommendedApps')}
               </p>
             </div>
           )}
@@ -575,7 +575,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                 className="ml-auto"
               >
                 <ShieldOff className="h-4 w-4 mr-2" />
-                Disable 2FA
+                {t('twoFactor.disable')}
               </Button>
             ) : (
               <Button
@@ -583,7 +583,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                 className="ml-auto"
               >
                 <Shield className="h-4 w-4 mr-2" />
-                Enable 2FA
+                {t('twoFactor.enable')}
               </Button>
             )
           )}
@@ -614,12 +614,12 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
               </div>
               <div>
                 <DialogTitle>
-                  {regeneratedCodes ? 'New Backup Codes' : 'Regenerate Backup Codes'}
+                  {regeneratedCodes ? t('backupCodes.newCodesTitle') : t('backupCodes.regenerateTitle')}
                 </DialogTitle>
                 <DialogDescription>
                   {regeneratedCodes
-                    ? 'Store these codes safely - your old codes are now invalid'
-                    : 'This will invalidate all existing backup codes'}
+                    ? t('backupCodes.newCodesDescription')
+                    : t('backupCodes.regenerateWarning')}
                 </DialogDescription>
               </div>
             </div>
@@ -631,7 +631,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                 <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-amber-700 dark:text-amber-300">
-                    All existing backup codes will be permanently deleted and replaced with new ones.
+                    {t('backupCodes.regenerateAlert')}
                   </AlertDescription>
                 </Alert>
 
@@ -643,14 +643,14 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="regenerate-password">Confirm Password</Label>
+                  <Label htmlFor="regenerate-password">{t('backupCodes.confirmPassword')}</Label>
                   <div className="relative">
                     <Input
                       id="regenerate-password"
                       type={showRegeneratePassword ? 'text' : 'password'}
                       value={regeneratePassword}
                       onChange={(e) => setRegeneratePassword(e.target.value)}
-                      placeholder="Enter your password"
+                      placeholder={t('backupCodes.enterPassword')}
                       className="pr-10"
                       disabled={isRegenerating}
                       onKeyDown={(e) => e.key === 'Enter' && handleRegenerateBackupCodes()}
@@ -675,16 +675,16 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
 
               <DialogFooter>
                 <Button variant="outline" onClick={handleCloseRegenerateDialog} disabled={isRegenerating}>
-                  Cancel
+                  {t('common:actions.cancel')}
                 </Button>
                 <Button onClick={handleRegenerateBackupCodes} disabled={isRegenerating || !regeneratePassword}>
                   {isRegenerating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Regenerating...
+                      {t('backupCodes.regenerating')}
                     </>
                   ) : (
-                    'Regenerate Codes'
+                    t('backupCodes.regenerateCodes')
                   )}
                 </Button>
               </DialogFooter>
@@ -695,8 +695,7 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                 <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-amber-700 dark:text-amber-300">
-                    <strong>Important:</strong> Each backup code can only be used once.
-                    Store them in a secure location.
+                    <strong>{t('common:notifications.important')}</strong> {t('backupCodes.importantMessageShort')}
                   </AlertDescription>
                 </Alert>
 
@@ -721,21 +720,21 @@ export const SecuritySection: React.FC<SecuritySectionProps> = () => {
                     className="flex-1"
                     onClick={() => copyBackupCodes(regeneratedCodes)}
                   >
-                    Copy All
+                    {t('backupCodes.copyAll')}
                   </Button>
                   <Button
                     variant="outline"
                     className="flex-1"
                     onClick={() => downloadBackupCodes(regeneratedCodes)}
                   >
-                    Download
+                    {t('backupCodes.download')}
                   </Button>
                 </div>
               </div>
 
               <DialogFooter>
                 <Button onClick={handleCloseRegenerateDialog} className="w-full">
-                  I've Saved My Backup Codes
+                  {t('backupCodes.savedCodes')}
                 </Button>
               </DialogFooter>
             </>

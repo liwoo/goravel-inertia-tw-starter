@@ -1,0 +1,86 @@
+{
+  "actions": {
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "view": "View",
+    "refresh": "Refresh",
+    "close": "Close",
+    "actions": "Actions",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All"
+  },
+  "pagination": {
+    "showing": "Showing {{from}} to {{to}} of {{total}} results",
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {{current}} of {{last}}",
+    "goToFirstPage": "Go to first page",
+    "goToPreviousPage": "Go to previous page",
+    "goToNextPage": "Go to next page",
+    "goToLastPage": "Go to last page"
+  },
+  "table": {
+    "asc": "Asc",
+    "desc": "Desc",
+    "hide": "Hide",
+    "noData": "No data available"
+  },
+  "toast": {
+    "deleteSuccess": "{{resource}} deleted successfully",
+    "deleteFailed": "Failed to delete {{resource}}: {{error}}",
+    "bulkDeleteSuccess": "{{count}} item(s) deleted successfully",
+    "operationFailed": "{{operation}} failed: {{error}}"
+  },
+  "confirm": {
+    "deleteItem": "Are you sure you want to delete this {{resource}}?",
+    "bulkDelete": "Are you sure you want to delete {{count}} item(s)?"
+  },
+  "labels": {
+    "all": "All",
+    "filters": "Filters",
+    "search": "Search",
+    "or": "Or",
+    "register": "Register"
+  },
+  "status": {
+    "loading": "Loading...",
+    "error": "Error",
+    "unknownError": "Unknown error occurred"
+  },
+  "nav": {
+    "account": "Account",
+    "messages": "Messages",
+    "notifications": "Notifications",
+    "logOut": "Log out",
+    "superAdmin": "Super Admin",
+    "unknownUser": "Unknown User",
+    "backToMessages": "Back to messages"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unreadCount": "{{count}} unread notifications",
+    "allCaughtUp": "All caught up!",
+    "markAllRead": "Mark all read",
+    "markAllAsRead": "Mark all as read",
+    "dismissAll": "Dismiss all",
+    "dismiss": "Dismiss",
+    "markAsRead": "Mark as read",
+    "all": "All",
+    "unread": "Unread",
+    "messages": "Messages",
+    "system": "System",
+    "loading": "Loading notifications...",
+    "noUnread": "No unread notifications",
+    "noNotifications": "No notifications found",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "pendingApplications": "{{count}} Pending Application(s)",
+    "clickToReview": "Click to review and process",
+    "actionRequired": "Action Required",
+    "important": "Important:"
+  }
+}

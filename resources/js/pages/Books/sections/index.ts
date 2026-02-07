@@ -1,15 +1,15 @@
 export { BookDetailView } from './BookDetailView';
 export { BookCreateForm } from './BookCreateForm';
 export { BookEditForm } from './BookEditForm';
-export { 
-  bookColumns, 
-  bookColumnsMobile, 
-  bookFilters, 
-  bookQuickFilters 
+export {
+  getBookColumns,
+  getBookColumnsMobile,
+  getBookFilters,
+  getBookQuickFilters
 } from './BookColumns';
 export {
-  bookStatsConfigs,
-  bookSimpleFilters,
+  getBookStatsConfigs,
+  getBookSimpleFilters,
   getBookPageActions,
-  bookBulkActions
+  getBookBulkActions
 } from './bookPageConfig';

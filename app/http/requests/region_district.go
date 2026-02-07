@@ -14,12 +14,12 @@ type District string
 
 // Northern Region Districts (6 districts)
 const (
-	DistrictChitipa    District = "Chitipa"
-	DistrictKaronga    District = "Karonga"
-	DistrictLikoma     District = "Likoma"
-	DistrictMzimba     District = "Mzimba"
-	DistrictNkhataBay  District = "Nkhata Bay"
-	DistrictRumphi     District = "Rumphi"
+	DistrictChitipa   District = "Chitipa"
+	DistrictKaronga   District = "Karonga"
+	DistrictLikoma    District = "Likoma"
+	DistrictMzimba    District = "Mzimba"
+	DistrictNkhataBay District = "Nkhata Bay"
+	DistrictRumphi    District = "Rumphi"
 )
 
 // Central Region Districts (9 districts)

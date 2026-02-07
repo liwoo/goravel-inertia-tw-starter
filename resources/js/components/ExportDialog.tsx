@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Download, FileSpreadsheet, FileJson, FileText, File } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -60,11 +61,12 @@ const formatIcons: Record<ExportFormat, React.ReactNode> = {
     pdf: <File className="w-4 h-4" />,
 };
 
-const formatLabels: Record<ExportFormat, string> = {
-    csv: 'CSV (Comma Separated)',
-    json: 'JSON',
-    excel: 'Excel (.xlsx)',
-    pdf: 'PDF Document',
+// Format labels are resolved via i18n in the component
+const formatLabelKeys: Record<ExportFormat, string> = {
+    csv: 'export:format.csv',
+    json: 'export:format.json',
+    excel: 'export:format.excel',
+    pdf: 'export:format.pdf',
 };
 
 export function ExportDialog({
@@ -74,13 +76,15 @@ export function ExportDialog({
     totalItems,
     availableFields,
     defaultFields,
-    title = 'Export Data',
+    title: titleProp,
     description,
     showStatsOption = true,
     defaultFilename = 'export',
     maxRows = DEFAULT_MAX_EXPORT_ROWS,
     preparedBy,
 }: ExportDialogProps) {
+    const { t } = useTranslation('export');
+    const title = titleProp || t('title');
     const [format, setFormat] = useState<ExportFormat>('csv');
     const [fields, setFields] = useState<string[]>(
         defaultFields ?? availableFields.map(f => f.id)
@@ -131,8 +135,8 @@ export function ExportDialog({
 
     const dynamicDescription = description ?? (
         isLimited
-            ? `Export up to ${maxRows.toLocaleString()} of ${totalItems.toLocaleString()} records to a file.`
-            : `Export ${totalItems.toLocaleString()} record${totalItems !== 1 ? 's' : ''} to a file.`
+            ? t('description.limited', {max: maxRows.toLocaleString(), total: totalItems.toLocaleString()})
+            : t('description.full', {count: totalItems})
     );
 
     return (
@@ -151,22 +155,22 @@ export function ExportDialog({
                 <div className="space-y-4">
                     {/* Format Selection */}
                     <div className="space-y-2">
-                        <Label htmlFor="format">Export Format</Label>
+                        <Label htmlFor="format">{t('format.label')}</Label>
                         <Select value={format} onValueChange={(value: ExportFormat) => setFormat(value)}>
                             <SelectTrigger id="format">
                                 <SelectValue>
                                     <div className="flex items-center gap-2">
                                         {formatIcons[format]}
-                                        <span>{formatLabels[format]}</span>
+                                        <span>{t(formatLabelKeys[format])}</span>
                                     </div>
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                                {(Object.keys(formatLabels) as ExportFormat[]).map((fmt) => (
+                                {(Object.keys(formatLabelKeys) as ExportFormat[]).map((fmt) => (
                                     <SelectItem key={fmt} value={fmt}>
                                         <div className="flex items-center gap-2">
                                             {formatIcons[fmt]}
-                                            <span>{formatLabels[fmt]}</span>
+                                            <span>{t(formatLabelKeys[fmt])}</span>
                                         </div>
                                     </SelectItem>
                                 ))}
@@ -177,7 +181,7 @@ export function ExportDialog({
                     {/* Fields Selection */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label>Fields to Include</Label>
+                            <Label>{t('fields.label')}</Label>
                             <div className="flex gap-2">
                                 <Button
                                     type="button"
@@ -186,7 +190,7 @@ export function ExportDialog({
                                     className="h-auto py-1 px-2 text-xs"
                                     onClick={selectAll}
                                 >
-                                    Select All
+                                    {t('common:actions.selectAll')}
                                 </Button>
                                 <Button
                                     type="button"
@@ -195,7 +199,7 @@ export function ExportDialog({
                                     className="h-auto py-1 px-2 text-xs"
                                     onClick={deselectAll}
                                 >
-                                    Deselect All
+                                    {t('common:actions.deselectAll')}
                                 </Button>
                             </div>
                         </div>
@@ -217,7 +221,7 @@ export function ExportDialog({
                             ))}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            {fields.length} of {availableFields.length} fields selected
+                            {t('fields.selected', {count: fields.length, total: availableFields.length})}
                         </p>
                     </div>
 
@@ -230,7 +234,7 @@ export function ExportDialog({
                                 onCheckedChange={(checked) => setIncludeStats(!!checked)}
                             />
                             <Label htmlFor="includeStats" className="text-sm font-normal cursor-pointer">
-                                Include statistics summary
+                                {t('stats.includeStats')}
                             </Label>
                         </div>
                     )}
@@ -238,14 +242,14 @@ export function ExportDialog({
                     {/* Row limit warning */}
                     {isLimited && (
                         <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 p-2 rounded-md border border-amber-200 dark:border-amber-800">
-                            Limited to {maxRows.toLocaleString()} rows. Use filters to narrow down your data for a complete export.
+                            {t('rowLimit', {max: maxRows.toLocaleString()})}
                         </div>
                     )}
                 </div>
 
                 <DialogFooter className="gap-2 sm:gap-0">
                     <Button variant="outline" onClick={onClose} disabled={isExporting}>
-                        Cancel
+                        {t('common:actions.cancel')}
                     </Button>
                     <Button
                         onClick={handleExport}
@@ -254,12 +258,12 @@ export function ExportDialog({
                         {isExporting ? (
                             <>
                                 <span className="animate-spin mr-2">⏳</span>
-                                Exporting...
+                                {t('exporting')}
                             </>
                         ) : (
                             <>
                                 <Download className="w-4 h-4 mr-2" />
-                                Export {rowsToExport.toLocaleString()} Record{rowsToExport !== 1 ? 's' : ''}
+                                {t('exportButton', {count: rowsToExport})}
                             </>
                         )}
                     </Button>

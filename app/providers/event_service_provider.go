@@ -22,21 +22,6 @@ func (receiver *EventServiceProvider) Boot(app foundation.Application) {
 
 func (receiver *EventServiceProvider) listen() map[event.Event][]event.Listener {
 	return map[event.Event][]event.Listener{
-		&events.AdditionalBusinessMemberCreated{}: {
-			&listeners.UpdateBusinessEmployeeSummary{},
-		},
-		&events.AdditionalBusinessMemberUpdated{}: {
-			&listeners.UpdateBusinessEmployeeSummary{},
-		},
-		&events.AdditionalBusinessMemberDeleted{}: {
-			&listeners.UpdateBusinessEmployeeSummary{},
-		},
-		&events.EventCreated{}: {
-			&listeners.BroadcastEventNotification{},
-		},
-		&events.ProcurementPublished{}: {
-			&listeners.BroadcastProcurementNotification{},
-		},
 		&events.ApplicationApproved{}: {
 			&listeners.NotifyApplicationApproved{},
 		},

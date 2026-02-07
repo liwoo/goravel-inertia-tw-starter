@@ -39,8 +39,8 @@ func (c *PresenceController) GetOnlineUsers(ctx http.Context) http.Response {
 	return ctx.Response().Json(http.StatusOK, http.Json{
 		"success": true,
 		"data": http.Json{
-			"online_users":  onlineUserIDs,
-			"online_count":  len(onlineUserIDs),
+			"online_users": onlineUserIDs,
+			"online_count": len(onlineUserIDs),
 		},
 	})
 }

@@ -428,22 +428,11 @@ func (c *AccountController) GetRecentActivities(ctx http.Context) http.Response 
 		})
 	}
 
-	// Parse limit parameter
-	limit, _ := strconv.Atoi(ctx.Request().Query("limit", "20"))
-	if limit < 1 {
-		limit = 20
-	}
-	if limit > 50 {
-		limit = 50
-	}
-
-	// Get recent activities for this user
-	activities := c.dashboardService.GetUserRecentActivities(user.ID, limit)
-
+	// Return empty activities list (entity-specific activity tracking has been removed)
 	return ctx.Response().Json(nethttp.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Recent activities retrieved successfully",
-		"data":    activities,
+		"data":    []interface{}{},
 	})
 }
 

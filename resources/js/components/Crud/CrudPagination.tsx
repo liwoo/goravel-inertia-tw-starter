@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-r
 import { cn } from '@/lib/utils';
 import { PaginationProps } from '@/types/crud';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import {
   Select,
   SelectContent,
@@ -27,6 +28,7 @@ export function CrudPagination({
   showInfo = true,
   className,
 }: PaginationProps) {
+  const { t } = useTranslation('common');
   const showingFrom = (currentPage - 1) * perPage + 1;
   const showingTo = Math.min(currentPage * perPage, total);
 
@@ -39,13 +41,13 @@ export function CrudPagination({
       <div className="flex-1 text-sm text-muted-foreground">
         {showInfo && (
           <span>
-            Showing {showingFrom} to {showingTo} of {total} results
+            {t('pagination.showing', {from: showingFrom, to: showingTo, total})}
           </span>
         )}
       </div>
       <div className="flex items-center space-x-6 lg:space-x-8">
         <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
+          <p className="text-sm font-medium">{t('pagination.rowsPerPage')}</p>
           <Select
             value={`${perPage}`}
             onValueChange={(value) => {
@@ -71,7 +73,7 @@ export function CrudPagination({
           </Select>
         </div>
         <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-          Page {currentPage} of {lastPage}
+          {t('pagination.pageOf', {current: currentPage, last: lastPage})}
         </div>
         <div className="flex items-center space-x-2">
           <Button
@@ -80,7 +82,7 @@ export function CrudPagination({
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
           >
-            <span className="sr-only">Go to first page</span>
+            <span className="sr-only">{t('pagination.goToFirstPage')}</span>
             <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
@@ -89,7 +91,7 @@ export function CrudPagination({
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
           >
-            <span className="sr-only">Go to previous page</span>
+            <span className="sr-only">{t('pagination.goToPreviousPage')}</span>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
@@ -98,7 +100,7 @@ export function CrudPagination({
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === lastPage}
           >
-            <span className="sr-only">Go to next page</span>
+            <span className="sr-only">{t('pagination.goToNextPage')}</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
@@ -107,7 +109,7 @@ export function CrudPagination({
             onClick={() => onPageChange(lastPage)}
             disabled={currentPage === lastPage}
           >
-            <span className="sr-only">Go to last page</span>
+            <span className="sr-only">{t('pagination.goToLastPage')}</span>
             <ChevronsRight className="h-4 w-4" />
           </Button>
         </div>

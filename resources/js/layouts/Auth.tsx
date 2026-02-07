@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ThemeToggleIcon } from '@/components/ThemeToggleIcon';
 
 interface AuthLayoutProps {
@@ -6,6 +7,8 @@ interface AuthLayoutProps {
 }
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
+  const { t } = useTranslation('auth');
+
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="relative flex flex-col p-6 md:p-10 overflow-hidden">
@@ -52,7 +55,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         {/* Header section for the logo */}
         <div className="relative z-10 flex justify-between items-center mb-4 md:mb-8">
           <a href="/" className="flex items-center gap-2 font-medium">
-            <img src="/images/mw-coat.svg" alt="Logo" className="h-8 w-auto" />
+            <span className="text-lg font-semibold">{t('branding.portalName')}</span>
             {/* Optionally, add text next to logo if desired */}
             {/* <span className="text-lg font-semibold">Acme Inc.</span> */}
           </a>

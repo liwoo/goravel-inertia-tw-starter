@@ -1,25 +1,20 @@
 import {
-    BarChartIcon,
-    BookIcon, BuildingIcon, Calendar1Icon,
+    BookIcon,
     CameraIcon,
-    ClipboardListIcon,
     CogIcon,
-    DatabaseIcon,
     FileCodeIcon,
-    FileIcon,
     FileTextIcon,
-    FolderIcon,
     HelpCircleIcon,
-    LayoutDashboardIcon, NotebookTabsIcon, NotepadText, PercentSquareIcon, PersonStandingIcon,
-    SettingsIcon,
-    ShieldIcon, User2Icon,
+    LandmarkIcon,
+    LayoutDashboardIcon,
+    NotebookTabsIcon,
+    ShieldIcon,
     UsersIcon,
-    SparklesIcon,
 } from "lucide-react"
 
 // Navigation item types
 export interface BaseNavItem {
-    title: string;
+    title: string; // i18n key within 'nav' namespace
     url: string;
     icon: any;
     requiredService?: string;
@@ -27,7 +22,6 @@ export interface BaseNavItem {
     requiredRole?: string;
     requireSuperAdmin?: boolean;
     variant?: "default" | "primary";
-    action?: "openMySmeModal"; // Custom action instead of navigation
 }
 
 export type NavItem = BaseNavItem;
@@ -35,13 +29,13 @@ export type NavItem = BaseNavItem;
 interface NavItemWithChildren extends BaseNavItem {
     isActive?: boolean;
     items?: {
-        title: string;
+        title: string; // i18n key within 'nav' namespace
         url: string;
     }[];
 }
 
 interface DocumentItem {
-    name: string;
+    name: string; // i18n key within 'nav' namespace
     url: string;
     icon: any;
     requiredService?: string;
@@ -54,92 +48,76 @@ export interface NavigationConfig {
     navClouds: NavItemWithChildren[];
     navSecondary: NavItem[];
     documents: DocumentItem[];
-    navSme: NavItem[];
 }
 
 // Navigation items with permission requirements
+// title/name values are i18n keys resolved in nav components via useTranslation('nav')
 export const navigationConfig: NavigationConfig = {
     navMain: [
         {
-            title: "Dashboard",
+            title: "main.dashboard",
             url: "/dashboard",
             icon: LayoutDashboardIcon,
             // Dashboard is always accessible to authenticated users
         },
         {
-            title: "MSMEs",
-            url: "/admin/smes",
-            icon: User2Icon,
-            requiredService: "smes",
+            title: "main.books",
+            url: "/admin/books",
+            icon: BookIcon,
+            requiredService: "books",
             requiredAction: "read" as const,
         },
         {
-            title: "BDSPs",
-            url: "/admin/bdsps",
-            icon: BuildingIcon,
-            requiredService: "bdsps",
-            requiredAction: "read" as const,
-        },
-
-        {
-            title: "Events",
-            url: "/admin/events",
-            icon: Calendar1Icon,
-            requiredService: "events",
-            requiredAction: "read" as const,
-        },
-
-        {
-            title: "Procurement",
-            url: "/admin/procurement-notices",
-            icon: ClipboardListIcon,
-            requiredService: "procurement_notices",
+            title: "main.lenders",
+            url: "/admin/lenders",
+            icon: LandmarkIcon,
+            requiredService: "lenders",
             requiredAction: "read" as const,
         },
     ],
     navClouds: [
         {
-            title: "Capture",
+            title: "clouds.capture",
             icon: CameraIcon,
             isActive: true,
             url: "#",
             items: [
                 {
-                    title: "Active Proposals",
+                    title: "clouds.activeProposals",
                     url: "#",
                 },
                 {
-                    title: "Archived",
+                    title: "clouds.archived",
                     url: "#",
                 },
             ],
         },
         {
-            title: "Proposal",
+            title: "clouds.proposal",
             icon: FileTextIcon,
             url: "#",
             items: [
                 {
-                    title: "Active Proposals",
+                    title: "clouds.activeProposals",
                     url: "#",
                 },
                 {
-                    title: "Archived",
+                    title: "clouds.archived",
                     url: "#",
                 },
             ],
         },
         {
-            title: "Prompts",
+            title: "clouds.prompts",
             icon: FileCodeIcon,
             url: "#",
             items: [
                 {
-                    title: "Active Proposals",
+                    title: "clouds.activeProposals",
                     url: "#",
                 },
                 {
-                    title: "Archived",
+                    title: "clouds.archived",
                     url: "#",
                 },
             ],
@@ -147,19 +125,19 @@ export const navigationConfig: NavigationConfig = {
     ],
     navSecondary: [
         {
-            title: "Roles & Permissions",
+            title: "secondary.rolesPermissions",
             url: "/admin/permissions",
             icon: ShieldIcon,
             requireSuperAdmin: true,
         },
         {
-            title: "Users",
+            title: "secondary.users",
             url: "/admin/users",
             icon: UsersIcon,
             requireSuperAdmin: true,
         },
         {
-            title: "Get Help",
+            title: "secondary.getHelp",
             url: "#",
             icon: HelpCircleIcon,
             // Help is always accessible
@@ -167,53 +145,19 @@ export const navigationConfig: NavigationConfig = {
     ],
     documents: [
         {
-            name: "Configurations",
-            url: "/admin/configs",
-            icon: CogIcon,
-            requiredService: "config",
-            requiredAction: "read" as const,
-        },
-        {
-            name: "Applications",
+            name: "documents.applications",
             url: "/admin/applications",
             icon: NotebookTabsIcon,
             requiredService: "applications",
             requiredAction: "read" as const,
         },
+        {
+            name: "documents.configurations",
+            url: "/admin/configs",
+            icon: CogIcon,
+            requiredService: "config",
+            requiredAction: "read" as const,
+        },
     ],
 
-    navSme: [
-        {
-            title: "My MSME",
-            url: "#",
-            icon: LayoutDashboardIcon,
-            requiredRole: "sme-user",
-            variant: "primary",
-            action: "openMySmeModal",
-        },
-        {
-            title: "Portal",
-            url: "/portal",
-            icon: LayoutDashboardIcon,
-            requiredRole: "sme-user",
-        },
-        {
-            title: "Directory",
-            url: "/directory",
-            icon: FolderIcon,
-            requiredRole: "sme-user",
-        },
-        {
-            title: "My Applications",
-            url: "/applications",
-            icon: NotebookTabsIcon,
-            requiredRole: "sme-user",
-        },
-        {
-            title: "Opportunities",
-            url: "/opportunities",
-            icon: SparklesIcon,
-            requiredRole: "sme-user",
-        },
-    ],
 }

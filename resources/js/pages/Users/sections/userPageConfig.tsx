@@ -1,143 +1,151 @@
 import React from 'react';
 import { Users, Shield, Upload, Download, RefreshCw } from 'lucide-react';
-import { 
-  StatsCardConfig, 
-  PageActionConfig, 
+import {
+  StatsCardConfig,
+  PageActionConfig,
   SimpleFilterConfig,
-  handleResourceAction 
+  handleResourceAction
 } from '@/lib/crud-page-utils';
 import { CrudAction } from '@/types/crud';
+import { TFunction } from 'i18next';
 
 /**
  * Stats card configurations for users
  */
-export const userStatsConfigs: StatsCardConfig[] = [
-  {
-    title: 'Total Users',
-    getValue: (stats) => stats.totalUsers,
-    icon: <Users />,
-  },
-  {
-    title: 'Active Users',
-    getValue: (stats) => stats.activeUsers,
-    icon: <div className="h-4 w-4 bg-green-500 rounded-full" />,
-    getDescription: (stats) => 
-      stats.totalUsers > 0 
-        ? `${Math.round((stats.activeUsers / stats.totalUsers) * 100)}% of total` 
-        : undefined,
-    valueClassName: 'text-green-600',
-  },
-  {
-    title: 'Inactive Users',
-    getValue: (stats) => stats.inactiveUsers,
-    icon: <div className="h-4 w-4 bg-gray-500 rounded-full" />,
-    getDescription: (stats) => 
-      stats.totalUsers > 0 
-        ? `${Math.round((stats.inactiveUsers / stats.totalUsers) * 100)}% of total` 
-        : undefined,
-    valueClassName: 'text-gray-600',
-  },
-  {
-    title: 'Super Admins',
-    getValue: (stats) => stats.superAdmins,
-    icon: <Shield className="h-4 w-4" />,
-    iconClassName: 'text-blue-500',
-    getDescription: () => 'Full system access',
-    valueClassName: 'text-blue-600',
-  },
-];
+export function getUserStatsConfigs(t: TFunction): StatsCardConfig[] {
+  return [
+    {
+      title: t('stats.totalUsers'),
+      getValue: (stats) => stats.totalUsers,
+      icon: <Users />,
+    },
+    {
+      title: t('stats.activeUsers'),
+      getValue: (stats) => stats.activeUsers,
+      icon: <div className="h-4 w-4 bg-green-500 rounded-full" />,
+      getDescription: (stats) =>
+        stats.totalUsers > 0
+          ? `${Math.round((stats.activeUsers / stats.totalUsers) * 100)}% of total`
+          : undefined,
+      valueClassName: 'text-green-600',
+    },
+    {
+      title: t('stats.inactiveUsers'),
+      getValue: (stats) => stats.inactiveUsers,
+      icon: <div className="h-4 w-4 bg-gray-500 rounded-full" />,
+      getDescription: (stats) =>
+        stats.totalUsers > 0
+          ? `${Math.round((stats.inactiveUsers / stats.totalUsers) * 100)}% of total`
+          : undefined,
+      valueClassName: 'text-gray-600',
+    },
+    {
+      title: t('stats.superAdmins'),
+      getValue: (stats) => stats.superAdmins,
+      icon: <Shield className="h-4 w-4" />,
+      iconClassName: 'text-blue-500',
+      getDescription: () => t('stats.fullSystemAccess'),
+      valueClassName: 'text-blue-600',
+    },
+  ];
+}
 
 /**
  * Simple filter configurations for users
  */
-export const userSimpleFilters = (stats: any): SimpleFilterConfig[] => [
-  {
-    key: 'active',
-    label: 'Active',
-    value: 'active',
-    badge: stats?.activeUsers || 0,
-    filterParams: { is_active: 'true' }
-  },
-  {
-    key: 'inactive',
-    label: 'Inactive',
-    value: 'inactive',
-    badge: stats?.inactiveUsers || 0,
-    filterParams: { is_active: 'false' }
-  },
-  {
-    key: 'super_admins',
-    label: 'Super Admins',
-    value: 'super_admin',
-    badge: stats?.superAdmins || 0,
-    filterParams: { level_min: '90' }
-  },
-];
+export function getUserSimpleFilters(t: TFunction, stats: any): SimpleFilterConfig[] {
+  return [
+    {
+      key: 'active',
+      label: t('filters.active'),
+      value: 'active',
+      badge: stats?.activeUsers || 0,
+      filterParams: { is_active: 'true' }
+    },
+    {
+      key: 'inactive',
+      label: t('filters.inactive'),
+      value: 'inactive',
+      badge: stats?.inactiveUsers || 0,
+      filterParams: { is_active: 'false' }
+    },
+    {
+      key: 'super_admins',
+      label: t('filters.superAdmins'),
+      value: 'super_admin',
+      badge: stats?.superAdmins || 0,
+      filterParams: { level_min: '90' }
+    },
+  ];
+}
 
 /**
  * Page action configurations for users
  */
-export const getUserPageActions = (
+export function getUserPageActions(
+  t: TFunction,
   permissions: any,
   handlers: {
     onImport: () => void;
     onExport: () => void;
     onRefresh: () => void;
   }
-): PageActionConfig[] => [
-  {
-    key: 'import',
-    label: 'Import Users',
-    icon: <Upload className="h-4 w-4" />,
-    handler: handlers.onImport,
-    permission: permissions.canManage,
-  },
-  {
-    key: 'export',
-    label: 'Export Users',
-    icon: <Download className="h-4 w-4" />,
-    handler: handlers.onExport,
-    permission: permissions.canManage,
-  },
-  {
-    key: 'refresh',
-    label: 'Refresh',
-    icon: <RefreshCw className="h-4 w-4" />,
-    handler: handlers.onRefresh,
-    permission: permissions.canManage,
-  },
-];
+): PageActionConfig[] {
+  return [
+    {
+      key: 'import',
+      label: t('actions.importUsers'),
+      icon: <Upload className="h-4 w-4" />,
+      handler: handlers.onImport,
+      permission: permissions.canManage,
+    },
+    {
+      key: 'export',
+      label: t('actions.exportUsers'),
+      icon: <Download className="h-4 w-4" />,
+      handler: handlers.onExport,
+      permission: permissions.canManage,
+    },
+    {
+      key: 'refresh',
+      label: 'Refresh',
+      icon: <RefreshCw className="h-4 w-4" />,
+      handler: handlers.onRefresh,
+      permission: permissions.canManage,
+    },
+  ];
+}
 
 
 /*
  * User action handlers using the generic resource handler
  */
 export const userActionHandlers = {
-  activate: (id: number) => 
+  activate: (t: TFunction) => (id: number) =>
     handleResourceAction('users', id, 'activate', {
-      successMessage: 'User activated successfully',
+      successMessage: t('toast.activated'),
     }),
-    
-  deactivate: (id: number) => 
+
+  deactivate: (t: TFunction) => (id: number) =>
     handleResourceAction('users', id, 'deactivate', {
-      successMessage: 'User deactivated successfully',
+      successMessage: t('toast.deactivated'),
     }),
-    
-  resetPassword: (id: number) => 
+
+  resetPassword: (t: TFunction) => (id: number) =>
     handleResourceAction('users', id, 'reset-password', {
-      confirmMessage: 'Are you sure you want to reset this user\'s password?',
-      successMessage: 'Password reset email sent successfully',
+      confirmMessage: t('confirm.resetPassword'),
+      successMessage: t('toast.passwordResetSent'),
     }),
-    
-  impersonate: (id: number) => 
+
+  impersonate: (t: TFunction) => (id: number) =>
     handleResourceAction('users', id, 'impersonate', {
-      confirmMessage: 'Are you sure you want to impersonate this user?',
+      confirmMessage: t('confirm.impersonate'),
     }).then(() => {
       window.location.href = '/admin/dashboard';
     }),
-    
-  sendWelcomeEmail: (id: number) => 
+
+  sendWelcomeEmail: (t: TFunction) => (id: number) =>
     handleResourceAction('users', id, 'send-welcome', {
-      successMessage: 'Welcome email sent successfully',
+      successMessage: t('toast.welcomeEmailSent'),
     }),
 };

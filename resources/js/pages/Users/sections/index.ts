@@ -1,16 +1,16 @@
 export { UserDetailView } from './UserDetailView';
 export { UserCreateForm } from './UserCreateForm';
 export { UserEditForm } from './UserEditForm';
-export { 
-  userColumns, 
-  userColumnsMobile, 
-  userFilters, 
-  userQuickFilters,
-  createUserAdditionalActions 
+export {
+  getUserColumns,
+  getUserColumnsMobile,
+  getUserFilters,
+  getUserQuickFilters,
+  createUserAdditionalActions
 } from './UserColumns';
 export {
-  userStatsConfigs,
-  userSimpleFilters,
+  getUserStatsConfigs,
+  getUserSimpleFilters,
   getUserPageActions,
   userActionHandlers
 } from './userPageConfig';

@@ -1,0 +1,7 @@
+{
+  "title": "Dashboard",
+  "welcomeBack": "Welcome back, {{name}}!",
+  "systemOverview": "Here is an overview of your system.",
+  "simpleOverview": "System overview.",
+  "placeholder": "Dashboard content will be configured here."
+}

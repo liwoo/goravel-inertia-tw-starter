@@ -31,6 +31,7 @@ import {useFilterMetadata} from '@/hooks/useFilterMetadata';
 import {usePermissions} from '@/contexts/PermissionsContext';
 import {CompoundFilter, FilterCondition} from '@/types/filters';
 import {toast} from 'sonner';
+import {useTranslation} from 'react-i18next';
 
 export function CrudPage<T extends { id: number }>({
                                                        data,
@@ -63,12 +64,14 @@ export function CrudPage<T extends { id: number }>({
                                                        // Read-only mode
                                                        readOnly = false,
                                                    }: CrudPageProps<T>) {
+    const {t} = useTranslation(['common', 'crud']);
+
     // Guard against undefined data
     if (!data || !data.data) {
         console.error('CrudPage: data prop is undefined or missing data.data', {data, resourceName});
         return (
             <div className="flex items-center justify-center h-64">
-                <p className="text-muted-foreground">No data available</p>
+                <p className="text-muted-foreground">{t('common:table.noData')}</p>
             </div>
         );
     }
@@ -645,7 +648,7 @@ export function CrudPage<T extends { id: number }>({
     }, []);
 
     const handleDelete = React.useCallback(async (item: T) => {
-        const confirmMessage = `Are you sure you want to delete this ${singularDisplayName}?`;
+        const confirmMessage = t('common:confirm.deleteItem', {resource: singularDisplayName});
         if (confirm(confirmMessage)) {
             try {
                 // Get CSRF token from meta tag
@@ -663,7 +666,7 @@ export function CrudPage<T extends { id: number }>({
                 });
 
                 if (response.ok) {
-                    toast.success(`${singularDisplayName} deleted successfully`);
+                    toast.success(t('common:toast.deleteSuccess', {resource: singularDisplayName}));
                     // Close drawer first if it's open
                     if (drawerState.isOpen) {
                         closeDrawer();
@@ -680,11 +683,11 @@ export function CrudPage<T extends { id: number }>({
                 } else {
                     const errorData = await response.json().catch(() => ({}));
                     console.error('Delete error:', errorData);
-                    toast.error(`Failed to delete ${singularDisplayName}: ${errorData.message || 'Unknown error'}`);
+                    toast.error(t('common:toast.deleteFailed', {resource: singularDisplayName, error: errorData.message || t('common:status.unknownError')}));
                 }
             } catch (error) {
                 console.error('Delete error:', error);
-                toast.error(`Failed to delete ${singularDisplayName}: Network error`);
+                toast.error(t('common:toast.deleteFailed', {resource: singularDisplayName, error: 'Network error'}));
             }
         }
     }, [resourceName, selectedIds, clearSelection]);
@@ -692,11 +695,11 @@ export function CrudPage<T extends { id: number }>({
     const handleBulkDelete = React.useCallback(() => {
         if (selectedIds.length === 0) return;
 
-        const confirmMessage = `Are you sure you want to delete ${selectedIds.length} item(s)?`;
+        const confirmMessage = t('common:confirm.bulkDelete', {count: selectedIds.length});
         if (confirm(confirmMessage)) {
             try {
                 onBulkAction?.('delete', selectedIds);
-                toast.success(`${selectedIds.length} item(s) deleted successfully`);
+                toast.success(t('common:toast.bulkDeleteSuccess', {count: selectedIds.length}));
                 clearSelection();
             } catch (error) {
                 handleError(error, 'Bulk delete');
@@ -805,7 +808,7 @@ export function CrudPage<T extends { id: number }>({
         if (canView && DetailView) {
             defaultActions.push({
                 key: 'view',
-                label: 'View',
+                label: t('common:actions.view'),
                 icon: <Eye className="w-4 h-4"/>,
                 onClick: handleView,
             });
@@ -814,7 +817,7 @@ export function CrudPage<T extends { id: number }>({
         if (canEdit && EditForm) {
             defaultActions.push({
                 key: 'edit',
-                label: 'Edit',
+                label: t('common:actions.edit'),
                 icon: <Edit className="w-4 h-4"/>,
                 onClick: handleEdit,
             });
@@ -823,12 +826,12 @@ export function CrudPage<T extends { id: number }>({
         if (canDelete) {
             defaultActions.push({
                 key: 'delete',
-                label: 'Delete',
+                label: t('common:actions.delete'),
                 icon: <Trash2 className="w-4 h-4"/>,
                 onClick: handleDelete,
                 className: 'text-destructive focus:text-destructive',
                 confirm: true,
-                confirmMessage: `Are you sure you want to delete this ${singularDisplayName}?`,
+                confirmMessage: t('common:confirm.deleteItem', {resource: singularDisplayName}),
             });
         }
 
@@ -897,7 +900,7 @@ export function CrudPage<T extends { id: number }>({
                         </h1>
                         {data.total > 0 && (
                             <p className="text-sm text-muted-foreground">
-                                {data.total} total {data.total === 1 ? 'item' : 'items'}
+                                {t('crud:page.totalItems', {count: data.total})}
                             </p>
                         )}
                     </div>
@@ -911,7 +914,7 @@ export function CrudPage<T extends { id: number }>({
                             disabled={isRefreshing}
                         >
                             <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")}/>
-                            <span className="hidden lg:inline ml-2 whitespace-nowrap">Refresh</span>
+                            <span className="hidden lg:inline ml-2 whitespace-nowrap">{t('common:actions.refresh')}</span>
                         </Button>
 
                         {/* Filters - show if we have custom filters OR filter metadata with filters defined */}
@@ -923,7 +926,7 @@ export function CrudPage<T extends { id: number }>({
                                 className="relative"
                             >
                                 <Filter className="h-4 w-4"/>
-                                <span className="hidden lg:inline ml-2 whitespace-nowrap">Filters</span>
+                                <span className="hidden lg:inline ml-2 whitespace-nowrap">{t('common:labels.filters')}</span>
                                 {activeFilterCount > 0 && (
                                     <Badge
                                         variant="secondary"
@@ -941,11 +944,11 @@ export function CrudPage<T extends { id: number }>({
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="sm">
                                         <Settings2 className="h-4 w-4"/>
-                                        <span className="hidden lg:inline ml-2 whitespace-nowrap">Actions</span>
+                                        <span className="hidden lg:inline ml-2 whitespace-nowrap">{t('common:actions.actions')}</span>
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuLabel>{t('common:actions.actions')}</DropdownMenuLabel>
                                     <DropdownMenuSeparator/>
                                     {pageActions.map((action) => (
                                         <DropdownMenuItem
@@ -966,7 +969,7 @@ export function CrudPage<T extends { id: number }>({
                             <Button onClick={handleCreate} className="group">
                                 <Plus className="h-4 w-4"/>
                                 <span className="hidden lg:inline ml-2 whitespace-nowrap">
-                  Add {singularDisplayName}
+                  {t('crud:page.addResource', {name: singularDisplayName})}
                 </span>
                                 <kbd
                                     className="ml-2 pointer-events-none hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100">
@@ -992,7 +995,7 @@ export function CrudPage<T extends { id: number }>({
                             )}
                             <Input
                                 ref={searchInputRef}
-                                placeholder={`Search ${resourceName}...`}
+                                placeholder={t('crud:page.searchResource', {resource: resourceName})}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className={cn("pl-9", searchTerm && "pr-9")}
@@ -1007,7 +1010,7 @@ export function CrudPage<T extends { id: number }>({
                                     className="absolute right-0 top-1/2 -translate-y-1/2 h-full px-3 py-0 hover:bg-transparent"
                                 >
                                     <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                    <span className="sr-only">Clear search</span>
+                                    <span className="sr-only">{t('crud:page.clearSearch')}</span>
                                 </Button>
                             )}
                         </div>
@@ -1034,7 +1037,7 @@ export function CrudPage<T extends { id: number }>({
                         >
                             <TabsList
                                 className="**:data-[slot=badge]:bg-muted-foreground/30 **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 flex min-w-fit">
-                                <TabsTrigger value="all">All</TabsTrigger>
+                                <TabsTrigger value="all">{t('common:labels.all')}</TabsTrigger>
                                 {simpleFilters.slice(0, 5).map((filter) => (
                                     <TabsTrigger key={filter.key} value={filter.value.toString()}>
                                         {filter.icon && <span className="mr-2">{filter.icon}</span>}
@@ -1069,7 +1072,7 @@ export function CrudPage<T extends { id: number }>({
                                     onClick={() => handleSimpleFilterChange(undefined)}
                                     className={cn(!activeSimpleFilter && "bg-accent")}
                                 >
-                                    All
+                                    {t('common:labels.all')}
                                 </DropdownMenuItem>
                                 {simpleFilters.map((filter) => (
                                     <DropdownMenuItem
@@ -1119,7 +1122,7 @@ export function CrudPage<T extends { id: number }>({
                                         <div
                                             className="h-full md:h-auto rounded-none md:rounded-lg border-0 md:border bg-card p-4 min-w-0 overflow-hidden">
                                             <div className="flex items-center justify-between mb-4 min-w-0">
-                                                <h3 className="text-sm font-medium">Filters</h3>
+                                                <h3 className="text-sm font-medium">{t('common:labels.filters')}</h3>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"

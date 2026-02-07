@@ -14,10 +14,10 @@ type CacheService struct{}
 
 // Cache TTL constants
 const (
-	CacheTTLShort  = 5 * time.Minute   // For frequently changing data
-	CacheTTLMedium = 15 * time.Minute  // For moderately stable data
-	CacheTTLLong   = 1 * time.Hour     // For rarely changing data
-	CacheTTLDay    = 24 * time.Hour    // For static data
+	CacheTTLShort  = 5 * time.Minute  // For frequently changing data
+	CacheTTLMedium = 15 * time.Minute // For moderately stable data
+	CacheTTLLong   = 1 * time.Hour    // For rarely changing data
+	CacheTTLDay    = 24 * time.Hour   // For static data
 )
 
 // Cache key prefixes for namespacing

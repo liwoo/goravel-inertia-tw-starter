@@ -3,6 +3,7 @@ import { ArrowLeft, Edit, Save, Command, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DrawerProps } from '@/types/crud';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import {
   Sheet,
   SheetContent,
@@ -47,6 +48,8 @@ export function CrudDrawer({
   displayName,
   fullscreen = false
 }: CrudDrawerProps) {
+  const { t } = useTranslation(['common', 'crud']);
+
   // Keyboard shortcuts
   useEffect(() => {
     if (!isOpen) return;
@@ -85,9 +88,9 @@ export function CrudDrawer({
 
   // Build title based on type
   const displayTitle = type && formattedName ?
-    (type === 'create' ? `Create New ${formattedName}` :
-     type === 'edit' ? `Edit ${formattedName}` :
-     type === 'view' ? `${formattedName} Details` : title) : title;
+    (type === 'create' ? t('crud:drawer.createNew', {name: formattedName}) :
+     type === 'edit' ? t('crud:drawer.edit', {name: formattedName}) :
+     type === 'view' ? t('crud:drawer.details', {name: formattedName}) : title) : title;
 
   // Fullscreen mode uses Dialog
   if (fullscreen) {
@@ -126,7 +129,7 @@ export function CrudDrawer({
                   className="bg-primary hover:bg-primary/90 text-primary-foreground group"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? 'Saving...' : 'Save'}
+                  {isSaving ? t('common:actions.saving') : t('common:actions.save')}
                   {!isSaving && (
                     <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-primary-foreground/20 px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-primary-foreground/30">
                       <Command className="h-3 w-3" />S
@@ -185,7 +188,7 @@ export function CrudDrawer({
                 className="group"
               >
                 <Edit className="h-4 w-4 mr-2" />
-                Edit
+                {t('common:actions.edit')}
                 <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-background">
                   <Command className="h-3 w-3" />E
                 </kbd>
@@ -201,7 +204,7 @@ export function CrudDrawer({
                 className="bg-primary hover:bg-primary/90 text-primary-foreground group"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaving ? t('common:actions.saving') : t('common:actions.save')}
                 {!isSaving && (
                   <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-primary-foreground/20 px-1.5 font-mono text-[10px] font-medium opacity-100 group-hover:bg-primary-foreground/30">
                     <Command className="h-3 w-3" />S

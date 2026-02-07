@@ -10,21 +10,23 @@ import { User as UserIcon, Mail, Shield, Lock, UserCheck, CalendarDays } from 'l
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 
 interface UserEditFormProps extends CrudEditFormProps<User> {
   roles?: Role[];
   setIsSaving?: (saving: boolean) => void;
 }
 
-export const UserEditForm = forwardRef<any, UserEditFormProps>(({ 
+export const UserEditForm = forwardRef<any, UserEditFormProps>(({
   item: user,
   onSuccess,
   onError,
-  onCancel, 
+  onCancel,
   isLoading = false,
   roles = [],
   setIsSaving
 }, ref) => {
+  const { t } = useTranslation('users');
   const [formData, setFormData] = useState<UserFormData>({
     name: user.name,
     email: user.email,
@@ -37,27 +39,27 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async () => {
-    
+
     // Basic validation
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('validation.nameRequired');
     }
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('validation.emailRequired');
     }
     if (formData.password && formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = t('validation.passwordMinLength');
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    
+
     setErrors({});
     setIsSaving?.(true);
-    
+
     try {
       const response = await fetch(`/api/users/${user.id}`, {
         method: 'PUT',
@@ -72,7 +74,7 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
       });
 
       if (response.ok) {
-        onSuccess('User updated successfully');
+        onSuccess(t('toast.updated'));
       } else {
         const errorData = await response.json().catch(() => ({}));
         onError?.(errorData);
@@ -104,7 +106,7 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
           <p className="text-sm text-muted-foreground">{user.email}</p>
           {user.email_verified && (
             <Badge variant="secondary" className="mt-1">
-              Email Verified
+              {t('form.emailVerified')}
             </Badge>
           )}
         </div>
@@ -113,19 +115,19 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
       {/* User Information */}
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">User Information</h3>
+          <h3 className="text-lg font-semibold mb-4 text-foreground">{t('form.userInfo')}</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-muted">
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">{t('form.fullName')}</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter full name"
+                  placeholder={t('form.enterFullName')}
                   className={errors.name ? 'border-destructive' : ''}
                 />
                 {errors.name && (
@@ -139,13 +141,13 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
                 <Mail className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">{t('form.emailAddress')}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="user@example.com"
+                  placeholder={t('form.emailPlaceholder')}
                   className={errors.email ? 'border-destructive' : ''}
                 />
                 {errors.email && (
@@ -159,19 +161,19 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
                 <Lock className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="password">New Password</Label>
+                <Label htmlFor="password">{t('form.newPassword')}</Label>
                 <Input
                   id="password"
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Leave blank to keep current password"
+                  placeholder={t('form.leaveBlankPassword')}
                   className={errors.password ? 'border-destructive' : ''}
                 />
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password}</p>
                 )}
-                <p className="text-xs text-muted-foreground">Minimum 8 characters if changing</p>
+                <p className="text-xs text-muted-foreground">{t('form.minCharsHint')}</p>
               </div>
             </div>
 
@@ -181,7 +183,7 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <p className="text-sm text-muted-foreground">Last Login</p>
+                  <p className="text-sm text-muted-foreground">{t('columns.lastLogin')}</p>
                   <p className="font-medium text-foreground">
                     {new Date(user.last_login_at).toLocaleDateString('en-US', {
                       month: 'long',
@@ -201,20 +203,20 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
 
         {/* Account Settings */}
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">Account Settings</h3>
+          <h3 className="text-lg font-semibold mb-4 text-foreground">{t('form.accountSettings')}</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-muted">
                 <Shield className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-2">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">{t('form.role')}</Label>
                 <Select
                   value={formData.role_id?.toString()}
                   onValueChange={(value) => setFormData({ ...formData, role_id: value ? parseInt(value) : undefined })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue placeholder={t('form.selectRole')} />
                   </SelectTrigger>
                   <SelectContent>
                     {roles.map((role) => (
@@ -233,7 +235,7 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
               </div>
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="is_active">Account Status</Label>
+                  <Label htmlFor="is_active">{t('form.accountStatus')}</Label>
                   <Switch
                     id="is_active"
                     checked={formData.is_active}
@@ -241,7 +243,7 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {formData.is_active ? 'User can login and access the system' : 'User cannot login'}
+                  {formData.is_active ? t('form.canLogin') : t('form.cannotLogin')}
                 </p>
               </div>
             </div>
@@ -252,7 +254,7 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
               </div>
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="is_super_admin">Super Administrator</Label>
+                  <Label htmlFor="is_super_admin">{t('form.superAdministrator')}</Label>
                   <Switch
                     id="is_super_admin"
                     checked={formData.is_super_admin}
@@ -260,7 +262,7 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {formData.is_super_admin ? 'Has full system access' : 'Limited to role permissions'}
+                  {formData.is_super_admin ? t('form.hasFullAccess') : t('form.limitedPermissions')}
                 </p>
               </div>
             </div>
@@ -270,7 +272,7 @@ export const UserEditForm = forwardRef<any, UserEditFormProps>(({
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-1">
-                <p className="text-sm text-muted-foreground">Member Since</p>
+                <p className="text-sm text-muted-foreground">{t('detail.memberSince')}</p>
                 <p className="font-medium text-foreground">
                   {new Date(user.created_at).toLocaleDateString('en-US', {
                     month: 'long',

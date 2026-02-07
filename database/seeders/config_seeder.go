@@ -64,7 +64,7 @@ func (s *ConfigSeeder) Run() error {
 		{Name: "Primary Cooperative", Code: strPtr("BC_COOP1"), ConfigType: "Business Categories"},
 		{Name: "Secondary Cooperative", Code: strPtr("BC_COOP2"), ConfigType: "Business Categories"},
 		{Name: "Sole Proprietorship", Code: strPtr("BC_SOLE"), ConfigType: "Business Categories"},
-		{Name: "Group MSME", Code: strPtr("BC_GROUP"), ConfigType: "Business Categories"},
+		{Name: "Group Enterprise", Code: strPtr("BC_GROUP"), ConfigType: "Business Categories"},
 		{Name: "Private Company", Code: strPtr("BC_PRIV"), ConfigType: "Business Categories"},
 		{Name: "Association", Code: strPtr("BC_ASSOC"), ConfigType: "Business Categories"},
 	}
@@ -73,14 +73,14 @@ func (s *ConfigSeeder) Run() error {
 	industries := []models.Config{
 		{Name: "Microfinance", Code: strPtr("IND_MFI"), ConfigType: "Industries"},
 		{Name: "Business Counselling and Training", Code: strPtr("IND_BCT"), ConfigType: "Industries"},
-		{Name: "MSMEs Consultants", Code: strPtr("IND_CONS"), ConfigType: "Industries"},
-		{Name: "Banks with MSME Products", Code: strPtr("IND_BANK"), ConfigType: "Industries"},
-		{Name: "MSME Insurance Facilities", Code: strPtr("IND_INS"), ConfigType: "Industries"},
+		{Name: "Business Consultants", Code: strPtr("IND_CONS"), ConfigType: "Industries"},
+		{Name: "Banks with SME Products", Code: strPtr("IND_BANK"), ConfigType: "Industries"},
+		{Name: "Insurance Facilities", Code: strPtr("IND_INS"), ConfigType: "Industries"},
 		{Name: "Market Linkages", Code: strPtr("IND_MKT"), ConfigType: "Industries"},
-		{Name: "Institutions that deal with MSMEs", Code: strPtr("IND_INST"), ConfigType: "Industries"},
+		{Name: "Industry Institutions", Code: strPtr("IND_INST"), ConfigType: "Industries"},
 	}
 
-	// Sectors configurations (Sensible sectors in Malawi)
+	// Sectors configurations
 	sectors := []models.Config{
 		{Name: "Agriculture", Code: strPtr("SEC_AGR"), ConfigType: "Sectors"},
 		{Name: "Manufacturing", Code: strPtr("SEC_MFG"), ConfigType: "Sectors"},
@@ -113,65 +113,6 @@ func (s *ConfigSeeder) Run() error {
 		{Name: "JICA", Code: strPtr("DP_JICA"), ConfigType: "Development Partners"},
 	}
 
-	// Product Types configurations (for BDSPs)
-	productTypes := []models.Config{
-		{Name: "Business Training", Code: strPtr("PT_TRAIN"), ConfigType: "Product Types"},
-		{Name: "Financial Literacy", Code: strPtr("PT_FINLIT"), ConfigType: "Product Types"},
-		{Name: "Mentorship Programs", Code: strPtr("PT_MENTOR"), ConfigType: "Product Types"},
-		{Name: "Market Linkages", Code: strPtr("PT_MKTLINK"), ConfigType: "Product Types"},
-		{Name: "Technology Solutions", Code: strPtr("PT_TECH"), ConfigType: "Product Types"},
-		{Name: "Access to Finance", Code: strPtr("PT_FINANCE"), ConfigType: "Product Types"},
-		{Name: "Legal and Compliance", Code: strPtr("PT_LEGAL"), ConfigType: "Product Types"},
-		{Name: "Export Facilitation", Code: strPtr("PT_EXPORT"), ConfigType: "Product Types"},
-		{Name: "Quality Certification", Code: strPtr("PT_CERT"), ConfigType: "Product Types"},
-		{Name: "Incubation Services", Code: strPtr("PT_INCUB"), ConfigType: "Product Types"},
-	}
-
-	// Procurement Type configurations
-	procurementTypes := []models.Config{
-		{Name: "Goods", Code: strPtr("PROC_GOODS"), ConfigType: "Procurement Type"},
-		{Name: "Works", Code: strPtr("PROC_WORKS"), ConfigType: "Procurement Type"},
-		{Name: "Services", Code: strPtr("PROC_SERVICES"), ConfigType: "Procurement Type"},
-		{Name: "Consultancy", Code: strPtr("PROC_CONSULT"), ConfigType: "Procurement Type"},
-	}
-
-	// Procurement Classification configurations
-	procurementClassifications := []models.Config{
-		{Name: "Construction", Code: strPtr("CLASS_CONST"), ConfigType: "Procurement Classification"},
-		{Name: "IT Equipment", Code: strPtr("CLASS_IT"), ConfigType: "Procurement Classification"},
-		{Name: "Office Supplies", Code: strPtr("CLASS_OFFICE"), ConfigType: "Procurement Classification"},
-		{Name: "Vehicles", Code: strPtr("CLASS_VEHICLE"), ConfigType: "Procurement Classification"},
-		{Name: "Medical Supplies", Code: strPtr("CLASS_MEDICAL"), ConfigType: "Procurement Classification"},
-		{Name: "Agricultural Inputs", Code: strPtr("CLASS_AGRI"), ConfigType: "Procurement Classification"},
-		{Name: "Professional Services", Code: strPtr("CLASS_PROF"), ConfigType: "Procurement Classification"},
-		{Name: "Catering Services", Code: strPtr("CLASS_CATER"), ConfigType: "Procurement Classification"},
-		{Name: "Security Services", Code: strPtr("CLASS_SECURITY"), ConfigType: "Procurement Classification"},
-		{Name: "Cleaning Services", Code: strPtr("CLASS_CLEAN"), ConfigType: "Procurement Classification"},
-	}
-
-	// Procured By (Procurers) configurations
-	procuredBy := []models.Config{
-		{Name: "Ministry of Finance", Code: strPtr("PROCURER_MOF"), ConfigType: "Procured By"},
-		{Name: "Ministry of Health", Code: strPtr("PROCURER_MOH"), ConfigType: "Procured By"},
-		{Name: "Ministry of Education", Code: strPtr("PROCURER_MOE"), ConfigType: "Procured By"},
-		{Name: "Ministry of Agriculture", Code: strPtr("PROCURER_MOA"), ConfigType: "Procured By"},
-		{Name: "Ministry of Trade", Code: strPtr("PROCURER_MOT"), ConfigType: "Procured By"},
-		{Name: "Local Government", Code: strPtr("PROCURER_LG"), ConfigType: "Procured By"},
-		{Name: "Parastatals", Code: strPtr("PROCURER_PARA"), ConfigType: "Procured By"},
-		{Name: "Development Partners", Code: strPtr("PROCURER_DP"), ConfigType: "Procured By"},
-	}
-
-	// Organization configurations (for Procurement)
-	organizations := []models.Config{
-		{Name: "Public Procurement and Disposal of Assets Authority (PPDA)", Code: strPtr("ORG_PPDA"), ConfigType: "Organization"},
-		{Name: "Malawi Revenue Authority (MRA)", Code: strPtr("ORG_MRA"), ConfigType: "Organization"},
-		{Name: "Reserve Bank of Malawi (RBM)", Code: strPtr("ORG_RBM"), ConfigType: "Organization"},
-		{Name: "Malawi Bureau of Standards (MBS)", Code: strPtr("ORG_MBS"), ConfigType: "Organization"},
-		{Name: "Small and Medium Enterprise Development Institute (SMEDI)", Code: strPtr("ORG_SMEDI"), ConfigType: "Organization"},
-		{Name: "Malawi Investment and Trade Centre (MITC)", Code: strPtr("ORG_MITC"), ConfigType: "Organization"},
-		{Name: "National Construction Industry Council (NCIC)", Code: strPtr("ORG_NCIC"), ConfigType: "Organization"},
-	}
-
 	// Combine all configs
 	allConfigs := []models.Config{}
 	allConfigs = append(allConfigs, financings...)
@@ -181,11 +122,6 @@ func (s *ConfigSeeder) Run() error {
 	allConfigs = append(allConfigs, sectors...)
 	allConfigs = append(allConfigs, registrationStatuses...)
 	allConfigs = append(allConfigs, developmentPartners...)
-	allConfigs = append(allConfigs, productTypes...)
-	allConfigs = append(allConfigs, procurementTypes...)
-	allConfigs = append(allConfigs, procurementClassifications...)
-	allConfigs = append(allConfigs, procuredBy...)
-	allConfigs = append(allConfigs, organizations...)
 
 	// Insert configs using upsert logic (skip existing)
 	inserted := 0

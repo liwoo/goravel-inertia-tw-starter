@@ -1,0 +1,26 @@
+{
+  "title": "Export Data",
+  "format": {
+    "label": "Export Format",
+    "csv": "CSV (Comma Separated)",
+    "json": "JSON",
+    "excel": "Excel (.xlsx)",
+    "pdf": "PDF Document"
+  },
+  "fields": {
+    "label": "Fields to Include",
+    "selected": "{{count}} of {{total}} fields selected"
+  },
+  "stats": {
+    "includeStats": "Include statistics summary"
+  },
+  "description": {
+    "limited": "Export up to {{max}} of {{total}} records to a file.",
+    "full_one": "Export {{count}} record to a file.",
+    "full_other": "Export {{count}} records to a file."
+  },
+  "rowLimit": "Limited to {{max}} rows. Use filters to narrow down your data for a complete export.",
+  "exporting": "Exporting...",
+  "exportButton_one": "Export {{count}} Record",
+  "exportButton_other": "Export {{count}} Records"
+}

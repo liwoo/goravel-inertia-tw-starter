@@ -2,13 +2,11 @@ import React from 'react';
 import { Application, ApplicationType } from '@/types/application';
 import { CrudColumn, CrudFilter } from '@/types/crud';
 import { Badge } from '@/components/ui/badge';
-import { FileText, User, Mail, Phone, Tag, UserPlus, FileEdit } from 'lucide-react';
+import { FileText, User, Mail, Phone, Tag, UserPlus } from 'lucide-react';
 
 // Helper to get type display label
 const getTypeLabel = (type?: ApplicationType): string => {
   switch (type) {
-    case 'amend_formalisation':
-      return 'Formalisation Amendment';
     case 'signup':
     default:
       return 'Sign Up';
@@ -18,8 +16,6 @@ const getTypeLabel = (type?: ApplicationType): string => {
 // Helper to get type badge style
 const getTypeBadgeStyle = (type?: ApplicationType): string => {
   switch (type) {
-    case 'amend_formalisation':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
     case 'signup':
     default:
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
@@ -37,7 +33,7 @@ export const applicationColumns: CrudColumn<Application>[] = [
     className: 'min-w-[150px]',
     render: (application) => {
       const type = application.type || 'signup';
-      const Icon = type === 'amend_formalisation' ? FileEdit : UserPlus;
+      const Icon = UserPlus;
       return (
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-muted-foreground" />
@@ -50,7 +46,7 @@ export const applicationColumns: CrudColumn<Application>[] = [
   },
   {
     key: 'sme',
-    label: 'MSME',
+    label: 'Organization',
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
@@ -114,7 +110,7 @@ export const applicationColumns: CrudColumn<Application>[] = [
   },
   {
     key: 'sme_registration_number',
-    label: 'MSME Registration Number',
+    label: 'Registration Number',
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
@@ -125,7 +121,7 @@ export const applicationColumns: CrudColumn<Application>[] = [
   },
   {
     key: 'sme_tax_identification_number',
-    label: 'MSME Tax Identification Number',
+    label: 'Tax Identification Number',
     sortable: true,
     className: 'min-w-[150px]',
     render: (application) => (
@@ -201,7 +197,6 @@ export const applicationFilters: CrudFilter[] = [
     type: 'select',
     options: [
       { value: 'signup', label: 'Sign Up' },
-      { value: 'amend_formalisation', label: 'Formalisation Amendment' },
     ],
     placeholder: 'All types',
   },
@@ -218,9 +213,9 @@ export const applicationFilters: CrudFilter[] = [
   },
   {
     key: 'sme',
-    label: 'MSME',
+    label: 'Organization',
     type: 'text',
-    placeholder: 'Enter MSME',
+    placeholder: 'Enter organization name',
   },
   {
     key: 'registrant_name',
@@ -242,14 +237,14 @@ export const applicationFilters: CrudFilter[] = [
   },
   {
     key: 'sme_registration_number',
-    label: 'MSME Registration Number',
+    label: 'Registration Number',
     type: 'text',
-    placeholder: 'Enter MSME registration number',
+    placeholder: 'Enter registration number',
   },
   {
     key: 'sme_tax_identification_number',
-    label: 'MSME Tax Identification Number',
+    label: 'Tax Identification Number',
     type: 'text',
-    placeholder: 'Enter MSME tax identification number',
+    placeholder: 'Enter tax identification number',
   },
 ];

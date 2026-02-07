@@ -11,8 +11,8 @@ import (
 
 const (
 	// Context keys for request-scoped caching
-	ContextKeyAuthUser         = "auth_user_cached"
-	ContextKeyUserPermissions  = "auth_user_permissions_cached"
+	ContextKeyAuthUser          = "auth_user_cached"
+	ContextKeyUserPermissions   = "auth_user_permissions_cached"
 	ContextKeyPermissionsLoaded = "auth_permissions_loaded"
 )
 

@@ -66,7 +66,7 @@ func (s *ConfigControllerCRUDTestSuite) SetupTest() {
 func (s *ConfigControllerCRUDTestSuite) TearDownTest() {
 	// Clean up test data
 	if orm := facades.Orm(); orm != nil {
-		orm.Query().Exec("DELETE FROM sme_config")
+		orm.Query().Exec("DELETE FROM configs")
 		orm.Query().Exec("DELETE FROM users WHERE email = 'configcontrollertest@example.com'")
 		orm.Query().Exec("DELETE FROM user_roles")
 		orm.Query().Exec("DELETE FROM role_permissions")

@@ -2,6 +2,7 @@ import { MailIcon, PlusCircleIcon, Command, type LucideIcon } from "lucide-react
 // @ts-ignore
 import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePermissions } from "@/contexts/PermissionsContext"
 
 import { Button } from "@/components/ui/button"
@@ -31,10 +32,11 @@ export function NavMain({
     url: string
     icon?: LucideIcon
     variant?: "default" | "primary"
-    action?: "openMySmeModal"
+    action?: string
   }[]
 }) {
   const { url } = usePage();
+  const { t } = useTranslation('nav');
   const { canPerformAction } = usePermissions();
 
   // Check if a menu item is active based on current URL
@@ -61,11 +63,7 @@ export function NavMain({
   };
 
   // Check if user can create any entity
-  const canCreateAnything =
-    canPerformAction('smes', 'create') ||
-    canPerformAction('bdsps', 'create') ||
-    canPerformAction('events', 'create') ||
-    canPerformAction('procurement_notices', 'create');
+  const canCreateAnything = false;
 
   // Keyboard shortcuts for navigation items (Cmd/Ctrl + 1-9)
   useEffect(() => {
@@ -89,12 +87,12 @@ export function NavMain({
         {primaryCta != null ? <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
-              tooltip={primaryCta.title}
+              tooltip={t(primaryCta.title)}
               className="min-w-16 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
               onClick={handlePrimaryCtaClick}
             >
               <PlusCircleIcon />
-              <span>{primaryCta.title}</span>
+              <span>{t(primaryCta.title)}</span>
             </SidebarMenuButton>
             <Button
               size="icon"
@@ -121,26 +119,6 @@ export function NavMain({
                 <DropdownMenuContent side="right" align="start" className="w-48">
                   <DropdownMenuLabel>Create New</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {canPerformAction('smes', 'create') && (
-                    <DropdownMenuItem onClick={() => router.visit('/smes/create')}>
-                      MSME
-                    </DropdownMenuItem>
-                  )}
-                  {canPerformAction('bdsps', 'create') && (
-                    <DropdownMenuItem onClick={() => router.visit('/bdsps/create')}>
-                      BDSP
-                    </DropdownMenuItem>
-                  )}
-                  {canPerformAction('events', 'create') && (
-                    <DropdownMenuItem onClick={() => router.visit('/events/create')}>
-                      Event
-                    </DropdownMenuItem>
-                  )}
-                  {canPerformAction('procurement_notices', 'create') && (
-                    <DropdownMenuItem onClick={() => router.visit('/procurements/create')}>
-                      Procurement
-                    </DropdownMenuItem>
-                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button
@@ -161,11 +139,11 @@ export function NavMain({
               <SidebarMenuItem key={item.title}>
                 <Link href={item.url}>
                   <SidebarMenuButton
-                    tooltip={item.title}
+                    tooltip={t(item.title)}
                     isActive={active}
                   >
                     {item.icon && <item.icon />}
-                    <span>{item.title}</span>
+                    <span>{t(item.title)}</span>
                     {index < 9 && (
                       <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-data-[collapsible=icon]:hidden">
                         <Command className="h-3 w-3" />

@@ -10,5 +10,5 @@ type Config struct {
 }
 
 func (r *Config) TableName() string {
-	return "sme_config"
+	return "configs"
 }

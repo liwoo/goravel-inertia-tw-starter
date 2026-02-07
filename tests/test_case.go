@@ -1,4 +1,4 @@
-// Package tests provides test utilities and helpers for the SMEDI database test suite.
+// Package tests provides test utilities and helpers for the admin portal test suite.
 // Tests should be run using the scripts/run_tests.sh script which sets up the test
 // database container and environment variables.
 package tests

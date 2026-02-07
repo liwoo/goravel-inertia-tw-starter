@@ -15,27 +15,20 @@ func (r *M20251216102504AddTypeToApplicationsTable) Signature() string {
 // Up Run the migrations.
 func (r *M20251216102504AddTypeToApplicationsTable) Up() error {
 	return facades.Schema().Table("applications", func(table schema.Blueprint) {
-		// Application type: 'signup' for new SME registration, 'amend_formalisation' for changes to existing SME
-		table.Enum("type", []any{"signup", "amend_formalisation"}).Default("signup")
+		// Application type: 'signup' for new registration
+		table.Enum("type", []any{"signup"}).Default("signup")
 
-		// JSON field to store amendment details (current vs proposed values)
+		// JSON field to store extra details
 		table.Text("data").Nullable()
-
-		// Reference to the SME being amended (only for amend_formalisation type)
-		table.UnsignedBigInteger("sme_id").Nullable()
 
 		// Rejection reason when application is rejected
 		table.Text("rejection_reason").Nullable()
-
-		// Foreign key to smes table
-		table.Foreign("sme_id").References("id").On("smes")
 	})
 }
 
 // Down Reverse the migrations.
 func (r *M20251216102504AddTypeToApplicationsTable) Down() error {
 	return facades.Schema().Table("applications", func(table schema.Blueprint) {
-		table.DropForeign("applications_sme_id_foreign")
-		table.DropColumn("type", "data", "sme_id", "rejection_reason")
+		table.DropColumn("type", "data", "rejection_reason")
 	})
 }

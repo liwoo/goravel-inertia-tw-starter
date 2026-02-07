@@ -110,7 +110,7 @@ export function ApplicationDetailView({
           )}
           <TabsTrigger value="owner" title="Primary Owner">
             <User className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{isAmendment ? 'MSME Info' : 'Primary Owner'}</span>
+            <span className="hidden sm:inline">{isAmendment ? 'Organization Info' : 'Primary Owner'}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -252,7 +252,7 @@ export function ApplicationDetailView({
                     <FileText className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm text-muted-foreground">MSME</p>
+                    <p className="text-sm text-muted-foreground">Organization</p>
                     <p className="font-medium text-foreground">{application.sme}</p>
                   </div>
                 </div>
@@ -285,13 +285,13 @@ export function ApplicationDetailView({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex-1 space-y-1">
-                  <p className="text-sm text-muted-foreground">MSME Registration Number</p>
+                  <p className="text-sm text-muted-foreground">Organization Registration Number</p>
                   <p className="font-medium text-foreground">{application.sme_registration_number}</p>
                 </div>
 
                 <div className="flex items-start gap-3">
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm text-muted-foreground">MSME Tax Identification Number</p>
+                    <p className="text-sm text-muted-foreground">Organization Tax Identification Number</p>
                     <p className="font-medium text-foreground">{application.sme_tax_identification_number}</p>
                   </div>
                 </div>
@@ -320,20 +320,20 @@ export function ApplicationDetailView({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                {isAmendment ? 'MSME Contact Information' : 'Primary Business Owner'}
+                {isAmendment ? 'Organization Contact Information' : 'Primary Business Owner'}
               </CardTitle>
               <CardDescription>
                 {isAmendment
-                  ? 'Contact details for the MSME submitting the amendment'
+                  ? 'Contact details for the Organization submitting the amendment'
                   : 'Details of the primary business owner'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {isAmendment ? (
-                // For amendment applications, show MSME contact info
+                // For amendment applications, show Organization contact info
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <DetailRow label="MSME Name" value={amendmentData?.sme_name || application.sme} />
+                    <DetailRow label="Organization Name" value={amendmentData?.sme_name || application.sme} />
                     <DetailRow label="Contact Email" value={application.email} />
                     <DetailRow label="Contact Phone" value={application.phone} />
                   </div>
@@ -357,7 +357,7 @@ export function ApplicationDetailView({
                     <DetailRow label="Date of Birth" value={formatDate(application.date_of_birth)} />
                     <DetailRow label="Gender" value={application.gender} />
                     <DetailRow label="Education Level" value={application.education_level} />
-                    <DetailRow label="Malawian Status" value={application.malawian_status} />
+                    <DetailRow label="Citizenship Status" value={application.malawian_status} />
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">Special Needs</p>
                       <BooleanBadge value={application.has_special_needs ?? false} />

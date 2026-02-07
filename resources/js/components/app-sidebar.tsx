@@ -1,5 +1,6 @@
 import * as React from "react"
-import { ShieldIcon, Search, Command } from "lucide-react"
+import { Search, Command } from "lucide-react"
+import { useTranslation } from 'react-i18next'
 
 import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
@@ -24,6 +25,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
+    const { t } = useTranslation('nav');
     const { canPerformAction, isSuperAdmin: checkIsSuperAdmin, isAdmin } = usePermissions();
     const [searchOpen, setSearchOpen] = React.useState(false);
     const { openMessages, openNotifications } = useUI();
@@ -61,23 +63,8 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
             return true;
         };
 
-        // Determine which main navigation to use
-        let activeNavMain = navigationConfig.navMain;
-
-        // List of specialized navigation sections to check
-        const specializedNavs = [navigationConfig.navSme];
-
-        for (const navSection of specializedNavs) {
-            if (navSection && navSection.length > 0) {
-                if (navSection[0].requiredRole && hasRequiredRole(navSection[0])) {
-                    activeNavMain = navSection;
-                    break;
-                }
-            }
-        }
-
         // Filter main navigation
-        const filteredNavMain = activeNavMain.filter(checkItemRequirements);
+        const filteredNavMain = navigationConfig.navMain.filter(checkItemRequirements);
 
         // Filter secondary navigation
         const filteredNavSecondary = navigationConfig.navSecondary.filter(checkItemRequirements);
@@ -111,8 +98,10 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                 <SidebarHeader>
                     <div className="flex items-center justify-between px-1 py-2">
                         <a href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full">
-                            <img src="/images/mw-coat.svg" alt="Logo" className="h-8 w-auto shrink-0" />
-                            <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">MSME Database</span>
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                                <Command className="h-4 w-4" />
+                            </div>
+                            <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">{t('sidebar.portalName')}</span>
                         </a>
                     </div>
                 </SidebarHeader>
@@ -125,9 +114,9 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                     <div className="mt-2 px-3 pb-3 group-data-[collapsible=icon]:px-2">
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <SidebarMenuButton tooltip="Search" onClick={() => setSearchOpen(true)}>
+                                <SidebarMenuButton tooltip={t('common:labels.search')} onClick={() => setSearchOpen(true)}>
                                     <Search className="h-4 w-4" />
-                                    <span>Search</span>
+                                    <span>{t('common:labels.search')}</span>
                                     <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 group-data-[collapsible=icon]:hidden">
                                         <Command className="h-3 w-3" />K
                                     </kbd>

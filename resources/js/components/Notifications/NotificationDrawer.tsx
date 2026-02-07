@@ -43,6 +43,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { usePermissions } from "@/contexts/PermissionsContext";
+import { useTranslation } from "react-i18next";
 
 interface Notification {
   id: number;
@@ -76,6 +77,8 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
   // Use controlled state if provided, otherwise use internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
   const setIsOpen = onOpenChange || setInternalIsOpen;
+
+  const { t } = useTranslation('common');
 
   const {
     notifications,
@@ -147,13 +150,13 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
     const diffInMinutes = (now.getTime() - date.getTime()) / (1000 * 60);
 
     if (diffInMinutes < 1) {
-      return "Just now";
+      return t('notifications.justNow');
     } else if (diffInMinutes < 60) {
-      return `${Math.floor(diffInMinutes)}m ago`;
+      return t('notifications.minutesAgo', { count: Math.floor(diffInMinutes) });
     } else if (diffInMinutes < 1440) { // 24 hours
-      return `${Math.floor(diffInMinutes / 60)}h ago`;
+      return t('notifications.hoursAgo', { count: Math.floor(diffInMinutes / 60) });
     } else {
-      return `${Math.floor(diffInMinutes / 1440)}d ago`;
+      return t('notifications.daysAgo', { count: Math.floor(diffInMinutes / 1440) });
     }
   };
 
@@ -186,10 +189,6 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
         case "application":
           // For application notifications, go to admin applications page
           return "/admin/applications";
-        case "event":
-        case "procurement":
-          // Events and procurement opportunities go to opportunities page
-          return "/opportunities";
       }
     }
 
@@ -198,12 +197,9 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
       case "application_approved":
       case "application_rejected":
         return "/admin/applications";
-      case "event":
-      case "procurement":
-        return "/opportunities";
       case "message":
       case "mention":
-        return "/portal";
+        return "/dashboard";
       default:
         return null;
     }
@@ -262,10 +258,10 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
             <div>
               <DrawerTitle className="flex items-center gap-2">
                 <BellRing className="h-5 w-5" />
-                Notifications
+                {t('notifications.title')}
               </DrawerTitle>
               <DrawerDescription>
-                {unreadCount > 0 ? `${unreadCount} unread notifications` : "All caught up!"}
+                {unreadCount > 0 ? t('notifications.unreadCount', { count: unreadCount }) : t('notifications.allCaughtUp')}
               </DrawerDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -277,7 +273,7 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
                   disabled={loading}
                 >
                   <Check className="h-4 w-4 mr-1" />
-                  Mark all read
+                  {t('notifications.markAllRead')}
                 </Button>
               )}
               <DropdownMenu>
@@ -289,11 +285,11 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleMarkAllAsRead}>
                     <Check className="h-4 w-4 mr-2" />
-                    Mark all as read
+                    {t('notifications.markAllAsRead')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleDismissAll}>
                     <Archive className="h-4 w-4 mr-2" />
-                    Dismiss all
+                    {t('notifications.dismissAll')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -315,14 +311,14 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
                 <FileText className="h-5 w-5 text-amber-600" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                    {counts.pending_applications} Pending Application{counts.pending_applications !== 1 ? 's' : ''}
+                    {t('notifications.pendingApplications', { count: counts.pending_applications })}
                   </p>
                   <p className="text-xs text-amber-600 dark:text-amber-400">
-                    Click to review and process
+                    {t('notifications.clickToReview')}
                   </p>
                 </div>
                 <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
-                  Action Required
+                  {t('notifications.actionRequired')}
                 </Badge>
               </div>
             </div>
@@ -331,7 +327,7 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="all" className="text-xs">
-                All
+                {t('notifications.all')}
                 {counts?.total != null && counts.total > 0 && (
                   <Badge variant="secondary" className="ml-1 h-4 min-w-4 text-xs px-1">
                     {counts.total}
@@ -339,7 +335,7 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
                 )}
               </TabsTrigger>
               <TabsTrigger value="unread" className="text-xs">
-                Unread
+                {t('notifications.unread')}
                 {counts?.unread != null && counts.unread > 0 && (
                   <Badge variant="destructive" className="ml-1 h-4 min-w-4 text-xs px-1">
                     {counts.unread}
@@ -347,7 +343,7 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
                 )}
               </TabsTrigger>
               <TabsTrigger value="messages" className="text-xs">
-                Messages
+                {t('notifications.messages')}
                 {counts?.unread_messages != null && counts.unread_messages > 0 && (
                   <Badge variant="secondary" className="ml-1 h-4 min-w-4 text-xs px-1">
                     {counts.unread_messages}
@@ -355,7 +351,7 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
                 )}
               </TabsTrigger>
               <TabsTrigger value="system" className="text-xs">
-                System
+                {t('notifications.system')}
               </TabsTrigger>
             </TabsList>
 
@@ -363,13 +359,13 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
               <ScrollArea className="h-[400px] pr-4">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="text-sm text-muted-foreground">Loading notifications...</div>
+                    <div className="text-sm text-muted-foreground">{t('notifications.loading')}</div>
                   </div>
                 ) : filteredNotifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <Bell className="h-8 w-8 text-muted-foreground mb-2" />
                     <div className="text-sm text-muted-foreground">
-                      {activeTab === "unread" ? "No unread notifications" : "No notifications found"}
+                      {activeTab === "unread" ? t('notifications.noUnread') : t('notifications.noNotifications')}
                     </div>
                   </div>
                 ) : (
@@ -421,12 +417,12 @@ export function NotificationDrawer({ children, isOpen: controlledIsOpen, onOpenC
                                     {!notification.is_read && (
                                       <DropdownMenuItem onClick={() => markAsRead(notification.id)}>
                                         <Check className="h-4 w-4 mr-2" />
-                                        Mark as read
+                                        {t('notifications.markAsRead')}
                                       </DropdownMenuItem>
                                     )}
                                     <DropdownMenuItem onClick={() => dismissNotification(notification.id)}>
                                       <X className="h-4 w-4 mr-2" />
-                                      Dismiss
+                                      {t('notifications.dismiss')}
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>

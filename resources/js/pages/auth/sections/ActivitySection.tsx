@@ -5,14 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Activity,
-  Building2,
-  Calendar,
   FileText,
   User,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from '@/lib/axios';
@@ -25,7 +24,7 @@ interface ActivitySectionProps {
 // Recent activity data structure (matches dashboard RecentActivityDTO)
 interface RecentActivity {
   id: number;
-  entityType: "sme" | "event" | "procurement";
+  entityType: string;
   entityId: number;
   entityName: string;
   action: "created" | "updated";
@@ -37,11 +36,11 @@ interface RecentActivity {
 // Get icon for entity type
 function getEntityIcon(entityType: string) {
   switch (entityType) {
-    case "sme":
-      return Building2;
-    case "event":
-      return Calendar;
-    case "procurement":
+    case "user":
+      return User;
+    case "config":
+      return Settings;
+    case "application":
       return FileText;
     default:
       return Activity;
@@ -51,12 +50,12 @@ function getEntityIcon(entityType: string) {
 // Get label for entity type
 function getEntityLabel(entityType: string): string {
   switch (entityType) {
-    case "sme":
-      return "MSME";
-    case "event":
-      return "Event";
-    case "procurement":
-      return "Procurement";
+    case "user":
+      return "User";
+    case "config":
+      return "Config";
+    case "application":
+      return "Application";
     default:
       return entityType;
   }

@@ -197,16 +197,16 @@ func (s *MessageService) createMessageNotification(senderID uint, recipientID ui
 	priority := "normal"
 
 	_, err := notificationService.CreateNotification(
-		recipientID,           // userID
-		title,                 // title
-		notificationMessage,   // message
-		notificationType,      // type
-		&senderID,             // triggerUserID
-		&relatedType,          // relatedType
-		&message.ID,           // relatedID
-		priority,              // priority
-		nil,                   // expiresAt
-		"",                    // data
+		recipientID,         // userID
+		title,               // title
+		notificationMessage, // message
+		notificationType,    // type
+		&senderID,           // triggerUserID
+		&relatedType,        // relatedType
+		&message.ID,         // relatedID
+		priority,            // priority
+		nil,                 // expiresAt
+		"",                  // data
 	)
 
 	if err != nil {
@@ -362,10 +362,10 @@ func (s *MessageService) GetBroadcastHistory(senderID uint, req contracts.ListRe
 	// Get broadcast messages (type = 'system') sent by this user, grouped by content and approximate time
 	// We'll use a subquery to get distinct broadcasts
 	var broadcasts []struct {
-		Content     string    `gorm:"column:content"`
-		CreatedAt   time.Time `gorm:"column:created_at"`
-		FirstMsgID  uint      `gorm:"column:first_msg_id"`
-		RecipientCount int64  `gorm:"column:recipient_count"`
+		Content        string    `gorm:"column:content"`
+		CreatedAt      time.Time `gorm:"column:created_at"`
+		FirstMsgID     uint      `gorm:"column:first_msg_id"`
+		RecipientCount int64     `gorm:"column:recipient_count"`
 	}
 
 	// Query to get unique broadcasts (grouped by content and minute)

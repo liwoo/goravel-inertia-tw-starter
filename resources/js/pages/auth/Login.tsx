@@ -3,14 +3,16 @@ import { LoginForm } from "@/components/login-form";
 // @ts-ignore
 import { Head, usePage } from "@inertiajs/react";
 import type { SharedData } from "@/types/app";
+import { useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
     const { appVersion } = usePage<SharedData>().props;
+    const { t } = useTranslation('auth');
 
     return (
         <AuthLayout>
             <Head>
-                <title>Login</title>
+                <title>{t('login.submit')}</title>
             </Head>
             <LoginForm />
             <div className="text-center">
@@ -18,7 +20,7 @@ export default function LoginPage() {
                     v{appVersion || '0.0.0'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                    Property of Ministry of Trade and Industry and SMEDI. All rights reserved.
+                    {t('branding.copyright', { year: new Date().getFullYear() })}
                 </p>
             </div>
         </AuthLayout>

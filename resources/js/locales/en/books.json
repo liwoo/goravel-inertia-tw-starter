@@ -1,0 +1,92 @@
+{
+  "page": {
+    "title": "Books",
+    "headTitle": "Books - Library Management",
+    "myBooks": "My Books"
+  },
+  "stats": {
+    "totalBooks": "Total Books",
+    "available": "Available",
+    "borrowed": "Borrowed",
+    "maintenance": "Maintenance",
+    "percentAvailable": "{{percent}}% available",
+    "percentBorrowed": "{{percent}}% borrowed",
+    "avgPrice": "Avg. price ${{price}}"
+  },
+  "status": {
+    "available": "Available",
+    "borrowed": "Borrowed",
+    "maintenance": "Maintenance",
+    "reserved": "Reserved",
+    "unknown": "Unknown"
+  },
+  "columns": {
+    "bookDetails": "Book Details",
+    "status": "Status",
+    "price": "Price",
+    "published": "Published",
+    "tags": "Tags",
+    "added": "Added",
+    "book": "Book",
+    "noTags": "No tags"
+  },
+  "filters": {
+    "status": "Status",
+    "allStatus": "All Status",
+    "author": "Author",
+    "filterByAuthor": "Filter by author name",
+    "minPrice": "Min Price",
+    "maxPrice": "Max Price",
+    "publishedAfter": "Published After",
+    "publishedBefore": "Published Before",
+    "allBooks": "All Books",
+    "recentlyAdded": "Recently Added"
+  },
+  "actions": {
+    "importBooks": "Import Books",
+    "exportBooks": "Export Books",
+    "viewReports": "View Reports"
+  },
+  "form": {
+    "bookInfo": "Book Information",
+    "publicationDetails": "Publication Details",
+    "metadata": "Metadata",
+    "title": "Title *",
+    "author": "Author *",
+    "isbn": "ISBN *",
+    "description": "Description",
+    "price": "Price",
+    "publishedDate": "Published Date",
+    "status": "Status",
+    "tags": "Tags",
+    "enterTitle": "Enter book title",
+    "enterAuthor": "Enter author name",
+    "enterIsbn": "Enter ISBN number",
+    "enterDescription": "Enter book description",
+    "pricePlaceholder": "0.00",
+    "addTags": "Add tags (press Enter)",
+    "addTagsShort": "Add tags",
+    "selectStatus": "Select status",
+    "bookId": "Book ID",
+    "created": "Created",
+    "lastUpdated": "Last Updated",
+    "inStock": "In Stock",
+    "yes": "Yes",
+    "no": "No",
+    "notSpecified": "Not specified"
+  },
+  "validation": {
+    "titleRequired": "Title is required",
+    "authorRequired": "Author is required",
+    "isbnRequired": "ISBN is required",
+    "pricePositive": "Price must be a positive number"
+  },
+  "toast": {
+    "created": "Book created successfully",
+    "updated": "Book updated successfully"
+  },
+  "confirm": {
+    "bulkDelete": "Are you sure you want to delete {{count}} book(s)? This action cannot be undone.",
+    "exportFormat": "Export format (csv, json, excel):"
+  }
+}

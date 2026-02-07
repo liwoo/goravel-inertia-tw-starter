@@ -14,6 +14,7 @@ import {SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,} from "@/co
 import type {User} from "@/types/app";
 // @ts-ignore
 import {Link} from "@inertiajs/react";
+import {useTranslation} from "react-i18next";
 
 export function NavUser({
                             user,
@@ -27,6 +28,7 @@ export function NavUser({
     onNotificationsClick?: () => void,
 }) {
     const {isMobile} = useSidebar()
+    const {t} = useTranslation('common')
 
     const getInitials = (name: string) => {
         //name could have no space seperator
@@ -44,20 +46,20 @@ export function NavUser({
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            tooltip={user?.name || "Account"}
+                            tooltip={user?.name || t('nav.account')}
                             className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                         >
                             <Avatar className="h-8 w-8 rounded-lg grayscale">
                                 <AvatarImage alt={user?.name}/>
                                 <AvatarFallback
-                                    className="rounded-lg">{getInitials(user?.name || "Unknown User")}</AvatarFallback>
+                                    className="rounded-lg">{getInitials(user?.name || t('nav.unknownUser'))}</AvatarFallback>
                             </Avatar>
                             <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                                 <div>
                                     <span className="truncate font-medium">{user?.name} </span>
                                     {isSuperAdmin && (
                                         <span className="truncate text-xs text-slate-800 bg-background/50 px-1 rounded-full bg-green-400">
-                  Super Admin
+                  {t('nav.superAdmin')}
                 </span>
                                     )}
                                 </div>
@@ -93,23 +95,23 @@ export function NavUser({
                             <DropdownMenuItem asChild>
                                 <Link href="/account" className="flex items-center w-full">
                                     <UserCircleIcon className="mr-2 h-4 w-4"/>
-                                    <span>Account</span>
+                                    <span>{t('nav.account')}</span>
                                 </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={onMessagesClick}>
                                 <MessageCircleIcon className="mr-2 h-4 w-4"/>
-                                <span>Messages</span>
+                                <span>{t('nav.messages')}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={onNotificationsClick}>
                                 <BellIcon className="mr-2 h-4 w-4"/>
-                                <span>Notifications</span>
+                                <span>{t('nav.notifications')}</span>
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator/>
                         <DropdownMenuItem asChild>
                             <Link href="/logout" method="post" className="flex items-center w-full">
                                 <LogOutIcon className="mr-2 h-4 w-4"/>
-                                <span>Log out</span>
+                                <span>{t('nav.logOut')}</span>
                             </Link>
                         </DropdownMenuItem>
                     </DropdownMenuContent>

@@ -555,4 +555,3 @@ func (c *TOTPController) RegenerateBackupCodes(ctx goravelhttp.Context) goravelh
 		},
 	})
 }
-

@@ -17,10 +17,12 @@ import {
   DrawerContent,
 } from "@/components/ui/drawer"
 import { cn } from "@/lib/utils"
+import { useTranslation } from "react-i18next"
 
 export function SiteHeader({ title }: { title: string }) {
   const { props } = usePage<SharedData>();
   const user = props.auth?.user;
+  const { t } = useTranslation('common');
   const { selectedConversation, unreadCount, setSelectedConversation } = useMessages();
   const { isMessagesOpen, openMessages, closeMessages, isNotificationsOpen, openNotifications, closeNotifications } = useUI();
   const [showNewMessage, setShowNewMessage] = React.useState(false);
@@ -112,7 +114,7 @@ export function SiteHeader({ title }: { title: string }) {
                     className="gap-2"
                   >
                     <ArrowLeft className="h-4 w-4" />
-                    Back to messages
+                    {t('nav.backToMessages')}
                   </Button>
                 </div>
               )}

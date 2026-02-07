@@ -38,7 +38,7 @@ func (s *RBACSeeder) Run() error {
 		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Super Administrator', 'super-admin', 'Full system access with all permissions', 100, true, NOW(), NOW())",
 		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Administrator', 'admin', 'Administrative access to most features', 80, true, NOW(), NOW())",
 		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Librarian', 'librarian', 'Full book management access', 60, true, NOW(), NOW())",
-		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('MSME User', 'sme-user', 'MSME user access', 60, true, NOW(), NOW())",
+		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Standard User', 'standard-user', 'Standard user access', 60, true, NOW(), NOW())",
 		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Moderator', 'moderator', 'Limited administrative access', 40, true, NOW(), NOW())",
 		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Member', 'member', 'Regular user with borrowing privileges', 20, true, NOW(), NOW())",
 		"INSERT INTO roles (name, slug, description, level, is_active, created_at, updated_at) VALUES ('Guest', 'guest', 'Basic read-only access', 10, true, NOW(), NOW())",
@@ -96,49 +96,8 @@ func (s *RBACSeeder) Run() error {
 		}
 	}
 
-	// Assign SME-related permissions to sme-user role
-	s.assignSmeUserPermissions()
-
 	facades.Log().Info("RBAC seeding completed")
 	return nil
-}
-
-// assignSmeUserPermissions assigns SME-related permissions to the sme-user role
-func (s *RBACSeeder) assignSmeUserPermissions() {
-	var role models.Role
-	err := facades.Orm().Query().Where("slug = ?", "sme-user").First(&role)
-	if err != nil {
-		facades.Log().Error("Failed to find sme-user role", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	// Resources that SME users should have access to for their own data
-	smeResources := []string{
-		"additional_business_members",
-		"smes",
-		"primary_business_owners",
-		"business_formalisations",
-	}
-
-	// Actions SME users can perform on their own data
-	smeActions := []string{"read", "update", "create"}
-
-	for _, resource := range smeResources {
-		for _, action := range smeActions {
-			var permission models.Permission
-			err := facades.Orm().Query().
-				Where("resource = ? AND action = ?", resource, action).
-				First(&permission)
-			if err != nil {
-				continue
-			}
-			s.assignPermissionToRole(role.ID, permission.ID)
-		}
-	}
-
-	facades.Log().Info("Assigned SME permissions to sme-user role")
 }
 
 // createPermissions creates default permissions
@@ -258,7 +217,7 @@ func (s *RBACSeeder) createRoles() error {
 	roles := []roleData{
 		{Name: "Super Administrator", Slug: "super-admin", Description: "Full system access with all permissions", Level: 100},
 		{Name: "Administrator", Slug: "admin", Description: "Administrative access to most features", Level: 80},
-		{Name: "MSME User", Slug: "sme-user", Description: "MSME Portal access", Level: 60},
+		{Name: "Standard User", Slug: "standard-user", Description: "Standard user access", Level: 60},
 		{Name: "Librarian", Slug: "librarian", Description: "Full book management access", Level: 60},
 		{Name: "Moderator", Slug: "moderator", Description: "Limited administrative access", Level: 40},
 		{Name: "Member", Slug: "member", Description: "Regular user with borrowing privileges", Level: 20},
@@ -360,13 +319,13 @@ func (s *RBACSeeder) assignPermissionsToRoles() error {
 		return err
 	}
 
-	// SME User permissions
-	smeUserPerms := []string{
+	// Standard User permissions
+	standardUserPerms := []string{
 		"books.viewAny", "books.view", "books.create", "books.update", "books.delete", "books.manage", "books.export",
 		"users.view",
 		"reports.view", "reports.export",
 	}
-	if err := s.assignPermissionsToRole("sme-user", smeUserPerms); err != nil {
+	if err := s.assignPermissionsToRole("standard-user", standardUserPerms); err != nil {
 		return err
 	}
 
@@ -584,7 +543,7 @@ func (s *RBACSeeder) ensureRBACSetup() error {
 	}{
 		{"Super Administrator", "super-admin", "Full system access with all permissions", 100},
 		{"Administrator", "admin", "Administrative access to most features", 80},
-		{"MSME User", "sme-user", "MSME Portal access", 60},
+		{"Standard User", "standard-user", "Standard user access", 60},
 		{"Librarian", "librarian", "Full book management access", 60},
 		{"Moderator", "moderator", "Limited administrative access", 40},
 		{"Member", "member", "Regular user with borrowing privileges", 20},
@@ -636,9 +595,6 @@ func (s *RBACSeeder) ensureRBACSetup() error {
 			"error": err.Error(),
 		})
 	}
-
-	// Ensure SME user permissions are assigned
-	s.assignSmeUserPermissions()
 
 	facades.Log().Info("RBAC setup verification completed")
 	return nil

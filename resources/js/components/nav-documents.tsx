@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 // @ts-ignore
 import { Link } from "@inertiajs/react"
+import { useTranslation } from 'react-i18next'
 
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ export function NavDocuments({
   }[]
 }) {
   const { isMobile } = useSidebar()
+  const { t } = useTranslation('nav');
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
@@ -44,7 +46,7 @@ export function NavDocuments({
             <SidebarMenuButton asChild>
               <Link href={item.url}>
                 <item.icon />
-                <span>{item.name}</span>
+                <span>{t(item.name)}</span>
               </Link>
             </SidebarMenuButton>
             <DropdownMenu>

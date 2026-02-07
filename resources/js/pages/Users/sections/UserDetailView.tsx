@@ -1,9 +1,9 @@
 import React from 'react';
-import { 
-  Calendar, 
-  Mail, 
-  Shield, 
-  Clock, 
+import {
+  Calendar,
+  Mail,
+  Shield,
+  Clock,
   User as UserIcon,
   Briefcase,
   CalendarDays,
@@ -16,13 +16,15 @@ import { Separator } from '@/components/ui/separator';
 import { CrudDetailViewProps } from '@/types/crud';
 import { User } from '@/types/user';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 
-export function UserDetailView({ 
+export function UserDetailView({
   item: user,
   onEdit,
   onClose,
   canEdit
 }: CrudDetailViewProps<User>) {
+  const { t } = useTranslation('users');
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -55,14 +57,14 @@ export function UserDetailView({
       {/* User Information Section */}
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">User Information</h3>
+          <h3 className="text-lg font-semibold mb-4 text-foreground">{t('form.userInfo')}</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-muted">
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-1">
-                <p className="text-sm text-muted-foreground">User ID</p>
+                <p className="text-sm text-muted-foreground">{t('detail.userId')}</p>
                 <p className="font-medium text-foreground">#{user.id.toString().padStart(6, '0')}</p>
               </div>
             </div>
@@ -72,7 +74,7 @@ export function UserDetailView({
                 <UserIcon className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-1">
-                <p className="text-sm text-muted-foreground">Full Name</p>
+                <p className="text-sm text-muted-foreground">{t('detail.fullName')}</p>
                 <p className="font-medium text-foreground">{user.name}</p>
               </div>
             </div>
@@ -82,12 +84,12 @@ export function UserDetailView({
                 <Mail className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-1">
-                <p className="text-sm text-muted-foreground">Email Address</p>
+                <p className="text-sm text-muted-foreground">{t('detail.emailAddress')}</p>
                 <p className="font-medium text-foreground">{user.email}</p>
                 {user.email_verified && (
                   <Badge variant="secondary" className="mt-1">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    Verified
+                    {t('columns.verified')}
                   </Badge>
                 )}
               </div>
@@ -100,14 +102,14 @@ export function UserDetailView({
 
         {/* Account Details */}
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">Account Details</h3>
+          <h3 className="text-lg font-semibold mb-4 text-foreground">{t('form.accountDetails')}</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-muted">
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-1">
-                <p className="text-sm text-muted-foreground">Roles</p>
+                <p className="text-sm text-muted-foreground">{t('columns.roles')}</p>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {user.roles && user.roles.length > 0 ? (
                     user.roles.map((role) => (
@@ -116,7 +118,7 @@ export function UserDetailView({
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-sm text-muted-foreground">No roles assigned</span>
+                    <span className="text-sm text-muted-foreground">{t('form.noRolesAssigned')}</span>
                   )}
                 </div>
               </div>
@@ -127,17 +129,17 @@ export function UserDetailView({
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-1">
-                <p className="text-sm text-muted-foreground">Account Status</p>
+                <p className="text-sm text-muted-foreground">{t('form.accountStatus')}</p>
                 <Badge variant={user.is_active ? 'default' : 'secondary'} className={user.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}>
                   {user.is_active ? (
                     <>
                       <CheckCircle className="h-3 w-3 mr-1" />
-                      Active
+                      {t('columns.active')}
                     </>
                   ) : (
                     <>
                       <XCircle className="h-3 w-3 mr-1" />
-                      Inactive
+                      {t('columns.inactive')}
                     </>
                   )}
                 </Badge>
@@ -150,10 +152,10 @@ export function UserDetailView({
                   <Shield className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <p className="text-sm text-muted-foreground">Admin Status</p>
+                  <p className="text-sm text-muted-foreground">{t('form.adminStatus')}</p>
                   <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                     <Shield className="h-3 w-3 mr-1" />
-                    Super Administrator
+                    {t('form.superAdministrator')}
                   </Badge>
                 </div>
               </div>
@@ -165,7 +167,7 @@ export function UserDetailView({
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <p className="text-sm text-muted-foreground">Last Login</p>
+                  <p className="text-sm text-muted-foreground">{t('columns.lastLogin')}</p>
                   <p className="font-medium text-foreground">{formatDate(user.last_login_at)}</p>
                 </div>
               </div>
@@ -176,7 +178,7 @@ export function UserDetailView({
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex-1 space-y-1">
-                <p className="text-sm text-muted-foreground">Member Since</p>
+                <p className="text-sm text-muted-foreground">{t('detail.memberSince')}</p>
                 <p className="font-medium text-foreground">{formatDate(user.created_at)}</p>
               </div>
             </div>

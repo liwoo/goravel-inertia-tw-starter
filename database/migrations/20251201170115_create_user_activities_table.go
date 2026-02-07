@@ -46,5 +46,5 @@ func (r *M20251201170115CreateUserActivitiesTable) Up() error {
 
 // Down Reverse the migrations.
 func (r *M20251201170115CreateUserActivitiesTable) Down() error {
- 	return facades.Schema().DropIfExists("user_activities")
+	return facades.Schema().DropIfExists("user_activities")
 }

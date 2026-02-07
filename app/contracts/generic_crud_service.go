@@ -54,7 +54,7 @@ func NewGenericCrudService[T any](resourceName string, primaryKey string) *Gener
 	modelType := reflect.TypeOf(model)
 
 	// Use the provided resourceName as the table name
-	// This allows services to specify custom table names (e.g., "sme_config" instead of "configs")
+	// This allows services to specify custom table names (e.g., "configs")
 	tableName := resourceName
 
 	return &GenericCrudService[T]{

@@ -26,8 +26,8 @@ type SSEService struct {
 	clientsMutex sync.RWMutex
 	eventBus     chan BroadcastEvent
 	// Presence tracking
-	userLastSeen   map[uint]time.Time
-	presenceMutex  sync.RWMutex
+	userLastSeen  map[uint]time.Time
+	presenceMutex sync.RWMutex
 }
 
 type BroadcastEvent struct {
