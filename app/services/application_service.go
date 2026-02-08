@@ -40,6 +40,7 @@ func NewApplicationService() *ApplicationService {
 			}
 			return nil
 		}).
+		WithTenantAwareness().
 		Build() // Returns a fully configured CrudServiceContract
 
 	applicationServiceInstance := &ApplicationService{

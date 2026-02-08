@@ -10,6 +10,7 @@ import (
 	"books-database/app/http/controllers/books"
 	"books-database/app/http/controllers/configs"
 	"books-database/app/http/controllers/lenders"
+	tenants_ctrl "books-database/app/http/controllers/tenants"
 	inertiaHelper "books-database/app/http/inertia"
 	"books-database/app/http/middleware"
 
@@ -19,9 +20,9 @@ import (
 	"github.com/goravel/framework/support"
 )
 
-func Web() {
+func Web(router route.Router) {
 	// Readiness probe - verifies database connection
-	facades.Route().Get("/ready", func(ctx http.Context) http.Response {
+	router.Get("/ready", func(ctx http.Context) http.Response {
 		var result int
 		err := facades.Orm().Query().Raw("SELECT 1").Scan(&result)
 		if err != nil {
@@ -36,19 +37,13 @@ func Web() {
 	})
 
 	// Liveness probe - simple health check
-	facades.Route().Get("/health", func(ctx http.Context) http.Response {
+	router.Get("/health", func(ctx http.Context) http.Response {
 		return ctx.Response().Json(http.StatusOK, map[string]string{
 			"status": "ok",
 		})
 	})
 
 	// Serve static files from the public directory
-	facades.Route().Static("/images", "./public/images")
-	facades.Route().Static("/css", "./public/css")
-	facades.Route().Static("/js", "./public/js")
-
-	// Register the Inertia middleware globally
-	facades.Route().GlobalMiddleware(inertiaMiddleware)
 
 	authController := auth.NewAuthController()
 	utilController := controllers.NewUtilController()
@@ -60,19 +55,20 @@ func Web() {
 	lendersPageController := lenders.NewLenderPageController()
 	authorsPageController := authors.NewAuthorsPageController()
 	applicationsPageController := applications.NewApplicationPageController()
+	tenantPageController := tenants_ctrl.NewTenantPageController()
 
-	facades.Route().Post("/login", authController.Login)
-	facades.Route().Post("/verify-2fa", authController.Verify2FA) // 2FA verification during web login
-	facades.Route().Get("/login", func(ctx http.Context) http.Response {
+	router.Post("/login", authController.Login)
+	router.Post("/verify-2fa", authController.Verify2FA) // 2FA verification during web login
+	router.Get("/login", func(ctx http.Context) http.Response {
 		return inertiaHelper.Render(ctx, "auth/Login", map[string]interface{}{
 			"version": support.Version,
 		})
 	})
 	//register una
-	facades.Route().Get("/una", utilController.ShowUnaPage)
+	router.Get("/una", utilController.ShowUnaPage)
 
 	// Public route for home/login, redirect to dashboard if already authenticated
-	facades.Route().Middleware(middleware.RedirectIfAuthenticated()).Get("/", func(ctx http.Context) http.Response {
+	router.Middleware(middleware.RedirectIfAuthenticated()).Get("/", func(ctx http.Context) http.Response {
 		return inertiaHelper.Render(ctx, "auth/Login", map[string]interface{}{
 			"version": support.Version,
 		})
@@ -81,7 +77,7 @@ func Web() {
 	// Authenticated routes with 2FA enforcement
 	// The Require2FA middleware checks if AUTH_REQUIRE_2FA is enabled and redirects
 	// users without 2FA to /2fa-required
-	facades.Route().Middleware(middleware.JwtAuth(), middleware.Require2FA()).Group(func(router route.Router) {
+	router.Middleware(middleware.JwtAuth(), middleware.Require2FA()).Group(func(router route.Router) {
 		router.Post("/logout", authController.Logout)
 
 		// 2FA required setup page - accessible by authenticated users who need to set up 2FA
@@ -127,6 +123,9 @@ func Web() {
 
 		router.Get("/admin/roles/:id/permissions", permissionsPageController.RolePermissions)
 
+		// Tenant management (super admin only)
+		router.Get("/admin/tenants", tenantPageController.Index)
+
 		// User management pages (super admin only)
 		router.Get("/admin/users", userPageController.Index)
 	})
@@ -135,7 +134,7 @@ func Web() {
 }
 
 // inertiaMiddleware wraps the Inertia middleware
-func inertiaMiddleware(ctx http.Context) {
+func InertiaMiddleware(ctx http.Context) {
 	// The Inertia middleware should only set headers, not handle the full request
 	// Just set the headers directly here
 	if ctx.Request().Header("X-Inertia", "") == "true" {

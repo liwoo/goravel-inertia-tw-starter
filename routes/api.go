@@ -13,6 +13,7 @@ import (
 	"books-database/app/http/controllers/configs"
 	"books-database/app/http/controllers/lenders"
 	"books-database/app/http/controllers/messages"
+	tenants_api "books-database/app/http/controllers/tenants"
 
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/contracts/route"
@@ -43,6 +44,7 @@ func Api(router route.Router) {
 	swaggerController := controllers.NewSwaggerController()
 	configController := configs.NewConfigController()
 	lenderController := lenders.NewLenderController()
+	tenantController := tenants_api.NewTenantController()
 	authorController := authors.NewAuthorController()
 	applicationController := applications.NewApplicationController()
 	accountController := account.NewAccountController()
@@ -214,6 +216,20 @@ func Api(router route.Router) {
 			accountRouter.Get("/activities/types", accountController.GetActivityTypes)
 			accountRouter.Get("/activities/summary", accountController.GetActivitySummary)
 			accountRouter.Get("/recent-activities", accountController.GetRecentActivities)
+		})
+
+		// Tenant management routes (super admin only)
+		protectedRouter.Prefix("tenants").Group(func(tenantRouter route.Router) {
+			tenantRouter.Get("/", tenantController.Index)
+			tenantRouter.Get("/search", tenantController.Search)
+			tenantRouter.Get("/filters", tenantController.FilterMetadata)
+			tenantRouter.Get("/{id}", tenantController.Show)
+			tenantRouter.Post("/", tenantController.Store)
+			tenantRouter.Put("/{id}", tenantController.Update)
+			tenantRouter.Delete("/{id}", tenantController.Delete)
+			tenantRouter.Post("/{id}/users", tenantController.AssignUser)
+			tenantRouter.Delete("/{id}/users/{userId}", tenantController.RemoveUser)
+			tenantRouter.Get("/{id}/users", tenantController.GetUsers)
 		})
 
 		// Two-factor authentication routes

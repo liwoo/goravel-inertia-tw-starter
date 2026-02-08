@@ -46,5 +46,6 @@ func (kernel *Kernel) Commands() []console.Command {
 		&commands.UIMaker{},
 		&commands.EnumGenerator{},
 		&commands.MakeApp{},
+		&commands.MakeMultiTenancy{},
 	}
 }

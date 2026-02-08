@@ -92,6 +92,10 @@ type BaseAuditableModel struct {
 	orm.Model
 	orm.SoftDeletes
 
+	// Tenant isolation
+	TenantID *uint   `gorm:"index" json:"tenant_id,omitempty"`
+	Tenant   *Tenant `gorm:"foreignKey:TenantID" json:"tenant,omitempty" swaggerignore:"true"`
+
 	// Audit fields
 	CreatedBy *uint  `gorm:"index" json:"created_by,omitempty"`
 	Creator   *User  `gorm:"foreignKey:CreatedBy" json:"creator,omitempty" swaggerignore:"true"`
@@ -139,4 +143,14 @@ func (b *BaseAuditableModel) GetAuditInfo() *AuditInfo {
 		UpdatedAt: time.Now(), // Placeholder
 		DeletedAt: nil,        // Placeholder
 	}
+}
+
+// GetTenantID returns the tenant ID
+func (b *BaseAuditableModel) GetTenantID() *uint {
+	return b.TenantID
+}
+
+// SetTenantID sets the tenant ID
+func (b *BaseAuditableModel) SetTenantID(tenantID *uint) {
+	b.TenantID = tenantID
 }

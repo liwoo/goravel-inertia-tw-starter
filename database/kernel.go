@@ -45,6 +45,9 @@ func (kernel Kernel) Migrations() []schema.Migration {
 		&migrations.M20260207000001CreateAuthorsTable{},
 		&migrations.M20260207000002AddAuditFieldsToAuthorsTable{},
 		&migrations.M20260207000003AddAuthorIdToBooksTable{},
+		&migrations.M2026020716315001CreateTenantsTable{},
+		&migrations.M2026020716315002CreateUserTenantsTable{},
+		&migrations.M2026020716315003AddTenantIdToAllTables{},
 	}
 }
 func (kernel Kernel) Seeders() []seeder.Seeder {

@@ -120,6 +120,11 @@ func (b *ServiceBuilderComplete[T]) WithScopeFiltering(serviceRegistry string, u
 	return b
 }
 
+func (b *ServiceBuilderComplete[T]) WithTenantAwareness() *ServiceBuilderComplete[T] {
+	b.builder.service.tenantAware = true
+	return b
+}
+
 func (b *ServiceBuilderComplete[T]) WithBeforeCreate(hook func(data map[string]interface{}) error) *ServiceBuilderComplete[T] {
 	b.builder.service.beforeCreate = hook
 	return b

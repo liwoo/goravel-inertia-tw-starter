@@ -28,5 +28,11 @@ func (s *DatabaseSeeder) Run() error {
 		return err
 	}
 
+	// Run the tenant seeder
+	tenantSeeder := &TenantSeeder{}
+	if err := tenantSeeder.Run(); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"books-database/app/tenant"
+
 	"github.com/goravel/framework/contracts/http"
 	httpvalidate "github.com/goravel/framework/contracts/validation"
 	"github.com/goravel/framework/facades"
@@ -231,6 +233,11 @@ func (c *CrudController[T, C, U]) Store(ctx http.Context) http.Response {
 	// Transform to data
 	data := createReq.ToCreateData()
 
+	// Auto-inject tenant_id from request context
+	if tenantID := tenant.GetIDFromContext(ctx); tenantID != nil {
+		data["tenant_id"] = *tenantID
+	}
+
 	// Run before hook if set
 	if c.beforeStore != nil {
 		if err := c.beforeStore(ctx, data); err != nil {
@@ -341,6 +348,9 @@ func (c *CrudController[T, C, U]) Update(ctx http.Context) http.Response {
 
 	// Transform to data
 	data := updateReq.ToUpdateData()
+
+	// Prevent changing tenant_id via update
+	delete(data, "tenant_id")
 
 	// Run before hook if set
 	if c.beforeUpdate != nil {

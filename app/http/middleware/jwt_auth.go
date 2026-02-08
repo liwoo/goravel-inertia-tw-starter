@@ -1,8 +1,11 @@
 package middleware
 
 import (
+	"books-database/app/models"
+	"books-database/app/tenant"
 	"fmt"
 	contractshttp "github.com/goravel/framework/contracts/http"
+
 	"github.com/goravel/framework/facades"
 	"strings"
 )
@@ -79,6 +82,26 @@ func JwtAuth() contractshttp.Middleware {
 			} else {
 				ctx.Response().Header("Location", "/dashboard")
 				ctx.Request().AbortWithStatus(contractshttp.StatusFound)
+			}
+		}
+
+		// Verify user belongs to current tenant
+		currentTenant := tenant.GetFromContext(ctx)
+		if currentTenant != nil {
+			var user models.User
+			if err := facades.Auth(ctx).User(&user); err == nil && user.ID > 0 {
+				if !user.IsSuperAdminUser() {
+					var ut models.UserTenant
+					facades.Orm().Query().
+						Where("user_id = ? AND tenant_id = ? AND is_active = ?", user.ID, currentTenant.ID, true).
+						First(&ut)
+					if ut.ID == 0 {
+						ctx.Request().AbortWithStatusJson(403, map[string]string{
+							"error": "You do not have access to this tenant",
+						})
+						return
+					}
+				}
 			}
 		}
 

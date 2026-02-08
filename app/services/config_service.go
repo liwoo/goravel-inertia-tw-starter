@@ -4,6 +4,7 @@ import (
 	"books-database/app/contracts"
 	"books-database/app/http/requests"
 	"books-database/app/models"
+
 	"github.com/goravel/framework/facades"
 )
 
@@ -26,7 +27,7 @@ func NewConfigService() *ConfigService {
 		}).
 		WithDefaultSort("created_at", "DESC").       // Default sorting when none specified
 		WithScopeFiltering("configs", "created_by"). // Enable permission-based filtering
-
+		WithTenantAwareness().
 		Build() // Returns a fully configured CrudServiceContract
 
 	configServiceInstance := &ConfigService{

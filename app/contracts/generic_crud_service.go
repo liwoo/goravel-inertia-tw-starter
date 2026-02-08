@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"books-database/app/auth"
+	"books-database/app/tenant"
 
 	"github.com/goravel/framework/contracts/database/orm"
 	"github.com/goravel/framework/contracts/http"
@@ -41,6 +42,9 @@ type GenericCrudService[T any] struct {
 	afterUpdate  func(model *T) error
 	beforeDelete func(id uint) error
 	afterDelete  func(id uint) error
+
+	// Tenant awareness
+	tenantAware bool
 
 	// Custom query builders
 	customQuery   func(query orm.Query) orm.Query
@@ -106,6 +110,13 @@ func (s *GenericCrudService[T]) GetList(req ListRequest) (*PaginatedResult, erro
 			// Continue without scope filtering rather than failing the request
 		}
 	} else {
+	}
+
+	// Apply tenant scope filtering
+	if s.tenantAware && req.Context != nil {
+		if tenantID := tenant.GetIDFromContext(req.Context); tenantID != nil {
+			query = query.Where(s.tableName+".tenant_id = ?", *tenantID)
+		}
 	}
 
 	// Apply search
@@ -523,6 +534,13 @@ func (s *GenericCrudService[T]) GetByIDWithContext(ctx http.Context, id uint) (i
 		query = s.customQuery(query)
 	}
 
+	// Apply tenant scope filtering
+	if s.tenantAware && ctx != nil {
+		if tenantID := tenant.GetIDFromContext(ctx); tenantID != nil {
+			query = query.Where(s.tableName+".tenant_id = ?", *tenantID)
+		}
+	}
+
 	// Apply scope filtering if enabled
 	if s.enableScopeFiltering && ctx != nil {
 		var err error
@@ -818,6 +836,12 @@ func (s *GenericCrudService[T]) EnableScopeFiltering(serviceRegistry auth.Servic
 	s.enableScopeFiltering = true
 	s.serviceRegistry = serviceRegistry
 	s.scopeUserField = userField
+	return s
+}
+
+// EnableTenantAwareness enables automatic tenant_id filtering on queries
+func (s *GenericCrudService[T]) EnableTenantAwareness() *GenericCrudService[T] {
+	s.tenantAware = true
 	return s
 }
 

@@ -102,6 +102,7 @@ func NewBookService() *BookService {
 
 			return nil
 		}).
+		WithTenantAwareness().
 		Build() // Returns a fully configured CrudServiceContract
 
 	bookServiceInstance := &BookService{

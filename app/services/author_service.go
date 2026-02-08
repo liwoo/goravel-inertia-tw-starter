@@ -61,6 +61,7 @@ func NewAuthorService() *AuthorService {
 
 			return nil
 		}).
+		WithTenantAwareness().
 		Build()
 
 	authorServiceInstance := &AuthorService{

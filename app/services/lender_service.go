@@ -26,7 +26,7 @@ func NewLenderService() *LenderService {
 		}).
 		WithDefaultSort("created_at", "DESC").       // Default sorting when none specified
 		WithScopeFiltering("lenders", "created_by"). // Enable permission-based filtering
-
+		WithTenantAwareness().
 		Build() // Returns a fully configured CrudServiceContract
 
 	lenderServiceInstance := &LenderService{
