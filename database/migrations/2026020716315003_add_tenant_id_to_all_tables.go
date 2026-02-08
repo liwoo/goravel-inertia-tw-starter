@@ -15,7 +15,7 @@ func (r *M2026020716315003AddTenantIdToAllTables) Up() error {
 	tables := []string{
 		"users", "books", "lenders", "applications",
 		"configs", "messages", "notifications", "user_activities",
-		"authors",
+		"authors", "roles", "permissions",
 	}
 
 	for _, tableName := range tables {
@@ -36,7 +36,7 @@ func (r *M2026020716315003AddTenantIdToAllTables) Down() error {
 	tables := []string{
 		"users", "books", "lenders", "applications",
 		"configs", "messages", "notifications", "user_activities",
-		"authors",
+		"authors", "roles", "permissions",
 	}
 
 	for _, tableName := range tables {

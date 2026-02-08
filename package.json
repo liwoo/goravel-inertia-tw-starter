@@ -1,7 +1,7 @@
 {
   "name": "admin-portal",
   "private": true,
-  "version": "0.66.6",
+  "version": "0.70.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

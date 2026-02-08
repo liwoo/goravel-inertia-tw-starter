@@ -74,7 +74,7 @@ func (s *TestContainersIntegrationSuite) TestTablesExist() {
 	orm := facades.Orm()
 	s.NotNil(orm)
 
-	tables := []string{"users", "roles", "permissions", "smes", "business_employee_summary"}
+	tables := []string{"users", "roles", "permissions", "books", "authors"}
 
 	for _, table := range tables {
 		var exists bool
@@ -86,8 +86,8 @@ func (s *TestContainersIntegrationSuite) TestTablesExist() {
 	}
 }
 
-func (s *TestContainersIntegrationSuite) TestBusinessEmployeeSummaryHasDeletedAt() {
-	// Verify business_employee_summary has deleted_at column
+func (s *TestContainersIntegrationSuite) TestBooksHasDeletedAt() {
+	// Verify books table has deleted_at column (soft deletes)
 	orm := facades.Orm()
 	s.NotNil(orm)
 
@@ -95,13 +95,13 @@ func (s *TestContainersIntegrationSuite) TestBusinessEmployeeSummaryHasDeletedAt
 	query := `SELECT EXISTS (
 		SELECT 1 FROM information_schema.columns
 		WHERE table_schema = 'public'
-		AND table_name = 'business_employee_summary'
+		AND table_name = 'books'
 		AND column_name = 'deleted_at'
 	)`
 
 	err := orm.Query().Raw(query).Scan(&exists)
 	s.Nil(err, "Query should succeed")
-	s.True(exists, "business_employee_summary should have deleted_at column")
+	s.True(exists, "books should have deleted_at column")
 }
 
 func (s *TestContainersIntegrationSuite) TestIsolatedFromProduction() {
